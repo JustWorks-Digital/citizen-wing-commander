@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   activateChecklistSession,
   createChecklistSession,
@@ -8,6 +9,7 @@ import {
   fetchChecklistSessions,
   saveChecklist,
 } from "@/lib/api/checklistApi";
+import { appPaths } from "@/lib/appPaths";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import {
   getLocationBySlug,
@@ -18,7 +20,6 @@ import {
   applySessionCompletionTiming,
   formatSessionDuration,
   getSessionElapsedMs,
-  mockSessionChecklist,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import { estimateOnboardScu } from "@/lib/missions/cargoInventory";
@@ -27,14 +28,19 @@ import {
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
 } from "@/lib/missions/rebuildSessionRoute";
-import type { SessionTabSummary } from "@/lib/sessions/checklistStore";
+import {
+  emptySessionChecklist,
+  type SessionTabSummary,
+} from "@/lib/missions/sessionChecklist";
 import { CargoBayLayout } from "./CargoBayLayout";
 import { HaulingChecklistTable } from "./HaulingChecklistTable";
 import { SessionMissionsModal } from "./SessionMissionsModal";
 import { SessionTabs } from "./SessionTabs";
 
 export type SessionChecklistViewProps = {
-  /** Optional override; defaults to loading the shared active checklist. */
+  /** Route param — which session this page is showing. */
+  sessionId?: string;
+  /** Storybook / offline override (skips network). */
   initial?: SessionChecklistModel;
 };
 
@@ -43,10 +49,16 @@ const POLL_VISIBLE_MS = 1500;
 const POLL_HIDDEN_MS = 12000;
 
 export function SessionChecklistView({
+  sessionId: routeSessionId,
   initial,
 }: SessionChecklistViewProps) {
+  const router = useRouter();
   const [session, setSession] = useState<SessionChecklistModel>(
-    initial ?? mockSessionChecklist,
+    initial ??
+      emptySessionChecklist({
+        id: routeSessionId,
+        sessionName: "Loading…",
+      }),
   );
   const [tabs, setTabs] = useState<SessionTabSummary[]>(
     initial
@@ -62,7 +74,7 @@ export function SessionChecklistView({
       : [],
   );
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
-    initial?.id ?? null,
+    initial?.id ?? routeSessionId ?? null,
   );
   const [tabsBusy, setTabsBusy] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
@@ -81,6 +93,11 @@ export function SessionChecklistView({
 
   useEffect(() => {
     if (initial) return;
+    if (!routeSessionId) return;
+
+    setActiveSessionId(routeSessionId);
+    activeIdRef.current = routeSessionId;
+    etagRef.current = null;
 
     let cancelled = false;
     let timer: number | null = null;
@@ -101,18 +118,17 @@ export function SessionChecklistView({
       const list = await fetchChecklistSessions();
       if (cancelled) return;
       setTabs(list.sessions);
-      if (
-        !activeIdRef.current ||
-        !list.sessions.some((tab) => tab.id === activeIdRef.current)
-      ) {
-        setActiveSessionId(list.activeSessionId);
-        activeIdRef.current = list.activeSessionId;
-        etagRef.current = null;
+      const stillExists = list.sessions.some(
+        (tab) => tab.id === routeSessionId,
+      );
+      if (!stillExists && list.activeSessionId) {
+        router.replace(appPaths.session(list.activeSessionId));
       }
     };
 
     const applyRemote = (next: SessionChecklistModel) => {
       if (savingRef.current) return;
+      if (next.id !== routeSessionId) return;
       const current = sessionRef.current;
       if (
         current.id === next.id &&
@@ -130,10 +146,7 @@ export function SessionChecklistView({
       try {
         await refreshTabs();
         if (cancelled) return;
-        const result = await fetchChecklist(
-          etagRef.current,
-          activeIdRef.current,
-        );
+        const result = await fetchChecklist(etagRef.current, routeSessionId);
         if (cancelled) return;
         if (result.etag) etagRef.current = result.etag;
         if (!result.notModified && result.session) {
@@ -155,6 +168,9 @@ export function SessionChecklistView({
       }
     };
 
+    void activateChecklistSession(routeSessionId).catch(() => {
+      /* selection is best-effort; GET still works by id */
+    });
     void load().finally(schedule);
     document.addEventListener("visibilitychange", onVisibility);
 
@@ -163,7 +179,7 @@ export function SessionChecklistView({
       if (timer != null) window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [initial]);
+  }, [initial, routeSessionId, router]);
 
   useEffect(() => {
     if (session.completedAt || nowMs == null) return;
@@ -224,16 +240,12 @@ export function SessionChecklistView({
       });
   };
 
-  const selectSession = async (sessionId: string) => {
-    if (initial || sessionId === activeSessionId) return;
+  const selectSession = async (nextSessionId: string) => {
+    if (initial || nextSessionId === routeSessionId) return;
     setTabsBusy(true);
     try {
-      const next = await activateChecklistSession(sessionId);
-      etagRef.current = null;
-      setActiveSessionId(next.id);
-      setSession(next);
-      const list = await fetchChecklistSessions();
-      setTabs(list.sessions);
+      await activateChecklistSession(nextSessionId);
+      router.push(appPaths.session(nextSessionId));
       setLoadError(null);
     } catch (error) {
       setLoadError(
@@ -249,11 +261,7 @@ export function SessionChecklistView({
     setTabsBusy(true);
     try {
       const next = await createChecklistSession({ sessionName: "New session" });
-      etagRef.current = null;
-      setActiveSessionId(next.id);
-      setSession(next);
-      const list = await fetchChecklistSessions();
-      setTabs(list.sessions);
+      router.push(appPaths.session(next.id));
       setLoadError(null);
     } catch (error) {
       setLoadError(
@@ -268,7 +276,7 @@ export function SessionChecklistView({
     <div className="flex min-w-0 flex-col gap-4">
       <SessionTabs
         sessions={tabs}
-        activeSessionId={activeSessionId ?? session.id}
+        activeSessionId={routeSessionId ?? activeSessionId ?? session.id}
         onSelect={(id) => {
           void selectSession(id);
         }}

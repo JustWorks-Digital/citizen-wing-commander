@@ -1,22 +1,54 @@
-import { SessionChecklistView } from "@/components/missions/SessionChecklistView";
+"use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  createChecklistSession,
+  fetchChecklistSessions,
+} from "@/lib/api/checklistApi";
+import { appPaths } from "@/lib/appPaths";
+import { AppShell } from "@/components/AppShell";
+
+/** Resolve active session and send the browser to `/sessions/[sessionId]`. */
 export default function Home() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-rsi-border/80 bg-rsi-bg-deep/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
-        <div className="mx-auto w-full max-w-6xl">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-rsi-accent">
-            JustWorks Digital
-          </p>
-          <h1 className="text-lg font-semibold tracking-[0.04em] text-rsi-text sm:text-2xl">
-            Citizen Wing Commander
-          </h1>
-        </div>
-      </header>
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        <SessionChecklistView />
-      </main>
-    </div>
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await fetchChecklistSessions();
+        let sessionId = list.activeSessionId;
+        if (!sessionId || list.sessions.length === 0) {
+          const created = await createChecklistSession({
+            sessionName: "New session",
+          });
+          sessionId = created.id;
+        }
+        if (cancelled) return;
+        router.replace(appPaths.session(sessionId));
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to open a hauling session",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  return (
+    <AppShell>
+      {error ? (
+        <p className="text-sm text-rsi-warn">{error}</p>
+      ) : (
+        <p className="font-mono text-sm text-rsi-text-muted">Opening session…</p>
+      )}
+    </AppShell>
   );
 }

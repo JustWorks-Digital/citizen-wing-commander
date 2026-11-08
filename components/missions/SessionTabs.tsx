@@ -1,6 +1,6 @@
 "use client";
 
-import type { SessionTabSummary } from "@/lib/sessions/checklistStore";
+import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
 
 export type SessionTabsProps = {
   sessions: SessionTabSummary[];

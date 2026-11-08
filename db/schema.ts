@@ -84,12 +84,14 @@ export const deliverySessions = pgTable(
     name: text("name").notNull(),
     /** false = soft-deleted (hidden from tabs, retained in DB). */
     isActive: boolean("is_active").notNull().default(true),
+    /** UI / MCP default target when sessionId is omitted. */
+    isSelected: boolean("is_selected").notNull().default(false),
     /** Checklist document: ships + hauling rows. */
     checklist: jsonb("checklist")
       .$type<SessionChecklistModel>()
       .notNull()
       .default(
-        sql`'{"sessionName":"","shipSlugs":[],"startLocationSlug":null,"missionCount":0,"missionsCompleted":0,"rows":[]}'::jsonb`,
+        sql`'{"id":"","sessionName":"","shipSlugs":[],"startLocationSlug":null,"missionCount":0,"missionsCompleted":0,"missions":[],"rows":[]}'::jsonb`,
       ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -103,6 +105,7 @@ export const deliverySessions = pgTable(
       table.isActive,
       table.updatedAt,
     ),
+    index("delivery_sessions_selected_idx").on(table.isSelected),
   ],
 );
 

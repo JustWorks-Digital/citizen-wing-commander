@@ -1,6 +1,6 @@
 import { appApi } from "@/lib/api/appRoutes";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
-import type { SessionTabSummary } from "@/lib/sessions/checklistStore";
+import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
 
 export type ChecklistFetchResult = {
   session: SessionChecklistModel | null;

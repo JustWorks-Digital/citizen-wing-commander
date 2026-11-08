@@ -206,7 +206,7 @@ export function describeShipStorageLines(
  * Location/cargo slugs must exist in fixtures (`npm run fixtures:fetch`).
  */
 export const mockSessionChecklist: SessionChecklistModel = {
-  id: "demo0001",
+  id: "11111111-1111-4111-8111-111111111111",
   sessionName: "Stanton hauling run",
   shipSlugs: ["c2-hercules-starlifter", "misc-freelancer-max"],
   startLocationSlug: "area18",

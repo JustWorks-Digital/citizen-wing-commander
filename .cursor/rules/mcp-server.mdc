@@ -6,8 +6,8 @@ alwaysApply: true
 # MCP server
 
 - Endpoint: **`/mcp`** (Streamable HTTP via `mcp-handler` in `app/mcp/route.ts`).
-- Tools live in `lib/mcp/tools.ts`; multi-session checklist store in `.data/active-checklist.json` through `lib/sessions/checklistStore.ts` (UI tabs + `/api/checklist`).
-- Each session has a stable **`id` / `sessionId`**. UI shows it on tabs; MCP write tools accept optional `sessionId` (omit = active tab). Use `list_hauling_sessions` / `create_hauling_session` / `set_active_hauling_session`.
+- Tools live in `lib/mcp/tools.ts`; multi-session checklists persist in Postgres `delivery_sessions` via `lib/sessions/checklistStore.ts` (UI tabs + `/api/checklist`). Survives Railway deploys.
+- Each session has a stable UUID **`id` / `sessionId`**. UI shows it on tabs; MCP write tools accept optional `sessionId` (omit = selected tab). Use `list_hauling_sessions` / `create_hauling_session` / `set_active_hauling_session`.
 - Screenshot / contract intake playbook: `docs/mcp-screenshot-hauling-playbook.md` (also MCP tool `get_hauling_intake_playbook`).
 - Accepted intake JSON: `hauling_contracts_intake` (`lib/missions/haulingIntake.ts`, examples in `lib/fixtures/hauling-intake/`).
 - ChatGPT / Gemini / Cursor flow: `get_hauling_intake_playbook` → `store_hauling_screenshot` (attachments) → extract contracts / MobiGlas transcripts → `search_*` → optimize legs → **`apply_hauling_contracts_intake`** (with `sessionId` when needed) → `get_hauling_checklist`.
@@ -17,4 +17,4 @@ alwaysApply: true
 - When adding tools: action-oriented names, “Use this when…” descriptions, zod `inputSchema`, keep instructions on the handler updated.
 - Production MCP (Railway): `https://citizen-wing-commander-production.up.railway.app/mcp` — add to Cursor via `.cursor/mcp.json` as a remote `url` server (Streamable HTTP).
 - Local ChatGPT/Cursor testing can use that public HTTPS URL or a Secure MCP Tunnel pointing at `/mcp`. Do not invent locations/commodities/ships outside fixtures.
-- Checklist state is still the shared file store (`.data/…`); on Railway that is ephemeral unless a volume is attached — fine for MCP smoke tests, not durable multi-instance storage.
+- Checklist sessions are durable in Postgres. Ephemeral `.data/mcp-screenshots/` is still wiped on redeploy without a volume.

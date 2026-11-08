@@ -24,11 +24,10 @@ const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
 
 const sessionIdSchema = z
   .string()
-  .min(4)
-  .max(32)
+  .uuid()
   .optional()
   .describe(
-    "Target hauling session id from list_hauling_sessions / UI tabs. Omit to use the active session.",
+    "Target hauling session UUID from list_hauling_sessions / UI tabs. Omit to use the active session.",
   );
 
 const shipStorageSchema = z
@@ -112,7 +111,7 @@ const handler = createMcpHandler(
         description:
           "Use this to switch which session tab is active (UI focus + default MCP target when sessionId is omitted).",
         inputSchema: z.object({
-          sessionId: z.string().min(4).max(32),
+          sessionId: z.string().uuid(),
         }),
         annotations: { idempotentHint: true },
       },

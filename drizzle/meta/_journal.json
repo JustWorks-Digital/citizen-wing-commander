@@ -15,6 +15,13 @@
       "when": 1794100741883,
       "tag": "0001_lying_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794117452912,
+      "tag": "0002_shiny_falcon",
+      "breakpoints": true
     }
   ]
 }

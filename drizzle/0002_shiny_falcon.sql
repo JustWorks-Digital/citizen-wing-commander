@@ -1,0 +1,3 @@
+ALTER TABLE "delivery_sessions" ALTER COLUMN "checklist" SET DEFAULT '{"id":"","sessionName":"","shipSlugs":[],"startLocationSlug":null,"missionCount":0,"missionsCompleted":0,"missions":[],"rows":[]}'::jsonb;--> statement-breakpoint
+ALTER TABLE "delivery_sessions" ADD COLUMN "is_selected" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE INDEX "delivery_sessions_selected_idx" ON "delivery_sessions" USING btree ("is_selected");
