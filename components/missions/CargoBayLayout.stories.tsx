@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
 import { CargoBayLayout } from "./CargoBayLayout";
-import { SessionStatsStrip } from "./SessionStatsStrip";
+import { SessionInventoryStat } from "./SessionStatsStrip";
 
 const meta = {
   title: "Missions/CargoBayLayout",
@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session cargo layout as the ship’s bay grid at the active stop, with Top/3D tabs and optional session stats beside the title.",
+          "Session cargo layout as the ship’s bay grid at the active stop, with Top/3D tabs and optional inventory beside the title.",
       },
     },
   },
@@ -26,14 +26,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const WithSessionStats: Story = {
+export const WithInventory: Story = {
   args: {
     headerAside: (
-      <SessionStatsStrip
-        completedLegs={1}
-        totalLegs={3}
-        missionsCompleted={0}
-        missionCount={2}
+      <SessionInventoryStat
         onboardScu={24}
         totalCapacity={96}
         missionCargoScu={48}

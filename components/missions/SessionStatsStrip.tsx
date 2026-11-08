@@ -2,21 +2,6 @@
 
 import type { ReactNode } from "react";
 
-export type SessionStatsStripProps = {
-  completedLegs: number;
-  totalLegs: number;
-  missionsCompleted: number;
-  missionCount: number;
-  onboardScu: number;
-  totalCapacity: number;
-  missionCargoScu: number;
-  isOverCapacity?: boolean;
-  isMissionOverCapacity?: boolean;
-  onSourceClick?: () => void;
-  onMissionsClick?: () => void;
-  className?: string;
-};
-
 function StatLabel({ children }: { children: string }) {
   return (
     <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
@@ -64,78 +49,122 @@ function Fraction({
   );
 }
 
+const stripClass =
+  "inline-flex max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto rounded-rsi border border-rsi-border bg-rsi-bg-deep/55";
+
 const cellClass =
   "flex min-w-[4.5rem] flex-col justify-center px-3 py-2 text-left first:pl-3.5 last:pr-3.5";
 
-/**
- * Compact session telemetry for the cargo-layout header (Source, legs, missions, inventory).
- */
-export function SessionStatsStrip({
-  completedLegs,
-  totalLegs,
-  missionsCompleted,
-  missionCount,
-  onboardScu,
-  totalCapacity,
-  missionCargoScu,
-  isOverCapacity = false,
-  isMissionOverCapacity = false,
-  onSourceClick,
-  onMissionsClick,
-  className,
-}: SessionStatsStripProps) {
-  const deliveryLabel = totalLegs === 1 ? "Delivery" : "Deliveries";
-  const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
+const interactiveCellClass = [
+  cellClass,
+  "transition-colors hover:bg-rsi-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+].join(" ");
 
+export type SessionSourceStatProps = {
+  onClick?: () => void;
+  className?: string;
+};
+
+/** Opens session screenshots / source intake. */
+export function SessionSourceStat({
+  onClick,
+  className,
+}: SessionSourceStatProps) {
   return (
     <div
-      className={[
-        "inline-flex max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto rounded-rsi border border-rsi-border bg-rsi-bg-deep/55",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={[stripClass, className].filter(Boolean).join(" ")}
       role="group"
-      aria-label="Session stats"
+      aria-label="Source"
     >
       <button
         type="button"
-        onClick={onSourceClick}
+        onClick={onClick}
         className={[
-          cellClass,
-          "items-center justify-center transition-colors hover:bg-rsi-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+          interactiveCellClass,
+          "items-center justify-center",
         ].join(" ")}
       >
         <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
           Source
         </span>
       </button>
+    </div>
+  );
+}
 
+export type SessionRouteProgressStatsProps = {
+  completedLegs: number;
+  totalLegs: number;
+  missionsCompleted: number;
+  missionCount: number;
+  onMissionsClick?: () => void;
+  className?: string;
+};
+
+/** Deliveries + Missions telemetry for the checklist toolbar. */
+export function SessionRouteProgressStats({
+  completedLegs,
+  totalLegs,
+  missionsCompleted,
+  missionCount,
+  onMissionsClick,
+  className,
+}: SessionRouteProgressStatsProps) {
+  const deliveryLabel = totalLegs === 1 ? "Delivery" : "Deliveries";
+
+  return (
+    <div
+      className={[stripClass, className].filter(Boolean).join(" ")}
+      role="group"
+      aria-label="Route progress"
+    >
       <div className={cellClass}>
         <StatLabel>{deliveryLabel}</StatLabel>
         <StatValue>
           <Fraction current={completedLegs} total={totalLegs} />
         </StatValue>
       </div>
-
       <button
         type="button"
         onClick={onMissionsClick}
-        className={[
-          cellClass,
-          "transition-colors hover:bg-rsi-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-        ].join(" ")}
+        className={interactiveCellClass}
       >
         <StatLabel>Missions</StatLabel>
         <StatValue>
           <Fraction current={missionsCompleted} total={missionCount} />
         </StatValue>
       </button>
+    </div>
+  );
+}
 
-      <div
-        className={[cellClass, "min-w-[7.5rem]"].join(" ")}
-        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} SCU onboard, ${missionCargoScu} available`}
-      >
+export type SessionInventoryStatProps = {
+  onboardScu: number;
+  totalCapacity: number;
+  missionCargoScu: number;
+  isOverCapacity?: boolean;
+  isMissionOverCapacity?: boolean;
+  className?: string;
+};
+
+/** Inventory telemetry for the cargo-layout header. */
+export function SessionInventoryStat({
+  onboardScu,
+  totalCapacity,
+  missionCargoScu,
+  isOverCapacity = false,
+  isMissionOverCapacity = false,
+  className,
+}: SessionInventoryStatProps) {
+  const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
+
+  return (
+    <div
+      className={[stripClass, className].filter(Boolean).join(" ")}
+      role="group"
+      aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} SCU onboard, ${missionCargoScu} available`}
+    >
+      <div className={[cellClass, "min-w-[7.5rem]"].join(" ")}>
         <StatLabel>Inventory</StatLabel>
         <StatValue>
           <Fraction

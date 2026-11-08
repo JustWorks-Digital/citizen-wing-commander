@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   activateChecklistSession,
@@ -43,10 +43,17 @@ import {
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
 import { CargoBayLayout } from "./CargoBayLayout";
-import { HaulingChecklistTable } from "./HaulingChecklistTable";
+import {
+  defaultFocusedStopId,
+  HaulingChecklistTable,
+} from "./HaulingChecklistTable";
 import { SessionMissionsModal } from "./SessionMissionsModal";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
-import { SessionStatsStrip } from "./SessionStatsStrip";
+import {
+  SessionInventoryStat,
+  SessionRouteProgressStats,
+  SessionSourceStat,
+} from "./SessionStatsStrip";
 import { SessionTabs } from "./SessionTabs";
 
 export type SessionChecklistViewProps = {
@@ -91,6 +98,7 @@ export function SessionChecklistView({
   const [tabsBusy, setTabsBusy] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
+  const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
   const [shipsLoading, setShipsLoading] = useState(true);
@@ -247,6 +255,20 @@ export function SessionChecklistView({
     return () => window.clearInterval(tick);
   }, [session.completedAt, nowMs]);
 
+  useEffect(() => {
+    setFocusedStopId(null);
+  }, [session.id]);
+
+  const resolvedFocusedStopId = useMemo(() => {
+    if (
+      focusedStopId &&
+      session.rows.some((row) => row.id === focusedStopId)
+    ) {
+      return focusedStopId;
+    }
+    return defaultFocusedStopId(session.rows);
+  }, [focusedStopId, session.rows]);
+
   const selectedShipSlug = session.shipSlugs?.[0] ?? null;
   const shipBySlug = new Map(shipCatalog.map((ship) => [ship.slug, ship]));
   const totalCapacity =
@@ -378,56 +400,65 @@ export function SessionChecklistView({
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
           Session
         </p>
-        <h2 className="text-lg font-semibold tracking-wide break-words text-rsi-text sm:text-xl">
-          {session.sessionName}
-        </h2>
-        <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
-          ID {session.id}
-          <span className="text-rsi-text-muted/70"> · MCP sessionId</span>
-        </p>
-        <div className="mt-3">
-          <LocationFuzzySearch
-            valueSlug={session.startLocationSlug ?? null}
-            onChange={(slug) => {
-              persistSession(
-                applySessionCompletionTiming({
-                  ...session,
-                  shipSlugs: session.shipSlugs ?? [],
-                  startLocationSlug: slug,
-                }),
-              );
-            }}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold tracking-wide break-words text-rsi-text sm:text-xl">
+              {session.sessionName}
+            </h2>
+            <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
+              ID {session.id}
+            </p>
+          </div>
+          <SessionSourceStat
+            className="shrink-0"
+            onClick={() => setScreenshotsOpen(true)}
           />
-          {!session.startLocationSlug ? (
-            <p className="mt-1 text-sm text-rsi-text-muted">
-              Set where the crew begins so routing can use a start point.
-            </p>
-          ) : startLocation ? null : (
-            <p className="mt-1 text-sm text-rsi-warn">
-              Unknown start location slug: {session.startLocationSlug}
-            </p>
-          )}
         </div>
-        <div className="mt-3">
-          <ShipSelect
-            valueSlug={selectedShipSlug}
-            options={shipCatalog.map((ship) => ({
-              slug: ship.slug,
-              name: ship.name,
-              cargoScu: ship.cargoScu,
-            }))}
-            isLoading={shipsLoading}
-            error={shipsError}
-            onChange={(slug) => {
-              persistSession(
-                applySessionCompletionTiming({
-                  ...session,
-                  shipSlugs: slug ? [slug] : [],
-                  startLocationSlug: session.startLocationSlug ?? null,
-                }),
-              );
-            }}
-          />
+        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+          <div className="min-w-0 flex-1">
+            <LocationFuzzySearch
+              valueSlug={session.startLocationSlug ?? null}
+              onChange={(slug) => {
+                persistSession(
+                  applySessionCompletionTiming({
+                    ...session,
+                    shipSlugs: session.shipSlugs ?? [],
+                    startLocationSlug: slug,
+                  }),
+                );
+              }}
+            />
+            {!session.startLocationSlug ? (
+              <p className="mt-1 text-sm text-rsi-text-muted">
+                Set where the crew begins so routing can use a start point.
+              </p>
+            ) : startLocation ? null : (
+              <p className="mt-1 text-sm text-rsi-warn">
+                Unknown start location slug: {session.startLocationSlug}
+              </p>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <ShipSelect
+              valueSlug={selectedShipSlug}
+              options={shipCatalog.map((ship) => ({
+                slug: ship.slug,
+                name: ship.name,
+                cargoScu: ship.cargoScu,
+              }))}
+              isLoading={shipsLoading}
+              error={shipsError}
+              onChange={(slug) => {
+                persistSession(
+                  applySessionCompletionTiming({
+                    ...session,
+                    shipSlugs: slug ? [slug] : [],
+                    startLocationSlug: session.startLocationSlug ?? null,
+                  }),
+                );
+              }}
+            />
+          </div>
         </div>
         <p className="mt-3 text-sm text-rsi-text-secondary">
           <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
@@ -451,26 +482,31 @@ export function SessionChecklistView({
       <CargoBayLayout
         rows={session.rows}
         shipSlug={selectedShipSlug}
+        focusedStopId={resolvedFocusedStopId}
         headerAside={
-          <SessionStatsStrip
-            completedLegs={completedLegs}
-            totalLegs={totalLegs}
-            missionsCompleted={session.missionsCompleted ?? 0}
-            missionCount={session.missionCount ?? 0}
+          <SessionInventoryStat
             onboardScu={onboardScu}
             totalCapacity={totalCapacity}
             missionCargoScu={missionCargoScu}
             isOverCapacity={isOverCapacity}
             isMissionOverCapacity={isMissionOverCapacity}
-            onSourceClick={() => setScreenshotsOpen(true)}
-            onMissionsClick={() => setMissionsOpen(true)}
           />
         }
       />
 
       <HaulingChecklistTable
         rows={session.rows}
-        shipSlug={selectedShipSlug}
+        focusedStopId={resolvedFocusedStopId}
+        onFocusStop={setFocusedStopId}
+        toolbarStart={
+          <SessionRouteProgressStats
+            completedLegs={completedLegs}
+            totalLegs={totalLegs}
+            missionsCompleted={session.missionsCompleted ?? 0}
+            missionCount={session.missionCount ?? 0}
+            onMissionsClick={() => setMissionsOpen(true)}
+          />
+        }
         onToggle={(rowId) => {
           persistSession(
             applySessionCompletionTiming({

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 
 export type ImageLightboxProps = {
   src: string;
@@ -41,17 +42,11 @@ export function ImageLightbox({
       aria-label={title || alt || "Image preview"}
       className="fixed inset-0 z-[80] flex flex-col bg-rsi-bg"
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rsi-border bg-rsi-bg-deep/80 px-4 py-3">
+      <div className="relative flex shrink-0 items-center border-b border-rsi-border bg-rsi-bg-deep/80 px-4 py-3 pr-12 sm:pr-14">
         <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-rsi-text-muted">
           {title || "Reference"}
         </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-rsi border border-rsi-border bg-rsi-surface px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
-        >
-          Close
-        </button>
+        <ModalCloseButton onClick={onClose} />
       </div>
       <div
         className="relative min-h-0 flex-1 overflow-auto bg-rsi-bg-deep/40 p-4"

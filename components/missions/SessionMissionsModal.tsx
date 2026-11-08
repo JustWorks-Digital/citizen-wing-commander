@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { MobiglasMissionDetail } from "./MobiglasMissionDetail";
 
@@ -115,7 +116,8 @@ export function SessionMissionsModal({
       }}
     >
       <div className="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border">
-        <header className="flex flex-col gap-3 border-b border-rsi-divider px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+        <header className="relative flex flex-col gap-3 border-b border-rsi-divider px-4 py-3 pr-12 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 sm:pr-14">
+          <ModalCloseButton onClick={onClose} />
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               {selected ? "Mission" : "Missions"}
@@ -124,54 +126,45 @@ export function SessionMissionsModal({
               {selected ? selected.title : "Accepted contracts"}
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            {selected ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleCompleted(selected.id, !selected.isCompleted);
-                  }}
-                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success"
-                >
-                  {selected.isCompleted ? "Reopen" : "Complete"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleHidden(selected.id, !selected.isHidden);
-                  }}
-                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
-                >
-                  {selected.isHidden ? "Show" : "Hide"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRemoveMission(selected.id);
-                    setSelectedId(null);
-                  }}
-                  className="rounded-rsi border border-rsi-danger/40 px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-danger hover:bg-rsi-danger-muted"
-                >
-                  Remove
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
-                >
-                  Back
-                </button>
-              </>
-            ) : null}
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
-            >
-              Close
-            </button>
-          </div>
+          {selected ? (
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleCompleted(selected.id, !selected.isCompleted);
+                }}
+                className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success"
+              >
+                {selected.isCompleted ? "Reopen" : "Complete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleHidden(selected.id, !selected.isHidden);
+                }}
+                className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
+              >
+                {selected.isHidden ? "Show" : "Hide"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onRemoveMission(selected.id);
+                  setSelectedId(null);
+                }}
+                className="rounded-rsi border border-rsi-danger/40 px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-danger hover:bg-rsi-danger-muted"
+              >
+                Remove
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
+              >
+                Back
+              </button>
+            </div>
+          ) : null}
         </header>
 
         <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">

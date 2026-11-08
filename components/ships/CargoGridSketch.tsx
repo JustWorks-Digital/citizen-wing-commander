@@ -398,7 +398,7 @@ export function CargoGridSketch({
             <div
               className={[
                 "mb-2 flex shrink-0 flex-wrap items-center gap-2",
-                showTopLegend ? "pr-[13.5rem]" : "",
+                showTopLegend ? "md:pr-[13.5rem]" : "",
               ].join(" ")}
             >
               {tabbed || compact ? (
@@ -537,8 +537,9 @@ export function CargoGridSketch({
             <div
               className={[
                 "flex min-h-full min-w-full items-center justify-center",
-                // Keep front bay (right after length flip) clear of the legend.
-                showTopLegend ? "pr-[13.5rem]" : "",
+                showTopLegend
+                  ? "max-md:pt-28 md:pr-[13.5rem]"
+                  : "",
               ].join(" ")}
               role="img"
               aria-label={`${sketch.shipName} top-view cargo grid, ${totalScu} SCU`}

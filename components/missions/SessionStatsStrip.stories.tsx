@@ -1,54 +1,78 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { SessionStatsStrip } from "./SessionStatsStrip";
+import {
+  SessionInventoryStat,
+  SessionRouteProgressStats,
+  SessionSourceStat,
+} from "./SessionStatsStrip";
 
 const meta = {
-  title: "Missions/SessionStatsStrip",
-  component: SessionStatsStrip,
+  title: "Missions/SessionStats",
   parameters: {
     layout: "padded",
     docs: {
       description: {
         component:
-          "Compact session telemetry strip for the cargo-layout header: source, deliveries, missions, inventory.",
+          "Split session telemetry: Source (session header), Deliveries/Missions (checklist toolbar), Inventory (cargo layout).",
       },
     },
   },
-  args: {
-    completedLegs: 1,
-    totalLegs: 3,
-    missionsCompleted: 0,
-    missionCount: 2,
-    onboardScu: 24,
-    totalCapacity: 96,
-    missionCargoScu: 48,
-  },
-} satisfies Meta<typeof SessionStatsStrip>;
+} satisfies Meta;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj;
 
-export const Default: Story = {};
-
-export const OverCapacity: Story = {
-  args: {
-    onboardScu: 110,
-    totalCapacity: 96,
-    missionCargoScu: 120,
-    isOverCapacity: true,
-    isMissionOverCapacity: true,
-  },
+export const Source: Story = {
+  render: () => <SessionSourceStat />,
 };
 
-export const SingleDelivery: Story = {
-  args: {
-    completedLegs: 0,
-    totalLegs: 1,
-  },
+export const RouteProgress: Story = {
+  render: () => (
+    <SessionRouteProgressStats
+      completedLegs={1}
+      totalLegs={3}
+      missionsCompleted={0}
+      missionCount={2}
+    />
+  ),
 };
 
-export const NoShipCapacity: Story = {
-  args: {
-    totalCapacity: 0,
-    onboardScu: 0,
-  },
+export const Inventory: Story = {
+  render: () => (
+    <SessionInventoryStat
+      onboardScu={24}
+      totalCapacity={96}
+      missionCargoScu={48}
+    />
+  ),
+};
+
+export const InventoryOverCapacity: Story = {
+  render: () => (
+    <SessionInventoryStat
+      onboardScu={110}
+      totalCapacity={96}
+      missionCargoScu={120}
+      isOverCapacity
+      isMissionOverCapacity
+    />
+  ),
+};
+
+export const AllPieces: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-4">
+      <SessionSourceStat />
+      <SessionRouteProgressStats
+        completedLegs={1}
+        totalLegs={3}
+        missionsCompleted={0}
+        missionCount={2}
+      />
+      <SessionInventoryStat
+        onboardScu={24}
+        totalCapacity={96}
+        missionCargoScu={48}
+      />
+    </div>
+  ),
 };

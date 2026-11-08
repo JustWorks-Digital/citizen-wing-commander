@@ -121,11 +121,6 @@ export function LocationFuzzySearch({
           </button>
         ) : null}
       </div>
-      {selected && !isOpen ? (
-        <p className="mt-1 font-mono text-xs text-rsi-text-muted">
-          {[selected.parentName, selected.type].filter(Boolean).join(" · ")}
-        </p>
-      ) : null}
       {isOpen && results.length > 0 ? (
         <ul
           id={listId}

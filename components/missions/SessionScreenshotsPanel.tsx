@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/screenshotsApi";
 import { Button } from "@/components/ui/Button";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
+import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 
 export type SessionScreenshotsPanelProps = {
   open: boolean;
@@ -329,16 +330,10 @@ export function SessionScreenshotsPanel({
         onDrop={onDrop}
       >
         <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
-          <button
-            type="button"
+          <ModalCloseButton
+            label="Close screenshots"
             onClick={onClose}
-            aria-label="Close screenshots"
-            className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-rsi text-rsi-text-muted transition-colors hover:bg-rsi-bg-deep/60 hover:text-rsi-text sm:right-4 sm:top-4"
-          >
-            <span aria-hidden className="text-xl leading-none">
-              ×
-            </span>
-          </button>
+          />
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               Screenshots

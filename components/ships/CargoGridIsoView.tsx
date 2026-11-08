@@ -648,7 +648,7 @@ export function CargoGridIsoView({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex min-w-full justify-center pb-9">
+        <div className="flex min-w-full justify-center">
 
       {showLegend ? (
         <div
@@ -767,33 +767,38 @@ export function CargoGridIsoView({
           {showLayers ? (
             <div
               className={[
-                "flex flex-wrap items-center gap-1",
+                "flex items-center justify-between gap-2",
                 showActionKey || legend.length > 0
                   ? "border-t border-rsi-border/60 pt-1.5"
                   : "",
               ].join(" ")}
             >
-              {layerOptions.map((z) => {
-                const isOn = !hiddenLayers.has(z);
-                const number = layerNumber(z);
-                return (
-                  <button
-                    key={`layer-${z}`}
-                    type="button"
-                    aria-pressed={isOn}
-                    aria-label={`Layer ${number}`}
-                    onClick={() => toggleLayer(z)}
-                    className={[
-                      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                      isOn
-                        ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                        : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
-                    ].join(" ")}
-                  >
-                    {number}
-                  </button>
-                );
-              })}
+              <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
+                Layers
+              </p>
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                {layerOptions.map((z) => {
+                  const isOn = !hiddenLayers.has(z);
+                  const number = layerNumber(z);
+                  return (
+                    <button
+                      key={`layer-${z}`}
+                      type="button"
+                      aria-pressed={isOn}
+                      aria-label={`Layer ${number}`}
+                      onClick={() => toggleLayer(z)}
+                      className={[
+                        "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                        isOn
+                          ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                          : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
+                      ].join(" ")}
+                    >
+                      {number}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </div>

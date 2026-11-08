@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
 import { Button } from "@/components/ui/Button";
+import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 
 export type SessionTabsProps = {
   sessions: SessionTabSummary[];
@@ -185,7 +186,12 @@ export function SessionTabs({
             if (event.target === event.currentTarget) setPendingClose(null);
           }}
         >
-          <div className="w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 shadow-rsi-panel">
+          <div className="relative w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 pr-12 shadow-rsi-panel sm:pr-14">
+            <ModalCloseButton
+              label="Dismiss"
+              onClick={() => setPendingClose(null)}
+              disabled={isBusy}
+            />
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               Close session
             </p>

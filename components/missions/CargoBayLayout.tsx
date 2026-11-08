@@ -18,17 +18,20 @@ export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
   /** Active session ship — drives which cargo grid to show. */
   shipSlug?: string | null;
+  /** Checklist stop to preview (completed or not). Defaults to next incomplete. */
+  focusedStopId?: string | null;
   /** Optional session stats — right of the Cargo layout title. */
   headerAside?: ReactNode;
   className?: string;
 };
 
 /**
- * Session cargo layout: ship bay grid at the active stop (top / 3D tabs).
+ * Session cargo layout: ship bay grid at the focused stop (top / 3D tabs).
  */
 export function CargoBayLayout({
   rows,
   shipSlug = null,
+  focusedStopId = null,
   headerAside = null,
   className,
 }: CargoBayLayoutProps) {
@@ -38,8 +41,13 @@ export function CargoBayLayout({
   );
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
 
-  const activeRow =
-    rows.find((row) => !row.isCompleted) ?? rows[rows.length - 1] ?? null;
+  const activeRow = useMemo(() => {
+    if (focusedStopId) {
+      const hit = rows.find((row) => row.id === focusedStopId);
+      if (hit) return hit;
+    }
+    return rows.find((row) => !row.isCompleted) ?? rows[rows.length - 1] ?? null;
+  }, [rows, focusedStopId]);
 
   const plan = useMemo(() => {
     if (!sketch || !activeRow) return null;

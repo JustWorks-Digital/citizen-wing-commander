@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import {
   describeCargoDeliveries,
@@ -14,39 +14,45 @@ import {
   type HaulingChecklistRow,
   type LegKind,
 } from "@/lib/missions/mockSession";
-import { CargoStorageGridModal } from "./CargoStorageGridModal";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
   onToggle: (rowId: string) => void;
-  /** Active session ship — used for precise bay grid View. */
-  shipSlug?: string | null;
+  /** Stop shown in cargo layout — any stop, including completed. */
+  focusedStopId?: string | null;
+  /** Click a row (not checkbox / copy) to preview that stop. */
+  onFocusStop?: (rowId: string) => void;
+  /** Left side of the toolbar (e.g. Deliveries / Missions stats). */
+  toolbarStart?: ReactNode;
 };
 
-/** First incomplete stop in route order — the stop to fly to next. */
-function activeChecklistRowId(rows: HaulingChecklistRow[]): string | null {
-  return rows.find((row) => !row.isCompleted)?.id ?? null;
+/** Default focus: first incomplete stop, else last stop. */
+export function defaultFocusedStopId(
+  rows: HaulingChecklistRow[],
+): string | null {
+  return (
+    rows.find((row) => !row.isCompleted)?.id ??
+    rows[rows.length - 1]?.id ??
+    null
+  );
 }
 
 function checklistRowToneClass(
   isCompleted: boolean,
-  isActive: boolean,
+  isFocused: boolean,
 ): string {
+  if (isFocused && isCompleted) {
+    return "cursor-pointer bg-rsi-success-muted/50 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";
+  }
+  if (isFocused) {
+    return "cursor-pointer bg-rsi-accent-muted/45 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";
+  }
   if (isCompleted) {
-    return "bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)]";
+    return "cursor-pointer bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)] hover:bg-rsi-success-muted/55";
   }
-  if (isActive) {
-    return "bg-rsi-accent-muted/45 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";
-  }
-  return "";
+  return "cursor-pointer hover:bg-rsi-surface-raised/35";
 }
-
-type StorageGridViewTarget = {
-  locationLabel: string;
-  rowId: string;
-  focusCommoditySlug: string | null;
-};
 
 function CopyIcon({ className }: { className?: string }) {
   return (
@@ -129,7 +135,10 @@ function DoneCheckbox({
       role="checkbox"
       aria-checked={isCompleted}
       aria-label={`Stop ${step}, mark done: ${location}`}
-      onClick={onToggle}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       className={[
         "group inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors sm:size-8",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
@@ -170,13 +179,9 @@ function DoneCheckbox({
 function CargoGroups({
   row,
   cargoLines,
-  locationLabel,
-  onViewCargo,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
-  locationLabel: string;
-  onViewCargo?: (target: StorageGridViewTarget) => void;
 }) {
   const groups = groupCargoLines(cargoLines);
 
@@ -234,13 +239,15 @@ function CargoGroups({
                 line.commoditySlug,
               );
               const iconSrc = getCommodityIconSrc(line.commoditySlug);
-              const canView =
-                Boolean(onViewCargo) &&
-                line.scu != null &&
-                line.commoditySlug != null &&
-                line.commodityName != null;
-              const content = (
-                <>
+              return (
+                <span
+                  key={`${row.id}-cargo-${group.role}-${index}`}
+                  className={[
+                    "inline-flex items-center gap-1.5 font-medium tabular-nums",
+                    doneClass,
+                  ].join(" ")}
+                  style={cargoHex ? { color: cargoHex } : undefined}
+                >
                   <span
                     aria-hidden
                     className="inline-block size-4 shrink-0 bg-current"
@@ -256,42 +263,6 @@ function CargoGroups({
                     }}
                   />
                   {line.scu} {line.commodityName}
-                </>
-              );
-              const className = [
-                "inline-flex items-center gap-1.5 font-medium tabular-nums",
-                doneClass,
-                canView ? "cursor-pointer text-left" : "",
-              ].join(" ");
-
-              if (canView) {
-                return (
-                  <button
-                    key={`${row.id}-cargo-${group.role}-${index}`}
-                    type="button"
-                    className={className}
-                    style={cargoHex ? { color: cargoHex } : undefined}
-                    aria-label={`View cargo grid at ${locationLabel}`}
-                    onClick={() => {
-                      onViewCargo?.({
-                        locationLabel,
-                        rowId: row.id,
-                        focusCommoditySlug: line.commoditySlug ?? null,
-                      });
-                    }}
-                  >
-                    {content}
-                  </button>
-                );
-              }
-
-              return (
-                <span
-                  key={`${row.id}-cargo-${group.role}-${index}`}
-                  className={className}
-                  style={cargoHex ? { color: cargoHex } : undefined}
-                >
-                  {content}
                 </span>
               );
             })}
@@ -349,7 +320,10 @@ function LocationHeader({
             isCopied ? `Copied ${location}` : `Copy starmap name: ${location}`
           }
           title={isCopied ? "Copied" : "Copy for starmap"}
-          onClick={onCopy}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCopy();
+          }}
           className={[
             "inline-flex size-5 shrink-0 items-center justify-center rounded-rsi border transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
@@ -520,11 +494,12 @@ function equalizeTableRowHeights(tbody: HTMLTableSectionElement) {
 export function HaulingChecklistTable({
   rows,
   onToggle,
-  shipSlug = null,
+  focusedStopId = null,
+  onFocusStop,
+  toolbarStart = null,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [gridView, setGridView] = useState<StorageGridViewTarget | null>(null);
   const desktopTbodyRef = useRef<HTMLTableSectionElement>(null);
   const completedCount = rows.filter((row) => row.isCompleted).length;
   const visibleRows = hideCompleted
@@ -562,28 +537,31 @@ export function HaulingChecklistTable({
   }
 
   const toolbar = (
-    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-rsi-divider bg-rsi-bg-deep/40 px-3 py-2">
-      {hideCompleted && completedCount > 0 ? (
-        <p className="mr-auto font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-secondary">
-          {completedCount} hidden
-        </p>
-      ) : null}
-      <button
-        type="button"
-        aria-pressed={hideCompleted}
-        disabled={completedCount === 0}
-        onClick={() => setHideCompleted((value) => !value)}
-        className={[
-          "rounded-rsi border px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-          "disabled:cursor-not-allowed disabled:opacity-40",
-          hideCompleted
-            ? "border-rsi-accent/40 bg-rsi-accent-muted/40 text-rsi-accent"
-            : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-        ].join(" ")}
-      >
-        {hideCompleted ? "Show completed" : "Hide completed"}
-      </button>
+    <div className="flex flex-wrap items-center gap-2 border-b border-rsi-divider bg-rsi-bg-deep/40 px-3 py-2">
+      {toolbarStart}
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        {hideCompleted && completedCount > 0 ? (
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-secondary">
+            {completedCount} hidden
+          </p>
+        ) : null}
+        <button
+          type="button"
+          aria-pressed={hideCompleted}
+          disabled={completedCount === 0}
+          onClick={() => setHideCompleted((value) => !value)}
+          className={[
+            "rounded-rsi border px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+            "disabled:cursor-not-allowed disabled:opacity-40",
+            hideCompleted
+              ? "border-rsi-accent/40 bg-rsi-accent-muted/40 text-rsi-accent"
+              : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+          ].join(" ")}
+        >
+          {hideCompleted ? "Show completed" : "Hide completed"}
+        </button>
+      </div>
     </div>
   );
 
@@ -593,7 +571,10 @@ export function HaulingChecklistTable({
       : "All missions complete — show completed to review";
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
-  const activeRowId = activeChecklistRowId(rows);
+  const activeRowId =
+    focusedStopId && rows.some((row) => row.id === focusedStopId)
+      ? focusedStopId
+      : defaultFocusedStopId(rows);
 
   return (
     <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
@@ -621,24 +602,25 @@ export function HaulingChecklistTable({
           );
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
-          const isActive = row.id === activeRowId;
+          const isFocused = row.id === activeRowId;
 
           return (
             <li
               key={row.id}
               aria-checked={row.isCompleted}
-              aria-current={isActive ? "step" : undefined}
+              aria-current={isFocused ? "step" : undefined}
               className={[
                 "border-b border-rsi-divider/80 px-3 py-3 last:border-b-0",
-                checklistRowToneClass(row.isCompleted, isActive),
+                checklistRowToneClass(row.isCompleted, isFocused),
               ].join(" ")}
+              onClick={() => onFocusStop?.(row.id)}
             >
               <div className="flex gap-3">
                 <DoneCheckbox
                   location={location}
                   step={step}
                   isCompleted={row.isCompleted}
-                  isActive={isActive}
+                  isActive={isFocused}
                   onToggle={() => onToggle(row.id)}
                 />
                 <div className="min-w-0 flex-1">
@@ -654,12 +636,7 @@ export function HaulingChecklistTable({
                     }}
                   />
                   <div className="mt-3">
-                    <CargoGroups
-                      row={row}
-                      cargoLines={cargoLines}
-                      locationLabel={location}
-                      onViewCargo={setGridView}
-                    />
+                    <CargoGroups row={row} cargoLines={cargoLines} />
                   </div>
                   <MetaGrid row={row} scu={scu} />
                 </div>
@@ -746,24 +723,25 @@ export function HaulingChecklistTable({
               );
               const isCopied = copiedRowId === row.id;
               const step = stepById.get(row.id) ?? 0;
-              const isActive = row.id === activeRowId;
+              const isFocused = row.id === activeRowId;
 
               return (
                 <tr
                   key={row.id}
                   aria-checked={row.isCompleted}
-                  aria-current={isActive ? "step" : undefined}
+                  aria-current={isFocused ? "step" : undefined}
                   className={[
                     "transition-colors",
-                    checklistRowToneClass(row.isCompleted, isActive),
+                    checklistRowToneClass(row.isCompleted, isFocused),
                   ].join(" ")}
+                  onClick={() => onFocusStop?.(row.id)}
                 >
                   <td className="px-2 py-2 text-center align-middle">
                     <DoneCheckbox
                       location={location}
                       step={step}
                       isCompleted={row.isCompleted}
-                      isActive={isActive}
+                      isActive={isFocused}
                       onToggle={() => onToggle(row.id)}
                     />
                   </td>
@@ -781,12 +759,7 @@ export function HaulingChecklistTable({
                     />
                   </td>
                   <td className="px-4 py-3 text-left align-middle">
-                    <CargoGroups
-                      row={row}
-                      cargoLines={cargoLines}
-                      locationLabel={location}
-                      onViewCargo={setGridView}
-                    />
+                    <CargoGroups row={row} cargoLines={cargoLines} />
                   </td>
                   <td className="px-4 py-3 text-right align-middle">
                     <ScuTotalDisplay
@@ -812,16 +785,6 @@ export function HaulingChecklistTable({
           </tbody>
         </table>
       </div>
-
-      <CargoStorageGridModal
-        open={gridView != null}
-        onClose={() => setGridView(null)}
-        shipSlug={shipSlug}
-        locationLabel={gridView?.locationLabel ?? ""}
-        rows={rows}
-        rowId={gridView?.rowId ?? null}
-        focusCommoditySlug={gridView?.focusCommoditySlug ?? null}
-      />
     </div>
   );
 }

@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
-import { HaulingChecklistTable } from "./HaulingChecklistTable";
+import {
+  defaultFocusedStopId,
+  HaulingChecklistTable,
+} from "./HaulingChecklistTable";
 
 const meta = {
   title: "Missions/HaulingChecklistTable",
@@ -11,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Checklist rows with location, clickable cargo (opens bay grid), totals, and next distance. Row heights equalize on desktop.",
+          "Checklist rows with location, cargo, totals, and next distance. Click a row to focus it in cargo layout (including completed stops).",
       },
     },
   },
@@ -25,11 +28,15 @@ function InteractiveTable(args: {
   onToggle: (rowId: string) => void;
 }) {
   const [rows, setRows] = useState(args.rows);
+  const [focusedStopId, setFocusedStopId] = useState<string | null>(
+    defaultFocusedStopId(args.rows),
+  );
 
   return (
     <HaulingChecklistTable
       rows={rows}
-      shipSlug={mockSessionChecklist.shipSlugs[0] ?? null}
+      focusedStopId={focusedStopId}
+      onFocusStop={setFocusedStopId}
       onToggle={(rowId) => {
         setRows((prev) =>
           prev.map((row) =>
@@ -47,7 +54,6 @@ export const Default: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
-    shipSlug: mockSessionChecklist.shipSlugs[0] ?? null,
   },
   render: (args) => <InteractiveTable {...args} />,
 };
@@ -56,7 +62,6 @@ export const Mobile: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
-    shipSlug: mockSessionChecklist.shipSlugs[0] ?? null,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },
