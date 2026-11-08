@@ -6,10 +6,11 @@ alwaysApply: true
 # MCP server
 
 - Endpoint: **`/mcp`** (Streamable HTTP via `mcp-handler` in `app/mcp/route.ts`).
-- Tools live in `lib/mcp/tools.ts`; shared checklist state in `.data/active-checklist.json` through `lib/sessions/checklistStore.ts` (same store the UI polls via `/api/checklist`).
+- Tools live in `lib/mcp/tools.ts`; multi-session checklist store in `.data/active-checklist.json` through `lib/sessions/checklistStore.ts` (UI tabs + `/api/checklist`).
+- Each session has a stable **`id` / `sessionId`**. UI shows it on tabs; MCP write tools accept optional `sessionId` (omit = active tab). Use `list_hauling_sessions` / `create_hauling_session` / `set_active_hauling_session`.
 - Screenshot / contract intake playbook: `docs/mcp-screenshot-hauling-playbook.md` (also MCP tool `get_hauling_intake_playbook`).
 - Accepted intake JSON: `hauling_contracts_intake` (`lib/missions/haulingIntake.ts`, examples in `lib/fixtures/hauling-intake/`).
-- ChatGPT / Gemini / Cursor flow: `get_hauling_intake_playbook` → `store_hauling_screenshot` (attachments) → extract contracts / MobiGlas transcripts → `search_*` → optimize legs → **`apply_hauling_contracts_intake`** → `get_hauling_checklist`.
+- ChatGPT / Gemini / Cursor flow: `get_hauling_intake_playbook` → `store_hauling_screenshot` (attachments) → extract contracts / MobiGlas transcripts → `search_*` → optimize legs → **`apply_hauling_contracts_intake`** (with `sessionId` when needed) → `get_hauling_checklist`.
 - Session ships (`shipSlugs`) come from UEX vehicle fixtures (`lib/fixtures/ships.json`); cargo SCU on those rows will drive bay capacity later.
 - Session start point (`startLocationSlug`) is set in the UI fuzzy search or via `set_session_start_location`.
 - Contract screenshots: MCP `store_hauling_screenshot` → ephemeral `.data/mcp-screenshots/` (gitignored). Transcripts reference logical paths only — do not commit image binaries.

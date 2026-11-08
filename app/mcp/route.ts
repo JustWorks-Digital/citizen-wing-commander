@@ -3,13 +3,16 @@ import { z } from "zod";
 import {
   toolApplyHaulingContractsIntake,
   toolClearHaulingScreenshots,
+  toolCreateHaulingSession,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
   toolListHaulingScreenshots,
+  toolListHaulingSessions,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
   toolSearchLocations,
   toolSearchShips,
+  toolSetActiveHaulingSession,
   toolSetSessionStartLocation,
   toolSetLegCompleted,
   toolSetSessionName,
@@ -18,6 +21,15 @@ import {
 } from "@/lib/mcp/tools";
 
 const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
+
+const sessionIdSchema = z
+  .string()
+  .min(4)
+  .max(32)
+  .optional()
+  .describe(
+    "Target hauling session id from list_hauling_sessions / UI tabs. Omit to use the active session.",
+  );
 
 const shipStorageSchema = z
   .enum(["front", "middle", "rear"])
@@ -64,15 +76,61 @@ const legSchema = z.object({
 const handler = createMcpHandler(
   (server) => {
     server.registerTool(
+      "list_hauling_sessions",
+      {
+        title: "List hauling sessions",
+        description:
+          "Use this to list open hauling session tabs and the active sessionId before targeting writes.",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => toolListHaulingSessions(),
+    );
+
+    server.registerTool(
+      "create_hauling_session",
+      {
+        title: "Create hauling session",
+        description:
+          "Use this to open a new empty hauling session tab (same as the UI + control). Returns the new sessionId for MCP targeting.",
+        inputSchema: z.object({
+          sessionName: z.string().optional(),
+          activate: z
+            .boolean()
+            .optional()
+            .describe("When true (default), make the new session active."),
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolCreateHaulingSession(input),
+    );
+
+    server.registerTool(
+      "set_active_hauling_session",
+      {
+        title: "Set active hauling session",
+        description:
+          "Use this to switch which session tab is active (UI focus + default MCP target when sessionId is omitted).",
+        inputSchema: z.object({
+          sessionId: z.string().min(4).max(32),
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async ({ sessionId }) => toolSetActiveHaulingSession(sessionId),
+    );
+
+    server.registerTool(
       "get_hauling_checklist",
       {
         title: "Get hauling checklist",
         description:
-          "Use this when you need the current Citizen Wing Commander hauling checklist session (legs, cargo, completion).",
-        inputSchema: z.object({}),
+          "Use this when you need a Citizen Wing Commander hauling checklist session (legs, cargo, completion). Pass sessionId to target a tab; omit for the active session.",
+        inputSchema: z.object({
+          sessionId: sessionIdSchema,
+        }),
         annotations: { readOnlyHint: true },
       },
-      async () => toolGetHaulingChecklist(),
+      async ({ sessionId }) => toolGetHaulingChecklist(sessionId),
     );
 
     server.registerTool(
@@ -151,13 +209,15 @@ const handler = createMcpHandler(
       {
         title: "Set session name",
         description:
-          "Use this when renaming the active hauling session shown in the app.",
+          "Use this when renaming a hauling session tab. Pass sessionId to target a tab; omit for the active session.",
         inputSchema: z.object({
           sessionName: z.string().min(1),
+          sessionId: sessionIdSchema,
         }),
         annotations: { idempotentHint: true },
       },
-      async ({ sessionName }) => toolSetSessionName(sessionName),
+      async ({ sessionName, sessionId }) =>
+        toolSetSessionName(sessionName, sessionId),
     );
 
     server.registerTool(
@@ -165,18 +225,22 @@ const handler = createMcpHandler(
       {
         title: "Set session start location",
         description:
-          "Use this when the user or chat sets where the crew begins the hauling run (route origin). Prefer search_locations first when the name is ambiguous. Pass an empty location string to clear.",
+          "Use this when the user or chat sets where the crew begins the hauling run (route origin). Prefer search_locations first when the name is ambiguous. Pass an empty location string to clear. Pass sessionId to target a tab.",
         inputSchema: z.object({
           location: z
             .string()
             .describe(
               "Location name or fixture slug (e.g. Everus Harbor). Empty string clears the start point.",
             ),
+          sessionId: sessionIdSchema,
         }),
         annotations: { idempotentHint: true },
       },
-      async ({ location }) =>
-        toolSetSessionStartLocation(location.trim() ? location : null),
+      async ({ location, sessionId }) =>
+        toolSetSessionStartLocation(
+          location.trim() ? location : null,
+          sessionId,
+        ),
     );
 
     server.registerTool(
@@ -184,8 +248,9 @@ const handler = createMcpHandler(
       {
         title: "Replace hauling checklist",
         description:
-          "Use this after reading mission screenshots or contract text to fully replace the active checklist with structured legs. Prefer search_locations / search_commodities first when names are ambiguous. Do not invent locations or commodities that are not in fixtures.",
+          "Use this after reading mission screenshots or contract text to fully replace a session checklist with structured legs. Prefer search_locations / search_commodities first when names are ambiguous. Pass sessionId to target a tab; omit for the active session.",
         inputSchema: z.object({
+          sessionId: sessionIdSchema,
           sessionName: z.string().optional(),
           ships: z
             .array(z.string())
@@ -229,6 +294,7 @@ const handler = createMcpHandler(
         inputSchema: z.object({
           kind: z.literal("hauling_contracts_intake").optional(),
           version: z.literal(1).optional(),
+          sessionId: sessionIdSchema,
           sessionName: z.string().min(1),
           ships: z.array(z.string()).optional(),
           startLocation: z
@@ -255,6 +321,7 @@ const handler = createMcpHandler(
         toolApplyHaulingContractsIntake({
           kind: "hauling_contracts_intake",
           version: 1,
+          sessionId: input.sessionId,
           sessionName: input.sessionName,
           ships: input.ships,
           startLocation: input.startLocation,
@@ -270,16 +337,17 @@ const handler = createMcpHandler(
       {
         title: "Set session ships",
         description:
-          "Use this when the user or crew tells you which ship(s) they are flying for the hauling session. Prefer search_ships first when the name is ambiguous. Ship cargo SCU from fixtures will drive storage capacity later.",
+          "Use this when the user or crew tells you which ship(s) they are flying for a hauling session. Prefer search_ships first when the name is ambiguous. Pass sessionId to target a tab.",
         inputSchema: z.object({
           ships: z
             .array(z.string())
             .min(1)
             .describe("One or more ship names or fixture slugs"),
+          sessionId: sessionIdSchema,
         }),
         annotations: { idempotentHint: true },
       },
-      async ({ ships }) => toolSetSessionShips(ships),
+      async ({ ships, sessionId }) => toolSetSessionShips(ships, sessionId),
     );
 
     server.registerTool(
@@ -287,10 +355,11 @@ const handler = createMcpHandler(
       {
         title: "Set leg completed",
         description:
-          "Use this to mark a checklist leg done or not done by row id from get_hauling_checklist.",
+          "Use this to mark a checklist leg done or not done by row id from get_hauling_checklist. Pass sessionId when targeting a non-active tab.",
         inputSchema: z.object({
           rowId: z.string(),
           isCompleted: z.boolean(),
+          sessionId: sessionIdSchema,
         }),
         annotations: { idempotentHint: true },
       },
@@ -352,12 +421,13 @@ const handler = createMcpHandler(
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
       "When the user attaches contract screenshots, call store_hauling_screenshot (base64) so files land in the ephemeral .data/mcp-screenshots store; reference returned logical paths from mobiglas transcripts. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo).",
-      "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation when known). If legs are omitted, the server auto-merges contracts into stops.",
+      "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
+      "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
       "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",
-      "After writes, the web UI reads the same active checklist store.",
+      "After writes, the web UI polls the same multi-session checklist store.",
     ].join(" "),
   },
 );

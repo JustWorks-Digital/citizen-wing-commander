@@ -262,22 +262,37 @@ function ScuTotalDisplay({
   pickup,
   delivery,
   total,
+  align = "end",
 }: {
   row: HaulingChecklistRow;
   pickup: number;
   delivery: number;
   total: number;
+  /** Mobile meta row: start; desktop table column: end. */
+  align?: "start" | "end";
 }) {
   const showBreakdown = row.legKind === "both" && (pickup > 0 || delivery > 0);
   const done = row.isCompleted
     ? "line-through opacity-70 decoration-rsi-success/40"
     : "";
+  const crossAlign = align === "start" ? "items-start" : "items-end";
+  const totalAlign = align === "start" ? "self-start" : "self-end";
 
   return (
-    <div className="inline-flex min-w-[2.75rem] flex-col items-stretch font-mono tabular-nums">
+    <div
+      className={[
+        "inline-flex min-w-[2.75rem] flex-col font-mono tabular-nums",
+        crossAlign,
+      ].join(" ")}
+    >
       {showBreakdown ? (
         <>
-          <div className="flex flex-col items-end gap-1 text-xs leading-tight">
+          <div
+            className={[
+              "flex flex-col gap-1 text-xs leading-tight",
+              crossAlign,
+            ].join(" ")}
+          >
             {pickup > 0 ? (
               <span
                 className={["text-rsi-accent", done].join(" ")}
@@ -299,13 +314,14 @@ function ScuTotalDisplay({
           </div>
           <div
             aria-hidden
-            className="my-1.5 w-full border-t border-rsi-border-strong"
+            className="my-1.5 w-full min-w-[2.75rem] border-t border-rsi-border-strong"
           />
         </>
       ) : null}
       <span
         className={[
-          "relative self-end text-sm",
+          "relative text-sm",
+          totalAlign,
           row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-text",
         ].join(" ")}
       >
@@ -339,6 +355,7 @@ function MetaGrid({
             pickup={scu.pickup}
             delivery={scu.delivery}
             total={scu.total}
+            align="start"
           />
         </dd>
       </div>

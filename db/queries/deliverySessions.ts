@@ -12,6 +12,7 @@ function normalizeChecklist(
   name?: string,
 ): SessionChecklistModel {
   return applySessionCompletionTiming({
+    id: checklist.id,
     sessionName: (name ?? checklist.sessionName).trim() || "Delivery session",
     shipSlugs: Array.isArray(checklist.shipSlugs) ? checklist.shipSlugs : [],
     startLocationSlug:

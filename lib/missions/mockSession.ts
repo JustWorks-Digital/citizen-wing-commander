@@ -62,6 +62,11 @@ export type HaulingChecklistRow = {
 };
 
 export type SessionChecklistModel = {
+  /**
+   * Stable id for UI tabs + MCP targeting (`sessionId`).
+   * Short hex string; generated when a session is created.
+   */
+  id: string;
   sessionName: string;
   /**
    * Ships used on this session (one or more for a crew).
@@ -201,6 +206,7 @@ export function describeShipStorageLines(
  * Location/cargo slugs must exist in fixtures (`npm run fixtures:fetch`).
  */
 export const mockSessionChecklist: SessionChecklistModel = {
+  id: "demo0001",
   sessionName: "Stanton hauling run",
   shipSlugs: ["c2-hercules-starlifter", "misc-freelancer-max"],
   startLocationSlug: "area18",

@@ -15,8 +15,11 @@ import {
   shipStorageLocationLabels,
 } from "@/lib/missions/mockSession";
 import {
+  createChecklistSession,
   getChecklistSession,
+  listChecklistSessions,
   replaceChecklistRows,
+  setActiveChecklistSession,
   setLegCompleted,
   setSessionName,
   setSessionShips,
@@ -63,6 +66,8 @@ function presentSession(session: SessionChecklistModel) {
   const startSlug = session.startLocationSlug;
   const startLoc = startSlug ? getLocationBySlug(startSlug) : null;
   return {
+    id: session.id,
+    sessionId: session.id,
     sessionName: session.sessionName,
     ships: presentShips(session.shipSlugs),
     totalShipCargoScu: sumShipCargoScu(session.shipSlugs),
@@ -121,51 +126,130 @@ function textResult(payload: unknown) {
   };
 }
 
-export async function toolGetHaulingChecklist() {
-  const session = await getChecklistSession();
+async function resolveTargetSession(sessionId?: string | null) {
+  try {
+    return await getChecklistSession(sessionId);
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function toolListHaulingSessions() {
+  const list = await listChecklistSessions();
+  return textResult({
+    activeSessionId: list.activeSessionId,
+    sessions: list.sessions,
+    note: "Pass sessionId on write tools to target a tab; omit to use activeSessionId.",
+  });
+}
+
+export async function toolCreateHaulingSession(input?: {
+  sessionName?: string;
+  activate?: boolean;
+}) {
+  const session = await createChecklistSession({
+    sessionName: input?.sessionName,
+    activate: input?.activate !== false,
+  });
+  return textResult({
+    ok: true,
+    message: `Created session ${session.id}${input?.activate === false ? "" : " (active)"}.`,
+    session: presentSession(session),
+  });
+}
+
+export async function toolSetActiveHaulingSession(sessionId: string) {
+  try {
+    const session = await setActiveChecklistSession(sessionId);
+    return textResult({
+      ok: true,
+      message: `Active session is now ${session.id}.`,
+      session: presentSession(session),
+    });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to set active session",
+    });
+  }
+}
+
+export async function toolGetHaulingChecklist(sessionId?: string | null) {
+  const session = await resolveTargetSession(sessionId);
+  if (!session) {
+    return textResult({ error: `Unknown session id: ${sessionId}` });
+  }
   return textResult(presentSession(session));
 }
 
-export async function toolSetSessionName(sessionName: string) {
-  const session = await setSessionName(sessionName);
-  return textResult(presentSession(session));
+export async function toolSetSessionName(
+  sessionName: string,
+  sessionId?: string | null,
+) {
+  try {
+    const session = await setSessionName(sessionName, sessionId);
+    return textResult(presentSession(session));
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to set session name",
+    });
+  }
 }
 
-export async function toolSetSessionShips(ships: string[]) {
+export async function toolSetSessionShips(
+  ships: string[],
+  sessionId?: string | null,
+) {
   const resolved = resolveShipSlugs(ships);
   if (!resolved.ok) {
     return textResult({ error: resolved.error });
   }
-  const session = await setSessionShips(resolved.shipSlugs);
-  return textResult({
-    ok: true,
-    message: `Set ${resolved.shipSlugs.length} ship(s) on the session.`,
-    session: presentSession(session),
-  });
-}
-
-export async function toolSetSessionStartLocation(location: string | null) {
-  if (location == null || !location.trim()) {
-    const session = await setSessionStartLocation(null);
+  try {
+    const session = await setSessionShips(resolved.shipSlugs, sessionId);
     return textResult({
       ok: true,
-      message: "Cleared session start location.",
+      message: `Set ${resolved.shipSlugs.length} ship(s) on session ${session.id}.`,
       session: presentSession(session),
     });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to set ships",
+    });
   }
-  const slug = resolveLocationSlug(location);
-  if (!slug) {
-    return textResult({ error: `Unknown location: ${location}` });
+}
+
+export async function toolSetSessionStartLocation(
+  location: string | null,
+  sessionId?: string | null,
+) {
+  try {
+    if (location == null || !location.trim()) {
+      const session = await setSessionStartLocation(null, sessionId);
+      return textResult({
+        ok: true,
+        message: "Cleared session start location.",
+        session: presentSession(session),
+      });
+    }
+    const slug = resolveLocationSlug(location);
+    if (!slug) {
+      return textResult({ error: `Unknown location: ${location}` });
+    }
+    const session = await setSessionStartLocation(slug, sessionId);
+    return textResult({
+      ok: true,
+      message: `Set start location to ${getLocationBySlug(slug)?.name ?? slug}.`,
+      session: presentSession(session),
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to set start location",
+    });
   }
-  const session = await setSessionStartLocation(slug);
-  return textResult({
-    ok: true,
-    message: `Set start location to ${getLocationBySlug(slug)?.name ?? slug}.`,
-    session: presentSession(session),
-  });
 }
 
 export async function toolReplaceHaulingChecklist(input: {
+  sessionId?: string | null;
   sessionName?: string;
   ships?: string[];
   legs: IncomingLeg[];
@@ -192,19 +276,27 @@ export async function toolReplaceHaulingChecklist(input: {
     shipSlugs = resolvedShips.shipSlugs;
   }
 
-  const session = await replaceChecklistRows(rows, input.sessionName, {
-    resetTimer: input.resetTimer,
-    shipSlugs,
-    missionCount: input.missionCount,
-    missionsCompleted: input.missionsCompleted,
-    missions: input.missions,
-  });
+  try {
+    const session = await replaceChecklistRows(rows, input.sessionName, {
+      sessionId: input.sessionId,
+      resetTimer: input.resetTimer,
+      shipSlugs,
+      missionCount: input.missionCount,
+      missionsCompleted: input.missionsCompleted,
+      missions: input.missions,
+    });
 
-  return textResult({
-    ok: true,
-    message: `Replaced checklist with ${rows.length} leg(s).`,
-    session: presentSession(session),
-  });
+    return textResult({
+      ok: true,
+      message: `Replaced checklist on session ${session.id} with ${rows.length} leg(s).`,
+      session: presentSession(session),
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to replace checklist",
+    });
+  }
 }
 
 /**
@@ -212,7 +304,10 @@ export async function toolReplaceHaulingChecklist(input: {
  * Uses optional `legs` when provided; otherwise auto-merges contracts into stops.
  */
 export async function toolApplyHaulingContractsIntake(
-  intake: HaulingContractsIntake & { legs?: IncomingLeg[] },
+  intake: HaulingContractsIntake & {
+    legs?: IncomingLeg[];
+    sessionId?: string | null;
+  },
 ) {
   if (!intake.sessionName?.trim()) {
     return textResult({ error: "sessionName is required" });
@@ -235,6 +330,7 @@ export async function toolApplyHaulingContractsIntake(
   const missions = await buildSessionMissionsFromIntake(intake.contracts);
 
   const replaced = await toolReplaceHaulingChecklist({
+    sessionId: intake.sessionId,
     sessionName: intake.sessionName,
     ships: intake.ships,
     legs,
@@ -245,7 +341,10 @@ export async function toolApplyHaulingContractsIntake(
   });
 
   if (intake.startLocation != null && intake.startLocation.trim()) {
-    const start = await toolSetSessionStartLocation(intake.startLocation);
+    const start = await toolSetSessionStartLocation(
+      intake.startLocation,
+      intake.sessionId,
+    );
     return start;
   }
 
@@ -255,13 +354,24 @@ export async function toolApplyHaulingContractsIntake(
 export async function toolSetLegCompleted(input: {
   rowId: string;
   isCompleted: boolean;
+  sessionId?: string | null;
 }) {
-  const session = await getChecklistSession();
-  if (!session.rows.some((row) => row.id === input.rowId)) {
-    return textResult({ error: `Unknown row id: ${input.rowId}` });
+  try {
+    const session = await getChecklistSession(input.sessionId);
+    if (!session.rows.some((row) => row.id === input.rowId)) {
+      return textResult({ error: `Unknown row id: ${input.rowId}` });
+    }
+    const next = await setLegCompleted(
+      input.rowId,
+      input.isCompleted,
+      input.sessionId,
+    );
+    return textResult(presentSession(next));
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to set leg",
+    });
   }
-  const next = await setLegCompleted(input.rowId, input.isCompleted);
-  return textResult(presentSession(next));
 }
 
 export function toolSearchLocations(query: string, limit = 10) {
