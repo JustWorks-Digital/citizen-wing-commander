@@ -16,7 +16,11 @@ import {
   type CargoGridStorageLocation,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
-import { resolvePlacementSlotOrder } from "@/lib/ships/cargoGridPlacementRules";
+import {
+  forEachPlacementOrigin,
+  resolvePlacementSlotOrder,
+  scorePlacementSlot,
+} from "@/lib/ships/cargoGridPlacementRules";
 import type {
   CargoDelivery,
   HaulingChecklistRow,
@@ -191,29 +195,36 @@ function fits(
 }
 
 /**
- * Prefer vertical stacks over floor rows. Axis order comes from
- * `cargoGridPlacementRules` (e.g. full-height crates pack from the back).
+ * Pick a slot using `cargoGridPlacementRules` scan order + preference scores
+ * (flat layers first, smaller-on-larger, full-height toward the back, …).
  */
 function findSlot(
   bounds: ZoneBounds,
   footprint: CargoBoxFootprint,
   occupied: Set<string>,
+  occupiedSizes: ReadonlyMap<string, number>,
   zone: CargoGridStorageLocation,
 ): CargoGridCoord | null {
-  const { xs, ys, zs } = resolvePlacementSlotOrder({
+  const boxScu = footprint.dx * footprint.dy * footprint.dz;
+  const ctx = {
     bounds,
     footprint,
+    boxScu,
     zone,
-  });
-  for (const x of xs) {
-    for (const y of ys) {
-      for (const z of zs) {
-        const origin = { x, y, z };
-        if (fits(bounds, origin, footprint, occupied)) return origin;
-      }
+    occupiedSizes,
+  };
+  const order = resolvePlacementSlotOrder(ctx);
+  let best: CargoGridCoord | null = null;
+  let bestScore = -Infinity;
+  forEachPlacementOrigin(order, (origin) => {
+    if (!fits(bounds, origin, footprint, occupied)) return;
+    const score = scorePlacementSlot(ctx, origin);
+    if (score > bestScore) {
+      bestScore = score;
+      best = origin;
     }
-  }
-  return null;
+  });
+  return best;
 }
 
 export type PlaceCargoInZoneOptions = {
@@ -226,8 +237,9 @@ export type PlaceCargoInZoneOptions = {
 
 /**
  * Place crates for one bay zone: decompose each segment with 8/4/2/1,
- * largest crates first, stack in Z at each XY before spreading nose→ramp.
- * Never reuses a cell listed in `occupied` or claimed earlier in this call.
+ * largest crates first, fill lower layers before stacking, prefer smaller
+ * crates on larger ones. Never reuses a cell listed in `occupied` or claimed
+ * earlier in this call.
  */
 export function placeCargoInZone(
   sketch: ShipCargoGridSketch,
@@ -241,6 +253,11 @@ export function placeCargoInZone(
   const occupied = new Set<string>(
     [...(options?.occupied ?? [])].map(cargoGridCoordKey),
   );
+  /** Cell → owning crate SCU (unknown prior occupancy treated as large support). */
+  const occupiedSizes = new Map<string, number>();
+  for (const key of occupied) {
+    occupiedSizes.set(key, Number.POSITIVE_INFINITY);
+  }
 
   if (!bounds) {
     for (const segment of segments) {
@@ -283,10 +300,20 @@ export function placeCargoInZone(
   for (const item of pending) {
     let placed = false;
     for (const footprint of cargoBoxOrientations(item.size)) {
-      const origin = findSlot(bounds, footprint, occupied, zone);
+      const origin = findSlot(
+        bounds,
+        footprint,
+        occupied,
+        occupiedSizes,
+        zone,
+      );
       if (!origin) continue;
       const cells = cellsForBox(origin, footprint);
-      for (const cell of cells) occupied.add(cargoGridCoordKey(cell));
+      for (const cell of cells) {
+        const key = cargoGridCoordKey(cell);
+        occupied.add(key);
+        occupiedSizes.set(key, item.size);
+      }
       boxes.push({
         id: `${zone}-${index}-${item.size}-${item.commoditySlug}`,
         size: item.size,

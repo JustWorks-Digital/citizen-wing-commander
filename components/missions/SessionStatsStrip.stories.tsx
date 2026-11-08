@@ -40,8 +40,10 @@ export const Inventory: Story = {
   render: () => (
     <SessionInventoryStat
       onboardScu={24}
+      peakScu={72}
+      missionsTotalScu={144}
       totalCapacity={96}
-      missionCargoScu={48}
+      availableScu={24}
     />
   ),
 };
@@ -50,10 +52,11 @@ export const InventoryOverCapacity: Story = {
   render: () => (
     <SessionInventoryStat
       onboardScu={110}
+      peakScu={120}
+      missionsTotalScu={280}
       totalCapacity={96}
-      missionCargoScu={120}
+      availableScu={-24}
       isOverCapacity
-      isMissionOverCapacity
     />
   ),
 };
@@ -70,8 +73,10 @@ export const AllPieces: Story = {
       />
       <SessionInventoryStat
         onboardScu={24}
+        peakScu={72}
+        missionsTotalScu={144}
         totalCapacity={96}
-        missionCargoScu={48}
+        availableScu={24}
       />
     </div>
   ),

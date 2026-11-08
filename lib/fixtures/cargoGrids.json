@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "shipSlug": "c2-hercules-starlifter",
+      "shipName": "C2 Hercules",
+      "widthCells": 8,
+      "heightCells": 4,
+      "zones": [
+        {
+          "id": "forward",
+          "label": "Front bay",
+          "lengthCells": 9,
+          "widthCells": 6,
+          "kind": "cargo",
+          "storageLocation": "front"
+        },
+        {
+          "id": "mid-gap",
+          "label": "Gap",
+          "lengthCells": 3,
+          "widthCells": 8,
+          "kind": "gap"
+        },
+        {
+          "id": "rear",
+          "label": "Back bay",
+          "lengthCells": 15,
+          "widthCells": 8,
+          "kind": "cargo",
+          "storageLocation": "rear"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "shipSlug": "constellation-mk-v-centaurus",
+      "shipName": "Constellation Mk V Centaurus",
+      "widthCells": 4,
+      "heightCells": 6,
+      "zones": [
+        {
+          "id": "hold",
+          "label": "Bay",
+          "lengthCells": 10,
+          "widthCells": 4,
+          "kind": "cargo",
+          "storageLocation": "middle"
+        }
+      ],
+      "notes": [],
+      "viewScale": {
+        "top": 2
+      }
+    }
+  ]
+}

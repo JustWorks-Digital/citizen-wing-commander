@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** Inventory shows mission cargo in red when contracts exceed ship bay SCU. */
+/** Inventory shows peak / negative available (red) when route peak exceeds ship bay SCU. */
 export const MissionCargoOverCapacity: Story = {
   args: {
     initial: {

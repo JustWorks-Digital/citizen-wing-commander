@@ -8,6 +8,7 @@ import {
   cargoGridTotalScu,
   cargoGridZoneScu,
   cargoGridZoneWidth,
+  getCargoGridViewScale,
   type CargoGridZone,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
@@ -158,8 +159,11 @@ export function CargoGridSketch({
   const totalScu = cargoGridTotalScu(sketch);
   const maxWidth = cargoGridMaxWidth(sketch);
   const [activeZ, setActiveZ] = useState(0);
-  const viewCellPx = Math.max(4, Math.round(cellPx * zoom));
-  const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * zoom));
+  const { top: topScale, iso: isoScale } = getCargoGridViewScale(
+    sketch.shipSlug,
+  );
+  const viewCellPx = Math.max(4, Math.round(cellPx * topScale * zoom));
+  const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * isoScale * zoom));
 
   function zoomIn() {
     setZoom((value) =>
@@ -394,7 +398,7 @@ export function CargoGridSketch({
           ) : null}
 
           {showTop ? (
-          <div className="relative flex h-[18rem] flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-3 pb-10">
+          <div className="relative flex h-[24rem] flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-3 pb-10 md:h-[18rem]">
             <div
               className={[
                 "mb-2 flex shrink-0 flex-wrap items-center gap-2",
@@ -538,7 +542,7 @@ export function CargoGridSketch({
               className={[
                 "flex min-h-full min-w-full items-center justify-center",
                 showTopLegend
-                  ? "max-md:pt-28 md:pr-[13.5rem]"
+                  ? "max-md:pt-14 md:pr-[13.5rem]"
                   : "",
               ].join(" ")}
               role="img"

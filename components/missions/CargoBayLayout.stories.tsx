@@ -31,8 +31,10 @@ export const WithInventory: Story = {
     headerAside: (
       <SessionInventoryStat
         onboardScu={24}
+        peakScu={72}
+        missionsTotalScu={144}
         totalCapacity={96}
-        missionCargoScu={48}
+        availableScu={24}
       />
     ),
   },

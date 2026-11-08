@@ -1,6 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  addCatalogMissionNote,
+  getCatalogMission,
+  listCatalogMissionNotes,
+  listCatalogMissions,
+  recordCatalogMissionRun,
+  upsertCatalogMission,
+} from "@/db/queries/catalogMissions";
+import {
   formatCargoDeliveries,
   getCommodityBySlug,
   getLocationBySlug,
@@ -33,6 +41,7 @@ import {
 } from "@/lib/sessions/screenshotStore";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
+  resolveCommoditySlug,
   resolveIncomingLeg,
   resolveLocationSlug,
   resolveShipSlugs,
@@ -41,9 +50,21 @@ import {
   searchShips,
   type IncomingLeg,
 } from "@/lib/sessions/resolveRefs";
+import type { CatalogMissionNoteSentiment } from "@/lib/missions/catalogMission";
 import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 import { buildSessionMissionsFromIntake } from "@/lib/missions/sessionMissionsFromIntake";
+import { cargoPlacementRules } from "@/lib/ships/cargoGridPlacementRules";
+import {
+  cargoGridSketches,
+  cargoGridTotalLength,
+  cargoGridTotalScu,
+  cargoGridZoneScu,
+  cargoGridZoneWidth,
+  getCargoGridSketchBySlug,
+  getCargoGridViewScale,
+  type ShipCargoGridSketch,
+} from "@/lib/ships/cargoGrids";
 
 const PLAYBOOK_PATH = path.join(
   process.cwd(),
@@ -59,9 +80,45 @@ function presentShips(shipSlugs: string[]) {
       nameFull: ship?.nameFull ?? slug,
       manufacturer: ship?.manufacturer ?? null,
       cargoScu: ship?.cargoScu ?? 0,
+      hasCargoGridSketch: Boolean(getCargoGridSketchBySlug(slug)),
     };
   });
 }
+
+function presentCargoGridSketch(sketch: ShipCargoGridSketch) {
+  return {
+    shipSlug: sketch.shipSlug,
+    shipName: sketch.shipName,
+    widthCells: sketch.widthCells,
+    heightCells: sketch.heightCells,
+    totalLengthCells: cargoGridTotalLength(sketch),
+    totalCargoScu: cargoGridTotalScu(sketch),
+    viewScale: getCargoGridViewScale(sketch.shipSlug),
+    zones: sketch.zones.map((zone) => ({
+      id: zone.id,
+      label: zone.label,
+      kind: zone.kind,
+      storageLocation: zone.storageLocation ?? null,
+      lengthCells: zone.lengthCells,
+      widthCells: cargoGridZoneWidth(sketch, zone),
+      heightCells: sketch.heightCells,
+      scu: cargoGridZoneScu(sketch, zone),
+    })),
+    notes: sketch.notes,
+  };
+}
+
+const cargoGridCoordinateSystem = {
+  cellSizeScu: 1,
+  axes: {
+    x: "nose → ramp (length along the bay)",
+    y: "port → starboard (width)",
+    z: "deck → ceiling (height)",
+  },
+  storageLocations: ["front", "middle", "rear"] as const,
+  boxSizesScu: [1, 2, 4, 8] as const,
+  note: "Do not invent grid sizes. Prefer these sketches when packing; ships without a sketch have no bay geometry yet.",
+};
 
 function presentSession(session: SessionChecklistModel) {
   const startSlug = session.startLocationSlug;
@@ -407,7 +464,100 @@ export function toolSearchShips(query: string, limit = 10) {
       manufacturer: ship.manufacturer,
       cargoScu: ship.cargoScu,
       isCargo: ship.isCargo,
+      hasCargoGridSketch: Boolean(getCargoGridSketchBySlug(ship.slug)),
     })),
+  });
+}
+
+/**
+ * Bay geometry + packing-rule summaries for AI guidance.
+ * Prefer session ships; optional shipSlug/name looks up one sketch directly.
+ */
+export async function toolGetSessionCargoGrid(input?: {
+  sessionId?: string | null;
+  ship?: string | null;
+}) {
+  const placementRules = cargoPlacementRules.map((rule) => ({
+    id: rule.id,
+    summary: rule.summary,
+  }));
+  const knownSketches = cargoGridSketches.map(presentCargoGridSketch);
+
+  const shipQuery = input?.ship?.trim();
+  if (shipQuery) {
+    const resolved = resolveShipSlugs([shipQuery]);
+    if (!resolved.ok) {
+      return textResult({
+        error: resolved.error,
+        coordinateSystem: cargoGridCoordinateSystem,
+        placementRules,
+        knownSketches,
+      });
+    }
+    const slug = resolved.shipSlugs[0] ?? null;
+    const sketch = getCargoGridSketchBySlug(slug);
+    if (!sketch) {
+      return textResult({
+        ok: false,
+        shipSlug: slug,
+        error: `No cargo-grid sketch for ${slug}. Known sketches: ${knownSketches
+          .map((entry) => entry.shipSlug)
+          .join(", ")}.`,
+        coordinateSystem: cargoGridCoordinateSystem,
+        placementRules,
+        knownSketches,
+      });
+    }
+    return textResult({
+      ok: true,
+      source: "ship",
+      shipSlug: slug,
+      grid: presentCargoGridSketch(sketch),
+      coordinateSystem: cargoGridCoordinateSystem,
+      placementRules,
+      knownSketches,
+    });
+  }
+
+  const session = await resolveTargetSession(input?.sessionId);
+  if (!session) {
+    return textResult({
+      error: input?.sessionId
+        ? `Unknown session id: ${input.sessionId}`
+        : "No active hauling session",
+      coordinateSystem: cargoGridCoordinateSystem,
+      placementRules,
+      knownSketches,
+    });
+  }
+
+  const ships = presentShips(session.shipSlugs);
+  const grids = session.shipSlugs.flatMap((slug) => {
+    const sketch = getCargoGridSketchBySlug(slug);
+    return sketch ? [presentCargoGridSketch(sketch)] : [];
+  });
+  const missingSketches = session.shipSlugs.filter(
+    (slug) => !getCargoGridSketchBySlug(slug),
+  );
+
+  return textResult({
+    ok: true,
+    source: "session",
+    sessionId: session.id,
+    ships,
+    grids,
+    missingSketches,
+    message:
+      grids.length > 0
+        ? `Found ${grids.length} cargo-grid sketch(es) for session ships.`
+        : session.shipSlugs.length === 0
+          ? "Session has no ships set. Call set_session_ships or pass ship=."
+          : `No sketches for session ships (${missingSketches.join(", ")}). Known: ${knownSketches
+              .map((entry) => entry.shipSlug)
+              .join(", ")}.`,
+    coordinateSystem: cargoGridCoordinateSystem,
+    placementRules,
+    knownSketches,
   });
 }
 
@@ -500,4 +650,240 @@ export async function toolClearHaulingScreenshots(batchId?: string) {
     message: `Removed ${result.removed} screenshot(s) from batch ${result.batchId}.`,
     ...result,
   });
+}
+
+function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>>) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    type: row.type,
+    fingerprint: row.fingerprint,
+    title: row.title,
+    contractor: row.contractor,
+    rewardAuec: row.rewardAuec,
+    offerLocationSlug: row.offerLocationSlug,
+    offerLocationName: row.offerLocationSlug
+      ? (getLocationBySlug(row.offerLocationSlug)?.name ?? row.offerLocationSlug)
+      : null,
+    totalScu: row.totalScu,
+    maxContainerScu: row.maxContainerScu,
+    boxBreakdown: row.boxBreakdown,
+    latestScreenshotPath: row.latestScreenshotPath,
+    runCount: row.runCount,
+    totalDurationMs: row.totalDurationMs,
+    avgDurationMs: row.avgDurationMs,
+    lastObservedAt: row.lastObservedAt,
+    payload: row.payload,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Create or update a catalog mission (fingerprint upsert).
+ * `type` selects the payload shape — currently `hauling` only.
+ */
+export async function toolCreateMission(input: {
+  type?: "hauling";
+  title: string;
+  contractor?: string;
+  rewardAuec?: number;
+  /** Where the offer was seen / screenshot taken. */
+  offerLocation?: string;
+  /** Hauling: pickup locations. */
+  from?: string[];
+  /** Hauling: delivery locations. */
+  to?: string[];
+  /** Hauling: cargo lines. */
+  cargo?: Array<{ commodity: string; scu: number }>;
+  maxContainerScu?: number;
+  latestScreenshotPath?: string;
+  extras?: Record<string, unknown>;
+}) {
+  const type = input.type ?? "hauling";
+  try {
+    if (type !== "hauling") {
+      return textResult({
+        error: `Unsupported mission type: ${type}. Supported: hauling.`,
+      });
+    }
+
+    if (!input.from?.length || !input.to?.length || !input.cargo?.length) {
+      return textResult({
+        error: "Hauling missions require from[], to[], and cargo[].",
+      });
+    }
+
+    const offerLocationSlug = input.offerLocation?.trim()
+      ? resolveLocationSlug(input.offerLocation)
+      : null;
+    if (input.offerLocation?.trim() && !offerLocationSlug) {
+      return textResult({
+        error: `Unknown offer location: ${input.offerLocation}`,
+      });
+    }
+
+    const fromLocationSlugs: string[] = [];
+    for (const loc of input.from) {
+      const slug = resolveLocationSlug(loc);
+      if (!slug) return textResult({ error: `Unknown from location: ${loc}` });
+      if (!fromLocationSlugs.includes(slug)) fromLocationSlugs.push(slug);
+    }
+    const toLocationSlugs: string[] = [];
+    for (const loc of input.to) {
+      const slug = resolveLocationSlug(loc);
+      if (!slug) return textResult({ error: `Unknown to location: ${loc}` });
+      if (!toLocationSlugs.includes(slug)) toLocationSlugs.push(slug);
+    }
+
+    const cargo: Array<{
+      commoditySlug: string;
+      commodityName: string;
+      scu: number;
+    }> = [];
+    for (const line of input.cargo) {
+      const commoditySlug = resolveCommoditySlug(line.commodity);
+      if (!commoditySlug) {
+        return textResult({ error: `Unknown commodity: ${line.commodity}` });
+      }
+      cargo.push({
+        commoditySlug,
+        commodityName:
+          getCommodityBySlug(commoditySlug)?.name ?? commoditySlug,
+        scu: line.scu,
+      });
+    }
+
+    const row = await upsertCatalogMission({
+      type: "hauling",
+      payload: {
+        title: input.title,
+        contractor: input.contractor ?? null,
+        rewardAuec: input.rewardAuec ?? null,
+        offerLocationSlug,
+        fromLocationSlugs,
+        toLocationSlugs,
+        cargo,
+        maxContainerScu: input.maxContainerScu ?? null,
+        latestScreenshotPath: input.latestScreenshotPath ?? null,
+        extras: input.extras,
+      },
+    });
+
+    return textResult({
+      ok: true,
+      message: `Saved ${row.type} mission ${row.id} (${row.title}).`,
+      mission: presentCatalogMission(row),
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to create mission",
+    });
+  }
+}
+
+export async function toolListMissions(input?: {
+  offerLocation?: string;
+  type?: "hauling";
+  limit?: number;
+}) {
+  try {
+    let offerLocationSlug: string | null | undefined;
+    if (input?.offerLocation?.trim()) {
+      offerLocationSlug = resolveLocationSlug(input.offerLocation);
+      if (!offerLocationSlug) {
+        return textResult({
+          error: `Unknown offer location: ${input.offerLocation}`,
+        });
+      }
+    }
+    const rows = await listCatalogMissions({
+      offerLocationSlug,
+      type: input?.type,
+      limit: input?.limit,
+    });
+    return textResult({
+      count: rows.length,
+      missions: rows.map((row) => presentCatalogMission(row)),
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to list missions",
+    });
+  }
+}
+
+export async function toolGetMission(missionId: string) {
+  try {
+    const row = await getCatalogMission(missionId);
+    if (!row) {
+      return textResult({ error: `Unknown mission: ${missionId}` });
+    }
+    const notes = await listCatalogMissionNotes(missionId);
+    return textResult({
+      ok: true,
+      mission: presentCatalogMission(row),
+      notes,
+    });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to get mission",
+    });
+  }
+}
+
+export async function toolAddMissionNote(input: {
+  missionId: string;
+  body: string;
+  sentiment?: CatalogMissionNoteSentiment;
+}) {
+  try {
+    const note = await addCatalogMissionNote(input);
+    return textResult({
+      ok: true,
+      message: `Added note ${note.id}`,
+      note,
+    });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to add note",
+    });
+  }
+}
+
+export async function toolRecordMissionRun(input: {
+  missionId: string;
+  durationMs: number;
+  offerLocation?: string;
+  deliverySessionId?: string;
+}) {
+  try {
+    let offerLocationSlug: string | null = null;
+    if (input.offerLocation?.trim()) {
+      offerLocationSlug = resolveLocationSlug(input.offerLocation);
+      if (!offerLocationSlug) {
+        return textResult({
+          error: `Unknown offer location: ${input.offerLocation}`,
+        });
+      }
+    }
+    const result = await recordCatalogMissionRun({
+      missionId: input.missionId,
+      durationMs: input.durationMs,
+      offerLocationSlug,
+      deliverySessionId: input.deliverySessionId ?? null,
+    });
+    return textResult({
+      ok: true,
+      message: `Recorded run; avgDurationMs=${result.mission.avgDurationMs}`,
+      run: result.run,
+      mission: presentCatalogMission(result.mission),
+    });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to record run",
+    });
+  }
 }

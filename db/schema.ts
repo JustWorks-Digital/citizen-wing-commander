@@ -14,6 +14,10 @@ import {
 } from "drizzle-orm/pg-core";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 import type {
+  CatalogMissionNoteSentiment,
+  HaulingCatalogMissionPayload,
+} from "@/lib/missions/catalogMission";
+import type {
   ChecklistItemProgressMeta,
   HaulingMissionPayload,
   MissionPayload,
@@ -32,6 +36,11 @@ export const missionStatusEnum = pgEnum("mission_status", [
   "completed",
   "abandoned",
 ]);
+
+export const catalogMissionNoteSentimentEnum = pgEnum(
+  "catalog_mission_note_sentiment",
+  ["good", "bad", "neutral"],
+);
 
 export const sessionRoleEnum = pgEnum("session_role", [
   "owner",
@@ -277,13 +286,139 @@ export const checklistProgressRelations = relations(
   }),
 );
 
+/**
+ * Planning catalog of observed missions (not live checklist `missions` rows).
+ * Dedupe via `fingerprint`. Timing averages come from `catalog_mission_runs`.
+ */
+export const catalogMissions = pgTable(
+  "catalog_missions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    type: missionTypeEnum("type").notNull().default("hauling"),
+    /** sha256 of normalized title/contractor/offer/from/to/cargo */
+    fingerprint: text("fingerprint").notNull(),
+    title: text("title").notNull(),
+    contractor: text("contractor"),
+    rewardAuec: integer("reward_auec"),
+    /** Where the offer was seen / screenshot taken. */
+    offerLocationSlug: text("offer_location_slug"),
+    totalScu: integer("total_scu").notNull().default(0),
+    maxContainerScu: integer("max_container_scu"),
+    /** Crate counts: { size1, size2, size4, size8 }. */
+    boxBreakdown: jsonb("box_breakdown")
+      .$type<HaulingCatalogMissionPayload["boxBreakdown"]>()
+      .notNull()
+      .default(sql`'{"size1":0,"size2":0,"size4":0,"size8":0}'::jsonb`),
+    /** Full structured contract body. */
+    payload: jsonb("payload")
+      .$type<HaulingCatalogMissionPayload>()
+      .notNull(),
+    latestScreenshotPath: text("latest_screenshot_path"),
+    runCount: integer("run_count").notNull().default(0),
+    totalDurationMs: integer("total_duration_ms").notNull().default(0),
+    avgDurationMs: integer("avg_duration_ms"),
+    lastObservedAt: timestamp("last_observed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("catalog_missions_fingerprint_uidx").on(table.fingerprint),
+    index("catalog_missions_offer_location_idx").on(table.offerLocationSlug),
+    index("catalog_missions_type_idx").on(table.type),
+    index("catalog_missions_title_idx").on(table.title),
+  ],
+);
+
+export const catalogMissionNotes = pgTable(
+  "catalog_mission_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    missionId: uuid("mission_id")
+      .notNull()
+      .references(() => catalogMissions.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    sentiment: catalogMissionNoteSentimentEnum("sentiment"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("catalog_mission_notes_mission_idx").on(table.missionId)],
+);
+
+export const catalogMissionRuns = pgTable(
+  "catalog_mission_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    missionId: uuid("mission_id")
+      .notNull()
+      .references(() => catalogMissions.id, { onDelete: "cascade" }),
+    durationMs: integer("duration_ms").notNull(),
+    offerLocationSlug: text("offer_location_slug"),
+    /** Optional live delivery-session link. */
+    deliverySessionId: uuid("delivery_session_id").references(
+      () => deliverySessions.id,
+      { onDelete: "set null" },
+    ),
+    completedAt: timestamp("completed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("catalog_mission_runs_mission_idx").on(table.missionId)],
+);
+
+export const catalogMissionsRelations = relations(
+  catalogMissions,
+  ({ many }) => ({
+    notes: many(catalogMissionNotes),
+    runs: many(catalogMissionRuns),
+  }),
+);
+
+export const catalogMissionNotesRelations = relations(
+  catalogMissionNotes,
+  ({ one }) => ({
+    mission: one(catalogMissions, {
+      fields: [catalogMissionNotes.missionId],
+      references: [catalogMissions.id],
+    }),
+  }),
+);
+
+export const catalogMissionRunsRelations = relations(
+  catalogMissionRuns,
+  ({ one }) => ({
+    mission: one(catalogMissions, {
+      fields: [catalogMissionRuns.missionId],
+      references: [catalogMissions.id],
+    }),
+    deliverySession: one(deliverySessions, {
+      fields: [catalogMissionRuns.deliverySessionId],
+      references: [deliverySessions.id],
+    }),
+  }),
+);
+
 export type Player = typeof players.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type DeliverySession = typeof deliverySessions.$inferSelect;
 export type Ship = typeof ships.$inferSelect;
 export type Mission = typeof missions.$inferSelect;
 export type ChecklistProgress = typeof checklistProgress.$inferSelect;
+export type CatalogMission = typeof catalogMissions.$inferSelect;
+export type CatalogMissionNote = typeof catalogMissionNotes.$inferSelect;
+export type CatalogMissionRun = typeof catalogMissionRuns.$inferSelect;
 export type HaulingMission = Mission & {
   type: "hauling";
   payload: HaulingMissionPayload;
 };
+
+export type { CatalogMissionNoteSentiment };

@@ -29,6 +29,13 @@
       "when": 1794125336075,
       "tag": "0003_silky_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794174633575,
+      "tag": "0004_military_annihilus",
+      "breakpoints": true
     }
   ]
 }

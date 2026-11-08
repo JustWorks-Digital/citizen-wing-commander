@@ -29,8 +29,9 @@ import {
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import {
-  estimateMissionCargoScu,
+  estimateMissionsTotalScu,
   estimateOnboardScu,
+  estimatePeakOnboardScu,
 } from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
@@ -278,14 +279,16 @@ export function SessionChecklistView({
       return total + (getShipBySlug(slug)?.cargoScu ?? 0);
     }, 0) ?? sumShipCargoScu(session.shipSlugs ?? []);
   const onboardScu = estimateOnboardScu(session.rows);
-  const missionCargoScu = estimateMissionCargoScu(
+  const peakScu = estimatePeakOnboardScu(session.rows);
+  const missionsTotalScu = estimateMissionsTotalScu(
     session.missions,
     session.rows,
   );
   const isOverCapacity =
     totalCapacity > 0 && onboardScu > totalCapacity;
-  const isMissionOverCapacity =
-    totalCapacity > 0 && missionCargoScu > totalCapacity;
+  /** Remaining bay for more missions vs planned peak load. */
+  const availableScu =
+    totalCapacity > 0 ? totalCapacity - peakScu : null;
   const elapsedLabel =
     nowMs == null
       ? "—"
@@ -486,10 +489,11 @@ export function SessionChecklistView({
         headerAside={
           <SessionInventoryStat
             onboardScu={onboardScu}
+            peakScu={peakScu}
+            missionsTotalScu={missionsTotalScu}
             totalCapacity={totalCapacity}
-            missionCargoScu={missionCargoScu}
+            availableScu={availableScu}
             isOverCapacity={isOverCapacity}
-            isMissionOverCapacity={isMissionOverCapacity}
           />
         }
       />

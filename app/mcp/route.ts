@@ -1,14 +1,20 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import {
+  toolAddMissionNote,
   toolApplyHaulingContractsIntake,
   toolClearHaulingScreenshots,
   toolCreateHaulingSession,
+  toolCreateMission,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
   toolGetHaulingScreenshot,
+  toolGetMission,
+  toolGetSessionCargoGrid,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
+  toolListMissions,
+  toolRecordMissionRun,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
   toolSearchLocations,
@@ -432,6 +438,139 @@ const handler = createMcpHandler(
       },
       async ({ query, limit }) => toolSearchShips(query, limit),
     );
+
+    server.registerTool(
+      "get_session_cargo_grid",
+      {
+        title: "Get session cargo grid",
+        description:
+          "Use this before planning bay packing. Returns bay width/length/height in 1-SCU cells, zone layout (front/middle/rear), coordinate axes, and placement-rule summaries. Defaults to the session’s ships; pass ship to look up one sketch by name/slug. Do not invent grid sizes.",
+        inputSchema: z.object({
+          sessionId: sessionIdSchema,
+          ship: z
+            .string()
+            .optional()
+            .describe(
+              "Optional ship name or slug (e.g. C2 Hercules). When set, returns that sketch instead of session ships.",
+            ),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolGetSessionCargoGrid(input),
+    );
+
+    server.registerTool(
+      "create_mission",
+      {
+        title: "Create mission",
+        description:
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling include offerLocation, from/to, cargo, optional screenshot path and maxContainerScu. Upserts by fingerprint. Other mission types will be added later.",
+        inputSchema: z.object({
+          type: z
+            .enum(["hauling"])
+            .optional()
+            .default("hauling")
+            .describe("Mission kind. Currently only hauling is implemented."),
+          title: z.string().min(1),
+          contractor: z.string().optional(),
+          rewardAuec: z.number().nonnegative().optional(),
+          offerLocation: z
+            .string()
+            .optional()
+            .describe(
+              "Where the mission was offered / screenshot taken (availability context).",
+            ),
+          from: z
+            .array(z.string())
+            .optional()
+            .describe("Hauling: pickup locations"),
+          to: z
+            .array(z.string())
+            .optional()
+            .describe("Hauling: delivery locations"),
+          cargo: z
+            .array(
+              z.object({
+                commodity: z.string(),
+                scu: z.number().int().nonnegative(),
+              }),
+            )
+            .optional()
+            .describe("Hauling: cargo lines"),
+          maxContainerScu: z.number().int().positive().optional(),
+          latestScreenshotPath: z
+            .string()
+            .optional()
+            .describe("Logical path from store_hauling_screenshot / UI upload"),
+          extras: z.record(z.string(), z.unknown()).optional(),
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolCreateMission(input),
+    );
+
+    server.registerTool(
+      "list_missions",
+      {
+        title: "List missions",
+        description:
+          "Use this to browse catalog missions. Optionally filter by offerLocation.",
+        inputSchema: z.object({
+          offerLocation: z.string().optional(),
+          type: z.enum(["hauling"]).optional(),
+          limit: z.number().int().min(1).max(200).optional().default(50),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolListMissions(input),
+    );
+
+    server.registerTool(
+      "get_mission",
+      {
+        title: "Get mission",
+        description:
+          "Use this to fetch one catalog mission plus its player notes.",
+        inputSchema: z.object({
+          missionId: z.string().uuid(),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async ({ missionId }) => toolGetMission(missionId),
+    );
+
+    server.registerTool(
+      "add_mission_note",
+      {
+        title: "Add mission note",
+        description:
+          "Use this to store a player note (good/bad/neutral) about a catalog mission for future planning.",
+        inputSchema: z.object({
+          missionId: z.string().uuid(),
+          body: z.string().min(1),
+          sentiment: z.enum(["good", "bad", "neutral"]).optional(),
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolAddMissionNote(input),
+    );
+
+    server.registerTool(
+      "record_mission_run",
+      {
+        title: "Record mission run",
+        description:
+          "Use this after a completed run to update total/average mission time for a catalog mission.",
+        inputSchema: z.object({
+          missionId: z.string().uuid(),
+          durationMs: z.number().int().nonnegative(),
+          offerLocation: z.string().optional(),
+          deliverySessionId: z.string().uuid().optional(),
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolRecordMissionRun(input),
+    );
   },
   {
     serverInfo: {
@@ -447,6 +586,8 @@ const handler = createMcpHandler(
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
+      "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids.",
+      "To save missions for later planning (not the live checklist), call create_mission (type=hauling today) with offerLocation + from/to/cargo; use add_mission_note and record_mission_run for notes and timing. Browse with list_missions / get_mission.",
       "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",
       "After writes, the web UI polls the same multi-session checklist store.",

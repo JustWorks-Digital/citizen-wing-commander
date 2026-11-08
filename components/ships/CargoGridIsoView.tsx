@@ -578,13 +578,12 @@ export function CargoGridIsoView({
       maxY = Math.max(maxY, point.y);
     }
     const padX = cellPx;
-    const padTop = cellPx * 0.25;
-    const padBottom = cellPx * 0.85;
+    const padY = cellPx * 0.55;
     return {
       minX: minX - padX,
-      minY: minY - padTop,
+      minY: minY - padY,
       width: maxX - minX + padX * 2,
-      height: maxY - minY + padTop + padBottom,
+      height: maxY - minY + padY * 2,
     };
   }, [cellPx, viewHeight, maxWidth, totalLength]);
 
@@ -648,7 +647,7 @@ export function CargoGridIsoView({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex min-w-full justify-center">
+        <div className="flex min-h-full min-w-full items-center justify-center">
 
       {showLegend ? (
         <div

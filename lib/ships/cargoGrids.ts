@@ -1,10 +1,12 @@
 /**
  * Working cargo-grid sketches for layout tooling.
- * Not synced from UEX — refine against in-game / community checks.
+ * Source: `lib/fixtures/cargoGrids.json` — not synced from UEX.
  *
  * Coordinate system (1 SCU cells): see `cargoGridCoords.ts`
  * - X nose → ramp, Y port → starboard, Z deck → ceiling
  */
+
+import cargoGridsFixture from "@/lib/fixtures/cargoGrids.json";
 
 export type CargoGridZoneKind = "cargo" | "gap";
 
@@ -33,6 +35,15 @@ export type CargoGridZone = {
   storageLocation?: CargoGridStorageLocation;
 };
 
+/**
+ * Per-view base scale for the cargo UI (independent of the user’s zoom %).
+ * `1` = default; `2` = twice as large at 100% zoom.
+ */
+export type ShipCargoGridViewScale = {
+  top?: number;
+  iso?: number;
+};
+
 export type ShipCargoGridSketch = {
   shipSlug: string;
   shipName: string;
@@ -43,79 +54,44 @@ export type ShipCargoGridSketch = {
   /** Nose → ramp segments. */
   zones: CargoGridZone[];
   notes: string[];
+  /** Optional per-ship top / 3D display scale (defaults to 1). */
+  viewScale?: ShipCargoGridViewScale;
 };
 
-/**
- * C2: front bay 6 wide × 9 long × 4 = 216; back bay 8×15×4 = 480; total 696.
- * Mid gap 3; back centered on the wider front span when widths differ.
- */
-export const c2HerculesCargoGridSketch: ShipCargoGridSketch = {
-  shipSlug: "c2-hercules-starlifter",
-  shipName: "C2 Hercules",
-  widthCells: 8,
-  heightCells: 4,
-  zones: [
-    {
-      id: "forward",
-      label: "Front bay",
-      lengthCells: 9,
-      widthCells: 6,
-      kind: "cargo",
-      storageLocation: "front",
-    },
-    {
-      id: "mid-gap",
-      label: "Gap",
-      lengthCells: 3,
-      widthCells: 8,
-      kind: "gap",
-    },
-    {
-      id: "rear",
-      label: "Back bay",
-      lengthCells: 15,
-      widthCells: 8,
-      kind: "cargo",
-      storageLocation: "rear",
-    },
-  ],
-  notes: [],
+type CargoGridsFixtureFile = {
+  items: ShipCargoGridSketch[];
 };
 
-/**
- * Mk V Centaurus: one rectangular bay, no gaps.
- * 4×10×6 = 240 SCU.
- */
-export const mkVCentaurusCargoGridSketch: ShipCargoGridSketch = {
-  shipSlug: "constellation-mk-v-centaurus",
-  shipName: "Constellation Mk V Centaurus",
-  widthCells: 4,
-  heightCells: 6,
-  zones: [
-    {
-      id: "hold",
-      label: "Bay",
-      lengthCells: 10,
-      widthCells: 4,
-      kind: "cargo",
-      storageLocation: "middle",
-    },
-  ],
-  notes: [],
-};
+const fixture = cargoGridsFixture as CargoGridsFixtureFile;
 
-export const cargoGridSketches: ShipCargoGridSketch[] = [
-  c2HerculesCargoGridSketch,
-  mkVCentaurusCargoGridSketch,
-];
+export const cargoGridSketches: ShipCargoGridSketch[] = fixture.items;
+
+const sketchesBySlug = new Map(
+  cargoGridSketches.map((sketch) => [sketch.shipSlug, sketch] as const),
+);
+
+export const c2HerculesCargoGridSketch =
+  sketchesBySlug.get("c2-hercules-starlifter")!;
+
+export const mkVCentaurusCargoGridSketch =
+  sketchesBySlug.get("constellation-mk-v-centaurus")!;
 
 export function getCargoGridSketchBySlug(
   shipSlug: string | null | undefined,
 ): ShipCargoGridSketch | null {
   if (!shipSlug) return null;
-  return (
-    cargoGridSketches.find((sketch) => sketch.shipSlug === shipSlug) ?? null
-  );
+  return sketchesBySlug.get(shipSlug) ?? null;
+}
+
+/** Display scale for a ship’s cargo grid UI. Missing values default to 1. */
+export function getCargoGridViewScale(
+  shipSlug: string | null | undefined,
+): Required<ShipCargoGridViewScale> {
+  const sketch = getCargoGridSketchBySlug(shipSlug);
+  return {
+    top: sketch?.viewScale?.top ?? 1,
+    iso: sketch?.viewScale?.iso ?? 1,
+  };
 }
 
 export function isCargoGridZone(zone: CargoGridZone): boolean {
