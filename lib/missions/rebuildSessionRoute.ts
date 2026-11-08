@@ -10,18 +10,26 @@ import type {
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
 
-function visibleMissions(missions: SessionMission[]): SessionMission[] {
+/** Still counted in N/M (unless hidden). */
+function countedMissions(missions: SessionMission[]): SessionMission[] {
   return missions.filter((mission) => !mission.isHidden);
+}
+
+/** Cargo that still belongs on the route table. */
+function routeMissions(missions: SessionMission[]): SessionMission[] {
+  return missions.filter(
+    (mission) => !mission.isHidden && !mission.isCompleted,
+  );
 }
 
 function rebuildRowsFromMissions(
   session: SessionChecklistModel,
   missions: SessionMission[],
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
-  const active = visibleMissions(missions);
-  // Hidden missions stay in the list but drop out of N/M and the route table.
-  const missionCount = active.length;
-  const missionsCompleted = active.filter((m) => m.isCompleted).length;
+  const counted = countedMissions(missions);
+  const active = routeMissions(missions);
+  const missionCount = counted.length;
+  const missionsCompleted = counted.filter((m) => m.isCompleted).length;
 
   if (active.length === 0) {
     return {
@@ -29,8 +37,8 @@ function rebuildRowsFromMissions(
       session: applySessionCompletionTiming({
         ...session,
         missions,
-        missionCount: 0,
-        missionsCompleted: 0,
+        missionCount,
+        missionsCompleted,
         rows: [],
       }),
     };
@@ -70,7 +78,7 @@ function rebuildRowsFromMissions(
   };
 }
 
-/** Hide/show a mission; hidden ones stay stored but drop out of the route table. */
+/** Hide/show a mission; hidden ones drop out of N/M and the route table. */
 export function setMissionHiddenAndRebuildRoute(
   session: SessionChecklistModel,
   missionId: string,
@@ -78,6 +86,18 @@ export function setMissionHiddenAndRebuildRoute(
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
   const missions = (session.missions ?? []).map((mission) =>
     mission.id === missionId ? { ...mission, isHidden } : mission,
+  );
+  return rebuildRowsFromMissions(session, missions);
+}
+
+/** Complete/reopen a mission; completed cargo is removed from the route table. */
+export function setMissionCompletedAndRebuildRoute(
+  session: SessionChecklistModel,
+  missionId: string,
+  isCompleted: boolean,
+): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  const missions = (session.missions ?? []).map((mission) =>
+    mission.id === missionId ? { ...mission, isCompleted } : mission,
   );
   return rebuildRowsFromMissions(session, missions);
 }

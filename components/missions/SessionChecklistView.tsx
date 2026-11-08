@@ -20,6 +20,7 @@ import {
 } from "@/lib/missions/mockSession";
 import {
   removeMissionAndRebuildRoute,
+  setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
 } from "@/lib/missions/rebuildSessionRoute";
 import { CargoBayLayout } from "./CargoBayLayout";
@@ -278,6 +279,18 @@ export function SessionChecklistView({
             session,
             missionId,
             isHidden,
+          );
+          if (!result.ok) {
+            setLoadError(result.error);
+            return;
+          }
+          persistSession(result.session);
+        }}
+        onToggleCompleted={(missionId, isCompleted) => {
+          const result = setMissionCompletedAndRebuildRoute(
+            session,
+            missionId,
+            isCompleted,
           );
           if (!result.ok) {
             setLoadError(result.error);

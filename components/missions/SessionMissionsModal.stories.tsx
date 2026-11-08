@@ -13,6 +13,7 @@ const meta = {
     missions: mockSessionChecklist.missions,
     onClose: () => {},
     onToggleHidden: () => {},
+    onToggleCompleted: () => {},
     onRemoveMission: () => {},
   },
 } satisfies Meta<typeof SessionMissionsModal>;

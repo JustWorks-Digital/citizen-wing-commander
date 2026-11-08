@@ -9,6 +9,7 @@ export type SessionMissionsModalProps = {
   missions: SessionMission[];
   onClose: () => void;
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
+  onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
   onRemoveMission: (missionId: string) => void;
 };
 
@@ -49,11 +50,36 @@ function VisibilityIcon({ isHidden }: { isHidden: boolean }) {
   );
 }
 
+function CompleteIcon({ isCompleted }: { isCompleted: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {isCompleted ? (
+        <>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </>
+      ) : (
+        <circle cx="12" cy="12" r="9" />
+      )}
+    </svg>
+  );
+}
+
 export function SessionMissionsModal({
   open,
   missions,
   onClose,
   onToggleHidden,
+  onToggleCompleted,
   onRemoveMission,
 }: SessionMissionsModalProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -98,9 +124,18 @@ export function SessionMissionsModal({
               {selected ? selected.title : "Accepted contracts"}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {selected ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleCompleted(selected.id, !selected.isCompleted);
+                  }}
+                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success"
+                >
+                  {selected.isCompleted ? "Reopen" : "Complete"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -151,21 +186,30 @@ export function SessionMissionsModal({
             <ul className="grid gap-3 sm:grid-cols-2">
               {missions.map((mission) => {
                 const isHidden = Boolean(mission.isHidden);
+                const isCompleted = Boolean(mission.isCompleted);
                 return (
                   <li key={mission.id} className="relative">
                     <button
                       type="button"
                       onClick={() => setSelectedId(mission.id)}
                       className={[
-                        "flex h-full w-full flex-col items-start rounded-rsi border p-4 pr-12 text-left transition-colors",
+                        "flex h-full w-full flex-col items-start rounded-rsi border p-4 pr-20 text-left transition-colors",
                         isHidden
                           ? "border-rsi-border/60 bg-rsi-bg-deep/30 opacity-55 hover:opacity-80"
-                          : "border-rsi-border bg-rsi-bg-deep/50 hover:border-rsi-border-strong hover:bg-rsi-surface-raised",
+                          : isCompleted
+                            ? "border-rsi-success/40 bg-rsi-bg-deep/40"
+                            : "border-rsi-border bg-rsi-bg-deep/50 hover:border-rsi-border-strong hover:bg-rsi-surface-raised",
                       ].join(" ")}
                     >
-                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent">
+                      <span
+                        className={[
+                          "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
+                          isCompleted ? "text-rsi-success" : "text-rsi-accent",
+                        ].join(" ")}
+                      >
                         {mission.rewardDisplay ??
                           `${Math.round(mission.rewardAuec / 1000)}k`}
+                        {isCompleted ? " · complete" : ""}
                         {isHidden ? " · hidden" : ""}
                       </span>
                       <span className="mt-2 font-semibold tracking-wide text-rsi-text">
@@ -181,31 +225,58 @@ export function SessionMissionsModal({
                         {mission.from.join(" · ")} → {mission.to.join(" · ")}
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      aria-label={
-                        isHidden
-                          ? `Show ${mission.title} in route`
-                          : `Hide ${mission.title} from route`
-                      }
-                      title={
-                        isHidden
-                          ? "Show in route table"
-                          : "Hide from route table"
-                      }
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onToggleHidden(mission.id, !isHidden);
-                      }}
-                      className={[
-                        "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
-                        isHidden
-                          ? "border-rsi-accent/40 text-rsi-accent hover:border-rsi-accent"
-                          : "border-rsi-border text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                      ].join(" ")}
-                    >
-                      <VisibilityIcon isHidden={isHidden} />
-                    </button>
+                    <div className="absolute right-2 top-2 flex gap-1">
+                      <button
+                        type="button"
+                        aria-label={
+                          isCompleted
+                            ? `Reopen ${mission.title}`
+                            : `Complete ${mission.title}`
+                        }
+                        title={
+                          isCompleted
+                            ? "Reopen mission (restore cargo to route)"
+                            : "Complete mission (drop cargo from route)"
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onToggleCompleted(mission.id, !isCompleted);
+                        }}
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
+                          isCompleted
+                            ? "border-rsi-success/50 text-rsi-success hover:border-rsi-success"
+                            : "border-rsi-border text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success",
+                        ].join(" ")}
+                      >
+                        <CompleteIcon isCompleted={isCompleted} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={
+                          isHidden
+                            ? `Show ${mission.title} in route`
+                            : `Hide ${mission.title} from route`
+                        }
+                        title={
+                          isHidden
+                            ? "Show in route table"
+                            : "Hide from route table"
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onToggleHidden(mission.id, !isHidden);
+                        }}
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
+                          isHidden
+                            ? "border-rsi-accent/40 text-rsi-accent hover:border-rsi-accent"
+                            : "border-rsi-border text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        <VisibilityIcon isHidden={isHidden} />
+                      </button>
+                    </div>
                   </li>
                 );
               })}
