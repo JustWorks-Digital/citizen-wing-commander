@@ -12,3 +12,5 @@ alwaysApply: true
 - Keep commits reviewable; do not force-push shared history.
 - AI agents: keep mid-task progress in gitignored Markdown under `.ai-progress/` (see `ai-progress.mdc`). Never commit those files.
 - Follow `naming.mdc` for files, components, DB fields, payloads, tokens, and domain terms (`Session`, `Mission`, `ChecklistItem`, …).
+- Keep agent replies very short/concise unless the user asks for detail.
+- On bug fixes for things that already existed or should have worked: 1–2 sentences covering root cause + fix.
