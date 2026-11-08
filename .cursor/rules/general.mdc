@@ -8,9 +8,11 @@ alwaysApply: true
 - Stack: Next.js (App Router) + TypeScript + Tailwind v4 + Storybook + Postgres/Drizzle. Keep one coherent Tailwind setup (no duplicate PostCSS / Tailwind configs).
 - Target repo: `JustWorks-Digital/citizen-wing-commander`. Do not push scaffolding to unrelated linked clones.
 - Prefer small, reusable primitives under `components/ui/` before page-specific markup.
+- One-off `/dev/*` preview pages are fine while polishing a UI section; delete them when the review is done. Not required for every tweak.
 - Document new standing conventions here or as a new file under `.cursor/rules/`, and link them from `.cursor/rules/README.md`.
 - Keep commits reviewable; do not force-push shared history.
 - AI agents: keep mid-task progress in gitignored Markdown under `.ai-progress/` (see `ai-progress.mdc`). Never commit those files.
 - Follow `naming.mdc` for files, components, DB fields, payloads, tokens, and domain terms (`Session`, `Mission`, `ChecklistItem`, …).
-- Keep agent replies very short/concise unless the user asks for detail.
+- Abstract API URLs behind named domains in `lib/api/` (see `api-endpoints.mdc`) — no hardcoded `/api/…` or third-party hosts at call sites.
+- Keep agent replies very short/concise unless the user asks for detail (see `concise-answers.mdc`).
 - On bug fixes for things that already existed or should have worked: 1–2 sentences covering root cause + fix.

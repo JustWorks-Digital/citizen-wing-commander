@@ -15,6 +15,7 @@ Living standards — refine as the domain grows. Prefer clear **hauling / missio
 | Components | `PascalCase.tsx` | `Button.tsx`, `MissionPanel.tsx` |
 | Hooks | `use` + `PascalCase` feature → file `useThing.ts` | `useSessionBundle.ts` |
 | Lib / utils | `camelCase.ts` or domain folder + `camelCase` | `lib/missions/types.ts` |
+| API path maps / clients | `lib/api/` — `appRoutes.ts`, `*Api.ts`, `externalEndpoints.mjs` | `lib/api/checklistApi.ts` |
 | DB | `db/schema.ts`, `db/queries/<domain>.ts` | `db/queries/sessions.ts` |
 | Stories | Co-locate `ComponentName.stories.tsx` or `stories/foundation/` | `Panel.stories.tsx` |
 | CSS / globals | keep `app/globals.css`; avoid random style sheets | — |
@@ -39,6 +40,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 - Exported handlers: framework names (`GET`, `POST`, …).
 - Helper functions: **verb + domain**, `camelCase` — `createSessionWithOwner`, `addHaulingMission`, `upsertChecklistItem`.
 - Prefer `db/queries/*` names that read as use-cases, not raw SQL verbs alone.
+- Client-facing path names live in `appApi` / `uexApi` / etc. (see `api-endpoints.mdc`) — never hardcode URL strings in UI.
 
 ## DB models & fields (Drizzle)
 

@@ -1,0 +1,129 @@
+# Accepted third-party data sources for Citizen Wing Commander.
+#
+# Agents (Cursor AI):
+# - Read this file BEFORE fetching Star Citizen / trade / starmap data.
+# - Prefer status: accepted sources for the matching purpose. Do not ask the user
+#   which site to use when an accepted source already covers the need.
+# - When you discover a useful new source and successfully use it, ADD an entry
+#   here (status: trial first; promote to accepted after a successful fixture fetch
+#   or repeated use). Include purpose, url, and used_by paths.
+# - Never delete entries yourself unless the user asks. Humans prune bad sources.
+#
+# Humans:
+# - Delete or set status: rejected on anything unreliable.
+# - Keep used_by in sync when moving scripts/fixtures.
+
+schema_version: 1
+
+sources:
+  - id: sc-wiki-starmap-locations
+    status: accepted
+    purpose:
+      - locations
+      - starmap
+    label: Star Citizen Wiki starmap locations
+    url: https://api.star-citizen.wiki/api/locations
+    docs_url: https://api.star-citizen.wiki/locations
+    used_by:
+      - scripts/fetch-sc-fixtures.mjs
+      - lib/fixtures/locations.json
+    notes: >
+      Paginated JSON API of in-game starmap locations (name, slug, type, system,
+      parent). Primary source for location name fixtures.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"
+
+  - id: uex-commodities
+    status: accepted
+    purpose:
+      - commodities
+      - cargo-types
+    label: UEX Corp commodities
+    url: https://api.uexcorp.uk/2.0/commodities
+    docs_url: https://uexcorp.space/api/documentation/id/get_commodities/
+    used_by:
+      - scripts/fetch-sc-fixtures.mjs
+      - lib/fixtures/commodities.json
+    notes: >
+      Full commodity list with codes/slugs/kinds. Primary source for cargo type
+      fixtures. No auth required for this endpoint. Colors joined from UEX
+      /items (commodity categories) color/color2 when present; otherwise kind
+      fallback crate pairs in fetch-sc-fixtures.mjs.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"
+
+  - id: uex-items-commodity-colors
+    status: accepted
+    purpose:
+      - commodity-colors
+      - cargo-crate-colors
+    label: UEX Corp items (commodity colors)
+    url: https://api.uexcorp.uk/2.0/items
+    docs_url: https://uexcorp.space/api/documentation/id/get_items/
+    used_by:
+      - scripts/fetch-sc-fixtures.mjs
+      - lib/fixtures/commodities.json
+    notes: >
+      Items endpoint exposes named color/color2. Fetched for commodity item
+      categories (36, 87) and joined onto commodities via id_item. Often empty
+      for commodities today — fixture still stores fields + kind fallback.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"
+
+  - id: uex-vehicles-ships
+    status: accepted
+    purpose:
+      - ships
+      - vehicles
+      - cargo-capacity
+    label: UEX Corp vehicles (spaceships)
+    url: https://api.uexcorp.uk/2.0/vehicles
+    docs_url: https://uexcorp.space/api/documentation/id/get_vehicles/
+    used_by:
+      - scripts/fetch-sc-fixtures.mjs
+      - lib/fixtures/ships.json
+    notes: >
+      Ship/vehicle list including cargo SCU capacity (`scu`). Fixture filters to
+      spaceships. Used for session ship selection and future bay capacity.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"
+
+  - id: sc-wiki-commodity-icons
+    status: accepted
+    purpose:
+      - commodity-icons
+      - cargo-icons
+    label: Star Citizen Wiki commodity icons
+    url: https://starcitizen.tools/Category:Commodity_icons
+    docs_url: https://starcitizen.tools/Category:Commodity_icons
+    used_by:
+      - scripts/fetch-commodity-icons.mjs
+      - public/icons/commodities/
+      - lib/fixtures/commodityIcons.json
+    notes: >
+      MediaWiki category of in-game commodity / inventory SVGs. Fetched via
+      starcitizen.tools api.php; prefer Inv Icon *.svg, with kind-level
+      fallbacks (Food, Medical, Metal, …) and Default. Manifest maps UEX
+      commodity slugs → public/icons/commodities filenames.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"
+
+  - id: uex-terminals-outdoor-freight
+    status: accepted
+    purpose:
+      - outdoor-freight-elevators
+      - loading-docks
+      - terminals
+    label: UEX Corp terminals (outdoor freight elevators)
+    url: https://api.uexcorp.uk/2.0/terminals
+    docs_url: https://uexcorp.space/api/documentation/id/get_terminals/
+    used_by:
+      - scripts/fetch-sc-fixtures.mjs
+      - lib/fixtures/locations.json
+    notes: >
+      Terminal rows expose has_freight_elevator (hangar/common) and
+      has_loading_dock (outdoor / external freight elevator). We join
+      has_loading_dock place names onto wiki location fixtures as
+      hasOutdoorFreightElevator. Unknown / false → no UI icon.
+    added: "2026-11-07"
+    last_verified: "2026-11-07"

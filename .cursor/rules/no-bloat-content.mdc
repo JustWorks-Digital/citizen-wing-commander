@@ -1,0 +1,33 @@
+---
+description: Avoid scaffold bloat and RSI/Spectrum product copy in UI
+alwaysApply: true
+---
+
+# No bloat content
+
+When creating pages, components, stories, or copy: ship only what the product needs. Do not pad UI with demo, meta, or borrowed branding.
+
+## Product identity
+
+- This app is **Citizen Wing Commander** (JustWorks Digital). It is **not** Spectrum, RSI.com, or any CIG tool.
+- Visual theme may be RSI/Spectrum-*inspired* (see `rsi-theme.mdc`). That does **not** mean naming or mimicking their products in UI copy, nav, CTAs, or status chrome.
+- Do **not** put labels like “Spectrum”, “Roberts Space Industries”, “CIG”, or faux org channels on product surfaces unless the user explicitly asks for that reference.
+
+## No scaffold filler
+
+- Avoid placeholder “systems check”, token lectures, Storybook launch ads, design-system marketing, or meta notes about Tailwind/`bg-rsi-*` on user-facing pages.
+- New elements: real domain content (sessions, missions, checklists, players) or a minimal empty state — not decorative industrial flavor text.
+- Storybook / foundation docs can document tokens and theme; the app shell should not.
+
+## Examples
+
+```tsx
+// ❌ BAD — looks like Spectrum / design-system demo
+<button>Spectrum</button>
+<p>Companion systems online</p>
+<p>Use bg-rsi-* and CSS variables — avoid one-off hex</p>
+
+// ✅ GOOD — product-owned, purpose-built
+<h1>Citizen Wing Commander</h1>
+<p>Plan hauling sessions with your crew.</p>
+```

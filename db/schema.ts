@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 import type {
   ChecklistItemProgressMeta,
   HaulingMissionPayload,
@@ -70,6 +71,37 @@ export const sessions = pgTable(
       .notNull(),
   },
   (table) => [uniqueIndex("sessions_join_code_uidx").on(table.joinCode)],
+);
+
+/**
+ * Nightly hauling / delivery run (checklist UI document).
+ * Soft-delete via `isActive=false` — rows are kept for history.
+ */
+export const deliverySessions = pgTable(
+  "delivery_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    /** false = soft-deleted (hidden from tabs, retained in DB). */
+    isActive: boolean("is_active").notNull().default(true),
+    /** Checklist document: ships + hauling rows. */
+    checklist: jsonb("checklist")
+      .$type<SessionChecklistModel>()
+      .notNull()
+      .default(sql`'{"sessionName":"","shipSlugs":[],"rows":[]}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("delivery_sessions_active_updated_idx").on(
+      table.isActive,
+      table.updatedAt,
+    ),
+  ],
 );
 
 export const sessionPlayers = pgTable(
@@ -204,6 +236,7 @@ export const checklistProgressRelations = relations(
 
 export type Player = typeof players.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+export type DeliverySession = typeof deliverySessions.$inferSelect;
 export type Mission = typeof missions.$inferSelect;
 export type ChecklistProgress = typeof checklistProgress.$inferSelect;
 export type HaulingMission = Mission & {

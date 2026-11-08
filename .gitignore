@@ -50,6 +50,10 @@ storybook-static
 .ai-progress/**
 *.ai-progress.md
 
+# Local runtime checklist store (MCP / UI shared state)
+.data/
+.data/**
+
 *storybook.log
 storybook-static
 debug-storybook.log

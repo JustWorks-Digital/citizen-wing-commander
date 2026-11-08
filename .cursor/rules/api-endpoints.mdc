@@ -1,0 +1,28 @@
+---
+description: Abstract API paths behind named domains — never hardcode URL strings at call sites
+alwaysApply: true
+---
+
+# API endpoint abstraction
+
+Do **not** scatter raw API URL strings in components, scripts, or feature code. Name the domain once; call sites use the name.
+
+## App (Next.js) routes
+
+- Canonical path map: `lib/api/appRoutes.ts` (`appApi.checklist`, `appApi.sessions`, …).
+- Prefer **domain clients** under `lib/api/` (e.g. `checklistApi.ts`) that import `appApi` — UI/hooks call `fetchChecklist` / `saveChecklist`, not `fetch("/api/…")`.
+- When adding a new `app/api/**/route.ts`, also add a named entry to `appApi` and a thin client helper if anything outside the route needs it.
+- Route handlers stay thin; they do not redefine their own path constants for clients.
+
+## External / third-party APIs
+
+- Canonical URL map: `lib/api/externalEndpoints.mjs` (imported by Node scripts and re-exported from `lib/api/externalEndpoints.ts` for the app).
+- Named groups by provider: `uexApi`, `scWikiApi`, `scToolsWikiApi`, …
+- Fixture / sync scripts must import these names — no inline `https://api.…` literals.
+- When adding or changing an external source, update **both** `externalEndpoints.mjs` and `.cursor/third-party-sources.yaml` (see `third-party-sources.mdc`).
+
+## Why
+
+- Path or host changes stay in one file.
+- Call sites read as domain intent (`uexApi.terminals`, `appApi.checklist`), not URL shape.
+- Easier to swap mocks, version prefixes, or alternate hosts later.

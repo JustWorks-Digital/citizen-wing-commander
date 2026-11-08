@@ -1,0 +1,11 @@
+---
+description: Keep answers short unless the user asks for detail
+alwaysApply: true
+---
+
+# Concise answers
+
+- Default to **very short** answers: a sentence or two, or a few bullets.
+- Do **not** pad with caveats, background, alternatives, or “how we’d implement it” unless asked.
+- If the user asks a yes/no or factual question, lead with the direct answer.
+- Expand only when they explicitly ask for detail, a plan, or implementation.

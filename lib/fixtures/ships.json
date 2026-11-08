@@ -1,0 +1,2703 @@
+{
+  "source": "https://api.uexcorp.uk/2.0/vehicles",
+  "sourceLabel": "UEX Corp vehicles (spaceships)",
+  "fetchedAt": "2026-11-08T01:16:56.115Z",
+  "items": [
+    {
+      "id": 1,
+      "slug": "orig-100i",
+      "name": "100i",
+      "nameFull": "Origin 100i",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "orig-125a",
+      "name": "125a",
+      "nameFull": "Origin 125a",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "orig-135c",
+      "name": "135c",
+      "nameFull": "Origin 135c",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 6,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "orig-300i",
+      "name": "300i",
+      "nameFull": "Origin 300i",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 8,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "orig-315p",
+      "name": "315p",
+      "nameFull": "Origin 315p",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 12,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "orig-325a",
+      "name": "325a",
+      "nameFull": "Origin 325a",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 7,
+      "slug": "orig-350r",
+      "name": "350r",
+      "nameFull": "Origin 350r",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 8,
+      "slug": "400i",
+      "name": "400i",
+      "nameFull": "Origin 400i",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 42,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 9,
+      "slug": "600i-executive-edition",
+      "name": "600i Executive Edition",
+      "nameFull": "Origin 600i Executive Edition",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 40,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 10,
+      "slug": "orig-600i-explorer",
+      "name": "600i Explorer",
+      "nameFull": "Origin 600i Explorer",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 44,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 11,
+      "slug": "orig-600i-touring",
+      "name": "600i Touring",
+      "nameFull": "Origin 600i Touring",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 20,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 12,
+      "slug": "orig-85x",
+      "name": "85X",
+      "nameFull": "Origin 85X",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 13,
+      "slug": "890-jump",
+      "name": "890 Jump",
+      "nameFull": "Origin 890 Jump",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 388,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 178,
+      "slug": "a1-spirit",
+      "name": "A1 Spirit",
+      "nameFull": "Crusader A1 Spirit",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 14,
+      "slug": "a2-hercules-starlifter",
+      "name": "A2 Hercules Starlifter",
+      "nameFull": "Crusader A2 Hercules Starlifter",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 234,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 15,
+      "slug": "apollo-medivac",
+      "name": "Apollo Medivac",
+      "nameFull": "RSI Apollo Medivac",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 32,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 16,
+      "slug": "apollo-triage",
+      "name": "Apollo Triage",
+      "nameFull": "RSI Apollo Triage",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 32,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 17,
+      "slug": "ares-inferno-starfighter",
+      "name": "Ares Inferno Starfighter",
+      "nameFull": "Crusader Ares Inferno Starfighter",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 18,
+      "slug": "ares-ion-starfighter",
+      "name": "Ares Ion Starfighter",
+      "nameFull": "Crusader Ares Ion Starfighter",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 19,
+      "slug": "arrastra",
+      "name": "Arrastra",
+      "nameFull": "RSI Arrastra",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 576,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 20,
+      "slug": "arrow",
+      "name": "Arrow",
+      "nameFull": "Anvil Arrow",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 255,
+      "slug": "anvl-asgard",
+      "name": "Asgard",
+      "nameFull": "Anvil Asgard",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 180,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 21,
+      "slug": "aurora-mk-i-cl",
+      "name": "Aurora Mk I CL",
+      "nameFull": "RSI Aurora Mk I CL",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 6,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 22,
+      "slug": "aurora-mk-i-es",
+      "name": "Aurora Mk I ES",
+      "nameFull": "RSI Aurora Mk I ES",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 3,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 23,
+      "slug": "aurora-mk-i-ln",
+      "name": "Aurora Mk I LN",
+      "nameFull": "RSI Aurora Mk I LN",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 3,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 24,
+      "slug": "aurora-mk-i-lx",
+      "name": "Aurora Mk I LX",
+      "nameFull": "RSI Aurora Mk I LX",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 3,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 25,
+      "slug": "aurora-mk-i-mr",
+      "name": "Aurora Mk I MR",
+      "nameFull": "RSI Aurora Mk I MR",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 3,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 279,
+      "slug": "aurora-mk-i-se",
+      "name": "Aurora Mk I SE",
+      "nameFull": "RSI Aurora Mk I SE",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 6,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 278,
+      "slug": "aurora-mk-ii",
+      "name": "Aurora Mk II",
+      "nameFull": "RSI Aurora Mk II",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 26,
+      "slug": "aegs-avenger-stalker",
+      "name": "Avenger Stalker",
+      "nameFull": "Aegis Avenger Stalker",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 27,
+      "slug": "aegs-avenger-titan",
+      "name": "Avenger Titan",
+      "nameFull": "Aegis Avenger Titan",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 8,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 28,
+      "slug": "aegs-avenger-titan-renegade",
+      "name": "Avenger Titan Renegade",
+      "nameFull": "Aegis Avenger Titan Renegade",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 8,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 29,
+      "slug": "aegs-avenger-warlock",
+      "name": "Avenger Warlock",
+      "nameFull": "Aegis Avenger Warlock",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 33,
+      "slug": "vncl-blade",
+      "name": "Blade",
+      "nameFull": "Esperia Blade",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 34,
+      "slug": "drak-buccaneer",
+      "name": "Buccaneer",
+      "nameFull": "Drake Buccaneer",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 179,
+      "slug": "c1-spirit",
+      "name": "C1 Spirit",
+      "nameFull": "Crusader C1 Spirit",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 64,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 35,
+      "slug": "c2-hercules-starlifter",
+      "name": "C2 Hercules Starlifter",
+      "nameFull": "Crusader C2 Hercules Starlifter",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 696,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 36,
+      "slug": "anvl-c8-pisces",
+      "name": "C8 Pisces",
+      "nameFull": "Anvil C8 Pisces",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 37,
+      "slug": "c8r-pisces-rescue",
+      "name": "C8R Pisces Rescue",
+      "nameFull": "Anvil C8R Pisces Rescue",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 38,
+      "slug": "anvl-c8x-pisces-expedition",
+      "name": "C8X Pisces Expedition",
+      "nameFull": "Anvil C8X Pisces Expedition",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 39,
+      "slug": "anvl-carrack",
+      "name": "Carrack",
+      "nameFull": "Anvil Carrack",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 456,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 40,
+      "slug": "anvl-carrack-expedition",
+      "name": "Carrack Expedition",
+      "nameFull": "Anvil Carrack Expedition",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 456,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 41,
+      "slug": "caterpillar",
+      "name": "Caterpillar",
+      "nameFull": "Drake Caterpillar",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 576,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 42,
+      "slug": "caterpillar-best-in-show-edition",
+      "name": "Caterpillar Best In Show Edition",
+      "nameFull": "Drake Caterpillar Best In Show Edition",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 576,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 43,
+      "slug": "caterpillar-pirate-edition",
+      "name": "Caterpillar Pirate Edition",
+      "nameFull": "Drake Caterpillar Pirate Edition",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 576,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 268,
+      "slug": "clipper",
+      "name": "Clipper",
+      "nameFull": "Drake Clipper",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 45,
+      "slug": "constellation-mk-iv-andromeda",
+      "name": "Constellation Mk IV Andromeda",
+      "nameFull": "RSI Constellation Mk IV Andromeda",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 46,
+      "slug": "constellation-mk-iv-aquila",
+      "name": "Constellation Mk IV Aquila",
+      "nameFull": "RSI Constellation Mk IV Aquila",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 47,
+      "slug": "constellation-mk-iv-phoenix",
+      "name": "Constellation Mk IV Phoenix",
+      "nameFull": "RSI Constellation Mk IV Phoenix",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 80,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 48,
+      "slug": "constellation-mk-iv-phoenix-emerald",
+      "name": "Constellation Mk IV Phoenix Emerald",
+      "nameFull": "RSI Constellation Mk IV Phoenix Emerald",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 80,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 49,
+      "slug": "constellation-mk-iv-taurus",
+      "name": "Constellation Mk IV Taurus",
+      "nameFull": "RSI Constellation Mk IV Taurus",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 174,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 292,
+      "slug": "constellation-mk-v-centaurus",
+      "name": "Constellation Mk V Centaurus",
+      "nameFull": "RSI Constellation Mk V Centaurus",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 240,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 50,
+      "slug": "drak-corsair",
+      "name": "Corsair",
+      "nameFull": "Drake Corsair",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 72,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 51,
+      "slug": "crucible",
+      "name": "Crucible",
+      "nameFull": "Anvil Crucible",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 240,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 52,
+      "slug": "drak-cutlass-black",
+      "name": "Cutlass Black",
+      "nameFull": "Drake Cutlass Black",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 46,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 53,
+      "slug": "cutlass-black-best-in-show-edition",
+      "name": "Cutlass Black Best In Show Edition",
+      "nameFull": "Drake Cutlass Black Best In Show Edition",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 46,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 54,
+      "slug": "drak-cutlass-blue",
+      "name": "Cutlass Blue",
+      "nameFull": "Drake Cutlass Blue",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 55,
+      "slug": "drak-cutlass-red",
+      "name": "Cutlass Red",
+      "nameFull": "Drake Cutlass Red",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 56,
+      "slug": "drak-cutlass-steel",
+      "name": "Cutlass Steel",
+      "nameFull": "Drake Cutlass Steel",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 57,
+      "slug": "drak-cutter",
+      "name": "Cutter",
+      "nameFull": "Drake Cutter",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 4,
+      "isCargo": true,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 59,
+      "slug": "drak-cutter-rambler",
+      "name": "Cutter Rambler",
+      "nameFull": "Drake Cutter Rambler",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 58,
+      "slug": "drak-cutter-scout",
+      "name": "Cutter Scout",
+      "nameFull": "Drake Cutter Scout",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 66,
+      "slug": "banu-defender",
+      "name": "Defender",
+      "nameFull": "Banu Defender",
+      "manufacturer": "Banu Souli",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 67,
+      "slug": "dragonfly-black",
+      "name": "Dragonfly Black",
+      "nameFull": "Drake Dragonfly Black",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 68,
+      "slug": "drak-dragonfly-yellow",
+      "name": "Dragonfly Yellowjacket",
+      "nameFull": "Drake Dragonfly Yellowjacket",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 180,
+      "slug": "e1-spirit",
+      "name": "E1 Spirit",
+      "nameFull": "Crusader E1 Spirit",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 69,
+      "slug": "aegs-eclipse",
+      "name": "Eclipse",
+      "nameFull": "Aegis Eclipse",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 70,
+      "slug": "endeavor",
+      "name": "Endeavor",
+      "nameFull": "MISC Endeavor",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 500,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 71,
+      "slug": "expanse",
+      "name": "Expanse",
+      "nameFull": "MISC Expanse",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 128,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 72,
+      "slug": "f7a-hornet-mk-i",
+      "name": "F7A Hornet Mk I",
+      "nameFull": "Anvil F7A Hornet Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 223,
+      "slug": "f7a-hornet-mk-ii",
+      "name": "F7A Hornet Mk II",
+      "nameFull": "Anvil F7A Hornet Mk II",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 224,
+      "slug": "anvl-hornet-f7c",
+      "name": "F7C Hornet Mk I",
+      "nameFull": "Anvil F7C Hornet Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 73,
+      "slug": "anvl-hornet-f7c-mk2",
+      "name": "F7C Hornet Mk II",
+      "nameFull": "Anvil F7C Hornet Mk II",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 74,
+      "slug": "anvl-hornet-f7c-wildfire",
+      "name": "F7C Hornet Wildfire Mk I",
+      "nameFull": "Anvil F7C Hornet Wildfire Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 76,
+      "slug": "f7c-m-super-hornet-heartseeker-mk-i",
+      "name": "F7C-M Super Hornet Heartseeker Mk I",
+      "nameFull": "Anvil F7C-M Super Hornet Heartseeker Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 75,
+      "slug": "anvl-hornet-f7cm",
+      "name": "F7C-M Super Hornet Mk I",
+      "nameFull": "Anvil F7C-M Super Hornet Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 250,
+      "slug": "anvl-hornet-f7cm-mk2",
+      "name": "F7C-M Super Hornet Mk II",
+      "nameFull": "Anvil F7C-M Super Hornet Mk II",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 77,
+      "slug": "anvl-hornet-f7cr",
+      "name": "F7C-R Hornet Tracker Mk I",
+      "nameFull": "Anvil F7C-R Hornet Tracker Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 246,
+      "slug": "anvl-hornet-f7cr-mk2",
+      "name": "F7C-R Hornet Tracker Mk II",
+      "nameFull": "Anvil F7C-R Hornet Tracker Mk II",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 78,
+      "slug": "anvl-hornet-f7cs",
+      "name": "F7C-S Hornet Ghost Mk I",
+      "nameFull": "Anvil F7C-S Hornet Ghost Mk I",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 247,
+      "slug": "anvl-hornet-f7cs-mk2",
+      "name": "F7C-S Hornet Ghost Mk II",
+      "nameFull": "Anvil F7C-S Hornet Ghost Mk II",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 79,
+      "slug": "anvl-lightning-f8c",
+      "name": "F8C Lightning",
+      "nameFull": "Anvil F8C Lightning",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 222,
+      "slug": "anvl-lightning-f8c-exec",
+      "name": "F8C Lightning Executive Edition",
+      "nameFull": "Anvil F8C Lightning Executive Edition",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 234,
+      "slug": "misc-fortune",
+      "name": "Fortune",
+      "nameFull": "MISC Fortune",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 16,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 80,
+      "slug": "misc-freelancer",
+      "name": "Freelancer",
+      "nameFull": "MISC Freelancer",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 66,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 81,
+      "slug": "misc-freelancer-dur",
+      "name": "Freelancer DUR",
+      "nameFull": "MISC Freelancer DUR",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 36,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 82,
+      "slug": "misc-freelancer-max",
+      "name": "Freelancer MAX",
+      "nameFull": "MISC Freelancer MAX",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 120,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 83,
+      "slug": "misc-freelancer-mis",
+      "name": "Freelancer MIS",
+      "nameFull": "MISC Freelancer MIS",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 36,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 84,
+      "slug": "fury",
+      "name": "Fury",
+      "nameFull": "Mirai Fury",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 85,
+      "slug": "misc-fury-lx",
+      "name": "Fury LX",
+      "nameFull": "Mirai Fury LX",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 86,
+      "slug": "fury-mx",
+      "name": "Fury MX",
+      "nameFull": "Mirai Fury MX",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 90,
+      "slug": "galaxy",
+      "name": "Galaxy",
+      "nameFull": "RSI Galaxy",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 64,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 91,
+      "slug": "genesis-starliner",
+      "name": "Genesis Starliner",
+      "nameFull": "Crusader Genesis Starliner",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 300,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 92,
+      "slug": "anvl-gladiator",
+      "name": "Gladiator",
+      "nameFull": "Anvil Gladiator",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 93,
+      "slug": "aegs-gladius",
+      "name": "Gladius",
+      "nameFull": "Aegis Gladius",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 94,
+      "slug": "gladius-pirate",
+      "name": "Gladius Pirate",
+      "nameFull": "Aegis Gladius Pirate",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 95,
+      "slug": "aegs-gladius-valiant",
+      "name": "Gladius Valiant",
+      "nameFull": "Aegis Gladius Valiant",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 96,
+      "slug": "vncl-glaive",
+      "name": "Glaive",
+      "nameFull": "Esperia Glaive",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 251,
+      "slug": "golem",
+      "name": "Golem",
+      "nameFull": "Drake Golem",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 32,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 269,
+      "slug": "golem-ox",
+      "name": "Golem Ox",
+      "nameFull": "Drake Golem Ox",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 64,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 238,
+      "slug": "mrai-guardian",
+      "name": "Guardian",
+      "nameFull": "Mirai Guardian",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 257,
+      "slug": "guardian-mx",
+      "name": "Guardian MX",
+      "nameFull": "Mirai Guardian MX",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 239,
+      "slug": "guardian-qi",
+      "name": "Guardian QI",
+      "nameFull": "Mirai Guardian QI",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 97,
+      "slug": "aegs-hammerhead",
+      "name": "Hammerhead",
+      "nameFull": "Aegis Hammerhead",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 40,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 98,
+      "slug": "hammerhead-best-in-show-edition",
+      "name": "Hammerhead Best In Show Edition",
+      "nameFull": "Aegis Hammerhead Best In Show Edition",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 40,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 99,
+      "slug": "anvl-hawk",
+      "name": "Hawk",
+      "nameFull": "Anvil Hawk",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 100,
+      "slug": "drak-herald",
+      "name": "Herald",
+      "nameFull": "Drake Herald",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 275,
+      "slug": "hermes",
+      "name": "Hermes",
+      "nameFull": "RSI Hermes",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 288,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ]
+    },
+    {
+      "id": 101,
+      "slug": "cnou-hoverquad",
+      "name": "HoverQuad",
+      "nameFull": "C.O. HoverQuad",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 102,
+      "slug": "misc-hull-a",
+      "name": "Hull A",
+      "nameFull": "MISC Hull A",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 64,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 103,
+      "slug": "hull-b",
+      "name": "Hull B",
+      "nameFull": "MISC Hull B",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 512,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        6,
+        8,
+        12,
+        16,
+        32
+      ]
+    },
+    {
+      "id": 104,
+      "slug": "hull-c",
+      "name": "Hull C",
+      "nameFull": "MISC Hull C",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 4608,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 105,
+      "slug": "hull-d",
+      "name": "Hull D",
+      "nameFull": "MISC Hull D",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 6912,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 106,
+      "slug": "hull-e",
+      "name": "Hull E",
+      "nameFull": "MISC Hull E",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 12288,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 107,
+      "slug": "anvl-hurricane",
+      "name": "Hurricane",
+      "nameFull": "Anvil Hurricane",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 108,
+      "slug": "idris-m",
+      "name": "Idris-M",
+      "nameFull": "Aegis Idris-M",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 1326,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 109,
+      "slug": "idris-p",
+      "name": "Idris-P",
+      "nameFull": "Aegis Idris-P",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 1374,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 236,
+      "slug": "crus-intrepid",
+      "name": "Intrepid",
+      "nameFull": "Crusader Intrepid",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 8,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 230,
+      "slug": "ironclad",
+      "name": "Ironclad",
+      "nameFull": "Drake Ironclad",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 2200,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 231,
+      "slug": "ironclad-assault",
+      "name": "Ironclad Assault",
+      "nameFull": "Drake Ironclad Assault",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 1440,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 110,
+      "slug": "aegs-javelin",
+      "name": "Javelin",
+      "nameFull": "Aegis Javelin",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 111,
+      "slug": "khartu-al",
+      "name": "Khartu-al",
+      "nameFull": "Aopoa Khartu-al",
+      "manufacturer": "Aopoa",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 112,
+      "slug": "kraken",
+      "name": "Kraken",
+      "nameFull": "Drake Kraken",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 3792,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 113,
+      "slug": "kraken-privateer",
+      "name": "Kraken Privateer",
+      "nameFull": "Drake Kraken Privateer",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 768,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 264,
+      "slug": "l-21-wolf",
+      "name": "L-21 Wolf",
+      "nameFull": "Kruger L-21 Wolf",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 267,
+      "slug": "l-22-alpha-wolf",
+      "name": "L-22 Alpha Wolf",
+      "nameFull": "Kruger L-22 Alpha Wolf",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 114,
+      "slug": "legionnaire",
+      "name": "Legionnaire",
+      "nameFull": "Anvil Legionnaire",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 115,
+      "slug": "liberator",
+      "name": "Liberator",
+      "nameFull": "Anvil Liberator",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 400,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 117,
+      "slug": "m2-hercules-starlifter",
+      "name": "M2 Hercules Starlifter",
+      "nameFull": "Crusader M2 Hercules Starlifter",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 522,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 118,
+      "slug": "m50",
+      "name": "M50",
+      "nameFull": "Origin M50",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 283,
+      "slug": "m80",
+      "name": "M80",
+      "nameFull": "Origin M80",
+      "manufacturer": "Origin Jumpworks",
+      "cargoScu": 2,
+      "isCargo": true,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 119,
+      "slug": "rsi-mantis",
+      "name": "Mantis",
+      "nameFull": "RSI Mantis",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 120,
+      "slug": "merchantman",
+      "name": "Merchantman",
+      "nameFull": "Banu Merchantman",
+      "manufacturer": "Banu Souli",
+      "cargoScu": 2880,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 121,
+      "slug": "mercury-star-runner",
+      "name": "Mercury Star Runner",
+      "nameFull": "Crusader Mercury Star Runner",
+      "manufacturer": "Crusader Industries",
+      "cargoScu": 114,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 263,
+      "slug": "meteor",
+      "name": "Meteor",
+      "nameFull": "RSI Meteor",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 122,
+      "slug": "argo-mole",
+      "name": "MOLE",
+      "nameFull": "Argo MOLE",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 32,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 123,
+      "slug": "mole-carbon-edition",
+      "name": "MOLE Carbon Edition",
+      "nameFull": "Argo MOLE Carbon Edition",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 124,
+      "slug": "mole-talus-edition",
+      "name": "MOLE Talus Edition",
+      "nameFull": "Argo MOLE Talus Edition",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 276,
+      "slug": "moth",
+      "name": "MOTH",
+      "nameFull": "Argo MOTH",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 224,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 125,
+      "slug": "mpuv-cargo",
+      "name": "MPUV Cargo",
+      "nameFull": "Argo MPUV Cargo",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 2,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 126,
+      "slug": "mpuv-personnel",
+      "name": "MPUV Personnel",
+      "nameFull": "Argo MPUV Personnel",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 227,
+      "slug": "mpuv-tractor",
+      "name": "MPUV Tractor",
+      "nameFull": "Argo MPUV Tractor",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 16,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 128,
+      "slug": "cnou-mustang-alpha",
+      "name": "Mustang Alpha",
+      "nameFull": "C.O. Mustang Alpha",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 129,
+      "slug": "mustang-alpha-vindicator",
+      "name": "Mustang Alpha Vindicator",
+      "nameFull": "C.O. Mustang Alpha Vindicator",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 4,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 130,
+      "slug": "cnou-mustang-beta",
+      "name": "Mustang Beta",
+      "nameFull": "C.O. Mustang Beta",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 131,
+      "slug": "cnou-mustang-delta",
+      "name": "Mustang Delta",
+      "nameFull": "C.O. Mustang Delta",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 132,
+      "slug": "cnou-mustang-gamma",
+      "name": "Mustang Gamma",
+      "nameFull": "C.O. Mustang Gamma",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 133,
+      "slug": "cnou-mustang-omega",
+      "name": "Mustang Omega",
+      "nameFull": "C.O. Mustang Omega",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 134,
+      "slug": "nautilus",
+      "name": "Nautilus",
+      "nameFull": "Aegis Nautilus",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 64,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 135,
+      "slug": "nautilus-solstice-edition",
+      "name": "Nautilus Solstice Edition",
+      "nameFull": "Aegis Nautilus Solstice Edition",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 64,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 136,
+      "slug": "cnou-nomad",
+      "name": "Nomad",
+      "nameFull": "C.O. Nomad",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 24,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 138,
+      "slug": "xian-nox",
+      "name": "Nox",
+      "nameFull": "Aopoa Nox",
+      "manufacturer": "Aopoa",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 139,
+      "slug": "xian-nox-kue",
+      "name": "Nox Kue",
+      "nameFull": "Aopoa Nox Kue",
+      "manufacturer": "Aopoa",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 286,
+      "slug": "odin",
+      "name": "Odin",
+      "nameFull": "Anvil Odin",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 6000,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 140,
+      "slug": "odyssey",
+      "name": "Odyssey",
+      "nameFull": "MISC Odyssey",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 252,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 141,
+      "slug": "orion",
+      "name": "Orion",
+      "nameFull": "RSI Orion",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 384,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 142,
+      "slug": "krig-p52-merlin",
+      "name": "P-52 Merlin",
+      "nameFull": "Kruger P-52 Merlin",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 143,
+      "slug": "krig-p72-archimedes",
+      "name": "P-72 Archimedes",
+      "nameFull": "Kruger P-72 Archimedes",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 144,
+      "slug": "krig-p72-archimedes-emerald",
+      "name": "P-72 Archimedes Emerald",
+      "nameFull": "Kruger P-72 Archimedes Emerald",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 249,
+      "slug": "paladin",
+      "name": "Paladin",
+      "nameFull": "Anvil Paladin",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 4,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 145,
+      "slug": "perseus",
+      "name": "Perseus",
+      "nameFull": "RSI Perseus",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 146,
+      "slug": "pioneer",
+      "name": "Pioneer",
+      "nameFull": "C.O. Pioneer",
+      "manufacturer": "Consolidated Outland",
+      "cargoScu": 1000,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 282,
+      "slug": "pitbull",
+      "name": "Pitbull",
+      "nameFull": "Drake Pitbull",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 147,
+      "slug": "polaris",
+      "name": "Polaris",
+      "nameFull": "RSI Polaris",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 576,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 148,
+      "slug": "misc-prospector",
+      "name": "Prospector",
+      "nameFull": "MISC Prospector",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 149,
+      "slug": "prowler",
+      "name": "Prowler",
+      "nameFull": "Esperia Prowler",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 262,
+      "slug": "prowler-utility",
+      "name": "Prowler Utility",
+      "nameFull": "Esperia Prowler Utility",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 32,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 151,
+      "slug": "argo-raft",
+      "name": "RAFT",
+      "nameFull": "Argo RAFT",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 192,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 152,
+      "slug": "railen",
+      "name": "Railen",
+      "nameFull": "Gatac Railen",
+      "manufacturer": "Gatac Manufacture",
+      "cargoScu": 640,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 156,
+      "slug": "misc-razor",
+      "name": "Razor",
+      "nameFull": "Mirai Razor",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 157,
+      "slug": "misc-razor-ex",
+      "name": "Razor EX",
+      "nameFull": "Mirai Razor EX",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 158,
+      "slug": "misc-razor-lx",
+      "name": "Razor LX",
+      "nameFull": "Mirai Razor LX",
+      "manufacturer": "Mirai",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 159,
+      "slug": "aegs-reclaimer",
+      "name": "Reclaimer",
+      "nameFull": "Aegis Reclaimer",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 420,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 160,
+      "slug": "reclaimer-best-in-show-edition",
+      "name": "Reclaimer Best In Show Edition",
+      "nameFull": "Aegis Reclaimer Best In Show Edition",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 180,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 161,
+      "slug": "redeemer",
+      "name": "Redeemer",
+      "nameFull": "Aegis Redeemer",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 2,
+      "isCargo": false,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 162,
+      "slug": "misc-reliant",
+      "name": "Reliant Kore",
+      "nameFull": "MISC Reliant Kore",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 6,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 163,
+      "slug": "misc-reliant-mako",
+      "name": "Reliant Mako",
+      "nameFull": "MISC Reliant Mako",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 164,
+      "slug": "misc-reliant-sen",
+      "name": "Reliant Sen",
+      "nameFull": "MISC Reliant Sen",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 165,
+      "slug": "misc-reliant-tana",
+      "name": "Reliant Tana",
+      "nameFull": "MISC Reliant Tana",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 1,
+      "isCargo": false,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 166,
+      "slug": "retaliator",
+      "name": "Retaliator",
+      "nameFull": "Aegis Retaliator",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 74,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 167,
+      "slug": "retaliator-bomber",
+      "name": "Retaliator Bomber",
+      "nameFull": "Aegis Retaliator Bomber",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 74,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 274,
+      "slug": "s-65-stingray",
+      "name": "S-65 Stingray",
+      "nameFull": "Kruger S-65 Stingray",
+      "manufacturer": "Kruger Intergalactic",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 170,
+      "slug": "aegs-sabre",
+      "name": "Sabre",
+      "nameFull": "Aegis Sabre",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 171,
+      "slug": "aegs-sabre-comet",
+      "name": "Sabre Comet",
+      "nameFull": "Aegis Sabre Comet",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 228,
+      "slug": "aegs-sabre-firebird",
+      "name": "Sabre Firebird",
+      "nameFull": "Aegis Sabre Firebird",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 232,
+      "slug": "aegs-sabre-peregrine",
+      "name": "Sabre Peregrine",
+      "nameFull": "Aegis Sabre Peregrine",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 172,
+      "slug": "aegs-sabre-raven",
+      "name": "Sabre Raven",
+      "nameFull": "Aegis Sabre Raven",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 290,
+      "slug": "sabre-raven-ex",
+      "name": "Sabre Raven EX",
+      "nameFull": "Aegis Sabre Raven EX",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 291,
+      "slug": "sabre-raven-ex",
+      "name": "Sabre Raven EX",
+      "nameFull": "Aegis Sabre Raven EX",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 271,
+      "slug": "salvation",
+      "name": "Salvation",
+      "nameFull": "RSI Salvation",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 6,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 173,
+      "slug": "san-tok-y-i",
+      "name": "San tok.Yāi",
+      "nameFull": "Aopoa San tok.Yāi",
+      "manufacturer": "Aopoa",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 174,
+      "slug": "scorpius",
+      "name": "Scorpius",
+      "nameFull": "RSI Scorpius",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 175,
+      "slug": "rsi-scorpius-antares",
+      "name": "Scorpius Antares",
+      "nameFull": "RSI Scorpius Antares",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 176,
+      "slug": "scythe",
+      "name": "Scythe",
+      "nameFull": "Vanduul Scythe",
+      "manufacturer": "Vanduul Clans",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 266,
+      "slug": "shiv",
+      "name": "Shiv",
+      "nameFull": "Grey's Market Shiv",
+      "manufacturer": "Grey&apos;s Market",
+      "cargoScu": 32,
+      "isCargo": true,
+      "containerSizes": []
+    },
+    {
+      "id": 181,
+      "slug": "srv",
+      "name": "SRV",
+      "nameFull": "Argo SRV",
+      "manufacturer": "Argo Astronautics",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 182,
+      "slug": "misc-starfarer",
+      "name": "Starfarer",
+      "nameFull": "MISC Starfarer",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 291,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 183,
+      "slug": "misc-starfarer-gemini",
+      "name": "Starfarer Gemini",
+      "nameFull": "MISC Starfarer Gemini",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 291,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 243,
+      "slug": "starlancer-bld",
+      "name": "Starlancer BLD",
+      "nameFull": "MISC Starlancer BLD",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 242,
+      "slug": "starlancer-max",
+      "name": "Starlancer MAX",
+      "nameFull": "MISC Starlancer MAX",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 224,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 241,
+      "slug": "starlancer-tac",
+      "name": "Starlancer TAC",
+      "nameFull": "MISC Starlancer TAC",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 96,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 284,
+      "slug": "starlite",
+      "name": "Starlite",
+      "nameFull": "MISC Starlite",
+      "manufacturer": "Musashi Industrial and Starflight Concern",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 265,
+      "slug": "stinger",
+      "name": "Stinger",
+      "nameFull": "Esperia Stinger",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 188,
+      "slug": "gama-syulen",
+      "name": "Syulen",
+      "nameFull": "Gatac Syulen",
+      "manufacturer": "Gatac Manufacture",
+      "cargoScu": 6,
+      "isCargo": true,
+      "containerSizes": [
+        1
+      ]
+    },
+    {
+      "id": 189,
+      "slug": "espr-talon",
+      "name": "Talon",
+      "nameFull": "Esperia Talon",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 190,
+      "slug": "espr-talon-shrike",
+      "name": "Talon Shrike",
+      "nameFull": "Esperia Talon Shrike",
+      "manufacturer": "Esperia Incorporation",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 191,
+      "slug": "anvl-terrapin",
+      "name": "Terrapin",
+      "nameFull": "Anvil Terrapin",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 248,
+      "slug": "anvl-terrapin-medic",
+      "name": "Terrapin Medic",
+      "nameFull": "Anvil Terrapin Medic",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 285,
+      "slug": "tiburon",
+      "name": "Tiburon",
+      "nameFull": "Aegis Tiburon",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 64,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 287,
+      "slug": "tyilui",
+      "name": "Tyilui",
+      "nameFull": "Gatac Tyilui",
+      "manufacturer": "Gatac Manufacture",
+      "cargoScu": 96,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        6,
+        8,
+        16,
+        24
+      ]
+    },
+    {
+      "id": 194,
+      "slug": "anvl-valkyrie",
+      "name": "Valkyrie",
+      "nameFull": "Anvil Valkyrie",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 90,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 195,
+      "slug": "valkyrie-liberator-edition",
+      "name": "Valkyrie Liberator Edition",
+      "nameFull": "Anvil Valkyrie Liberator Edition",
+      "manufacturer": "Anvil Aerospace",
+      "cargoScu": 30,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 196,
+      "slug": "aegs-vanguard-harbinger",
+      "name": "Vanguard Harbinger",
+      "nameFull": "Aegis Vanguard Harbinger",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 197,
+      "slug": "aegs-vanguard-hoplite",
+      "name": "Vanguard Hoplite",
+      "nameFull": "Aegis Vanguard Hoplite",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 198,
+      "slug": "aegs-vanguard-sentinel",
+      "name": "Vanguard Sentinel",
+      "nameFull": "Aegis Vanguard Sentinel",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 199,
+      "slug": "aegs-vanguard",
+      "name": "Vanguard Warden",
+      "nameFull": "Aegis Vanguard Warden",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 0,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 200,
+      "slug": "vulcan",
+      "name": "Vulcan",
+      "nameFull": "Aegis Vulcan",
+      "manufacturer": "Aegis Dynamics",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": []
+    },
+    {
+      "id": 201,
+      "slug": "vulture",
+      "name": "Vulture",
+      "nameFull": "Drake Vulture",
+      "manufacturer": "Drake Interplanetary",
+      "cargoScu": 12,
+      "isCargo": false,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "id": 207,
+      "slug": "zeus-mk-ii-cl",
+      "name": "Zeus Mk II CL",
+      "nameFull": "RSI Zeus Mk II CL",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 128,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        24,
+        32
+      ]
+    },
+    {
+      "id": 205,
+      "slug": "zeus-mk-ii-es",
+      "name": "Zeus Mk II ES",
+      "nameFull": "RSI Zeus Mk II ES",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 32,
+      "isCargo": true,
+      "containerSizes": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ]
+    },
+    {
+      "id": 206,
+      "slug": "zeus-mk-ii-mr",
+      "name": "Zeus Mk II MR",
+      "nameFull": "RSI Zeus Mk II MR",
+      "manufacturer": "Roberts Space Industries",
+      "cargoScu": 16,
+      "isCargo": false,
+      "containerSizes": []
+    }
+  ]
+}

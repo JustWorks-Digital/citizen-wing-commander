@@ -1,0 +1,24 @@
+---
+description: Registry of accepted third-party SC data sources
+alwaysApply: true
+---
+
+# Third-party data sources
+
+Canonical registry: **`.cursor/third-party-sources.yaml`**
+
+## Agent behavior
+
+- Before scraping or calling external Star Citizen / trade / starmap APIs, **read the registry**.
+- If an `accepted` (or solid `trial`) source already matches the purpose, **use it** — do not ask the user which website to use.
+- When you find a new useful source and successfully use it, **add an entry** to the YAML (`status: trial`, then `accepted` after a good fixture pull). Fill `id`, `purpose`, `url`, `used_by`, `notes`, `added`.
+- **Do not delete** registry entries unless the user asks. Humans remove or mark `rejected` when a source is bad.
+- Keep `used_by` paths accurate when adding scripts or fixtures.
+
+## Status values
+
+| Status | Meaning |
+| --- | --- |
+| `accepted` | Prefer this source for its `purpose` |
+| `trial` | Newly added; OK to use, promote after proven |
+| `rejected` | Do not use (leave for history, or human deletes) |
