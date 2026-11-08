@@ -26,9 +26,11 @@ Postgres + Drizzle. See `.cursor/rules/database.mdc`.
 
 ```bash
 cp .env.example .env.local   # set DATABASE_URL
-npm run db:generate          # after schema edits
-npm run db:migrate           # apply drizzle/*.sql
+npm run db:generate          # after schema edits → drizzle/*.sql
+npm run db:upgrade           # apply pending migrations (deploy-safe)
 ```
+
+Production / staging deploys: set `DATABASE_URL` and run `npm run db:upgrade` (same script as local).
 
 ## Scripts
 
@@ -39,5 +41,6 @@ npm run db:migrate           # apply drizzle/*.sql
 | `npm run build-storybook` | Static Storybook build |
 | `npm run lint` | ESLint |
 | `npm run db:generate` | Generate SQL from `db/schema.ts` |
-| `npm run db:migrate` | Apply migrations |
+| `npm run db:upgrade` | Apply pending migrations (`scripts/db-upgrade.mjs`) |
+| `npm run db:migrate` | Alias for `db:upgrade` |
 | `npm run db:studio` | Drizzle Studio |

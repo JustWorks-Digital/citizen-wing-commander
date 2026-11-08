@@ -21,6 +21,10 @@ export const BaijiniPoint: Story = {
   args: { locationSlug: "baijini-point" },
 };
 
+export const PortTressler: Story = {
+  args: { locationSlug: "port-tressler" },
+};
+
 export const SeraphimStation: Story = {
   args: { locationSlug: "seraphim-station" },
 };

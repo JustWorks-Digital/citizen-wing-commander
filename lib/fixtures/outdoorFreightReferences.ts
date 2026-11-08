@@ -4,6 +4,7 @@
  */
 const OUTDOOR_FREIGHT_REFERENCES: Record<string, string> = {
   "baijini-point": "/images/outdoor-freight-elevators/baijini-point.jpg",
+  "port-tressler": "/images/outdoor-freight-elevators/port-tressler.jpg",
   "seraphim-station": "/images/outdoor-freight-elevators/seraphim-station.jpg",
 };
 

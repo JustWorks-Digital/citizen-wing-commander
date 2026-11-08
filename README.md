@@ -24,7 +24,9 @@ New UI must have stories before commit. See `CONTRIBUTING.md` and `.cursor/rules
 Postgres + Drizzle (`db/schema.ts`). Copy `.env.example` → `.env.local`, then:
 
 ```bash
-npm run db:migrate
+npm run db:upgrade   # apply pending drizzle/*.sql (also: db:migrate)
 ```
+
+Deploy / CI should run the same upgrade script with `DATABASE_URL` set (`scripts/db-upgrade.mjs`).
 
 Minimal proof routes: `GET /api/health/db`, `GET|POST /api/sessions`.

@@ -11,10 +11,12 @@ alwaysApply: true
 - **Queries:** prefer helpers under `db/queries/`; keep route handlers thin.
 - **JSON/JSONB:** store large mission/checklist bodies in `missions.payload` (and small progress `meta`). Normalize sessions, players, membership, mission lists, and progress rows for querying.
 - **Mission types:** use `mission_type` enum / `payload.kind`. Start with `hauling`; add new enum values + payload types when expanding — avoid one-off tables per mission flavor unless querying demands it.
-- **Migrations:**
+- **Migrations (upgrade scripts):**
   1. Change `db/schema.ts` (+ types if needed).
   2. `npm run db:generate` → review SQL under `drizzle/`.
-  3. Apply with `npm run db:migrate` (or `db:push` for throwaway local prototypes only).
+  3. Apply with `npm run db:upgrade` (alias: `db:migrate`) via `scripts/db-upgrade.mjs`.
   4. Commit schema + generated SQL + `drizzle/meta` together.
+  5. On deploy, run `DATABASE_URL=… npm run db:upgrade` before/with app start — uses drizzle-orm migrator (no drizzle-kit required in production).
+- Prefer `db:upgrade` over `db:push` outside throwaway local prototypes.
 - **Env:** `DATABASE_URL` from `.env.example` → `.env.local`. Never commit secrets.
 - Do not hand-edit applied production migration history; add a new migration instead.
