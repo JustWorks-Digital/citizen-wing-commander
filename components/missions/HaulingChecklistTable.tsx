@@ -246,7 +246,12 @@ function LocationHeader({
         </button>
       </div>
       {hasOutdoorFreightElevator ? (
-        <OutdoorFreightIcon locationSlug={row.locationSlug} />
+        <div className="mt-0.5 flex items-center gap-1.5 text-rsi-text-secondary">
+          <OutdoorFreightIcon locationSlug={row.locationSlug} />
+          <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em]">
+            Outdoor freight
+          </span>
+        </div>
       ) : null}
     </div>
   );

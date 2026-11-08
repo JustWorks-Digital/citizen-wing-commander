@@ -21,6 +21,19 @@ export const BaijiniPoint: Story = {
   args: { locationSlug: "baijini-point" },
 };
 
+/** Checklist row treatment: glyph + inline label. */
+export const WithInlineLabel: Story = {
+  args: { locationSlug: "everus-harbor" },
+  render: (args) => (
+    <div className="flex items-center gap-1.5 text-rsi-text-secondary">
+      <OutdoorFreightIcon {...args} />
+      <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em]">
+        Outdoor freight
+      </span>
+    </div>
+  ),
+};
+
 export const PortTressler: Story = {
   args: { locationSlug: "port-tressler" },
 };
