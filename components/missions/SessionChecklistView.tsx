@@ -567,6 +567,7 @@ export function SessionChecklistView({
 
       <HaulingChecklistTable
         rows={session.rows}
+        shipSlug={selectedShipSlug}
         onToggle={(rowId) => {
           persistSession(
             applySessionCompletionTiming({

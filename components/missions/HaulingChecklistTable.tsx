@@ -13,16 +13,25 @@ import {
   formatDistanceToNext,
   type HaulingChecklistRow,
   type LegKind,
+  type ShipStorageLocation,
 } from "@/lib/missions/mockSession";
-import {
-  buildShipStorageBars,
-  type ShipStorageBar,
-} from "@/lib/missions/shipStorageBars";
+import type { CargoGridStorageLocation } from "@/lib/ships/cargoGrids";
+import type { CargoPlacementSegment } from "@/lib/ships/cargoGridPlacement";
+import { CargoStorageGridModal } from "./CargoStorageGridModal";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
   onToggle: (rowId: string) => void;
+  /** Active session ship — used for precise bay grid View. */
+  shipSlug?: string | null;
+};
+
+type StorageGridViewTarget = {
+  zone: CargoGridStorageLocation;
+  locationLabel: string;
+  segments: CargoPlacementSegment[];
+  rowId: string;
 };
 
 function CopyIcon({ className }: { className?: string }) {
@@ -66,6 +75,20 @@ function legKindBadges(legKind: LegKind): { label: string; variant: BadgeVariant
 }
 
 type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
+
+function zoneForCargoLine(
+  row: HaulingChecklistRow,
+  line: CargoLine,
+): ShipStorageLocation {
+  const delivery = row.cargoDeliveries.find((entry) => {
+    if (entry.commoditySlug !== line.commoditySlug) return false;
+    if (entry.scu !== line.scu) return false;
+    if (line.role == null) return true;
+    const role = entry.role ?? (row.legKind === "both" ? null : row.legKind);
+    return role === line.role;
+  });
+  return delivery?.shipStorageLocation ?? row.shipStorageLocation;
+}
 
 function groupCargoLines(lines: CargoLine[]): {
   role: "pickup" | "delivery" | null;
@@ -140,13 +163,19 @@ function DoneCheckbox({
 function CargoGroups({
   row,
   cargoLines,
+  locationLabel,
+  onViewCargo,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
+  locationLabel: string;
+  onViewCargo?: (target: StorageGridViewTarget) => void;
 }) {
+  const groups = groupCargoLines(cargoLines);
+
   return (
     <div className="flex flex-col gap-5 text-sm md:gap-2">
-      {groupCargoLines(cargoLines).map((group) => {
+      {groups.map((group, groupIndex) => {
         const roleClass =
           group.role === "pickup"
             ? "text-rsi-accent"
@@ -156,6 +185,12 @@ function CargoGroups({
         const doneClass = row.isCompleted
           ? "line-through opacity-70 decoration-rsi-success/40"
           : "";
+        const prevRole = groups[groupIndex - 1]?.role;
+        const showRoleDivider =
+          groupIndex > 0 &&
+          prevRole != null &&
+          group.role != null &&
+          prevRole !== group.role;
 
         if (group.items.length === 1 && group.items[0]?.scu == null) {
           return (
@@ -171,7 +206,12 @@ function CargoGroups({
         return (
           <div
             key={`${row.id}-cargo-${group.role ?? "none"}`}
-            className="flex flex-col gap-0.5"
+            className={[
+              "flex flex-col gap-0.5",
+              showRoleDivider
+                ? "border-t border-rsi-divider pt-2 md:pt-1.5"
+                : "",
+            ].join(" ")}
           >
             {group.role ? (
               <span
@@ -187,12 +227,13 @@ function CargoGroups({
                 line.commoditySlug,
               );
               const iconSrc = getCommodityIconSrc(line.commoditySlug);
-              return (
-                <span
-                  key={`${row.id}-cargo-${group.role}-${index}`}
-                  className={`inline-flex items-center gap-1.5 font-medium tabular-nums md:pl-3 ${doneClass}`}
-                  style={cargoHex ? { color: cargoHex } : undefined}
-                >
+              const canView =
+                Boolean(onViewCargo) &&
+                line.scu != null &&
+                line.commoditySlug != null &&
+                line.commodityName != null;
+              const content = (
+                <>
                   <span
                     aria-hidden
                     className="inline-block size-4 shrink-0 bg-current"
@@ -208,6 +249,52 @@ function CargoGroups({
                     }}
                   />
                   {line.scu} {line.commodityName}
+                </>
+              );
+              const className = [
+                "inline-flex items-center gap-1.5 font-medium tabular-nums",
+                doneClass,
+                canView ? "cursor-pointer text-left" : "",
+              ].join(" ");
+
+              if (canView) {
+                return (
+                  <button
+                    key={`${row.id}-cargo-${group.role}-${index}`}
+                    type="button"
+                    className={className}
+                    style={cargoHex ? { color: cargoHex } : undefined}
+                    aria-label={`View ${line.commodityName} bay grid`}
+                    onClick={() => {
+                      const zone = zoneForCargoLine(row, line);
+                      onViewCargo?.({
+                        zone,
+                        locationLabel,
+                        rowId: row.id,
+                        segments: [
+                          {
+                            commoditySlug: line.commoditySlug!,
+                            commodityName: line.commodityName!,
+                            scu: line.scu!,
+                            color: line.color,
+                            color2: line.color2,
+                          },
+                        ],
+                      });
+                    }}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <span
+                  key={`${row.id}-cargo-${group.role}-${index}`}
+                  className={className}
+                  style={cargoHex ? { color: cargoHex } : undefined}
+                >
+                  {content}
                 </span>
               );
             })}
@@ -373,96 +460,15 @@ function ScuTotalDisplay({
   );
 }
 
-function ShipStorageBars({
-  row,
-  bars,
-  /** Fill parent height (desktop table); fixed bars on mobile. */
-  fill = false,
-}: {
-  row: HaulingChecklistRow;
-  bars: ShipStorageBar[];
-  fill?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        "flex w-full min-w-[4.5rem] max-w-[7.5rem] flex-col gap-1",
-        fill ? "h-full min-h-0" : "",
-        row.isCompleted ? "opacity-50" : "",
-      ].join(" ")}
-      role="list"
-      aria-label="Ship storage"
-    >
-      {bars.map((bar) => {
-        const isEmpty = bar.segments.length === 0;
-        const segmentSummary = isEmpty
-          ? "empty"
-          : bar.segments
-              .map((segment) => `${segment.scu} ${segment.commodityName}`)
-              .join(", ");
-        return (
-          <div
-            key={`${row.id}-bar-${bar.zone}`}
-            role="listitem"
-            className={[
-              "relative flex w-full overflow-hidden rounded-sm border border-rsi-border/80",
-              isEmpty ? "bg-rsi-bg-deep/40" : "bg-rsi-bg-deep/60",
-              fill ? "min-h-0 flex-1" : "h-10",
-            ].join(" ")}
-            title={`${bar.label}: ${segmentSummary}`}
-            aria-label={`${bar.label}: ${segmentSummary}`}
-          >
-            {bar.segments.map((segment) => {
-              const hex =
-                resolveCommodityColorHex(
-                  segment.color,
-                  segment.color2,
-                  segment.commoditySlug,
-                ) ?? "var(--rsi-border-strong)";
-              return (
-                <span
-                  key={`${row.id}-${bar.zone}-${segment.commoditySlug || "empty"}`}
-                  className="h-full min-w-0"
-                  style={{
-                    flexGrow: Math.max(segment.scu, 1),
-                    flexBasis: 0,
-                    backgroundColor: hex,
-                  }}
-                  title={`${bar.label} · ${segment.scu} ${segment.commodityName}`}
-                />
-              );
-            })}
-            {isEmpty ? (
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 flex items-center justify-center font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted/35"
-              >
-                {bar.label}
-              </span>
-            ) : null}
-            {/* Center divider — two bay quadrants per zone */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-rsi-bg"
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function MetaGrid({
   row,
   scu,
-  storageBars,
 }: {
   row: HaulingChecklistRow;
   scu: { pickup: number; delivery: number; total: number };
-  storageBars: ShipStorageBar[];
 }) {
   return (
-    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rsi-divider/80 pt-3 text-sm sm:grid-cols-3">
+    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rsi-divider/80 pt-3 text-sm">
       <div>
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
           Total
@@ -478,14 +484,6 @@ function MetaGrid({
         </dd>
       </div>
       <div>
-        <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Storage location
-        </dt>
-        <dd className="mt-1">
-          <ShipStorageBars row={row} bars={storageBars} />
-        </dd>
-      </div>
-      <div className="col-span-2 sm:col-span-1">
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
           Next Distance
         </dt>
@@ -525,9 +523,11 @@ function equalizeTableRowHeights(tbody: HTMLTableSectionElement) {
 export function HaulingChecklistTable({
   rows,
   onToggle,
+  shipSlug = null,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [gridView, setGridView] = useState<StorageGridViewTarget | null>(null);
   const desktopTbodyRef = useRef<HTMLTableSectionElement>(null);
   const completedCount = rows.filter((row) => row.isCompleted).length;
   const visibleRows = hideCompleted
@@ -565,16 +565,12 @@ export function HaulingChecklistTable({
   }
 
   const toolbar = (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-divider bg-rsi-bg-deep/40 px-3 py-2">
-      <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-        Missions
-        {hideCompleted && completedCount > 0 ? (
-          <span className="text-rsi-text-secondary">
-            {" "}
-            · {completedCount} hidden
-          </span>
-        ) : null}
-      </p>
+    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-rsi-divider bg-rsi-bg-deep/40 px-3 py-2">
+      {hideCompleted && completedCount > 0 ? (
+        <p className="mr-auto font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-secondary">
+          {completedCount} hidden
+        </p>
+      ) : null}
       <button
         type="button"
         aria-pressed={hideCompleted}
@@ -625,7 +621,6 @@ export function HaulingChecklistTable({
             row.cargoDeliveries,
             row.legKind === "both" ? null : row.legKind,
           );
-          const storageBars = buildShipStorageBars(row);
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
 
@@ -660,13 +655,14 @@ export function HaulingChecklistTable({
                     }}
                   />
                   <div className="mt-3">
-                    <CargoGroups row={row} cargoLines={cargoLines} />
+                    <CargoGroups
+                      row={row}
+                      cargoLines={cargoLines}
+                      locationLabel={location}
+                      onViewCargo={setGridView}
+                    />
                   </div>
-                  <MetaGrid
-                    row={row}
-                    scu={scu}
-                    storageBars={storageBars}
-                  />
+                  <MetaGrid row={row} scu={scu} />
                 </div>
               </div>
             </li>
@@ -678,7 +674,7 @@ export function HaulingChecklistTable({
       <div className="hidden overflow-x-auto md:block">
         <table
           className={[
-            "w-full min-w-[48rem] border-collapse text-left",
+            "w-full min-w-[40rem] border-collapse text-left",
             /* Row rule under data cells; location starts at name (px-4), not into step col */
             "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:relative",
             "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:pointer-events-none",
@@ -721,12 +717,6 @@ export function HaulingChecklistTable({
                 scope="col"
                 className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                Storage location
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
                 Next Distance
               </th>
             </tr>
@@ -735,7 +725,7 @@ export function HaulingChecklistTable({
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="px-4 py-8 text-center text-sm text-rsi-text-muted"
                 >
                   {emptyMessage}
@@ -755,7 +745,6 @@ export function HaulingChecklistTable({
                 row.cargoDeliveries,
                 row.legKind === "both" ? null : row.legKind,
               );
-              const storageBars = buildShipStorageBars(row);
               const isCopied = copiedRowId === row.id;
               const step = stepById.get(row.id) ?? 0;
               const isFirstStep = rowIndex === 0;
@@ -809,7 +798,12 @@ export function HaulingChecklistTable({
                     />
                   </td>
                   <td className="px-4 py-3 text-left align-middle">
-                    <CargoGroups row={row} cargoLines={cargoLines} />
+                    <CargoGroups
+                      row={row}
+                      cargoLines={cargoLines}
+                      locationLabel={location}
+                      onViewCargo={setGridView}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right align-middle">
                     <ScuTotalDisplay
@@ -818,16 +812,6 @@ export function HaulingChecklistTable({
                       delivery={scu.delivery}
                       total={scu.total}
                     />
-                  </td>
-                  <td className="relative w-[7.5rem] px-4 py-3 text-right align-middle text-sm">
-                    {/* Absolute so storage bars fill row height without growing it. */}
-                    <div className="absolute inset-x-4 inset-y-3">
-                      <ShipStorageBars
-                        row={row}
-                        bars={storageBars}
-                        fill
-                      />
-                    </div>
                   </td>
                   <td
                     className={[
@@ -845,6 +829,17 @@ export function HaulingChecklistTable({
           </tbody>
         </table>
       </div>
+
+      <CargoStorageGridModal
+        open={gridView != null}
+        onClose={() => setGridView(null)}
+        shipSlug={shipSlug}
+        zone={gridView?.zone ?? "front"}
+        locationLabel={gridView?.locationLabel ?? ""}
+        segments={gridView?.segments ?? []}
+        rows={rows}
+        rowId={gridView?.rowId ?? null}
+      />
     </div>
   );
 }

@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Checklist rows with separate location/cargo columns and stacked front/middle/rear storage color bars.",
+          "Checklist rows with location, clickable cargo (opens bay grid), totals, and next distance.",
       },
     },
   },
@@ -29,6 +29,7 @@ function InteractiveTable(args: {
   return (
     <HaulingChecklistTable
       rows={rows}
+      shipSlug={mockSessionChecklist.shipSlugs[0] ?? null}
       onToggle={(rowId) => {
         setRows((prev) =>
           prev.map((row) =>
@@ -46,6 +47,7 @@ export const Default: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
+    shipSlug: mockSessionChecklist.shipSlugs[0] ?? null,
   },
   render: (args) => <InteractiveTable {...args} />,
 };
@@ -54,6 +56,7 @@ export const Mobile: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
+    shipSlug: mockSessionChecklist.shipSlugs[0] ?? null,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },

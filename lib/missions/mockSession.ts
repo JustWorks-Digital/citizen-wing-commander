@@ -10,6 +10,16 @@ export type DistanceToNext = {
   unit: DistanceUnit;
 };
 
+/**
+ * Optional fine-grained bay cell on a ship cargo grid.
+ * Axes: X nose→ramp, Y port→starboard, Z deck→ceiling (see `cargoGridCoords`).
+ */
+export type CargoGridCoordRef = {
+  x: number;
+  y: number;
+  z: number;
+};
+
 export type CargoDelivery = {
   /** Slug from `lib/fixtures/commodities.json` (UEX). */
   commoditySlug: string;
@@ -24,6 +34,11 @@ export type CargoDelivery = {
    * when omitted (typical for single-role legs).
    */
   shipStorageLocation?: ShipStorageLocation;
+  /**
+   * Exact 1 SCU cell (or anchor cell for a multi-SCU stack) on the ship grid.
+   * When set, prefer this over coarse `shipStorageLocation` for UI hints.
+   */
+  gridCoord?: CargoGridCoordRef;
 };
 
 /** Stop role for the location badge. */
