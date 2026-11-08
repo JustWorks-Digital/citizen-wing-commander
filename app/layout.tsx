@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Exo_2, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,13 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Citizen Wing Commander",
   description: "Star Citizen companion app",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0b121c",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

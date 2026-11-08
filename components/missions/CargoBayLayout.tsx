@@ -2,7 +2,6 @@
 
 import {
   buildCargoBaySections,
-  CARGO_BAY_TILES_PER_ROW,
   type CargoBayTile,
 } from "@/lib/missions/cargoBayLayout";
 import {
@@ -49,12 +48,7 @@ function BaySection({
       {tiles.length === 0 ? (
         <p className="py-4 text-center text-xs text-rsi-text-muted">Empty</p>
       ) : (
-        <div
-          className="grid gap-2"
-          style={{
-            gridTemplateColumns: `repeat(${CARGO_BAY_TILES_PER_ROW}, minmax(0, 1fr))`,
-          }}
-        >
+        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           {tiles.map((tile) => (
             <div key={tile.key} className={tileClasses(tile)}>
               <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em]">

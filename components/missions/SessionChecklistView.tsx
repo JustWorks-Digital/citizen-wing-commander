@@ -158,12 +158,12 @@ export function SessionChecklistView({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="min-w-0">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
           Session
         </p>
-        <h2 className="text-xl font-semibold tracking-wide text-rsi-text">
+        <h2 className="text-lg font-semibold tracking-wide break-words text-rsi-text sm:text-xl">
           {session.sessionName}
         </h2>
         <div className="mt-3">

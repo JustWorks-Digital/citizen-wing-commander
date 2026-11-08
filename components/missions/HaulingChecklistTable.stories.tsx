@@ -14,27 +14,51 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function InteractiveTable(args: {
+  rows: typeof mockSessionChecklist.rows;
+  onToggle: (rowId: string) => void;
+}) {
+  const [rows, setRows] = useState(args.rows);
+
+  return (
+    <HaulingChecklistTable
+      rows={rows}
+      onToggle={(rowId) => {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === rowId
+              ? { ...row, isCompleted: !row.isCompleted }
+              : row,
+          ),
+        );
+      }}
+    />
+  );
+}
+
 export const Default: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
   },
-  render: function Render(args) {
-    const [rows, setRows] = useState(args.rows);
+  render: (args) => <InteractiveTable {...args} />,
+};
 
-    return (
-      <HaulingChecklistTable
-        rows={rows}
-        onToggle={(rowId) => {
-          setRows((prev) =>
-            prev.map((row) =>
-              row.id === rowId
-                ? { ...row, isCompleted: !row.isCompleted }
-                : row,
-            ),
-          );
-        }}
-      />
-    );
+export const Mobile: Story = {
+  args: {
+    rows: mockSessionChecklist.rows,
+    onToggle: () => {},
   },
+  parameters: {
+    viewport: { defaultViewport: "mobile1" },
+    layout: "fullscreen",
+  },
+  decorators: [
+    (Story) => (
+      <div className="mx-auto max-w-[390px] bg-rsi-bg p-3">
+        <Story />
+      </div>
+    ),
+  ],
+  render: (args) => <InteractiveTable {...args} />,
 };

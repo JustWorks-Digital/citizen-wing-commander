@@ -106,7 +106,7 @@ export function SessionMissionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={selected ? selected.title : "Session missions"}
@@ -114,17 +114,17 @@ export function SessionMissionsModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
-        <header className="flex items-center justify-between gap-3 border-b border-rsi-divider px-5 py-4">
-          <div>
+      <div className="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border">
+        <header className="flex flex-col gap-3 border-b border-rsi-divider px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+          <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               {selected ? "Mission" : "Missions"}
             </p>
-            <h2 className="text-lg font-semibold tracking-wide text-rsi-text">
+            <h2 className="truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
               {selected ? selected.title : "Accepted contracts"}
             </h2>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             {selected ? (
               <>
                 <button
@@ -174,7 +174,7 @@ export function SessionMissionsModal({
           </div>
         </header>
 
-        <div className="overflow-y-auto px-5 py-5">
+        <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
           {selected ? (
             <MobiglasMissionDetail
               panel={selected.mobiglas}
@@ -183,7 +183,7 @@ export function SessionMissionsModal({
           ) : missions.length === 0 ? (
             <p className="text-sm text-rsi-text-muted">No missions in this session.</p>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {missions.map((mission) => {
                 const isHidden = Boolean(mission.isHidden);
                 const isCompleted = Boolean(mission.isCompleted);
@@ -193,7 +193,7 @@ export function SessionMissionsModal({
                       type="button"
                       onClick={() => setSelectedId(mission.id)}
                       className={[
-                        "flex h-full w-full flex-col items-start rounded-rsi border p-4 pr-20 text-left transition-colors",
+                        "flex h-full w-full flex-col items-start rounded-rsi border p-3 pr-[4.5rem] text-left transition-colors sm:p-4 sm:pr-20",
                         isHidden
                           ? "border-rsi-border/60 bg-rsi-bg-deep/30 opacity-55 hover:opacity-80"
                           : isCompleted
