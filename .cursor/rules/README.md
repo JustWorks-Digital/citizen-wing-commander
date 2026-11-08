@@ -15,6 +15,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`general.mdc`](./general.mdc) | Catch-all project conventions |
 | [`api-endpoints.mdc`](./api-endpoints.mdc) | Named API domains — no hardcoded URL strings at call sites |
 | [`concise-answers.mdc`](./concise-answers.mdc) | Short answers by default; no verbose Q&A |
+| [`railway-proactive.mdc`](./railway-proactive.mdc) | After push: watch Railway deploy, then finish production/MCP follow-through |
 
 Also see:
 

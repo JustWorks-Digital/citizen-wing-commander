@@ -1,0 +1,24 @@
+---
+description: Be proactive with Railway deploys and production follow-through
+alwaysApply: true
+---
+
+# Railway — proactive follow-through
+
+Do **not** wait for the user to ask whether Railway is ready, whether a push deployed, or whether production was updated after a commit that should ship.
+
+## After commit / push to `main` (or the deploy branch)
+
+1. **Watch the deploy** via Railway MCP (`list-deployments` / status) until **SUCCESS** or **FAILED** — do not stop at “pushed; Railway should auto-deploy.”
+2. On **SUCCESS**, finish the production work that motivated the push (MCP tools, checklist apply, screenshot upload, health check, etc.).
+3. On **FAILED**, diagnose (logs / deploy diagnosis) and fix or report the failure without waiting to be asked.
+
+## Production / MCP work
+
+- Prefer verifying against the **live Railway app** when the change is meant for production.
+- If new MCP tools were deployed, use them on production once the deploy is green (reconnect/catalog lag is fine; call the tool or HTTP MCP endpoint).
+- Ephemeral `.data` (checklist, MCP screenshots) must be **re-seeded after deploy** when the user’s task needs that data — upload/apply yourself; do not leave “you’ll need to upload later” as the stopping point.
+
+## Tone
+
+- Be proactive, not passive. Confirm deploy status and complete the Railway-side steps in the same task arc whenever practical.
