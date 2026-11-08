@@ -1,0 +1,13 @@
+---
+description: RSI / Spectrum visual language and design tokens
+alwaysApply: true
+---
+
+# RSI / Spectrum theme
+
+- Match Roberts Space Industries and Spectrum: dark, industrial / sci-fi — not generic purple AI themes or flat light marketing UIs.
+- **Source of truth:** CSS variables in `app/globals.css` (`--rsi-*`) bridged into Tailwind v4 via `@theme inline` as `rsi-*` color utilities.
+- Prefer `bg-rsi-surface`, `text-rsi-text-secondary`, `border-rsi-border`, `text-rsi-accent`, etc. Do **not** introduce one-off hex colors in components or pages.
+- If a new color is needed, add a named `--rsi-*` token first, map it in `@theme inline`, document it in Storybook **Foundation/Colors**, then use the utility.
+- Accent / CTA is RSI cornflower (`--rsi-accent`). Surfaces lean Spectrum (`--rsi-surface` / `#1C2737`).
+- Typography: Exo 2 for UI (stand-in for Univia Pro); JetBrains Mono for labels / telemetry. Keep tracking wide and hierarchy quiet.

@@ -1,0 +1,12 @@
+---
+description: Storybook must be current before UI commits
+alwaysApply: true
+---
+
+# Storybook gate
+
+- Any **new UI element** (component, primitive, layout pattern) must have a Storybook story added or updated before it is committed.
+- Mid-iteration visual tweaks while coding do not require a Storybook round-trip on every keystroke — but **before each commit** that touches UI sources, Storybook must reflect the committed UI.
+- UI sources include: `components/**`, `app/**/*.tsx` (presentational pieces), `stories/**`, and theme tokens in `app/globals.css`.
+- Place stories next to components (`*.stories.tsx`) or under `stories/foundation/` for tokens / typography.
+- Run `npm run storybook` locally to verify. Pre-commit hook reminds when UI files change without Storybook file changes.

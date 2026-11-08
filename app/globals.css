@@ -1,26 +1,105 @@
 @import "tailwindcss";
 
+/*
+  RSI / Spectrum visual tokens
+  Sampled from robertsspaceindustries.com (rsi-minimal.css, Brandfetch)
+  and Spectrum (manifest background_color + forum chrome).
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Backgrounds */
+  --rsi-bg: #0a1d29;
+  --rsi-bg-deep: #06141d;
+  --rsi-surface: #1c2737;
+  --rsi-surface-raised: #243447;
+  --rsi-surface-sunken: #0f2c3e;
+
+  /* Borders / lines */
+  --rsi-border: #2f4056;
+  --rsi-border-strong: #3d536d;
+  --rsi-divider: #243447;
+
+  /* Text */
+  --rsi-text: #f3f6f9;
+  --rsi-text-secondary: #a9b3bd;
+  --rsi-text-muted: #7d8a97;
+  --rsi-text-inverse: #0a1d29;
+
+  /* Accent / CTA (RSI cornflower) */
+  --rsi-accent: #54adf7;
+  --rsi-accent-hover: #7bc1f9;
+  --rsi-accent-muted: #1a4a6e;
+  --rsi-accent-foreground: #06141d;
+
+  /* Status */
+  --rsi-danger: #e25555;
+  --rsi-danger-muted: #4a1f24;
+  --rsi-warn: #e0a63a;
+  --rsi-warn-muted: #3f3214;
+  --rsi-success: #3dbf8f;
+  --rsi-success-muted: #14352c;
+
+  /* Focus */
+  --rsi-ring: color-mix(in srgb, var(--rsi-accent) 55%, transparent);
+
+  /* Legacy aliases used by scaffold */
+  --background: var(--rsi-bg);
+  --foreground: var(--rsi-text);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--rsi-bg);
+  --color-foreground: var(--rsi-text);
+
+  --color-rsi-bg: var(--rsi-bg);
+  --color-rsi-bg-deep: var(--rsi-bg-deep);
+  --color-rsi-surface: var(--rsi-surface);
+  --color-rsi-surface-raised: var(--rsi-surface-raised);
+  --color-rsi-surface-sunken: var(--rsi-surface-sunken);
+
+  --color-rsi-border: var(--rsi-border);
+  --color-rsi-border-strong: var(--rsi-border-strong);
+  --color-rsi-divider: var(--rsi-divider);
+
+  --color-rsi-text: var(--rsi-text);
+  --color-rsi-text-secondary: var(--rsi-text-secondary);
+  --color-rsi-text-muted: var(--rsi-text-muted);
+  --color-rsi-text-inverse: var(--rsi-text-inverse);
+
+  --color-rsi-accent: var(--rsi-accent);
+  --color-rsi-accent-hover: var(--rsi-accent-hover);
+  --color-rsi-accent-muted: var(--rsi-accent-muted);
+  --color-rsi-accent-foreground: var(--rsi-accent-foreground);
+
+  --color-rsi-danger: var(--rsi-danger);
+  --color-rsi-danger-muted: var(--rsi-danger-muted);
+  --color-rsi-warn: var(--rsi-warn);
+  --color-rsi-warn-muted: var(--rsi-warn-muted);
+  --color-rsi-success: var(--rsi-success);
+  --color-rsi-success-muted: var(--rsi-success-muted);
+
+  --font-sans: var(--font-exo);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-exo);
+
+  --radius-rsi: 0.125rem;
+  --shadow-rsi-panel: 0 0 0 1px var(--rsi-border), 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--rsi-accent) 12%, transparent), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, color-mix(in srgb, var(--rsi-surface-sunken) 80%, transparent), transparent 50%),
+    var(--rsi-bg);
+  color: var(--rsi-text);
+  font-family: var(--font-exo), "Segoe UI", sans-serif;
+  min-height: 100%;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--rsi-accent) 40%, transparent);
+  color: var(--rsi-text);
 }
