@@ -1,0 +1,96 @@
+---
+description: TypeScript/React naming conventions (files, UI, DB, tokens)
+alwaysApply: true
+---
+
+# Naming conventions
+
+Living standards — refine as the domain grows. Prefer clear **hauling / mission** words: `Session`, `Mission`, `ChecklistItem`, `Player`, `HaulingPayload`.
+
+## Files & folders
+
+| Kind | Convention | Examples |
+| --- | --- | --- |
+| App routes | Next.js defaults; folders `kebab-case` only when multi-word | `app/api/health/db/route.ts` |
+| Components | `PascalCase.tsx` | `Button.tsx`, `MissionPanel.tsx` |
+| Hooks | `use` + `PascalCase` feature → file `useThing.ts` | `useSessionBundle.ts` |
+| Lib / utils | `camelCase.ts` or domain folder + `camelCase` | `lib/missions/types.ts` |
+| DB | `db/schema.ts`, `db/queries/<domain>.ts` | `db/queries/sessions.ts` |
+| Stories | Co-locate `ComponentName.stories.tsx` or `stories/foundation/` | `Panel.stories.tsx` |
+| CSS / globals | keep `app/globals.css`; avoid random style sheets | — |
+| Env example | `.env.example` | — |
+
+Folders for features: short **plural domain** names when grouping (`components/ui`, `lib/missions`, `db/queries`).
+
+## React components
+
+- **PascalCase** for components and their files: `ChecklistItemRow`, `SessionHeader`.
+- Props types: `ComponentNameProps` (`MissionCardProps`).
+- One primary export per component file; story file shares the name.
+
+## Hooks
+
+- `use` + PascalCase: `useMissionProgress`, `useSessionPlayers`.
+- Custom hook files match the export name.
+
+## Server actions / API
+
+- Route handlers stay in `route.ts` (Next convention).
+- Exported handlers: framework names (`GET`, `POST`, …).
+- Helper functions: **verb + domain**, `camelCase` — `createSessionWithOwner`, `addHaulingMission`, `upsertChecklistItem`.
+- Prefer `db/queries/*` names that read as use-cases, not raw SQL verbs alone.
+
+## DB models & fields (Drizzle)
+
+- **Tables:** `plural` `snake_case` in Postgres; Drizzle exports **camelCase plurals** matching domain: `sessions`, `players`, `missions`, `sessionPlayers`, `checklistProgress`.
+- **Columns:** Drizzle property **camelCase** (`joinCode`, `displayName`, `sortOrder`); SQL column `snake_case` via the column helper string.
+- **Enums:** Drizzle `xxxEnum` + SQL name `snake_case` — `missionTypeEnum` → `mission_type`; values **lowercase** / `snake_case` strings: `hauling`, `planned`, `owner`.
+- Inferred types: `Mission`, `Session`, `Player`, `ChecklistProgress` (singular PascalCase).
+
+## JSON payload types
+
+- Payload interfaces/types: **PascalCase** + clear suffix — `HaulingMissionPayload`, `ChecklistTemplateItem`, `MissionLocation`.
+- Discriminator field: `kind` (string literal, e.g. `"hauling"`).
+- Checklist keys in JSON: **`snake_case` or `kebab-case` stable IDs** — prefer `snake_case` string keys: `load_cargo`, `turn_in` (not UI labels).
+- Type guards / factories: `isHaulingPayload`, `emptyHaulingPayload`.
+
+## Env vars
+
+- **SCREAMING_SNAKE_CASE**: `DATABASE_URL`.
+- Server-only; no `NEXT_PUBLIC_` unless the value is intentionally public.
+- Document every var in `.env.example`.
+
+## CSS / design tokens
+
+- CSS variables: `--rsi-*` **kebab-case** after the prefix — `--rsi-bg`, `--rsi-text-secondary`, `--rsi-accent`.
+- Tailwind utilities from `@theme`: `rsi-*` — `bg-rsi-surface`, `text-rsi-accent`.
+- Do not invent parallel token prefixes (`--color-brand-*` etc.) without updating the theme rule.
+
+## Booleans
+
+- Props / fields: affirmative prefixes — `is`, `has`, `can`, `should` — `isCompleted` in TS; DB column `completed` is OK when it is the stored fact.
+- Avoid negations (`isNotReady`); prefer `isReady` and invert at use site.
+
+## Constants
+
+- Module-level immutable values: `SCREAMING_SNAKE_CASE` for true constants (`DEFAULT_JOIN_CODE_LENGTH`), or `camelCase` for config objects (`defaultHaulingChecklist`).
+- Prefer colocating domain defaults next to types (`emptyHaulingPayload`).
+
+## Enums
+
+- Prefer Drizzle `pgEnum` / string-union types over numeric enums.
+- TypeScript union or const object: values **lowercase** domain strings (`"active"`, `"hauling"`).
+- Const maps: `PascalCase` type name + `camelCase` object if needed (`missionStatusValues`).
+
+## Domain vocabulary (prefer these)
+
+| Use | Avoid |
+| --- | --- |
+| `Session` | `Room`, `Lobby`, `Game` |
+| `Player` | `User` (until auth exists), `Member` alone |
+| `Mission` | `Job`, `Quest`, `Task` (task = checklist step) |
+| `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |
+| `Hauling` / `hauling` | `Delivery` as the type name (delivery can be a checklist group) |
+| `payload` | `data`, `json`, `blob` for mission body |
+
+Refine this list in PRs; update this file when the team agrees on new terms.

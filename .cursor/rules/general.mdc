@@ -11,3 +11,4 @@ alwaysApply: true
 - Document new standing conventions here or as a new file under `.cursor/rules/`, and link them from `.cursor/rules/README.md`.
 - Keep commits reviewable; do not force-push shared history.
 - AI agents: keep mid-task progress in gitignored Markdown under `.ai-progress/` (see `ai-progress.mdc`). Never commit those files.
+- Follow `naming.mdc` for files, components, DB fields, payloads, tokens, and domain terms (`Session`, `Mission`, `ChecklistItem`, …).

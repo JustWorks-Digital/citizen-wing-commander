@@ -8,9 +8,10 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`storybook-gate.mdc`](./storybook-gate.mdc) | Storybook required before UI commits |
 | [`database.mdc`](./database.mdc) | Postgres + Drizzle schema & migrations |
 | [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |
+| [`naming.mdc`](./naming.mdc) | TypeScript/React/DB/token naming conventions |
 | [`general.mdc`](./general.mdc) | Catch-all project conventions |
 
 Also see:
 
 - `CONTRIBUTING.md` — human-oriented workflow (Storybook gate, hooks)
-- Project store doc: theme + Storybook setup notes (maintained outside the repo when needed)
+- Project store docs (outside repo): theme/Storybook, data model, naming conventions
