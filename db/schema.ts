@@ -89,7 +89,7 @@ export const deliverySessions = pgTable(
       .$type<SessionChecklistModel>()
       .notNull()
       .default(
-        sql`'{"sessionName":"","shipSlugs":[],"startLocationSlug":null,"rows":[]}'::jsonb`,
+        sql`'{"sessionName":"","shipSlugs":[],"startLocationSlug":null,"missionCount":0,"missionsCompleted":0,"rows":[]}'::jsonb`,
       ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

@@ -6,6 +6,7 @@ import {
   mockSessionChecklist,
   type HaulingChecklistRow,
   type SessionChecklistModel,
+  type SessionMission,
 } from "@/lib/missions/mockSession";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -36,6 +37,40 @@ function normalizeSession(
       typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()
         ? raw.startLocationSlug.trim()
         : null,
+    missionCount: (() => {
+      const total = Math.max(
+        0,
+        Math.trunc(
+          typeof raw.missionCount === "number" && Number.isFinite(raw.missionCount)
+            ? raw.missionCount
+            : 0,
+        ),
+      );
+      return total;
+    })(),
+    missionsCompleted: (() => {
+      const total = Math.max(
+        0,
+        Math.trunc(
+          typeof raw.missionCount === "number" && Number.isFinite(raw.missionCount)
+            ? raw.missionCount
+            : 0,
+        ),
+      );
+      const done = Math.max(
+        0,
+        Math.trunc(
+          typeof raw.missionsCompleted === "number" &&
+            Number.isFinite(raw.missionsCompleted)
+            ? raw.missionsCompleted
+            : 0,
+        ),
+      );
+      return Math.min(done, total);
+    })(),
+    missions: Array.isArray(raw.missions)
+      ? (raw.missions as SessionMission[])
+      : [],
     startedAt,
     completedAt:
       typeof raw.completedAt === "string" ? raw.completedAt : null,
@@ -97,15 +132,37 @@ export async function saveChecklistSession(
 export async function replaceChecklistRows(
   rows: HaulingChecklistRow[],
   sessionName?: string,
-  options?: { resetTimer?: boolean; shipSlugs?: string[] },
+  options?: {
+    resetTimer?: boolean;
+    shipSlugs?: string[];
+    missionCount?: number;
+    missionsCompleted?: number;
+    missions?: SessionMission[];
+  },
 ): Promise<SessionChecklistModel> {
   const current = await ensureStore();
   const now = new Date().toISOString();
+  const missions =
+    options?.missions !== undefined ? options.missions : current.missions;
+  const missionCount =
+    options?.missionCount !== undefined
+      ? options.missionCount
+      : options?.missions !== undefined
+        ? options.missions.length
+        : current.missionCount;
   return saveChecklistSession({
     ...current,
     sessionName: sessionName?.trim() || current.sessionName,
     shipSlugs:
       options?.shipSlugs !== undefined ? options.shipSlugs : current.shipSlugs,
+    missionCount,
+    missionsCompleted:
+      options?.missionsCompleted !== undefined
+        ? options.missionsCompleted
+        : options?.resetTimer
+          ? 0
+          : current.missionsCompleted,
+    missions,
     startedAt: options?.resetTimer ? now : current.startedAt,
     completedAt: options?.resetTimer ? null : current.completedAt,
     rows,

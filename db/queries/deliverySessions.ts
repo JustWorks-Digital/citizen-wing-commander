@@ -19,6 +19,25 @@ function normalizeChecklist(
       checklist.startLocationSlug.trim()
         ? checklist.startLocationSlug.trim()
         : null,
+    missionCount: Math.max(
+      0,
+      Math.trunc(
+        typeof checklist.missionCount === "number" &&
+          Number.isFinite(checklist.missionCount)
+          ? checklist.missionCount
+          : 0,
+      ),
+    ),
+    missionsCompleted: Math.max(
+      0,
+      Math.trunc(
+        typeof checklist.missionsCompleted === "number" &&
+          Number.isFinite(checklist.missionsCompleted)
+          ? checklist.missionsCompleted
+          : 0,
+      ),
+    ),
+    missions: Array.isArray(checklist.missions) ? checklist.missions : [],
     startedAt: checklist.startedAt || new Date().toISOString(),
     completedAt: checklist.completedAt ?? null,
     updatedAt: checklist.updatedAt || new Date().toISOString(),

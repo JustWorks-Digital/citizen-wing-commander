@@ -175,30 +175,67 @@ function stopRank(bucket: StopBucket): number {
   return body * 10 + 2;
 }
 
-/**
- * Merge intake contracts into geography-ish stop legs.
- * Prefer passing explicit `legs` from an optimized route when available.
- */
-export function buildRouteFromIntake(
-  intake: HaulingContractsIntake,
-): { ok: true; legs: IncomingLeg[] } | { ok: false; error: string } {
-  if (!intake.contracts.length) {
-    return { ok: false, error: "contracts must include at least one contract" };
+function locationAffinity(
+  aSlug: string,
+  bSlug: string,
+): number {
+  if (aSlug === bSlug) return 0;
+  const a = getLocationBySlug(aSlug);
+  const b = getLocationBySlug(bSlug);
+  if (!a || !b) return 50;
+  const aParent = (a.parentName ?? "").toLowerCase();
+  const bParent = (b.parentName ?? "").toLowerCase();
+  if (aParent && aParent === bParent) return 10;
+  const aSystem = (a.system ?? "").toLowerCase();
+  const bSystem = (b.system ?? "").toLowerCase();
+  if (aSystem && aSystem === bSystem) return 25;
+  return 80;
+}
+
+/** Greedy nearest-neighbor from start, with pickup-before-delivery bias. */
+function orderBucketsFromStart(
+  buckets: StopBucket[],
+  startLocationSlug: string | null | undefined,
+): StopBucket[] {
+  if (buckets.length <= 1) return buckets;
+
+  const startSlug =
+    (startLocationSlug && resolveLocationSlug(startLocationSlug)) ||
+    buckets.find((b) => b.pickups.length > 0)?.locationSlug ||
+    buckets[0]!.locationSlug;
+
+  const remaining = [...buckets];
+  const ordered: StopBucket[] = [];
+  let cursor = startSlug;
+
+  const startIdx = remaining.findIndex((b) => b.locationSlug === startSlug);
+  if (startIdx >= 0) {
+    ordered.push(remaining.splice(startIdx, 1)[0]!);
+    cursor = ordered[0]!.locationSlug;
   }
 
-  const buckets = new Map<string, StopBucket>();
-  for (const contract of intake.contracts) {
-    const result = ingestContract(buckets, contract);
-    if (!result.ok) return result;
+  while (remaining.length > 0) {
+    remaining.sort((a, b) => {
+      const pickBias =
+        (a.pickups.length > 0 && a.deliveries.length === 0 ? -2 : 0) -
+        (b.pickups.length > 0 && b.deliveries.length === 0 ? -2 : 0);
+      const dist =
+        locationAffinity(cursor, a.locationSlug) -
+        locationAffinity(cursor, b.locationSlug);
+      if (dist !== 0) return dist;
+      if (pickBias !== 0) return pickBias;
+      return stopRank(a) - stopRank(b);
+    });
+    const next = remaining.shift()!;
+    ordered.push(next);
+    cursor = next.locationSlug;
   }
 
-  const ordered = [...buckets.values()].sort((a, b) => {
-    const rank = stopRank(a) - stopRank(b);
-    if (rank !== 0) return rank;
-    return a.location.localeCompare(b.location);
-  });
+  return ordered;
+}
 
-  const legs: IncomingLeg[] = ordered.map((bucket, index) => {
+function bucketsToLegs(ordered: StopBucket[]): IncomingLeg[] {
+  return ordered.map((bucket, index) => {
     const hasP = bucket.pickups.length > 0;
     const hasD = bucket.deliveries.length > 0;
     const legKind = hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
@@ -228,6 +265,37 @@ export function buildRouteFromIntake(
       isCompleted: false,
     };
   });
+}
 
-  return { ok: true, legs };
+/**
+ * Merge intake contracts into geography-ish stop legs.
+ * When `startLocation` is set, orders stops from that origin (nearest-neighbor).
+ */
+export function buildRouteFromIntake(
+  intake: HaulingContractsIntake,
+  options?: { startLocation?: string | null },
+): { ok: true; legs: IncomingLeg[] } | { ok: false; error: string } {
+  if (!intake.contracts.length) {
+    return { ok: true, legs: [] };
+  }
+
+  const buckets = new Map<string, StopBucket>();
+  for (const contract of intake.contracts) {
+    const result = ingestContract(buckets, contract);
+    if (!result.ok) return result;
+  }
+
+  const startSlug = options?.startLocation
+    ? resolveLocationSlug(options.startLocation)
+    : null;
+
+  const ordered = startSlug
+    ? orderBucketsFromStart([...buckets.values()], startSlug)
+    : [...buckets.values()].sort((a, b) => {
+        const rank = stopRank(a) - stopRank(b);
+        if (rank !== 0) return rank;
+        return a.location.localeCompare(b.location);
+      });
+
+  return { ok: true, legs: bucketsToLegs(ordered) };
 }

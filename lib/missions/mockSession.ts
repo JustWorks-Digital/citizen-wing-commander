@@ -1,3 +1,7 @@
+import type { SessionMission } from "@/lib/missions/sessionMissions";
+
+export type { SessionMission } from "@/lib/missions/sessionMissions";
+
 /** Units for distance-to-next (UI display; convert later if needed). */
 export type DistanceUnit = "m" | "km" | "Mm" | "Gm" | "AU";
 
@@ -69,6 +73,12 @@ export type SessionChecklistModel = {
    * Slug from `lib/fixtures/locations.json`, or null if unset.
    */
   startLocationSlug: string | null;
+  /** Accepted / planned hauling missions in this session (contracts). */
+  missionCount: number;
+  /** Missions marked done (not the same as route-leg completion). */
+  missionsCompleted: number;
+  /** Full mission cards for the Missions modal / MobiGlas detail. */
+  missions: SessionMission[];
   /** ISO timestamp when the session was created / timer started. */
   startedAt: string;
   /**
@@ -194,6 +204,48 @@ export const mockSessionChecklist: SessionChecklistModel = {
   sessionName: "Stanton hauling run",
   shipSlugs: ["c2-hercules-starlifter", "misc-freelancer-max"],
   startLocationSlug: "area18",
+  missionCount: 1,
+  missionsCompleted: 0,
+  missions: [
+    {
+      id: "demo-area18-haul",
+      title: "Junior Rank - Direct Medium Cargo Haul",
+      contractor: "Covalex Independent Contractors",
+      rewardAuec: 80000,
+      rewardDisplay: "80k",
+      from: ["Area18"],
+      to: ["Baijini Point"],
+      cargo: [
+        { commodity: "Pressurized Ice", scu: 8 },
+        { commodity: "Processed Food", scu: 9 },
+      ],
+      cargoSummary: "8 SCU Pressurized Ice · 9 SCU Processed Food",
+      isCompleted: false,
+      screenshots: [],
+      mobiglas: {
+        tab: "Accepted",
+        acceptedCount: "1/10",
+        category: "Hauling - Planetary",
+        title: "Junior Rank - Direct Medium Cargo Haul",
+        contractor: "Covalex Independent Contractors",
+        rewardAuec: 80000,
+        rewardDisplay: "80k",
+        timeRemaining: null,
+        deadline: null,
+        details:
+          "Demo contract for Storybook / local preview. Haul mixed cargo from Area18 toward Baijini Point.",
+        contact: "Chase Hewitt, Jr. Logistics Coordinator, Covalex Shipping",
+        objectives: [
+          {
+            label: "Deliver cargo toward Baijini Point",
+            progressCurrent: 0,
+            progressTotal: 17,
+            children: ["Collect from Area18"],
+          },
+        ],
+      },
+    },
+  ],
   startedAt: new Date().toISOString(),
   completedAt: null,
   updatedAt: new Date().toISOString(),

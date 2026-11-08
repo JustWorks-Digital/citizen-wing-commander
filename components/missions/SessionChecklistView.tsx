@@ -18,8 +18,10 @@ import {
   mockSessionChecklist,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
+import { removeMissionAndRebuildRoute } from "@/lib/missions/rebuildSessionRoute";
 import { CargoBayLayout } from "./CargoBayLayout";
 import { HaulingChecklistTable } from "./HaulingChecklistTable";
+import { SessionMissionsModal } from "./SessionMissionsModal";
 
 export type SessionChecklistViewProps = {
   /** Optional override; defaults to loading the shared active checklist. */
@@ -36,6 +38,7 @@ export function SessionChecklistView({
   const [session, setSession] = useState<SessionChecklistModel>(
     initial ?? mockSessionChecklist,
   );
+  const [missionsOpen, setMissionsOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const etagRef = useRef<string | null>(null);
@@ -216,15 +219,33 @@ export function SessionChecklistView({
 
       <CargoBayLayout rows={session.rows} />
 
-      <div className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-4 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel">
-        <p className="mb-1 text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-          Complete
-        </p>
-        <p className="text-lg text-rsi-text">
-          <span className="text-rsi-success">{completedLegs}</span>
-          <span className="text-rsi-text-muted"> / </span>
-          <span>{totalLegs}</span>
-        </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-4 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel">
+          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
+            Complete
+          </p>
+          <p className="text-lg text-rsi-text">
+            <span className="text-rsi-success">{completedLegs}</span>
+            <span className="text-rsi-text-muted"> / </span>
+            <span>{totalLegs}</span>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setMissionsOpen(true)}
+          className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-4 py-3 text-left font-mono tabular-nums tracking-wide shadow-rsi-panel transition-colors hover:border-rsi-border-strong hover:bg-rsi-surface-raised"
+        >
+          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
+            Missions
+          </p>
+          <p className="text-lg text-rsi-text">
+            <span className="text-rsi-success">
+              {session.missionsCompleted ?? 0}
+            </span>
+            <span className="text-rsi-text-muted"> / </span>
+            <span>{session.missionCount ?? 0}</span>
+          </p>
+        </button>
       </div>
 
       <HaulingChecklistTable
@@ -242,6 +263,20 @@ export function SessionChecklistView({
               ),
             }),
           );
+        }}
+      />
+
+      <SessionMissionsModal
+        open={missionsOpen}
+        missions={session.missions ?? []}
+        onClose={() => setMissionsOpen(false)}
+        onRemoveMission={(missionId) => {
+          const result = removeMissionAndRebuildRoute(session, missionId);
+          if (!result.ok) {
+            setLoadError(result.error);
+            return;
+          }
+          persistSession(result.session);
         }}
       />
     </div>

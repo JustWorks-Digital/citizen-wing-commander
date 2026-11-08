@@ -39,6 +39,7 @@ import {
 } from "@/lib/sessions/resolveRefs";
 import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import { buildSessionMissionsFromIntake } from "@/lib/missions/sessionMissionsFromIntake";
 
 const PLAYBOOK_PATH = path.join(
   process.cwd(),
@@ -73,6 +74,9 @@ function presentSession(session: SessionChecklistModel) {
           type: startLoc?.type ?? null,
         }
       : null,
+    missionCount: session.missionCount,
+    missionsCompleted: session.missionsCompleted,
+    missions: session.missions ?? [],
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     updatedAt: session.updatedAt,
@@ -166,6 +170,9 @@ export async function toolReplaceHaulingChecklist(input: {
   ships?: string[];
   legs: IncomingLeg[];
   resetTimer?: boolean;
+  missionCount?: number;
+  missionsCompleted?: number;
+  missions?: SessionChecklistModel["missions"];
 }) {
   const rows = [];
   for (const [index, leg] of input.legs.entries()) {
@@ -188,6 +195,9 @@ export async function toolReplaceHaulingChecklist(input: {
   const session = await replaceChecklistRows(rows, input.sessionName, {
     resetTimer: input.resetTimer,
     shipSlugs,
+    missionCount: input.missionCount,
+    missionsCompleted: input.missionsCompleted,
+    missions: input.missions,
   });
 
   return textResult({
@@ -222,11 +232,16 @@ export async function toolApplyHaulingContractsIntake(
     legs = built.legs;
   }
 
+  const missions = await buildSessionMissionsFromIntake(intake.contracts);
+
   const replaced = await toolReplaceHaulingChecklist({
     sessionName: intake.sessionName,
     ships: intake.ships,
     legs,
     resetTimer: intake.resetTimer !== false,
+    missionCount: missions.length,
+    missionsCompleted: intake.resetTimer !== false ? 0 : undefined,
+    missions,
   });
 
   if (intake.startLocation != null && intake.startLocation.trim()) {
