@@ -123,7 +123,7 @@ function CargoGroups({
   cargoLines: CargoLine[];
 }) {
   return (
-    <div className="flex flex-col gap-2 text-sm">
+    <div className="flex flex-col gap-5 text-sm md:gap-2">
       {groupCargoLines(cargoLines).map((group) => {
         const roleClass =
           group.role === "pickup"
@@ -166,7 +166,7 @@ function CargoGroups({
               return (
                 <span
                   key={`${row.id}-cargo-${group.role}-${index}`}
-                  className={`inline-flex items-center gap-1.5 pl-3 font-medium tabular-nums ${doneClass}`}
+                  className={`inline-flex items-center gap-1.5 font-medium tabular-nums md:pl-3 ${doneClass}`}
                   style={cargoHex ? { color: cargoHex } : undefined}
                 >
                   <span
@@ -550,7 +550,7 @@ export function HaulingChecklistTable({
 
       {/* Desktop: table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[40rem] border-collapse text-left">
+        <table className="w-full min-w-[48rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
               <th
@@ -567,9 +567,15 @@ export function HaulingChecklistTable({
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="min-w-[10rem] px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                Location / cargo
+                Location
+              </th>
+              <th
+                scope="col"
+                className="min-w-[12rem] px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+              >
+                Cargo
               </th>
               <th
                 scope="col"
@@ -595,7 +601,7 @@ export function HaulingChecklistTable({
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-8 text-center text-sm text-rsi-text-muted"
                 >
                   {emptyMessage}
@@ -640,7 +646,7 @@ export function HaulingChecklistTable({
                       onToggle={() => onToggle(row.id)}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-top">
                     <LocationHeader
                       row={row}
                       location={location}
@@ -652,11 +658,11 @@ export function HaulingChecklistTable({
                         void copyStarmapName(row.id, location);
                       }}
                     />
-                    <div className="mt-3">
-                      <CargoGroups row={row} cargoLines={cargoLines} />
-                    </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-top">
+                    <CargoGroups row={row} cargoLines={cargoLines} />
+                  </td>
+                  <td className="px-4 py-3 align-top">
                     <ScuTotalDisplay
                       row={row}
                       pickup={scu.pickup}
@@ -664,7 +670,7 @@ export function HaulingChecklistTable({
                       total={scu.total}
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-4 py-3 align-top text-sm">
                     <div className="flex flex-col gap-0.5">
                       {storageLines.map((line, index) => {
                         const roleClass =
@@ -691,7 +697,7 @@ export function HaulingChecklistTable({
                   </td>
                   <td
                     className={[
-                      "px-4 py-3 font-mono text-sm tabular-nums",
+                      "px-4 py-3 align-top font-mono text-sm tabular-nums",
                       row.isCompleted
                         ? "text-rsi-text-muted line-through"
                         : "text-rsi-text-secondary",
