@@ -19,6 +19,8 @@ export type SessionMission = {
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
   cargoSummary: string;
   isCompleted: boolean;
+  /** When true, mission stays in the list but is excluded from the route table. */
+  isHidden?: boolean;
   screenshots: string[];
   transcript?: string;
   mobiglas: MobiglasContractPanel;
@@ -93,6 +95,7 @@ export function sessionMissionFromIntakeContract(
     maxContainerScu: contract.maxContainerScu,
     cargoSummary: cargoSummary(contract),
     isCompleted: false,
+    isHidden: false,
     screenshots: contract.screenshots ? [...contract.screenshots] : [],
     transcript: contract.transcript,
     mobiglas: mobiglas ?? synthesizeMobiglas(contract),

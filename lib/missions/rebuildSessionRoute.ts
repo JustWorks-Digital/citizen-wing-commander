@@ -10,25 +10,25 @@ import type {
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
 
-/**
- * Drop a mission and rebuild route legs from the remaining set,
- * ordered from the session start location when set.
- */
-export function removeMissionAndRebuildRoute(
-  session: SessionChecklistModel,
-  missionId: string,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
-  const missions = (session.missions ?? []).filter(
-    (mission) => mission.id !== missionId,
-  );
-  const missionsCompleted = missions.filter((m) => m.isCompleted).length;
+function visibleMissions(missions: SessionMission[]): SessionMission[] {
+  return missions.filter((mission) => !mission.isHidden);
+}
 
-  if (missions.length === 0) {
+function rebuildRowsFromMissions(
+  session: SessionChecklistModel,
+  missions: SessionMission[],
+): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  const active = visibleMissions(missions);
+  // Hidden missions stay in the list but drop out of N/M and the route table.
+  const missionCount = active.length;
+  const missionsCompleted = active.filter((m) => m.isCompleted).length;
+
+  if (active.length === 0) {
     return {
       ok: true,
       session: applySessionCompletionTiming({
         ...session,
-        missions: [],
+        missions,
         missionCount: 0,
         missionsCompleted: 0,
         rows: [],
@@ -41,7 +41,7 @@ export function removeMissionAndRebuildRoute(
       kind: "hauling_contracts_intake",
       version: 1,
       sessionName: session.sessionName,
-      contracts: missions.map(intakeContractFromSessionMission),
+      contracts: active.map(intakeContractFromSessionMission),
     },
     { startLocation: session.startLocationSlug },
   );
@@ -63,11 +63,37 @@ export function removeMissionAndRebuildRoute(
     session: applySessionCompletionTiming({
       ...session,
       missions,
-      missionCount: missions.length,
+      missionCount,
       missionsCompleted,
       rows,
     }),
   };
+}
+
+/** Hide/show a mission; hidden ones stay stored but drop out of the route table. */
+export function setMissionHiddenAndRebuildRoute(
+  session: SessionChecklistModel,
+  missionId: string,
+  isHidden: boolean,
+): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  const missions = (session.missions ?? []).map((mission) =>
+    mission.id === missionId ? { ...mission, isHidden } : mission,
+  );
+  return rebuildRowsFromMissions(session, missions);
+}
+
+/**
+ * Permanently drop a mission and rebuild route legs from the remaining set,
+ * ordered from the session start location when set.
+ */
+export function removeMissionAndRebuildRoute(
+  session: SessionChecklistModel,
+  missionId: string,
+): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  const missions = (session.missions ?? []).filter(
+    (mission) => mission.id !== missionId,
+  );
+  return rebuildRowsFromMissions(session, missions);
 }
 
 export type { SessionMission };

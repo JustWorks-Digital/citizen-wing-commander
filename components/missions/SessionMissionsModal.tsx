@@ -8,13 +8,52 @@ export type SessionMissionsModalProps = {
   open: boolean;
   missions: SessionMission[];
   onClose: () => void;
+  onToggleHidden: (missionId: string, isHidden: boolean) => void;
   onRemoveMission: (missionId: string) => void;
 };
+
+function VisibilityIcon({ isHidden }: { isHidden: boolean }) {
+  if (isHidden) {
+    return (
+      <svg
+        aria-hidden
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+        <line x1="1" y1="1" x2="23" y2="23" />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
 
 export function SessionMissionsModal({
   open,
   missions,
   onClose,
+  onToggleHidden,
   onRemoveMission,
 }: SessionMissionsModalProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -61,13 +100,34 @@ export function SessionMissionsModal({
           </div>
           <div className="flex items-center gap-2">
             {selected ? (
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
-              >
-                Back
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleHidden(selected.id, !selected.isHidden);
+                  }}
+                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
+                >
+                  {selected.isHidden ? "Show" : "Hide"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRemoveMission(selected.id);
+                    setSelectedId(null);
+                  }}
+                  className="rounded-rsi border border-rsi-danger/40 px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-danger hover:bg-rsi-danger-muted"
+                >
+                  Remove
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="rounded-rsi border border-rsi-border px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
+                >
+                  Back
+                </button>
+              </>
             ) : null}
             <button
               type="button"
@@ -89,47 +149,66 @@ export function SessionMissionsModal({
             <p className="text-sm text-rsi-text-muted">No missions in this session.</p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
-              {missions.map((mission) => (
-                <li key={mission.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(mission.id)}
-                    className="flex h-full w-full flex-col items-start rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4 pr-12 text-left transition-colors hover:border-rsi-border-strong hover:bg-rsi-surface-raised"
-                  >
-                    <span className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent">
-                      {mission.rewardDisplay ??
-                        `${Math.round(mission.rewardAuec / 1000)}k`}
-                    </span>
-                    <span className="mt-2 font-semibold tracking-wide text-rsi-text">
-                      {mission.title}
-                    </span>
-                    <span className="mt-1 text-xs text-rsi-text-secondary">
-                      {mission.contractor}
-                    </span>
-                    <span className="mt-3 text-sm text-rsi-text">
-                      {mission.cargoSummary}
-                    </span>
-                    <span className="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                      {mission.from.join(" · ")} → {mission.to.join(" · ")}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${mission.title}`}
-                    title="Remove mission and rebuild route"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRemoveMission(mission.id);
-                      if (selectedId === mission.id) setSelectedId(null);
-                    }}
-                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-danger/50 hover:bg-rsi-danger-muted hover:text-rsi-danger"
-                  >
-                    <span aria-hidden className="text-lg leading-none">
-                      ×
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {missions.map((mission) => {
+                const isHidden = Boolean(mission.isHidden);
+                return (
+                  <li key={mission.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(mission.id)}
+                      className={[
+                        "flex h-full w-full flex-col items-start rounded-rsi border p-4 pr-12 text-left transition-colors",
+                        isHidden
+                          ? "border-rsi-border/60 bg-rsi-bg-deep/30 opacity-55 hover:opacity-80"
+                          : "border-rsi-border bg-rsi-bg-deep/50 hover:border-rsi-border-strong hover:bg-rsi-surface-raised",
+                      ].join(" ")}
+                    >
+                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent">
+                        {mission.rewardDisplay ??
+                          `${Math.round(mission.rewardAuec / 1000)}k`}
+                        {isHidden ? " · hidden" : ""}
+                      </span>
+                      <span className="mt-2 font-semibold tracking-wide text-rsi-text">
+                        {mission.title}
+                      </span>
+                      <span className="mt-1 text-xs text-rsi-text-secondary">
+                        {mission.contractor}
+                      </span>
+                      <span className="mt-3 text-sm text-rsi-text">
+                        {mission.cargoSummary}
+                      </span>
+                      <span className="mt-2 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                        {mission.from.join(" · ")} → {mission.to.join(" · ")}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={
+                        isHidden
+                          ? `Show ${mission.title} in route`
+                          : `Hide ${mission.title} from route`
+                      }
+                      title={
+                        isHidden
+                          ? "Show in route table"
+                          : "Hide from route table"
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleHidden(mission.id, !isHidden);
+                      }}
+                      className={[
+                        "absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
+                        isHidden
+                          ? "border-rsi-accent/40 text-rsi-accent hover:border-rsi-accent"
+                          : "border-rsi-border text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                      ].join(" ")}
+                    >
+                      <VisibilityIcon isHidden={isHidden} />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

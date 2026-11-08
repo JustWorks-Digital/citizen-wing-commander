@@ -18,7 +18,10 @@ import {
   mockSessionChecklist,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
-import { removeMissionAndRebuildRoute } from "@/lib/missions/rebuildSessionRoute";
+import {
+  removeMissionAndRebuildRoute,
+  setMissionHiddenAndRebuildRoute,
+} from "@/lib/missions/rebuildSessionRoute";
 import { CargoBayLayout } from "./CargoBayLayout";
 import { HaulingChecklistTable } from "./HaulingChecklistTable";
 import { SessionMissionsModal } from "./SessionMissionsModal";
@@ -270,6 +273,18 @@ export function SessionChecklistView({
         open={missionsOpen}
         missions={session.missions ?? []}
         onClose={() => setMissionsOpen(false)}
+        onToggleHidden={(missionId, isHidden) => {
+          const result = setMissionHiddenAndRebuildRoute(
+            session,
+            missionId,
+            isHidden,
+          );
+          if (!result.ok) {
+            setLoadError(result.error);
+            return;
+          }
+          persistSession(result.session);
+        }}
         onRemoveMission={(missionId) => {
           const result = removeMissionAndRebuildRoute(session, missionId);
           if (!result.ok) {
