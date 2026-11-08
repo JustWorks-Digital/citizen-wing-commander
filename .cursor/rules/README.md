@@ -6,6 +6,8 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | --- | --- |
 | [`rsi-theme.mdc`](./rsi-theme.mdc) | RSI / Spectrum visual language & token usage |
 | [`storybook-gate.mdc`](./storybook-gate.mdc) | Storybook required before UI commits |
+| [`database.mdc`](./database.mdc) | Postgres + Drizzle schema & migrations |
+| [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |
 | [`general.mdc`](./general.mdc) | Catch-all project conventions |
 
 Also see:

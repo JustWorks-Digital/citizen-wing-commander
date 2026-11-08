@@ -18,3 +18,13 @@ RSI / Spectrum tokens live in `app/globals.css` as `--rsi-*` CSS variables and T
 ## Storybook gate
 
 New UI must have stories before commit. See `CONTRIBUTING.md` and `.cursor/rules/storybook-gate.mdc`.
+
+## Database
+
+Postgres + Drizzle (`db/schema.ts`). Copy `.env.example` → `.env.local`, then:
+
+```bash
+npm run db:migrate
+```
+
+Minimal proof routes: `GET /api/health/db`, `GET|POST /api/sessions`.

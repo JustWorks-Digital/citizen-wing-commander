@@ -20,6 +20,16 @@ npm run storybook
 
 Project conventions live in `.cursor/rules/` (index: `.cursor/rules/README.md`). Add new rules there as the team invents them.
 
+## Database
+
+Postgres + Drizzle. See `.cursor/rules/database.mdc`.
+
+```bash
+cp .env.example .env.local   # set DATABASE_URL
+npm run db:generate          # after schema edits
+npm run db:migrate           # apply drizzle/*.sql
+```
+
 ## Scripts
 
 | Script | Purpose |
@@ -28,3 +38,6 @@ Project conventions live in `.cursor/rules/` (index: `.cursor/rules/README.md`).
 | `npm run storybook` | Design system / UI workshop |
 | `npm run build-storybook` | Static Storybook build |
 | `npm run lint` | ESLint |
+| `npm run db:generate` | Generate SQL from `db/schema.ts` |
+| `npm run db:migrate` | Apply migrations |
+| `npm run db:studio` | Drizzle Studio |

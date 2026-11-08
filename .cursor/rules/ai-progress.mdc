@@ -1,0 +1,15 @@
+---
+description: Temporary AI agent progress MD files (gitignored)
+alwaysApply: true
+---
+
+# AI progress MD files
+
+- While working on development tasks, AI agents should keep **temporary progress notes in Markdown** so work can resume after crashes, timeouts, or handoffs.
+- Preferred location: **`.ai-progress/`** at the repo root (create as needed). Use short kebab-case names, e.g. `.ai-progress/hauling-db.md`, `.ai-progress/theme-pass.md`.
+- These files are **local scratch only**:
+  - Listed in `.gitignore` (`.ai-progress/` and similar).
+  - **Must NOT be committed**, staged, or force-added.
+  - Safe to overwrite; not a substitute for project-store docs or PR descriptions.
+- When a task finishes cleanly, delete or leave the progress file — either is fine — but never ship it in git.
+- Durable user-facing notes belong in Project store `docs/` or committed repo docs (`CONTRIBUTING.md`, etc.), not in `.ai-progress/`.
