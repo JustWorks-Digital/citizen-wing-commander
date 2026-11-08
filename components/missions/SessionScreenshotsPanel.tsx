@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { DragEvent } from "react";
+import type { ClipboardEvent, DragEvent } from "react";
 import {
   deleteSessionScreenshot,
   fetchSessionScreenshots,
@@ -25,6 +25,14 @@ const IMAGE_TYPES = new Set([
   "image/gif",
 ]);
 
+const EXT_BY_MIME: Record<string, string> = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -40,6 +48,28 @@ function imageFilesFromList(list: FileList | File[] | null): File[] {
   );
 }
 
+function imageFilesFromClipboard(data: DataTransfer | null): File[] {
+  if (!data) return [];
+  const files: File[] = [];
+  for (const item of Array.from(data.items)) {
+    if (item.kind !== "file") continue;
+    const type = item.type.toLowerCase();
+    if (!IMAGE_TYPES.has(type)) continue;
+    const file = item.getAsFile();
+    if (!file) continue;
+    const ext = EXT_BY_MIME[type] ?? ".png";
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    files.push(
+      new File([file], file.name || `paste-${stamp}${ext}`, {
+        type: file.type || type,
+        lastModified: file.lastModified,
+      }),
+    );
+  }
+  if (files.length) return files;
+  return imageFilesFromList(data.files);
+}
+
 /** Upload + browse contract screenshots for a hauling session. */
 export function SessionScreenshotsPanel({
   sessionId,
@@ -47,6 +77,7 @@ export function SessionScreenshotsPanel({
 }: SessionScreenshotsPanelProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const dragDepthRef = useRef(0);
   const [screenshots, setScreenshots] = useState<ScreenshotListItem[]>(
     initialScreenshots ?? [],
@@ -54,6 +85,7 @@ export function SessionScreenshotsPanel({
   const [isLoading, setIsLoading] = useState(!initialScreenshots);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isPasteReady, setIsPasteReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ScreenshotListItem | null>(null);
 
@@ -141,6 +173,21 @@ export function SessionScreenshotsPanel({
     void uploadFiles(images);
   };
 
+  const onPaste = (event: ClipboardEvent<HTMLElement>) => {
+    if (isUploading) return;
+    const images = imageFilesFromClipboard(event.clipboardData);
+    if (!images.length) {
+      setError("Clipboard has no image. Copy a screenshot, then paste here.");
+      return;
+    }
+    event.preventDefault();
+    void uploadFiles(images);
+  };
+
+  const focusPanelForPaste = () => {
+    panelRef.current?.focus();
+  };
+
   const onDelete = async (shot: ScreenshotListItem) => {
     setError(null);
     try {
@@ -156,12 +203,24 @@ export function SessionScreenshotsPanel({
 
   return (
     <section
+      ref={panelRef}
+      tabIndex={0}
+      aria-label="Session screenshots. Click to focus, then paste an image from the clipboard."
       className={[
-        "rounded-rsi border bg-rsi-surface/90 p-4 shadow-rsi-panel transition-colors",
-        isDragging
+        "rounded-rsi border bg-rsi-surface/90 p-4 shadow-rsi-panel transition-colors outline-none",
+        isDragging || isPasteReady
           ? "border-rsi-accent bg-rsi-accent-muted/30"
           : "border-rsi-border",
+        "focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
       ].join(" ")}
+      onClick={focusPanelForPaste}
+      onFocus={() => setIsPasteReady(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsPasteReady(false);
+        }
+      }}
+      onPaste={onPaste}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
       onDragOver={onDragOver}
@@ -173,7 +232,7 @@ export function SessionScreenshotsPanel({
             Screenshots
           </p>
           <p className="mt-1 text-xs text-rsi-text-muted">
-            Drop images here or upload contract shots for this session.
+            Click this panel, then paste (⌘/Ctrl+V), drop, or upload images.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -205,19 +264,29 @@ export function SessionScreenshotsPanel({
         <p className="mb-3 rounded-rsi border border-dashed border-rsi-accent bg-rsi-accent-muted/40 px-3 py-4 text-center font-mono text-xs uppercase tracking-[0.16em] text-rsi-accent">
           Drop to upload
         </p>
+      ) : isPasteReady ? (
+        <p className="mb-3 rounded-rsi border border-dashed border-rsi-accent/60 bg-rsi-accent-muted/25 px-3 py-3 text-center font-mono text-xs uppercase tracking-[0.16em] text-rsi-accent">
+          Ready — paste screenshot
+        </p>
       ) : null}
 
       {isLoading ? (
         <p className="font-mono text-sm text-rsi-text-muted">Loading…</p>
       ) : screenshots.length === 0 ? (
-        <button
-          type="button"
-          disabled={isUploading}
-          onClick={() => inputRef.current?.click()}
-          className="w-full rounded-rsi border border-dashed border-rsi-border bg-rsi-bg-deep/40 px-3 py-8 text-center text-sm text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary disabled:opacity-50"
-        >
-          No screenshots yet. Drag and drop images here, or click to browse.
-        </button>
+        <div className="rounded-rsi border border-dashed border-rsi-border bg-rsi-bg-deep/40 px-3 py-8 text-center text-sm text-rsi-text-muted">
+          <p>No screenshots yet. Paste, drop, or browse to add contract shots.</p>
+          <button
+            type="button"
+            disabled={isUploading}
+            onClick={(event) => {
+              event.stopPropagation();
+              inputRef.current?.click();
+            }}
+            className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent hover:text-rsi-accent-hover disabled:opacity-50"
+          >
+            Browse files
+          </button>
+        </div>
       ) : (
         <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
           {screenshots.map((shot) => (

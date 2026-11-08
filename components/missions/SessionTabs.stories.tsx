@@ -30,6 +30,7 @@ const meta = {
     activeSessionId: "a1b2c3d4",
     onSelect: () => undefined,
     onCreate: () => undefined,
+    onClose: () => undefined,
   },
 } satisfies Meta<typeof SessionTabs>;
 
@@ -60,6 +61,15 @@ export const Interactive: Story = {
             },
           ]);
           setActive(id);
+        }}
+        onClose={(sessionId) => {
+          setSessions((prev) => {
+            const next = prev.filter((tab) => tab.id !== sessionId);
+            if (sessionId === activeSessionId && next[0]) {
+              setActive(next[0].id);
+            }
+            return next;
+          });
         }}
       />
     );

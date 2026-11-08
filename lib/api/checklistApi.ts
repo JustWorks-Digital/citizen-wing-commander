@@ -99,3 +99,22 @@ export async function activateChecklistSession(
   }
   return (await res.json()) as SessionChecklistModel;
 }
+
+export type DeleteChecklistSessionResult = {
+  deletedSessionId: string;
+  activeSessionId: string;
+  sessions: SessionTabSummary[];
+};
+
+/** Soft-delete a session tab (closes it for the crew). */
+export async function deleteChecklistSession(
+  sessionId: string,
+): Promise<DeleteChecklistSessionResult> {
+  const res = await fetch(appApi.checklistSession(sessionId), {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(`Checklist session delete failed (${res.status})`);
+  }
+  return (await res.json()) as DeleteChecklistSessionResult;
+}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   activateChecklistSession,
   createChecklistSession,
+  deleteChecklistSession,
   fetchChecklist,
   fetchChecklistSessions,
   saveChecklist,
@@ -282,6 +283,26 @@ export function SessionChecklistView({
     }
   };
 
+  const closeSession = async (sessionId: string) => {
+    if (initial) return;
+    setTabsBusy(true);
+    try {
+      const result = await deleteChecklistSession(sessionId);
+      setTabs(result.sessions);
+      setActiveSessionId(result.activeSessionId);
+      setLoadError(null);
+      if (sessionId === routeSessionId || sessionId === session.id) {
+        router.push(appPaths.session(result.activeSessionId));
+      }
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Failed to close session",
+      );
+    } finally {
+      setTabsBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <SessionTabs
@@ -292,6 +313,9 @@ export function SessionChecklistView({
         }}
         onCreate={() => {
           void addSession();
+        }}
+        onClose={(id) => {
+          void closeSession(id);
         }}
         isBusy={tabsBusy}
       />

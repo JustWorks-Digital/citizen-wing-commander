@@ -5,6 +5,8 @@
 export const appApi = {
   checklist: "/api/checklist",
   checklistSessions: "/api/checklist/sessions",
+  checklistSession: (sessionId: string) =>
+    `/api/checklist/sessions/${encodeURIComponent(sessionId)}`,
   checklistSessionActivate: (sessionId: string) =>
     `/api/checklist/sessions/${encodeURIComponent(sessionId)}/activate`,
   checklistSessionScreenshots: (sessionId: string) =>

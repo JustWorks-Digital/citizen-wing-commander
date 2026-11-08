@@ -8,6 +8,7 @@ import {
   listActiveDeliverySessionTabs,
   rowToChecklist,
   selectDeliverySession,
+  softDeleteDeliverySession,
   updateDeliverySessionChecklist,
 } from "@/db/queries/deliverySessions";
 import type {
@@ -95,6 +96,25 @@ export async function createChecklistSession(input?: {
     select: input?.activate !== false,
   });
   return rowToChecklist(row);
+}
+
+/** Soft-delete a session tab; ensures another active session remains. */
+export async function deleteChecklistSession(sessionId: string): Promise<{
+  deletedSessionId: string;
+  activeSessionId: string;
+  sessions: SessionTabSummary[];
+}> {
+  const id = sessionId.trim();
+  const deleted = await softDeleteDeliverySession(id);
+  if (!deleted) {
+    throw new Error(`Unknown session id: ${id}`);
+  }
+  const list = await listChecklistSessions();
+  return {
+    deletedSessionId: id,
+    activeSessionId: list.activeSessionId,
+    sessions: list.sessions,
+  };
 }
 
 export async function saveChecklistSession(
