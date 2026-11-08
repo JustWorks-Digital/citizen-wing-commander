@@ -8,13 +8,16 @@ import {
   getLocationBySlug,
   sumCargoScuByRole,
 } from "@/lib/fixtures";
-import { namedCommodityColorToHex } from "@/lib/fixtures/commodityColors";
+import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import {
-  describeShipStorageLines,
   formatDistanceToNext,
   type HaulingChecklistRow,
   type LegKind,
 } from "@/lib/missions/mockSession";
+import {
+  buildShipStorageBars,
+  type ShipStorageBar,
+} from "@/lib/missions/shipStorageBars";
 import { OutdoorFreightIcon } from "./OutdoorFreightIcon";
 
 export type HaulingChecklistTableProps = {
@@ -159,9 +162,11 @@ function CargoGroups({
               </span>
             ) : null}
             {group.items.map((line, index) => {
-              const cargoHex =
-                namedCommodityColorToHex(line.color) ??
-                namedCommodityColorToHex(line.color2);
+              const cargoHex = resolveCommodityColorHex(
+                line.color,
+                line.color2,
+                line.commoditySlug,
+              );
               const iconSrc = getCommodityIconSrc(line.commoditySlug);
               return (
                 <span
@@ -334,14 +339,85 @@ function ScuTotalDisplay({
   );
 }
 
+function ShipStorageBars({
+  row,
+  bars,
+  /** Fill parent height (desktop table); fixed bars on mobile. */
+  fill = false,
+}: {
+  row: HaulingChecklistRow;
+  bars: ShipStorageBar[];
+  fill?: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "flex w-full min-w-[4.5rem] max-w-[7.5rem] flex-col gap-1",
+        fill ? "h-full min-h-0" : "",
+        row.isCompleted ? "opacity-50" : "",
+      ].join(" ")}
+      role="list"
+      aria-label="Ship storage"
+    >
+      {bars.map((bar) => {
+        const isEmpty = bar.segments.length === 0;
+        const segmentSummary = isEmpty
+          ? "empty"
+          : bar.segments
+              .map((segment) => `${segment.scu} ${segment.commodityName}`)
+              .join(", ");
+        return (
+          <div
+            key={`${row.id}-bar-${bar.zone}`}
+            role="listitem"
+            className={[
+              "relative flex w-full overflow-hidden rounded-sm border border-rsi-border/80",
+              isEmpty ? "bg-rsi-bg-deep/40" : "bg-rsi-bg-deep/60",
+              fill ? "min-h-0 flex-1" : "h-10",
+            ].join(" ")}
+            title={`${bar.label}: ${segmentSummary}`}
+            aria-label={`${bar.label}: ${segmentSummary}`}
+          >
+            {bar.segments.map((segment) => {
+              const hex =
+                resolveCommodityColorHex(
+                  segment.color,
+                  segment.color2,
+                  segment.commoditySlug,
+                ) ?? "var(--rsi-border-strong)";
+              return (
+                <span
+                  key={`${row.id}-${bar.zone}-${segment.commoditySlug || "empty"}`}
+                  className="h-full min-w-0"
+                  style={{
+                    flexGrow: Math.max(segment.scu, 1),
+                    flexBasis: 0,
+                    backgroundColor: hex,
+                  }}
+                  title={`${bar.label} · ${segment.scu} ${segment.commodityName}`}
+                />
+              );
+            })}
+            {/* Center divider — two bay quadrants per zone */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-rsi-bg"
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MetaGrid({
   row,
   scu,
-  storageLines,
+  storageBars,
 }: {
   row: HaulingChecklistRow;
   scu: { pickup: number; delivery: number; total: number };
-  storageLines: ReturnType<typeof describeShipStorageLines>;
+  storageBars: ShipStorageBar[];
 }) {
   return (
     <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rsi-divider/80 pt-3 text-sm sm:grid-cols-3">
@@ -363,30 +439,8 @@ function MetaGrid({
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
           Ship storage
         </dt>
-        <dd className="mt-0.5">
-          <div className="flex flex-col gap-0.5">
-            {storageLines.map((line, index) => {
-              const roleClass =
-                line.role === "pickup"
-                  ? "text-rsi-accent"
-                  : line.role === "delivery"
-                    ? "text-rsi-success"
-                    : "text-rsi-text-secondary";
-              return (
-                <span
-                  key={`${row.id}-storage-${index}`}
-                  className={[
-                    roleClass,
-                    row.isCompleted
-                      ? "line-through opacity-70 decoration-rsi-success/40"
-                      : "",
-                  ].join(" ")}
-                >
-                  {line.label}
-                </span>
-              );
-            })}
-          </div>
+        <dd className="mt-1">
+          <ShipStorageBars row={row} bars={storageBars} />
         </dd>
       </div>
       <div className="col-span-2 sm:col-span-1">
@@ -492,7 +546,7 @@ export function HaulingChecklistTable({
             row.cargoDeliveries,
             row.legKind === "both" ? null : row.legKind,
           );
-          const storageLines = describeShipStorageLines(row);
+          const storageBars = buildShipStorageBars(row);
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
 
@@ -539,7 +593,7 @@ export function HaulingChecklistTable({
                   <MetaGrid
                     row={row}
                     scu={scu}
-                    storageLines={storageLines}
+                    storageBars={storageBars}
                   />
                 </div>
               </div>
@@ -621,7 +675,7 @@ export function HaulingChecklistTable({
                 row.cargoDeliveries,
                 row.legKind === "both" ? null : row.legKind,
               );
-              const storageLines = describeShipStorageLines(row);
+              const storageBars = buildShipStorageBars(row);
               const isCopied = copiedRowId === row.id;
               const step = stepById.get(row.id) ?? 0;
 
@@ -670,29 +724,14 @@ export function HaulingChecklistTable({
                       total={scu.total}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top text-sm">
-                    <div className="flex flex-col gap-0.5">
-                      {storageLines.map((line, index) => {
-                        const roleClass =
-                          line.role === "pickup"
-                            ? "text-rsi-accent"
-                            : line.role === "delivery"
-                              ? "text-rsi-success"
-                              : "text-rsi-text-secondary";
-                        return (
-                          <span
-                            key={`${row.id}-storage-${index}`}
-                            className={[
-                              roleClass,
-                              row.isCompleted
-                                ? "line-through opacity-70 decoration-rsi-success/40"
-                                : "",
-                            ].join(" ")}
-                          >
-                            {line.label}
-                          </span>
-                        );
-                      })}
+                  <td className="relative w-[7.5rem] px-4 py-3 align-top text-sm">
+                    {/* Absolute so storage bars fill row height without growing it. */}
+                    <div className="absolute inset-x-4 inset-y-3">
+                      <ShipStorageBars
+                        row={row}
+                        bars={storageBars}
+                        fill
+                      />
                     </div>
                   </td>
                   <td

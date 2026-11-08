@@ -52,7 +52,7 @@ const KIND_CRATE_COLORS = {
   vice: { color: "white", color2: "gray" },
   drug: { color: "green", color2: "black" },
   scrap: { color: "black", color2: "orange" },
-  waste: { color: "black", color2: "yellow" },
+  waste: { color: "gray", color2: "rust" },
   explosive: { color: "red", color2: "black" },
   ammunition: { color: "brown", color2: "black" },
   electronics: { color: "blue", color2: "white" },

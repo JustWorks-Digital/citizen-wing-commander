@@ -8,6 +8,12 @@ const meta = {
   component: HaulingChecklistTable,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Checklist rows with separate location/cargo columns and stacked front/middle/rear storage color bars.",
+      },
+    },
   },
 } satisfies Meta<typeof HaulingChecklistTable>;
 

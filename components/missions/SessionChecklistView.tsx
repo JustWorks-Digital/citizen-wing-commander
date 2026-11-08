@@ -473,7 +473,7 @@ export function SessionChecklistView({
         </div>
         <div className="flex h-full flex-col justify-start rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel sm:px-4">
           <p className="mb-1 text-[0.6rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
-            Complete
+            {totalLegs === 1 ? "Delivery complete" : "Deliveries complete"}
           </p>
           <p className="text-base leading-none text-rsi-text sm:text-lg">
             <span>{completedLegs}</span>

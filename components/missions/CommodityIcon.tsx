@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { getCommodityIconSrc } from "@/lib/fixtures";
-import { namedCommodityColorToHex } from "@/lib/fixtures/commodityColors";
+import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 
 export type CommodityIconProps = {
   commoditySlug: string;
@@ -38,8 +38,7 @@ export function CommodityIcon({
   const showTimer = useRef<number | null>(null);
   const hideTimer = useRef<number | null>(null);
   const iconSrc = getCommodityIconSrc(commoditySlug);
-  const cargoHex =
-    namedCommodityColorToHex(color) ?? namedCommodityColorToHex(color2);
+  const cargoHex = resolveCommodityColorHex(color, color2, commoditySlug);
 
   useEffect(() => {
     return () => {

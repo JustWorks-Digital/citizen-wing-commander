@@ -31,6 +31,16 @@ export const Food: Story = {
   },
 };
 
+/** Dual crate tint blended (gray + rust). */
+export const Waste: Story = {
+  args: {
+    commoditySlug: "waste",
+    label: "Waste",
+    color: "gray",
+    color2: "rust",
+  },
+};
+
 /** Label shown beside the icon (mobile cargo bay list). */
 export const InlineLabel: Story = {
   args: {

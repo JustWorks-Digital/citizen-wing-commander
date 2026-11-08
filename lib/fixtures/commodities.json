@@ -2325,8 +2325,8 @@
       "slug": "waste",
       "name": "Waste",
       "kind": "Waste",
-      "color": "black",
-      "color2": "yellow",
+      "color": "gray",
+      "color2": "rust",
       "colorSource": "kind-fallback",
       "isAvailableLive": true,
       "isIllegal": false
