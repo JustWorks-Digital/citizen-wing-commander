@@ -466,6 +466,8 @@ export function HaulingChecklistTable({
       ? "No missions yet"
       : "All missions complete — show completed to review";
 
+  const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
+
   return (
     <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
       {toolbar}
@@ -492,6 +494,7 @@ export function HaulingChecklistTable({
           );
           const storageLines = describeShipStorageLines(row);
           const isCopied = copiedRowId === row.id;
+          const step = stepById.get(row.id) ?? 0;
 
           return (
             <li
@@ -505,11 +508,19 @@ export function HaulingChecklistTable({
               ].join(" ")}
             >
               <div className="flex gap-3">
-                <DoneCheckbox
-                  location={location}
-                  isCompleted={row.isCompleted}
-                  onToggle={() => onToggle(row.id)}
-                />
+                <div className="flex flex-col items-center gap-2">
+                  <span
+                    className="font-mono text-[0.7rem] tabular-nums tracking-wide text-rsi-text-muted"
+                    aria-label={`Stop ${step}`}
+                  >
+                    {step}
+                  </span>
+                  <DoneCheckbox
+                    location={location}
+                    isCompleted={row.isCompleted}
+                    onToggle={() => onToggle(row.id)}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <LocationHeader
                     row={row}
@@ -542,6 +553,12 @@ export function HaulingChecklistTable({
         <table className="w-full min-w-[40rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
+              <th
+                scope="col"
+                className="w-10 px-2 py-3 text-center font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+              >
+                #
+              </th>
               <th
                 scope="col"
                 className="w-12 px-3 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
@@ -578,7 +595,7 @@ export function HaulingChecklistTable({
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-sm text-rsi-text-muted"
                 >
                   {emptyMessage}
@@ -600,6 +617,7 @@ export function HaulingChecklistTable({
               );
               const storageLines = describeShipStorageLines(row);
               const isCopied = copiedRowId === row.id;
+              const step = stepById.get(row.id) ?? 0;
 
               return (
                 <tr
@@ -612,6 +630,9 @@ export function HaulingChecklistTable({
                       : "",
                   ].join(" ")}
                 >
+                  <td className="px-2 py-3 text-center font-mono text-xs tabular-nums tracking-wide text-rsi-text-muted">
+                    <span aria-label={`Stop ${step}`}>{step}</span>
+                  </td>
                   <td className="px-3 py-2 text-center">
                     <DoneCheckbox
                       location={location}
