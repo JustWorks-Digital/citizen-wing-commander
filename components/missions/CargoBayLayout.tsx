@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import {
   buildCargoBaySections,
   type CargoBayTile,
@@ -48,58 +49,67 @@ function BaySection({
       {tiles.length === 0 ? (
         <p className="py-4 text-center text-xs text-rsi-text-muted">Empty</p>
       ) : (
-        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-          {tiles.map((tile) => (
-            <div key={tile.key} className={tileClasses(tile)}>
-              <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em]">
-                {tile.role}
-              </span>
-              <span className="text-sm font-semibold leading-tight text-rsi-text">
-                {tile.locationName}
-              </span>
-              {tile.commodities.length > 0 ? (
-                <>
-                  {/* Mobile: named list (tooltips are hard to use on touch). */}
-                  <ul className="mt-1.5 flex flex-col gap-1 md:hidden">
-                    {tile.commodities.map((item) => {
-                      const label = `${item.scu} SCU · ${item.commodityName}`;
-                      return (
-                        <li
-                          key={`${tile.key}-${item.commoditySlug}-list`}
-                          className="flex items-center gap-1.5 text-xs leading-snug text-rsi-text"
-                        >
-                          <CommodityIcon
-                            commoditySlug={item.commoditySlug}
-                            label={label}
-                            color={item.color}
-                            color2={item.color2}
-                            size="sm"
-                            showTooltip={false}
-                          />
-                          <span className="min-w-0 font-medium">{label}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {/* Desktop: compact icons + hover tooltips. */}
-                  <div className="mt-1.5 hidden flex-wrap items-center gap-1.5 md:flex">
-                    {tile.commodities.map((item) => (
-                      <CommodityIcon
-                        key={`${tile.key}-${item.commoditySlug}`}
-                        commoditySlug={item.commoditySlug}
-                        label={`${item.scu} SCU · ${item.commodityName}`}
-                        color={item.color}
-                        color2={item.color2}
-                        size="sm"
-                      />
-                    ))}
-                  </div>
-                </>
+        <div className="flex flex-col md:grid md:grid-cols-2 md:gap-2">
+          {tiles.map((tile, index) => (
+            <Fragment key={tile.key}>
+              {index > 0 ? (
+                <div
+                  className="my-3 border-t border-rsi-border-strong md:hidden"
+                  role="separator"
+                  aria-hidden
+                />
               ) : null}
-              <span className="mt-1 font-mono text-xs tabular-nums opacity-90">
-                {tile.scu} SCU
-              </span>
-            </div>
+              <div className={tileClasses(tile)}>
+                <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em]">
+                  {tile.role}
+                </span>
+                <span className="text-sm font-semibold leading-tight text-rsi-text">
+                  {tile.locationName}
+                </span>
+                {tile.commodities.length > 0 ? (
+                  <>
+                    {/* Mobile: named list (tooltips are hard to use on touch). */}
+                    <ul className="mt-1.5 flex flex-col gap-1 md:hidden">
+                      {tile.commodities.map((item) => {
+                        const label = `${item.scu} SCU · ${item.commodityName}`;
+                        return (
+                          <li
+                            key={`${tile.key}-${item.commoditySlug}-list`}
+                            className="flex items-center gap-1.5 text-xs leading-snug text-rsi-text"
+                          >
+                            <CommodityIcon
+                              commoditySlug={item.commoditySlug}
+                              label={label}
+                              color={item.color}
+                              color2={item.color2}
+                              size="sm"
+                              showTooltip={false}
+                            />
+                            <span className="min-w-0 font-medium">{label}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {/* Desktop: compact icons + hover tooltips. */}
+                    <div className="mt-1.5 hidden flex-wrap items-center gap-1.5 md:flex">
+                      {tile.commodities.map((item) => (
+                        <CommodityIcon
+                          key={`${tile.key}-${item.commoditySlug}`}
+                          commoditySlug={item.commoditySlug}
+                          label={`${item.scu} SCU · ${item.commodityName}`}
+                          color={item.color}
+                          color2={item.color2}
+                          size="sm"
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                <span className="mt-1 font-mono text-xs tabular-nums opacity-90">
+                  {tile.scu} SCU
+                </span>
+              </div>
+            </Fragment>
           ))}
         </div>
       )}
@@ -116,13 +126,18 @@ export function CargoBayLayout({ rows }: CargoBayLayoutProps) {
       <p className="mb-3 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
         Cargo layout
       </p>
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3">
-        {sections.map((section) => (
-          <BaySection
-            key={section.zone}
-            zone={section.zone}
-            tiles={section.tiles}
-          />
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 md:gap-3">
+        {sections.map((section, index) => (
+          <Fragment key={section.zone}>
+            {index > 0 ? (
+              <div
+                className="h-px w-full bg-rsi-border-strong md:hidden"
+                role="separator"
+                aria-hidden
+              />
+            ) : null}
+            <BaySection zone={section.zone} tiles={section.tiles} />
+          </Fragment>
         ))}
       </div>
     </div>

@@ -13,8 +13,8 @@ alwaysApply: true
 - ChatGPT / Gemini / Cursor flow: `get_hauling_intake_playbook` → `store_hauling_screenshot` (attachments) → extract contracts / MobiGlas transcripts → `search_*` → optimize legs → **`apply_hauling_contracts_intake`** (with `sessionId` when needed) → `get_hauling_checklist`.
 - Session ships (`shipSlugs`) come from UEX vehicle fixtures (`lib/fixtures/ships.json`); cargo SCU on those rows will drive bay capacity later.
 - Session start point (`startLocationSlug`) is set in the UI fuzzy search or via `set_session_start_location`.
-- Contract screenshots: MCP `store_hauling_screenshot` → ephemeral `.data/mcp-screenshots/` (gitignored). Transcripts reference logical paths only — do not commit image binaries.
+- Contract screenshots: web UI upload or MCP `store_hauling_screenshot` → `.data/mcp-screenshots/<batchId>/` (gitignored). UI uses `sessionId` as `batchId`. Retrieve with MCP `list_hauling_screenshots` / `get_hauling_screenshot`. Prefer a Railway volume on `.data` so files survive redeploy.
 - When adding tools: action-oriented names, “Use this when…” descriptions, zod `inputSchema`, keep instructions on the handler updated.
 - Production MCP (Railway): `https://citizen-wing-commander-production.up.railway.app/mcp` — add to Cursor via `.cursor/mcp.json` as a remote `url` server (Streamable HTTP).
 - Local ChatGPT/Cursor testing can use that public HTTPS URL or a Secure MCP Tunnel pointing at `/mcp`. Do not invent locations/commodities/ships outside fixtures.
-- Checklist sessions are durable in Postgres. Ephemeral `.data/mcp-screenshots/` is still wiped on redeploy without a volume.
+- Checklist sessions are durable in Postgres. Screenshot files live on disk under `.data/mcp-screenshots/` (mount a Railway volume at `/app/.data` in production).

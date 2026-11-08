@@ -22,7 +22,10 @@ import {
   getSessionElapsedMs,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
-import { estimateOnboardScu } from "@/lib/missions/cargoInventory";
+import {
+  estimateMissionCargoScu,
+  estimateOnboardScu,
+} from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
   setMissionCompletedAndRebuildRoute,
@@ -35,6 +38,7 @@ import {
 import { CargoBayLayout } from "./CargoBayLayout";
 import { HaulingChecklistTable } from "./HaulingChecklistTable";
 import { SessionMissionsModal } from "./SessionMissionsModal";
+import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionTabs } from "./SessionTabs";
 
 export type SessionChecklistViewProps = {
@@ -197,8 +201,14 @@ export function SessionChecklistView({
   });
   const totalCapacity = sumShipCargoScu(session.shipSlugs ?? []);
   const onboardScu = estimateOnboardScu(session.rows);
+  const missionCargoScu = estimateMissionCargoScu(
+    session.missions,
+    session.rows,
+  );
   const isOverCapacity =
     totalCapacity > 0 && onboardScu > totalCapacity;
+  const isMissionOverCapacity =
+    totalCapacity > 0 && missionCargoScu > totalCapacity;
   const elapsedLabel =
     nowMs == null
       ? "—"
@@ -354,12 +364,56 @@ export function SessionChecklistView({
 
       <CargoBayLayout rows={session.rows} />
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <SessionScreenshotsPanel sessionId={session.id} />
+
+      <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-3 sm:gap-3">
         <div className="flex h-full flex-col justify-start rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel sm:px-4">
           <p className="mb-1 text-[0.6rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
             Inventory
           </p>
-          <p className="text-base leading-none text-rsi-text sm:text-lg">
+          {/* Mobile: stacked SCU lines with border dividers */}
+          <dl className="divide-y divide-rsi-border sm:hidden">
+            <div className="flex items-baseline justify-between gap-2 py-1.5 first:pt-0">
+              <dt className="text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                Onboard
+              </dt>
+              <dd
+                className={[
+                  "text-base leading-none",
+                  isOverCapacity ? "text-rsi-warn" : "text-rsi-accent",
+                ].join(" ")}
+              >
+                {onboardScu}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-2 py-1.5">
+              <dt className="text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                Ship capacity
+              </dt>
+              <dd className="text-base leading-none text-rsi-text">
+                {totalCapacity > 0 ? totalCapacity : "—"}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-2 py-1.5 last:pb-0">
+              <dt className="text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                Mission
+              </dt>
+              <dd
+                className={[
+                  "text-base leading-none",
+                  totalCapacity <= 0
+                    ? "text-rsi-text"
+                    : isMissionOverCapacity
+                      ? "text-rsi-danger"
+                      : "text-rsi-success",
+                ].join(" ")}
+              >
+                {missionCargoScu}
+              </dd>
+            </div>
+          </dl>
+          {/* sm+: compact inline totals */}
+          <p className="hidden text-lg leading-none text-rsi-text sm:block">
             <span
               className={
                 isOverCapacity ? "text-rsi-warn" : "text-rsi-accent"
@@ -367,8 +421,24 @@ export function SessionChecklistView({
             >
               {onboardScu}
             </span>
-            <span className="text-rsi-text-muted"> / </span>
+            <span className="text-rsi-text-muted" aria-hidden>
+              {" · "}
+            </span>
             <span>{totalCapacity > 0 ? totalCapacity : "—"}</span>
+            <span className="text-rsi-text-muted" aria-hidden>
+              {" · "}
+            </span>
+            <span
+              className={
+                totalCapacity <= 0
+                  ? "text-rsi-text"
+                  : isMissionOverCapacity
+                    ? "text-rsi-danger"
+                    : "text-rsi-success"
+              }
+            >
+              {missionCargoScu}
+            </span>
           </p>
           <p className="mt-0.5 text-[0.6rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
             SCU

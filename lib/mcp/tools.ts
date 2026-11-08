@@ -28,6 +28,7 @@ import {
 import {
   clearHaulingScreenshots,
   listHaulingScreenshots,
+  readHaulingScreenshot,
   storeHaulingScreenshot,
 } from "@/lib/sessions/screenshotStore";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
@@ -438,7 +439,7 @@ export async function toolStoreHaulingScreenshot(input: {
       ok: true,
       message: `Stored screenshot at ${stored.logicalPath}`,
       ...stored,
-      note: "Ephemeral .data/mcp-screenshots store (not committed; cleared on redeploy without a volume).",
+      note: "Stored under .data/mcp-screenshots (gitignored). Survives redeploy when Railway mounts a volume at /app/.data.",
     });
   } catch (error) {
     return textResult({
@@ -453,7 +454,43 @@ export async function toolListHaulingScreenshots(batchId?: string) {
     batchId: batchId?.trim() || "default",
     count: screenshots.length,
     screenshots,
+    note: "UI uploads use sessionId as batchId. Pass that id here to see app-uploaded shots.",
   });
+}
+
+/** Return screenshot bytes (base64) so agents can read UI-uploaded images. */
+export async function toolGetHaulingScreenshot(input: {
+  logicalPath?: string;
+  batchId?: string;
+  filename?: string;
+}) {
+  try {
+    const logicalPath =
+      input.logicalPath?.trim() ||
+      (input.batchId && input.filename
+        ? `${input.batchId.trim()}/${input.filename.trim()}`
+        : "");
+    if (!logicalPath) {
+      return textResult({
+        error: "Provide logicalPath, or batchId + filename",
+      });
+    }
+    const shot = await readHaulingScreenshot(logicalPath);
+    return textResult({
+      ok: true,
+      logicalPath: shot.logicalPath,
+      filename: shot.filename,
+      bytes: shot.bytes,
+      contentType: shot.contentType,
+      imageBase64: shot.imageBase64,
+      dataUrl: `data:${shot.contentType};base64,${shot.imageBase64}`,
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to read screenshot",
+    });
+  }
 }
 
 export async function toolClearHaulingScreenshots(batchId?: string) {

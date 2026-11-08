@@ -6,6 +6,7 @@ import {
   toolCreateHaulingSession,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
+  toolGetHaulingScreenshot,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
   toolReplaceHaulingChecklist,
@@ -180,9 +181,12 @@ const handler = createMcpHandler(
       {
         title: "List hauling screenshots",
         description:
-          "Use this to list screenshots currently in the ephemeral MCP screenshot store for a batch.",
+          "Use this to list screenshots in the MCP/UI screenshot store for a batch. App uploads use the session UUID as batchId.",
         inputSchema: z.object({
-          batchId: z.string().optional(),
+          batchId: z
+            .string()
+            .optional()
+            .describe("Batch folder id — use sessionId for UI-uploaded shots"),
         }),
         annotations: { readOnlyHint: true },
       },
@@ -190,11 +194,30 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "get_hauling_screenshot",
+      {
+        title: "Get hauling screenshot",
+        description:
+          "Use this to retrieve a screenshot (base64 + data URL) that was uploaded via the web UI or store_hauling_screenshot. Pass logicalPath from list_hauling_screenshots, or batchId + filename.",
+        inputSchema: z.object({
+          logicalPath: z
+            .string()
+            .optional()
+            .describe("Logical path like <batchId>/<filename>"),
+          batchId: z.string().optional(),
+          filename: z.string().optional(),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolGetHaulingScreenshot(input),
+    );
+
+    server.registerTool(
       "clear_hauling_screenshots",
       {
         title: "Clear hauling screenshots",
         description:
-          "Use this to delete ephemeral screenshots for a batch from .data/mcp-screenshots.",
+          "Use this to delete screenshots for a batch from .data/mcp-screenshots.",
         inputSchema: z.object({
           batchId: z.string().optional(),
         }),

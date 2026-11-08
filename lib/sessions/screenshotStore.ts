@@ -1,9 +1,31 @@
-import { mkdir, readdir, unlink, writeFile, stat } from "node:fs/promises";
+import {
+  mkdir,
+  readFile,
+  readdir,
+  unlink,
+  writeFile,
+  stat,
+} from "node:fs/promises";
 import path from "node:path";
 
 const STORE_ROOT = path.join(process.cwd(), ".data", "mcp-screenshots");
 
 const ALLOWED_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+
+const MIME_BY_EXT: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+};
+
+export const SCREENSHOT_MAX_BYTES = 12 * 1024 * 1024;
+
+export function screenshotContentType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  return MIME_BY_EXT[ext] ?? "application/octet-stream";
+}
 
 function sanitizeSegment(value: string): string {
   return value
@@ -72,9 +94,44 @@ export async function storeHaulingScreenshot(input: {
   if (buffer.byteLength === 0) {
     throw new Error("imageBase64 is empty");
   }
-  if (buffer.byteLength > 12 * 1024 * 1024) {
+  return storeHaulingScreenshotBuffer({
+    batchId,
+    filename: input.filename,
+    buffer,
+    ext: detectedExt,
+    contractId: input.contractId,
+  });
+}
+
+/** Persist raw image bytes (multipart UI uploads). */
+export async function storeHaulingScreenshotBuffer(input: {
+  batchId?: string;
+  filename?: string;
+  buffer: Buffer;
+  /** Fallback extension when filename has none (e.g. ".png"). */
+  ext?: string;
+  contractId?: string;
+}): Promise<{
+  logicalPath: string;
+  absolutePath: string;
+  bytes: number;
+  batchId: string;
+  filename: string;
+  contractId?: string;
+}> {
+  const batchId = sanitizeSegment(input.batchId || "default") || "default";
+  const buffer = input.buffer;
+  if (buffer.byteLength === 0) {
+    throw new Error("Screenshot is empty");
+  }
+  if (buffer.byteLength > SCREENSHOT_MAX_BYTES) {
     throw new Error("Screenshot exceeds 12MB limit");
   }
+
+  const detectedExt =
+    input.ext && ALLOWED_EXT.has(input.ext.toLowerCase())
+      ? input.ext.toLowerCase()
+      : ".png";
 
   let filename = input.filename?.trim() || "";
   if (!filename) {
@@ -102,8 +159,48 @@ export async function storeHaulingScreenshot(input: {
     absolutePath,
     bytes: buffer.byteLength,
     batchId,
+    filename,
     contractId: input.contractId,
   };
+}
+
+/** Read a stored screenshot for MCP / HTTP serving. */
+export async function readHaulingScreenshot(logicalPath: string): Promise<{
+  logicalPath: string;
+  filename: string;
+  bytes: number;
+  contentType: string;
+  buffer: Buffer;
+  imageBase64: string;
+}> {
+  const absolutePath = absoluteScreenshotPath(logicalPath);
+  const filename = path.basename(absolutePath);
+  const ext = path.extname(filename).toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) {
+    throw new Error(`Unsupported screenshot type: ${filename}`);
+  }
+  const buffer = await readFile(absolutePath);
+  return {
+    logicalPath,
+    filename,
+    bytes: buffer.byteLength,
+    contentType: screenshotContentType(filename),
+    buffer,
+    imageBase64: buffer.toString("base64"),
+  };
+}
+
+export async function deleteHaulingScreenshot(logicalPath: string): Promise<{
+  removed: boolean;
+  logicalPath: string;
+}> {
+  const absolutePath = absoluteScreenshotPath(logicalPath);
+  try {
+    await unlink(absolutePath);
+    return { removed: true, logicalPath };
+  } catch {
+    return { removed: false, logicalPath };
+  }
 }
 
 export async function listHaulingScreenshots(batchId?: string): Promise<
