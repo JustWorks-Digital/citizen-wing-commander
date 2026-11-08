@@ -1,0 +1,103 @@
+{
+  "kind": "hauling_contracts_intake",
+  "version": 1,
+  "sessionName": "Hurston Covalex run",
+  "ships": [],
+  "notes": "Accepted 9/10 Covalex Hauling - Planetary contracts from 2026-11-08 screenshots. Arial iron/quartz totals split across Lathan + Bezdek.",
+  "contracts": [
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 80000,
+      "from": ["Everus Harbor"],
+      "to": ["Lorville"],
+      "cargo": [{ "commodity": "Stims", "scu": 96 }],
+      "maxContainerScu": 8
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 69250,
+      "from": ["HDPC-Cassillo"],
+      "to": ["Everus Harbor"],
+      "cargo": [{ "commodity": "Iron (Ore)", "scu": 85 }],
+      "maxContainerScu": 8
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56000,
+      "from": ["Everus Harbor"],
+      "to": ["Lorville"],
+      "cargo": [{ "commodity": "Tin", "scu": 100 }],
+      "maxContainerScu": 8
+    },
+    {
+      "title": "Junior Rank - Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 59750,
+      "from": ["HDMS-Lathan", "HDMS-Bezdek"],
+      "to": ["Everus Harbor"],
+      "cargo": [
+        { "commodity": "Iron (Ore)", "scu": 4 },
+        { "commodity": "Quartz (Raw)", "scu": 5 }
+      ],
+      "maxContainerScu": 4,
+      "pickupSplits": {
+        "HDMS-Lathan": [
+          { "commodity": "Iron (Ore)", "scu": 2 },
+          { "commodity": "Quartz (Raw)", "scu": 3 }
+        ],
+        "HDMS-Bezdek": [
+          { "commodity": "Iron (Ore)", "scu": 2 },
+          { "commodity": "Quartz (Raw)", "scu": 2 }
+        ]
+      }
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56000,
+      "from": ["Everus Harbor"],
+      "to": ["Lorville"],
+      "cargo": [{ "commodity": "Silicon", "scu": 82 }],
+      "maxContainerScu": 8
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": ["Everus Harbor"],
+      "to": ["HDPC-Farnesway"],
+      "cargo": [{ "commodity": "Tungsten", "scu": 9 }],
+      "maxContainerScu": 1
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": ["Everus Harbor"],
+      "to": ["HDPC-Cassillo"],
+      "cargo": [{ "commodity": "Quartz", "scu": 11 }],
+      "maxContainerScu": 1
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56750,
+      "from": ["HDPC-Cassillo"],
+      "to": ["Everus Harbor"],
+      "cargo": [{ "commodity": "Waste", "scu": 58 }],
+      "maxContainerScu": 8
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": ["Everus Harbor"],
+      "to": ["HDPC-Cassillo"],
+      "cargo": [{ "commodity": "Silicon", "scu": 7 }],
+      "maxContainerScu": 1
+    }
+  ]
+}

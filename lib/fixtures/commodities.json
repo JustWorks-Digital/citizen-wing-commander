@@ -570,7 +570,7 @@
     {
       "id": 217,
       "code": "CP",
-      "slug": null,
+      "slug": "construction-pieces",
       "name": "Construction Pieces",
       "kind": "Scrap",
       "color": "black",

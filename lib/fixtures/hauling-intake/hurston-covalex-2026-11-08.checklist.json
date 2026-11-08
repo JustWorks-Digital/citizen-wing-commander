@@ -1,0 +1,100 @@
+{
+  "sessionName": "Hurston Covalex run",
+  "shipSlugs": [],
+  "startedAt": "2026-11-08T03:50:00.000Z",
+  "completedAt": null,
+  "updatedAt": "2026-11-08T03:50:00.000Z",
+  "rows": [
+    {
+      "id": "leg-1",
+      "legKind": "pickup",
+      "locationSlug": "hdms-lathan",
+      "cargoDeliveries": [
+        { "commoditySlug": "iron-ore", "scu": 2, "shipStorageLocation": "rear" },
+        { "commoditySlug": "quartz-raw", "scu": 3, "shipStorageLocation": "rear" }
+      ],
+      "shipStorageLocation": "rear",
+      "distanceToNext": { "value": 200, "unit": "km" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-2",
+      "legKind": "pickup",
+      "locationSlug": "hdms-bezdek",
+      "cargoDeliveries": [
+        { "commoditySlug": "iron-ore", "scu": 2, "shipStorageLocation": "rear" },
+        { "commoditySlug": "quartz-raw", "scu": 2, "shipStorageLocation": "rear" }
+      ],
+      "shipStorageLocation": "rear",
+      "distanceToNext": { "value": 0.05, "unit": "AU" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-3",
+      "legKind": "pickup",
+      "locationSlug": "hdpc-cassillo",
+      "cargoDeliveries": [
+        { "commoditySlug": "iron-ore", "scu": 85, "shipStorageLocation": "middle" },
+        { "commoditySlug": "waste", "scu": 58, "shipStorageLocation": "middle" }
+      ],
+      "shipStorageLocation": "middle",
+      "distanceToNext": { "value": 12, "unit": "Mm" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-4",
+      "legKind": "both",
+      "locationSlug": "everus-harbor",
+      "cargoDeliveries": [
+        { "commoditySlug": "iron-ore", "scu": 89, "role": "delivery", "shipStorageLocation": "middle" },
+        { "commoditySlug": "quartz-raw", "scu": 5, "role": "delivery", "shipStorageLocation": "rear" },
+        { "commoditySlug": "waste", "scu": 58, "role": "delivery", "shipStorageLocation": "middle" },
+        { "commoditySlug": "stims", "scu": 96, "role": "pickup", "shipStorageLocation": "front" },
+        { "commoditySlug": "tin", "scu": 100, "role": "pickup", "shipStorageLocation": "front" },
+        { "commoditySlug": "silicon", "scu": 82, "role": "pickup", "shipStorageLocation": "front" },
+        { "commoditySlug": "silicon", "scu": 7, "role": "pickup", "shipStorageLocation": "middle" },
+        { "commoditySlug": "tungsten", "scu": 9, "role": "pickup", "shipStorageLocation": "rear" },
+        { "commoditySlug": "quartz", "scu": 11, "role": "pickup", "shipStorageLocation": "middle" }
+      ],
+      "shipStorageLocation": "front",
+      "distanceToNext": { "value": 12, "unit": "Mm" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-5",
+      "legKind": "delivery",
+      "locationSlug": "hdpc-cassillo",
+      "cargoDeliveries": [
+        { "commoditySlug": "quartz", "scu": 11, "shipStorageLocation": "middle" },
+        { "commoditySlug": "silicon", "scu": 7, "shipStorageLocation": "middle" }
+      ],
+      "shipStorageLocation": "middle",
+      "distanceToNext": { "value": 800, "unit": "km" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-6",
+      "legKind": "delivery",
+      "locationSlug": "hdpc-farnesway",
+      "cargoDeliveries": [
+        { "commoditySlug": "tungsten", "scu": 9, "shipStorageLocation": "rear" }
+      ],
+      "shipStorageLocation": "rear",
+      "distanceToNext": { "value": 1200, "unit": "km" },
+      "isCompleted": false
+    },
+    {
+      "id": "leg-7",
+      "legKind": "delivery",
+      "locationSlug": "lorville",
+      "cargoDeliveries": [
+        { "commoditySlug": "stims", "scu": 96, "shipStorageLocation": "front" },
+        { "commoditySlug": "tin", "scu": 100, "shipStorageLocation": "front" },
+        { "commoditySlug": "silicon", "scu": 82, "shipStorageLocation": "front" }
+      ],
+      "shipStorageLocation": "front",
+      "distanceToNext": null,
+      "isCompleted": false
+    }
+  ]
+}

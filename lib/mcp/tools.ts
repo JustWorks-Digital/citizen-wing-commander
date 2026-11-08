@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import {
   formatCargoDeliveries,
   getCommodityBySlug,
@@ -19,6 +21,7 @@ import {
   setSessionName,
   setSessionShips,
 } from "@/lib/sessions/checklistStore";
+import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
   resolveIncomingLeg,
   resolveShipSlugs,
@@ -27,7 +30,13 @@ import {
   searchShips,
   type IncomingLeg,
 } from "@/lib/sessions/resolveRefs";
+import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+
+const PLAYBOOK_PATH = path.join(
+  process.cwd(),
+  "docs/mcp-screenshot-hauling-playbook.md",
+);
 
 function presentShips(shipSlugs: string[]) {
   return shipSlugs.map((slug) => {
@@ -118,6 +127,7 @@ export async function toolReplaceHaulingChecklist(input: {
   sessionName?: string;
   ships?: string[];
   legs: IncomingLeg[];
+  resetTimer?: boolean;
 }) {
   const rows = [];
   for (const [index, leg] of input.legs.entries()) {
@@ -128,20 +138,57 @@ export async function toolReplaceHaulingChecklist(input: {
     rows.push(resolved.row);
   }
 
-  let session = await replaceChecklistRows(rows, input.sessionName);
-
+  let shipSlugs: string[] | undefined;
   if (input.ships) {
     const resolvedShips = resolveShipSlugs(input.ships);
     if (!resolvedShips.ok) {
       return textResult({ error: resolvedShips.error });
     }
-    session = await setSessionShips(resolvedShips.shipSlugs);
+    shipSlugs = resolvedShips.shipSlugs;
   }
+
+  const session = await replaceChecklistRows(rows, input.sessionName, {
+    resetTimer: input.resetTimer,
+    shipSlugs,
+  });
 
   return textResult({
     ok: true,
     message: `Replaced checklist with ${rows.length} leg(s).`,
     session: presentSession(session),
+  });
+}
+
+/**
+ * Apply accepted `hauling_contracts_intake` JSON.
+ * Uses optional `legs` when provided; otherwise auto-merges contracts into stops.
+ */
+export async function toolApplyHaulingContractsIntake(
+  intake: HaulingContractsIntake & { legs?: IncomingLeg[] },
+) {
+  if (!intake.sessionName?.trim()) {
+    return textResult({ error: "sessionName is required" });
+  }
+  if (!Array.isArray(intake.contracts) || intake.contracts.length === 0) {
+    return textResult({ error: "contracts must include at least one contract" });
+  }
+
+  let legs: IncomingLeg[];
+  if (Array.isArray(intake.legs) && intake.legs.length > 0) {
+    legs = intake.legs;
+  } else {
+    const built = buildRouteFromIntake(intake);
+    if (!built.ok) {
+      return textResult({ error: built.error });
+    }
+    legs = built.legs;
+  }
+
+  return toolReplaceHaulingChecklist({
+    sessionName: intake.sessionName,
+    ships: intake.ships,
+    legs,
+    resetTimer: intake.resetTimer !== false,
   });
 }
 
@@ -191,4 +238,19 @@ export function toolSearchShips(query: string, limit = 10) {
       isCargo: ship.isCargo,
     })),
   });
+}
+
+/** Playbook for screenshot → optimized route → replace_hauling_checklist. */
+export async function toolGetHaulingIntakePlaybook() {
+  try {
+    const markdown = await readFile(PLAYBOOK_PATH, "utf8");
+    return {
+      content: [{ type: "text" as const, text: markdown }],
+    };
+  } catch {
+    return textResult({
+      error:
+        "Playbook missing on server. Expected docs/mcp-screenshot-hauling-playbook.md",
+    });
+  }
 }

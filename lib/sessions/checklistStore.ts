@@ -93,11 +93,17 @@ export async function saveChecklistSession(
 export async function replaceChecklistRows(
   rows: HaulingChecklistRow[],
   sessionName?: string,
+  options?: { resetTimer?: boolean; shipSlugs?: string[] },
 ): Promise<SessionChecklistModel> {
   const current = await ensureStore();
+  const now = new Date().toISOString();
   return saveChecklistSession({
     ...current,
     sessionName: sessionName?.trim() || current.sessionName,
+    shipSlugs:
+      options?.shipSlugs !== undefined ? options.shipSlugs : current.shipSlugs,
+    startedAt: options?.resetTimer ? now : current.startedAt,
+    completedAt: options?.resetTimer ? null : current.completedAt,
     rows,
   });
 }

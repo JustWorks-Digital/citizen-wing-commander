@@ -1,7 +1,9 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import {
+  toolApplyHaulingContractsIntake,
   toolGetHaulingChecklist,
+  toolGetHaulingIntakePlaybook,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
   toolSearchLocations,
@@ -70,6 +72,18 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "get_hauling_intake_playbook",
+      {
+        title: "Get hauling intake playbook",
+        description:
+          "Use this first when ingesting mission screenshots or contract text. Returns the screenshot→route→replace_hauling_checklist playbook (extract fields, fixture resolution, merge/optimize stops, bay zoning).",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => toolGetHaulingIntakePlaybook(),
+    );
+
+    server.registerTool(
       "set_session_name",
       {
         title: "Set session name",
@@ -98,10 +112,67 @@ const handler = createMcpHandler(
               "Optional ship names/slugs for the crew (e.g. C2 Hercules, Freelancer MAX).",
             ),
           legs: z.array(legSchema).min(1),
+          resetTimer: z
+            .boolean()
+            .optional()
+            .describe("When true, restart session startedAt / clear completedAt."),
         }),
         annotations: { destructiveHint: true },
       },
       async (input) => toolReplaceHaulingChecklist(input),
+    );
+
+    const intakeCargoSchema = z.object({
+      commodity: z.string(),
+      scu: z.number().int().nonnegative(),
+    });
+
+    const intakeContractSchema = z.object({
+      title: z.string(),
+      contractor: z.string().optional(),
+      rewardAuec: z.number().nonnegative().optional(),
+      from: z.array(z.string()).min(1),
+      to: z.array(z.string()).min(1),
+      cargo: z.array(intakeCargoSchema).min(1),
+      maxContainerScu: z.number().int().positive().optional(),
+      pickupSplits: z.record(z.string(), z.array(intakeCargoSchema)).optional(),
+    });
+
+    server.registerTool(
+      "apply_hauling_contracts_intake",
+      {
+        title: "Apply hauling contracts intake",
+        description:
+          "Use this to apply accepted hauling_contracts_intake JSON (from screenshots). Pass contracts; optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Resets the session timer by default.",
+        inputSchema: z.object({
+          kind: z.literal("hauling_contracts_intake").optional(),
+          version: z.literal(1).optional(),
+          sessionName: z.string().min(1),
+          ships: z.array(z.string()).optional(),
+          contracts: z.array(intakeContractSchema).min(1),
+          notes: z.string().optional(),
+          legs: z
+            .array(legSchema)
+            .min(1)
+            .optional()
+            .describe(
+              "Optional pre-optimized route. Prefer this when you already merged stops geographically.",
+            ),
+          resetTimer: z.boolean().optional().default(true),
+        }),
+        annotations: { destructiveHint: true },
+      },
+      async (input) =>
+        toolApplyHaulingContractsIntake({
+          kind: "hauling_contracts_intake",
+          version: 1,
+          sessionName: input.sessionName,
+          ships: input.ships,
+          contracts: input.contracts,
+          notes: input.notes,
+          legs: input.legs,
+          resetTimer: input.resetTimer,
+        }),
     );
 
     server.registerTool(
@@ -188,9 +259,11 @@ const handler = createMcpHandler(
     },
     instructions: [
       "Citizen Wing Commander manages hauling session checklists.",
-      "When the user shares mission screenshots or contract details: extract ships, pickup/delivery stops, cargo amounts, ship storage zones, and distances.",
-      "Resolve names with search_locations, search_commodities, and search_ships; then call set_session_ships and/or replace_hauling_checklist.",
-      "Location, commodity, and ship names must match fixtures (Wiki starmap + UEX). Prefer fixture names over inventing labels.",
+      "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
+      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo).",
+      "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs. If legs are omitted, the server auto-merges contracts into stops.",
+      "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
+      "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",
       "After writes, the web UI reads the same active checklist store.",
     ].join(" "),

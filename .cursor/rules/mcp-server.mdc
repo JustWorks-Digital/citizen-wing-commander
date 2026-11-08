@@ -7,7 +7,11 @@ alwaysApply: true
 
 - Endpoint: **`/mcp`** (Streamable HTTP via `mcp-handler` in `app/mcp/route.ts`).
 - Tools live in `lib/mcp/tools.ts`; shared checklist state in `.data/active-checklist.json` through `lib/sessions/checklistStore.ts` (same store the UI polls via `/api/checklist`).
-- ChatGPT flow: screenshots → extract ships + legs → `search_ships` / `search_locations` / `search_commodities` → `set_session_ships` + `replace_hauling_checklist`.
+- Screenshot / contract intake playbook: `docs/mcp-screenshot-hauling-playbook.md` (also MCP tool `get_hauling_intake_playbook`).
+- Accepted intake JSON: `hauling_contracts_intake` (`lib/missions/haulingIntake.ts`, examples in `lib/fixtures/hauling-intake/`).
+- ChatGPT / Gemini / Cursor flow: `get_hauling_intake_playbook` → extract contracts → `search_*` → optimize legs → **`apply_hauling_contracts_intake`** (contracts + optional legs) → `get_hauling_checklist`. Fallback: `replace_hauling_checklist`.
 - Session ships (`shipSlugs`) come from UEX vehicle fixtures (`lib/fixtures/ships.json`); cargo SCU on those rows will drive bay capacity later.
 - When adding tools: action-oriented names, “Use this when…” descriptions, zod `inputSchema`, keep instructions on the handler updated.
-- Local ChatGPT testing needs a public HTTPS URL or Secure MCP Tunnel pointing at `/mcp`. Do not invent locations/commodities/ships outside fixtures.
+- Production MCP (Railway): `https://citizen-wing-commander-production.up.railway.app/mcp` — add to Cursor via `.cursor/mcp.json` as a remote `url` server (Streamable HTTP).
+- Local ChatGPT/Cursor testing can use that public HTTPS URL or a Secure MCP Tunnel pointing at `/mcp`. Do not invent locations/commodities/ships outside fixtures.
+- Checklist state is still the shared file store (`.data/…`); on Railway that is ephemeral unless a volume is attached — fine for MCP smoke tests, not durable multi-instance storage.

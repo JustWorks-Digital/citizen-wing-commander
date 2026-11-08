@@ -2,6 +2,9 @@
   "mcpServers": {
     "railway": {
       "url": "https://mcp.railway.com"
+    },
+    "citizen-wing-commander": {
+      "url": "https://citizen-wing-commander-production.up.railway.app/mcp"
     }
   }
 }

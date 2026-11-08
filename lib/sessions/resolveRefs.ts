@@ -13,7 +13,8 @@ import {
   type ShipStorageLocation,
 } from "@/lib/missions/mockSession";
 
-function normalize(value: string): string {
+function normalize(value: string | null | undefined): string {
+  if (value == null) return "";
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
