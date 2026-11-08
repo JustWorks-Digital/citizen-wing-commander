@@ -503,7 +503,7 @@ function MetaGrid({
 }
 
 function equalizeTableRowHeights(tbody: HTMLTableSectionElement) {
-  const trs = [...tbody.querySelectorAll(":scope > tr")].filter(
+  const trs = [...tbody.querySelectorAll<HTMLTableRowElement>(":scope > tr")].filter(
     (tr) => !tr.querySelector(":scope > td[colspan]"),
   );
   for (const tr of trs) {
@@ -546,8 +546,8 @@ export function HaulingChecklistTable({
     window.addEventListener("resize", sync);
     return () => {
       window.removeEventListener("resize", sync);
-      for (const tr of tbody.querySelectorAll(":scope > tr")) {
-        (tr as HTMLTableRowElement).style.height = "";
+      for (const tr of tbody.querySelectorAll<HTMLTableRowElement>(":scope > tr")) {
+        tr.style.height = "";
       }
     };
   }, [hideCompleted, rows]);

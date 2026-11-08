@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Checklist rows with location, clickable cargo (opens bay grid), totals, and next distance.",
+          "Checklist rows with location, clickable cargo (opens bay grid), totals, and next distance. Row heights equalize on desktop.",
       },
     },
   },
