@@ -1,0 +1,34 @@
+{
+  "kind": "mobiglas_contract_transcript",
+  "version": 1,
+  "id": "contract-06-tungsten",
+  "screenshots": [
+    "hurston-covalex-2026-11-08/06-tungsten-9-everus-farnesway.png"
+  ],
+  "capturedAt": "2026-11-08T03:33:29Z",
+  "intakeContractId": "contract-06-tungsten",
+  "mobiglas": {
+    "tab": "Accepted",
+    "acceptedCount": "9/10",
+    "category": "Hauling - Planetary",
+    "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+    "contractor": "Covalex Independent Contractors",
+    "rewardAuec": 50250,
+    "rewardDisplay": "50k",
+    "timeRemaining": "1h 1m",
+    "deadline": null,
+    "details": "Haul cargo from a freight elevator at Everus Harbor above Hurston to a freight elevator at HDPC-Farnesway on Hurston. Containers are at most 1 SCU. Bring a handheld tractor beam.",
+    "contact": "Chase Hewitt, Jr. Logistics Coordinator, Covalex Shipping",
+    "objectives": [
+      {
+        "label": "Deliver 0/9 SCU of Tungsten to HDPC-Farnesway on Hurston",
+        "progressCurrent": 0,
+        "progressTotal": 9,
+        "children": [
+          "Collect Tungsten from Everus Harbor"
+        ]
+      }
+    ]
+  },
+  "screenshotStore": ".data/mcp-screenshots"
+}

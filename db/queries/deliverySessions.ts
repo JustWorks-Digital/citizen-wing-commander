@@ -14,6 +14,11 @@ function normalizeChecklist(
   return applySessionCompletionTiming({
     sessionName: (name ?? checklist.sessionName).trim() || "Delivery session",
     shipSlugs: Array.isArray(checklist.shipSlugs) ? checklist.shipSlugs : [],
+    startLocationSlug:
+      typeof checklist.startLocationSlug === "string" &&
+      checklist.startLocationSlug.trim()
+        ? checklist.startLocationSlug.trim()
+        : null,
     startedAt: checklist.startedAt || new Date().toISOString(),
     completedAt: checklist.completedAt ?? null,
     updatedAt: checklist.updatedAt || new Date().toISOString(),

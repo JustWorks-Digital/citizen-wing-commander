@@ -1,0 +1,244 @@
+{
+  "kind": "hauling_contracts_intake",
+  "version": 1,
+  "sessionName": "Hurston Covalex run",
+  "ships": [],
+  "startLocation": "Everus Harbor",
+  "notes": "Accepted 9/10 Covalex Hauling - Planetary contracts from 2026-11-08. Screenshots are ephemeral via MCP store_hauling_screenshot \u2192 .data/mcp-screenshots/<batchId>/ (logical paths on contracts). Transcripts under transcripts/.",
+  "contracts": [
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 80000,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "Lorville"
+      ],
+      "cargo": [
+        {
+          "commodity": "Stims",
+          "scu": 96
+        }
+      ],
+      "maxContainerScu": 8,
+      "id": "contract-01-stims",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/01-stims-96-everus-lorville.png"
+      ],
+      "transcript": "transcripts/contract-01-stims.json"
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 69250,
+      "from": [
+        "HDPC-Cassillo"
+      ],
+      "to": [
+        "Everus Harbor"
+      ],
+      "cargo": [
+        {
+          "commodity": "Iron (Ore)",
+          "scu": 85
+        }
+      ],
+      "maxContainerScu": 8,
+      "id": "contract-02-iron-ore",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/02-iron-ore-85-cassillo-everus.png"
+      ],
+      "transcript": "transcripts/contract-02-iron-ore.json"
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56000,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "Lorville"
+      ],
+      "cargo": [
+        {
+          "commodity": "Tin",
+          "scu": 100
+        }
+      ],
+      "maxContainerScu": 8,
+      "id": "contract-03-tin",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/03-tin-100-everus-lorville.png"
+      ],
+      "transcript": "transcripts/contract-03-tin.json"
+    },
+    {
+      "title": "Junior Rank - Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 59750,
+      "from": [
+        "HDMS-Lathan",
+        "HDMS-Bezdek"
+      ],
+      "to": [
+        "Everus Harbor"
+      ],
+      "cargo": [
+        {
+          "commodity": "Iron (Ore)",
+          "scu": 4
+        },
+        {
+          "commodity": "Quartz (Raw)",
+          "scu": 5
+        }
+      ],
+      "maxContainerScu": 4,
+      "pickupSplits": {
+        "HDMS-Lathan": [
+          {
+            "commodity": "Iron (Ore)",
+            "scu": 2
+          },
+          {
+            "commodity": "Quartz (Raw)",
+            "scu": 3
+          }
+        ],
+        "HDMS-Bezdek": [
+          {
+            "commodity": "Iron (Ore)",
+            "scu": 2
+          },
+          {
+            "commodity": "Quartz (Raw)",
+            "scu": 2
+          }
+        ]
+      },
+      "id": "contract-04-arial-small",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/04-small-haul-arial-everus.png"
+      ],
+      "transcript": "transcripts/contract-04-arial-small.json"
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56000,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "Lorville"
+      ],
+      "cargo": [
+        {
+          "commodity": "Silicon",
+          "scu": 82
+        }
+      ],
+      "maxContainerScu": 8,
+      "id": "contract-05-silicon-82",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/05-silicon-82-everus-lorville.png"
+      ],
+      "transcript": "transcripts/contract-05-silicon-82.json"
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "commodity": "Tungsten",
+          "scu": 9
+        }
+      ],
+      "maxContainerScu": 1,
+      "id": "contract-06-tungsten",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/06-tungsten-9-everus-farnesway.png"
+      ],
+      "transcript": "transcripts/contract-06-tungsten.json"
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "HDPC-Cassillo"
+      ],
+      "cargo": [
+        {
+          "commodity": "Quartz",
+          "scu": 11
+        }
+      ],
+      "maxContainerScu": 1,
+      "id": "contract-07-quartz",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/07-quartz-11-everus-cassillo.png"
+      ],
+      "transcript": "transcripts/contract-07-quartz.json"
+    },
+    {
+      "title": "Junior Rank - Direct Medium Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 56750,
+      "from": [
+        "HDPC-Cassillo"
+      ],
+      "to": [
+        "Everus Harbor"
+      ],
+      "cargo": [
+        {
+          "commodity": "Waste",
+          "scu": 58
+        }
+      ],
+      "maxContainerScu": 8,
+      "id": "contract-08-waste",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/08-waste-58-cassillo-everus.jpg"
+      ],
+      "transcript": "transcripts/contract-08-waste.json"
+    },
+    {
+      "title": "Rookie Rank - Direct Extra Small Cargo Haul",
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 50250,
+      "from": [
+        "Everus Harbor"
+      ],
+      "to": [
+        "HDPC-Cassillo"
+      ],
+      "cargo": [
+        {
+          "commodity": "Silicon",
+          "scu": 7
+        }
+      ],
+      "maxContainerScu": 1,
+      "id": "contract-09-silicon-7",
+      "screenshots": [
+        "hurston-covalex-2026-11-08/09-silicon-7-everus-cassillo.jpg"
+      ],
+      "transcript": "transcripts/contract-09-silicon-7.json"
+    }
+  ]
+}

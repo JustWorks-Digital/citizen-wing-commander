@@ -60,14 +60,27 @@ export function resolveCommoditySlug(input: string): string | null {
 export function searchLocations(query: string, limit = 10) {
   const needle = normalize(query);
   if (!needle) return listLocations().slice(0, limit);
-  return listLocations()
-    .filter(
-      (loc) =>
-        normalize(loc.name).includes(needle) ||
-        normalize(loc.slug).includes(needle) ||
-        normalize(loc.system ?? "").includes(needle),
-    )
-    .slice(0, limit);
+
+  const scored: { loc: ReturnType<typeof listLocations>[number]; score: number }[] =
+    [];
+  for (const loc of listLocations()) {
+    const name = normalize(loc.name);
+    const slug = normalize(loc.slug);
+    const parent = normalize(loc.parentName ?? "");
+    const system = normalize(loc.system ?? "");
+    let score = 0;
+    if (name === needle || slug === needle) score = 100;
+    else if (name.startsWith(needle) || slug.startsWith(needle)) score = 80;
+    else if (name.includes(needle) || slug.includes(needle)) score = 55;
+    else if (parent.startsWith(needle) || parent.includes(needle)) score = 35;
+    else if (system.includes(needle)) score = 15;
+    else continue;
+    scored.push({ loc, score });
+  }
+  scored.sort(
+    (a, b) => b.score - a.score || a.loc.name.localeCompare(b.loc.name),
+  );
+  return scored.slice(0, limit).map((row) => row.loc);
 }
 
 export function searchCommodities(query: string, limit = 10) {

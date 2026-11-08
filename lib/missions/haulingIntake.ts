@@ -11,6 +11,8 @@ export type HaulingIntakeCargoLine = {
 };
 
 export type HaulingIntakeContract = {
+  /** Stable id; matches `mobiglas_contract_transcript.id` when present. */
+  id?: string;
   title: string;
   contractor?: string;
   rewardAuec?: number;
@@ -26,6 +28,13 @@ export type HaulingIntakeContract = {
    * (e.g. Lathan + Bezdek). Keys are location names/slugs.
    */
   pickupSplits?: Record<string, HaulingIntakeCargoLine[]>;
+  /**
+   * Logical MCP screenshot paths (`<batchId>/<filename>` under
+   * `.data/mcp-screenshots`, via `store_hauling_screenshot`).
+   */
+  screenshots?: string[];
+  /** Path to normalized MobiGlas transcript JSON relative to the batch folder. */
+  transcript?: string;
 };
 
 export type HaulingContractsIntake = {
@@ -34,6 +43,11 @@ export type HaulingContractsIntake = {
   sessionName: string;
   /** Optional ship names/slugs for the crew. */
   ships?: string[];
+  /**
+   * Where the crew begins the run (location name or slug).
+   * Cleared when null/omitted on apply unless explicitly set via set_session_start_location.
+   */
+  startLocation?: string | null;
   contracts: HaulingIntakeContract[];
   notes?: string;
   /**

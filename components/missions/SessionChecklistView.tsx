@@ -5,7 +5,12 @@ import {
   fetchChecklist,
   saveChecklist,
 } from "@/lib/api/checklistApi";
-import { getShipBySlug, sumShipCargoScu } from "@/lib/fixtures";
+import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
+import {
+  getLocationBySlug,
+  getShipBySlug,
+  sumShipCargoScu,
+} from "@/lib/fixtures";
 import {
   applySessionCompletionTiming,
   formatSessionDuration,
@@ -124,6 +129,26 @@ export function SessionChecklistView({
   const isComplete = Boolean(session.completedAt);
   const totalLegs = session.rows.length;
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
+  const startLocation = session.startLocationSlug
+    ? getLocationBySlug(session.startLocationSlug)
+    : undefined;
+
+  const persistSession = (next: SessionChecklistModel) => {
+    savingRef.current = true;
+    setSession(next);
+    void saveChecklist(next)
+      .then((result) => {
+        etagRef.current = result.etag;
+        setSession(result.session);
+        setLoadError(null);
+      })
+      .catch(() => {
+        setLoadError("Failed to save checklist");
+      })
+      .finally(() => {
+        savingRef.current = false;
+      });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -134,7 +159,30 @@ export function SessionChecklistView({
         <h2 className="text-xl font-semibold tracking-wide text-rsi-text">
           {session.sessionName}
         </h2>
-        <p className="mt-2 text-sm text-rsi-text-secondary">
+        <div className="mt-3">
+          <LocationFuzzySearch
+            valueSlug={session.startLocationSlug ?? null}
+            onChange={(slug) => {
+              persistSession(
+                applySessionCompletionTiming({
+                  ...session,
+                  shipSlugs: session.shipSlugs ?? [],
+                  startLocationSlug: slug,
+                }),
+              );
+            }}
+          />
+          {!session.startLocationSlug ? (
+            <p className="mt-1 text-sm text-rsi-text-muted">
+              Set where the crew begins so routing can use a start point.
+            </p>
+          ) : startLocation ? null : (
+            <p className="mt-1 text-sm text-rsi-warn">
+              Unknown start location slug: {session.startLocationSlug}
+            </p>
+          )}
+        </div>
+        <p className="mt-3 text-sm text-rsi-text-secondary">
           <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
             Ships
           </span>
@@ -182,29 +230,18 @@ export function SessionChecklistView({
       <HaulingChecklistTable
         rows={session.rows}
         onToggle={(rowId) => {
-          const next = applySessionCompletionTiming({
-            ...session,
-            shipSlugs: session.shipSlugs ?? [],
-            rows: session.rows.map((row) =>
-              row.id === rowId
-                ? { ...row, isCompleted: !row.isCompleted }
-                : row,
-            ),
-          });
-          savingRef.current = true;
-          setSession(next);
-          void saveChecklist(next)
-            .then((result) => {
-              etagRef.current = result.etag;
-              setSession(result.session);
-              setLoadError(null);
-            })
-            .catch(() => {
-              setLoadError("Failed to save checklist");
-            })
-            .finally(() => {
-              savingRef.current = false;
-            });
+          persistSession(
+            applySessionCompletionTiming({
+              ...session,
+              shipSlugs: session.shipSlugs ?? [],
+              startLocationSlug: session.startLocationSlug ?? null,
+              rows: session.rows.map((row) =>
+                row.id === rowId
+                  ? { ...row, isCompleted: !row.isCompleted }
+                  : row,
+              ),
+            }),
+          );
         }}
       />
     </div>

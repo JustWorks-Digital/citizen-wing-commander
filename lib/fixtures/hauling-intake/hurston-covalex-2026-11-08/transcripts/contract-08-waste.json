@@ -1,0 +1,34 @@
+{
+  "kind": "mobiglas_contract_transcript",
+  "version": 1,
+  "id": "contract-08-waste",
+  "screenshots": [
+    "hurston-covalex-2026-11-08/08-waste-58-cassillo-everus.jpg"
+  ],
+  "capturedAt": "2026-11-08T03:45:47Z",
+  "intakeContractId": "contract-08-waste",
+  "mobiglas": {
+    "tab": "Accepted",
+    "acceptedCount": "9/10",
+    "category": "Hauling - Planetary",
+    "title": "Junior Rank - Direct Medium Cargo Haul",
+    "contractor": "Covalex Independent Contractors",
+    "rewardAuec": 56750,
+    "rewardDisplay": "56k",
+    "timeRemaining": "42m 8s",
+    "deadline": null,
+    "details": "Haul 58 SCU of Waste from HDPC-Cassillo to Everus Harbor above Hurston. Handheld tractor beam strongly encouraged.",
+    "contact": "Chase Hewitt, Jr. Logistics Coordinator, Covalex Shipping",
+    "objectives": [
+      {
+        "label": "Deliver 0/58 SCU of Waste to Everus Harbor above Hurston",
+        "progressCurrent": 0,
+        "progressTotal": 58,
+        "children": [
+          "Collect Waste from HDPC-Cassillo"
+        ]
+      }
+    ]
+  },
+  "screenshotStore": ".data/mcp-screenshots"
+}

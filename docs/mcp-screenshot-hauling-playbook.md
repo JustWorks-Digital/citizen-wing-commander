@@ -6,11 +6,13 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
 
 ## Goal
 
-1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/`.
-2. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
-3. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
-4. Write with **`apply_hauling_contracts_intake`** (preferred: contracts + optimized `legs`) or `replace_hauling_checklist` / local `PUT /api/checklist`.
-5. Confirm with `get_hauling_checklist`.
+1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/hurston-covalex-2026-11-08/`.
+2. For each user-attached screenshot, call **`store_hauling_screenshot`** with base64 (or data URL). Files go to ephemeral `.data/mcp-screenshots/<batchId>/` — **not git**. Use returned `logicalPath` on the contract / transcript.
+3. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths. Keep a MobiGlas-layout `.md` next to the JSON in the batch folder.
+4. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
+5. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
+6. Write with **`apply_hauling_contracts_intake`** (preferred: contracts + optimized `legs`) or `replace_hauling_checklist` / local `PUT /api/checklist`.
+7. Confirm with `get_hauling_checklist`. Use `list_hauling_screenshots` / `clear_hauling_screenshots` to manage the temp store.
 
 ### Accepted intake JSON
 
@@ -20,6 +22,7 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
   "version": 1,
   "sessionName": "Hurston Covalex run",
   "ships": [],
+  "startLocation": "Everus Harbor",
   "contracts": [
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
@@ -35,6 +38,37 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
 ```
 
 Multi-pickup contracts use `from: [...]` plus optional `pickupSplits` when totals are shared across sites.
+
+Link evidence on each contract:
+
+```json
+{
+  "id": "contract-01-stims",
+  "screenshots": ["hurston-covalex-2026-11-08/01-stims-96-everus-lorville.png"],
+  "transcript": "transcripts/contract-01-stims.json"
+}
+```
+
+### Screenshots via MCP (temp)
+
+| Tool | Purpose |
+| --- | --- |
+| `store_hauling_screenshot` | Save base64/data-URL image → `.data/mcp-screenshots/<batchId>/` |
+| `list_hauling_screenshots` | List stored files for a batch |
+| `clear_hauling_screenshots` | Delete a batch’s temp images |
+
+Railway without a volume: store is wiped on redeploy (same as checklist `.data`).
+
+### MobiGlas transcript
+
+Store under the batch as `transcripts/<id>.json` (+ `.md` text layout):
+
+- `kind: "mobiglas_contract_transcript"`
+- `screenshots: [...]` (MCP logical paths)
+- `screenshotStore: ".data/mcp-screenshots"`
+- `mobiglas`: `tab`, `acceptedCount`, `category`, `title`, `contractor`, `rewardAuec`, `timeRemaining`, `deadline`, `details`, `contact`, `objectives[]`
+
+Use `formatMobiglasTranscript()` for the boxed text view that mirrors the in-game panel.
 
 ## Screenshot intake checklist
 

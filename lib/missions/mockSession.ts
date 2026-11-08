@@ -64,6 +64,11 @@ export type SessionChecklistModel = {
    * Slugs from `lib/fixtures/ships.json` (UEX).
    */
   shipSlugs: string[];
+  /**
+   * Where the crew starts the run (route origin).
+   * Slug from `lib/fixtures/locations.json`, or null if unset.
+   */
+  startLocationSlug: string | null;
   /** ISO timestamp when the session was created / timer started. */
   startedAt: string;
   /**
@@ -188,6 +193,7 @@ export function describeShipStorageLines(
 export const mockSessionChecklist: SessionChecklistModel = {
   sessionName: "Stanton hauling run",
   shipSlugs: ["c2-hercules-starlifter", "misc-freelancer-max"],
+  startLocationSlug: "area18",
   startedAt: new Date().toISOString(),
   completedAt: null,
   updatedAt: new Date().toISOString(),

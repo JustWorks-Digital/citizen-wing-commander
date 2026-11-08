@@ -20,10 +20,17 @@ import {
   setLegCompleted,
   setSessionName,
   setSessionShips,
+  setSessionStartLocation,
 } from "@/lib/sessions/checklistStore";
+import {
+  clearHaulingScreenshots,
+  listHaulingScreenshots,
+  storeHaulingScreenshot,
+} from "@/lib/sessions/screenshotStore";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
   resolveIncomingLeg,
+  resolveLocationSlug,
   resolveShipSlugs,
   searchCommodities,
   searchLocations,
@@ -52,10 +59,20 @@ function presentShips(shipSlugs: string[]) {
 }
 
 function presentSession(session: SessionChecklistModel) {
+  const startSlug = session.startLocationSlug;
+  const startLoc = startSlug ? getLocationBySlug(startSlug) : null;
   return {
     sessionName: session.sessionName,
     ships: presentShips(session.shipSlugs),
     totalShipCargoScu: sumShipCargoScu(session.shipSlugs),
+    startLocation: startSlug
+      ? {
+          slug: startSlug,
+          name: startLoc?.name ?? startSlug,
+          parentName: startLoc?.parentName ?? null,
+          type: startLoc?.type ?? null,
+        }
+      : null,
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     updatedAt: session.updatedAt,
@@ -123,6 +140,27 @@ export async function toolSetSessionShips(ships: string[]) {
   });
 }
 
+export async function toolSetSessionStartLocation(location: string | null) {
+  if (location == null || !location.trim()) {
+    const session = await setSessionStartLocation(null);
+    return textResult({
+      ok: true,
+      message: "Cleared session start location.",
+      session: presentSession(session),
+    });
+  }
+  const slug = resolveLocationSlug(location);
+  if (!slug) {
+    return textResult({ error: `Unknown location: ${location}` });
+  }
+  const session = await setSessionStartLocation(slug);
+  return textResult({
+    ok: true,
+    message: `Set start location to ${getLocationBySlug(slug)?.name ?? slug}.`,
+    session: presentSession(session),
+  });
+}
+
 export async function toolReplaceHaulingChecklist(input: {
   sessionName?: string;
   ships?: string[];
@@ -184,12 +222,19 @@ export async function toolApplyHaulingContractsIntake(
     legs = built.legs;
   }
 
-  return toolReplaceHaulingChecklist({
+  const replaced = await toolReplaceHaulingChecklist({
     sessionName: intake.sessionName,
     ships: intake.ships,
     legs,
     resetTimer: intake.resetTimer !== false,
   });
+
+  if (intake.startLocation != null && intake.startLocation.trim()) {
+    const start = await toolSetSessionStartLocation(intake.startLocation);
+    return start;
+  }
+
+  return replaced;
 }
 
 export async function toolSetLegCompleted(input: {
@@ -253,4 +298,44 @@ export async function toolGetHaulingIntakePlaybook() {
         "Playbook missing on server. Expected docs/mcp-screenshot-hauling-playbook.md",
     });
   }
+}
+
+/** Persist a user/chat screenshot into the ephemeral MCP screenshot store. */
+export async function toolStoreHaulingScreenshot(input: {
+  imageBase64: string;
+  filename?: string;
+  batchId?: string;
+  contractId?: string;
+}) {
+  try {
+    const stored = await storeHaulingScreenshot(input);
+    return textResult({
+      ok: true,
+      message: `Stored screenshot at ${stored.logicalPath}`,
+      ...stored,
+      note: "Ephemeral .data/mcp-screenshots store (not committed; cleared on redeploy without a volume).",
+    });
+  } catch (error) {
+    return textResult({
+      error: error instanceof Error ? error.message : "Failed to store screenshot",
+    });
+  }
+}
+
+export async function toolListHaulingScreenshots(batchId?: string) {
+  const screenshots = await listHaulingScreenshots(batchId);
+  return textResult({
+    batchId: batchId?.trim() || "default",
+    count: screenshots.length,
+    screenshots,
+  });
+}
+
+export async function toolClearHaulingScreenshots(batchId?: string) {
+  const result = await clearHaulingScreenshots(batchId);
+  return textResult({
+    ok: true,
+    message: `Removed ${result.removed} screenshot(s) from batch ${result.batchId}.`,
+    ...result,
+  });
 }

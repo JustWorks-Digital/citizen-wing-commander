@@ -2,15 +2,19 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import {
   toolApplyHaulingContractsIntake,
+  toolClearHaulingScreenshots,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
+  toolListHaulingScreenshots,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
   toolSearchLocations,
   toolSearchShips,
+  toolSetSessionStartLocation,
   toolSetLegCompleted,
   toolSetSessionName,
   toolSetSessionShips,
+  toolStoreHaulingScreenshot,
 } from "@/lib/mcp/tools";
 
 const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm", "AU"]);
@@ -84,6 +88,65 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "store_hauling_screenshot",
+      {
+        title: "Store hauling screenshot",
+        description:
+          "Use this when the user attaches a MobiGlas / contract screenshot. Saves the image into the server temp store (.data/mcp-screenshots) and returns a logical path to reference from transcripts. Pass raw base64 or a data:image/...;base64 URL. Do not commit screenshots into the repo.",
+        inputSchema: z.object({
+          imageBase64: z
+            .string()
+            .min(1)
+            .describe("Raw base64 bytes or data:image/...;base64,... URL"),
+          filename: z
+            .string()
+            .optional()
+            .describe("Optional filename (e.g. 01-stims-everus-lorville.png)"),
+          batchId: z
+            .string()
+            .optional()
+            .describe(
+              "Optional batch folder id (e.g. hurston-covalex-2026-11-08). Defaults to default.",
+            ),
+          contractId: z
+            .string()
+            .optional()
+            .describe("Optional contract id to associate (e.g. contract-01-stims)"),
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolStoreHaulingScreenshot(input),
+    );
+
+    server.registerTool(
+      "list_hauling_screenshots",
+      {
+        title: "List hauling screenshots",
+        description:
+          "Use this to list screenshots currently in the ephemeral MCP screenshot store for a batch.",
+        inputSchema: z.object({
+          batchId: z.string().optional(),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async ({ batchId }) => toolListHaulingScreenshots(batchId),
+    );
+
+    server.registerTool(
+      "clear_hauling_screenshots",
+      {
+        title: "Clear hauling screenshots",
+        description:
+          "Use this to delete ephemeral screenshots for a batch from .data/mcp-screenshots.",
+        inputSchema: z.object({
+          batchId: z.string().optional(),
+        }),
+        annotations: { destructiveHint: true },
+      },
+      async ({ batchId }) => toolClearHaulingScreenshots(batchId),
+    );
+
+    server.registerTool(
       "set_session_name",
       {
         title: "Set session name",
@@ -95,6 +158,25 @@ const handler = createMcpHandler(
         annotations: { idempotentHint: true },
       },
       async ({ sessionName }) => toolSetSessionName(sessionName),
+    );
+
+    server.registerTool(
+      "set_session_start_location",
+      {
+        title: "Set session start location",
+        description:
+          "Use this when the user or chat sets where the crew begins the hauling run (route origin). Prefer search_locations first when the name is ambiguous. Pass an empty location string to clear.",
+        inputSchema: z.object({
+          location: z
+            .string()
+            .describe(
+              "Location name or fixture slug (e.g. Everus Harbor). Empty string clears the start point.",
+            ),
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async ({ location }) =>
+        toolSetSessionStartLocation(location.trim() ? location : null),
     );
 
     server.registerTool(
@@ -149,6 +231,13 @@ const handler = createMcpHandler(
           version: z.literal(1).optional(),
           sessionName: z.string().min(1),
           ships: z.array(z.string()).optional(),
+          startLocation: z
+            .string()
+            .nullable()
+            .optional()
+            .describe(
+              "Optional route origin (location name/slug). Prefer search_locations first.",
+            ),
           contracts: z.array(intakeContractSchema).min(1),
           notes: z.string().optional(),
           legs: z
@@ -168,6 +257,7 @@ const handler = createMcpHandler(
           version: 1,
           sessionName: input.sessionName,
           ships: input.ships,
+          startLocation: input.startLocation,
           contracts: input.contracts,
           notes: input.notes,
           legs: input.legs,
@@ -260,8 +350,10 @@ const handler = createMcpHandler(
     instructions: [
       "Citizen Wing Commander manages hauling session checklists.",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
+      "When the user attaches contract screenshots, call store_hauling_screenshot (base64) so files land in the ephemeral .data/mcp-screenshots store; reference returned logical paths from mobiglas transcripts. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo).",
-      "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs. If legs are omitted, the server auto-merges contracts into stops.",
+      "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation when known). If legs are omitted, the server auto-merges contracts into stops.",
+      "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
       "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",

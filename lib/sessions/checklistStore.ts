@@ -32,6 +32,10 @@ function normalizeSession(
   return applySessionCompletionTiming({
     sessionName: raw.sessionName?.trim() || mockSessionChecklist.sessionName,
     shipSlugs: Array.isArray(raw.shipSlugs) ? raw.shipSlugs : [],
+    startLocationSlug:
+      typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()
+        ? raw.startLocationSlug.trim()
+        : null,
     startedAt,
     completedAt:
       typeof raw.completedAt === "string" ? raw.completedAt : null,
@@ -136,5 +140,15 @@ export async function setSessionShips(
   return saveChecklistSession({
     ...current,
     shipSlugs,
+  });
+}
+
+export async function setSessionStartLocation(
+  startLocationSlug: string | null,
+): Promise<SessionChecklistModel> {
+  const current = await ensureStore();
+  return saveChecklistSession({
+    ...current,
+    startLocationSlug,
   });
 }
