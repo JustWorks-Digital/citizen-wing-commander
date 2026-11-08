@@ -13,10 +13,7 @@ import {
   formatDistanceToNext,
   type HaulingChecklistRow,
   type LegKind,
-  type ShipStorageLocation,
 } from "@/lib/missions/mockSession";
-import type { CargoGridStorageLocation } from "@/lib/ships/cargoGrids";
-import type { CargoPlacementSegment } from "@/lib/ships/cargoGridPlacement";
 import { CargoStorageGridModal } from "./CargoStorageGridModal";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 
@@ -27,11 +24,28 @@ export type HaulingChecklistTableProps = {
   shipSlug?: string | null;
 };
 
+/** First incomplete stop in route order — the stop to fly to next. */
+function activeChecklistRowId(rows: HaulingChecklistRow[]): string | null {
+  return rows.find((row) => !row.isCompleted)?.id ?? null;
+}
+
+function checklistRowToneClass(
+  isCompleted: boolean,
+  isActive: boolean,
+): string {
+  if (isCompleted) {
+    return "bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)]";
+  }
+  if (isActive) {
+    return "bg-rsi-accent-muted/45 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";
+  }
+  return "";
+}
+
 type StorageGridViewTarget = {
-  zone: CargoGridStorageLocation;
   locationLabel: string;
-  segments: CargoPlacementSegment[];
   rowId: string;
+  focusCommoditySlug: string | null;
 };
 
 function CopyIcon({ className }: { className?: string }) {
@@ -76,20 +90,6 @@ function legKindBadges(legKind: LegKind): { label: string; variant: BadgeVariant
 
 type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
 
-function zoneForCargoLine(
-  row: HaulingChecklistRow,
-  line: CargoLine,
-): ShipStorageLocation {
-  const delivery = row.cargoDeliveries.find((entry) => {
-    if (entry.commoditySlug !== line.commoditySlug) return false;
-    if (entry.scu !== line.scu) return false;
-    if (line.role == null) return true;
-    const role = entry.role ?? (row.legKind === "both" ? null : row.legKind);
-    return role === line.role;
-  });
-  return delivery?.shipStorageLocation ?? row.shipStorageLocation;
-}
-
 function groupCargoLines(lines: CargoLine[]): {
   role: "pickup" | "delivery" | null;
   items: CargoLine[];
@@ -114,11 +114,13 @@ function DoneCheckbox({
   location,
   step,
   isCompleted,
+  isActive = false,
   onToggle,
 }: {
   location: string;
   step: number;
   isCompleted: boolean;
+  isActive?: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -129,11 +131,13 @@ function DoneCheckbox({
       aria-label={`Stop ${step}, mark done: ${location}`}
       onClick={onToggle}
       className={[
-        "group inline-flex size-9 shrink-0 items-center justify-center rounded-rsi border transition-colors sm:size-8",
+        "group inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors sm:size-8",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isCompleted
           ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
-          : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
+          : isActive
+            ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-accent"
+            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
       ].join(" ")}
     >
       {isCompleted ? (
@@ -144,7 +148,10 @@ function DoneCheckbox({
         <>
           <span
             aria-hidden
-            className="font-mono text-[0.7rem] tabular-nums leading-none tracking-wide group-hover:hidden"
+            className={[
+              "font-mono text-[0.7rem] tabular-nums leading-none tracking-wide group-hover:hidden",
+              isActive ? "text-rsi-text-secondary" : "",
+            ].join(" ")}
           >
             {step}
           </span>
@@ -264,22 +271,12 @@ function CargoGroups({
                     type="button"
                     className={className}
                     style={cargoHex ? { color: cargoHex } : undefined}
-                    aria-label={`View ${line.commodityName} bay grid`}
+                    aria-label={`View cargo grid at ${locationLabel}`}
                     onClick={() => {
-                      const zone = zoneForCargoLine(row, line);
                       onViewCargo?.({
-                        zone,
                         locationLabel,
                         rowId: row.id,
-                        segments: [
-                          {
-                            commoditySlug: line.commoditySlug!,
-                            commodityName: line.commodityName!,
-                            scu: line.scu!,
-                            color: line.color,
-                            color2: line.color2,
-                          },
-                        ],
+                        focusCommoditySlug: line.commoditySlug ?? null,
                       });
                     }}
                   >
@@ -596,6 +593,7 @@ export function HaulingChecklistTable({
       : "All missions complete — show completed to review";
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
+  const activeRowId = activeChecklistRowId(rows);
 
   return (
     <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
@@ -623,16 +621,16 @@ export function HaulingChecklistTable({
           );
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
+          const isActive = row.id === activeRowId;
 
           return (
             <li
               key={row.id}
               aria-checked={row.isCompleted}
+              aria-current={isActive ? "step" : undefined}
               className={[
                 "border-b border-rsi-divider/80 px-3 py-3 last:border-b-0",
-                row.isCompleted
-                  ? "bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)]"
-                  : "",
+                checklistRowToneClass(row.isCompleted, isActive),
               ].join(" ")}
             >
               <div className="flex gap-3">
@@ -640,6 +638,7 @@ export function HaulingChecklistTable({
                   location={location}
                   step={step}
                   isCompleted={row.isCompleted}
+                  isActive={isActive}
                   onToggle={() => onToggle(row.id)}
                 />
                 <div className="min-w-0 flex-1">
@@ -732,7 +731,7 @@ export function HaulingChecklistTable({
                 </td>
               </tr>
             ) : null}
-            {visibleRows.map((row, rowIndex) => {
+            {visibleRows.map((row) => {
               const locationFixture = getLocationBySlug(row.locationSlug);
               const location = locationFixture?.name ?? row.locationSlug;
               const cargoFallbackRole =
@@ -747,42 +746,26 @@ export function HaulingChecklistTable({
               );
               const isCopied = copiedRowId === row.id;
               const step = stepById.get(row.id) ?? 0;
-              const isFirstStep = rowIndex === 0;
-              const isLastStep = rowIndex === visibleRows.length - 1;
+              const isActive = row.id === activeRowId;
 
               return (
                 <tr
                   key={row.id}
                   aria-checked={row.isCompleted}
+                  aria-current={isActive ? "step" : undefined}
                   className={[
                     "transition-colors",
-                    row.isCompleted
-                      ? "bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)]"
-                      : "",
+                    checklistRowToneClass(row.isCompleted, isActive),
                   ].join(" ")}
                 >
-                  <td className="relative px-2 py-2 text-center align-middle">
-                    {/* Stop at checkbox edge: size-9 → 1.125rem half; sm:size-8 → 1rem half */}
-                    {!isFirstStep ? (
-                      <span
-                        aria-hidden
-                        className="absolute top-0 left-1/2 h-[calc(50%-1.125rem)] w-px -translate-x-1/2 bg-rsi-border-strong sm:h-[calc(50%-1rem)]"
-                      />
-                    ) : null}
-                    {!isLastStep ? (
-                      <span
-                        aria-hidden
-                        className="absolute top-[calc(50%+1.125rem)] bottom-0 left-1/2 w-px -translate-x-1/2 bg-rsi-border-strong sm:top-[calc(50%+1rem)]"
-                      />
-                    ) : null}
-                    <span className="relative z-10 inline-flex">
-                      <DoneCheckbox
-                        location={location}
-                        step={step}
-                        isCompleted={row.isCompleted}
-                        onToggle={() => onToggle(row.id)}
-                      />
-                    </span>
+                  <td className="px-2 py-2 text-center align-middle">
+                    <DoneCheckbox
+                      location={location}
+                      step={step}
+                      isCompleted={row.isCompleted}
+                      isActive={isActive}
+                      onToggle={() => onToggle(row.id)}
+                    />
                   </td>
                   <td className="px-4 py-3 text-left align-middle">
                     <LocationHeader
@@ -834,11 +817,10 @@ export function HaulingChecklistTable({
         open={gridView != null}
         onClose={() => setGridView(null)}
         shipSlug={shipSlug}
-        zone={gridView?.zone ?? "front"}
         locationLabel={gridView?.locationLabel ?? ""}
-        segments={gridView?.segments ?? []}
         rows={rows}
         rowId={gridView?.rowId ?? null}
+        focusCommoditySlug={gridView?.focusCommoditySlug ?? null}
       />
     </div>
   );

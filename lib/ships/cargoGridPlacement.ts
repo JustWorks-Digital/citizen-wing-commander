@@ -16,6 +16,7 @@ import {
   type CargoGridStorageLocation,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
+import { resolvePlacementSlotOrder } from "@/lib/ships/cargoGridPlacementRules";
 import type {
   CargoDelivery,
   HaulingChecklistRow,
@@ -189,14 +190,24 @@ function fits(
   return true;
 }
 
+/**
+ * Prefer vertical stacks over floor rows. Axis order comes from
+ * `cargoGridPlacementRules` (e.g. full-height crates pack from the back).
+ */
 function findSlot(
   bounds: ZoneBounds,
   footprint: CargoBoxFootprint,
   occupied: Set<string>,
+  zone: CargoGridStorageLocation,
 ): CargoGridCoord | null {
-  for (let z = 0; z <= bounds.zEnd - footprint.dz; z += 1) {
-    for (let x = bounds.xStart; x <= bounds.xEnd - footprint.dx; x += 1) {
-      for (let y = bounds.yStart; y <= bounds.yEnd - footprint.dy; y += 1) {
+  const { xs, ys, zs } = resolvePlacementSlotOrder({
+    bounds,
+    footprint,
+    zone,
+  });
+  for (const x of xs) {
+    for (const y of ys) {
+      for (const z of zs) {
         const origin = { x, y, z };
         if (fits(bounds, origin, footprint, occupied)) return origin;
       }
@@ -215,7 +226,7 @@ export type PlaceCargoInZoneOptions = {
 
 /**
  * Place crates for one bay zone: decompose each segment with 8/4/2/1,
- * largest crates first, pack low-Z then nose→ramp within the zone.
+ * largest crates first, stack in Z at each XY before spreading nose→ramp.
  * Never reuses a cell listed in `occupied` or claimed earlier in this call.
  */
 export function placeCargoInZone(
@@ -272,7 +283,7 @@ export function placeCargoInZone(
   for (const item of pending) {
     let placed = false;
     for (const footprint of cargoBoxOrientations(item.size)) {
-      const origin = findSlot(bounds, footprint, occupied);
+      const origin = findSlot(bounds, footprint, occupied, zone);
       if (!origin) continue;
       const cells = cellsForBox(origin, footprint);
       for (const cell of cells) occupied.add(cargoGridCoordKey(cell));
@@ -537,14 +548,14 @@ function splitRowCargo(row: HaulingChecklistRow): {
  * matching FIFO lots so later pickups can reuse those coordinates.
  * At `both` stops, deliveries run before pickups.
  *
- * View plan for `rowId` + `zone`: cargo delivered from this bay at this stop
- * (still shown so you can unload it) plus new pickups into this bay.
+ * View plan for `rowId`: cargo delivered / picked up at this stop.
+ * Pass `zone` to limit to one bay; omit for the whole location (all bays).
  */
 export function planZoneOccupancyAtStop(
   sketch: ShipCargoGridSketch,
   rows: HaulingChecklistRow[],
   rowId: string,
-  zone: CargoGridStorageLocation,
+  zone?: CargoGridStorageLocation | null,
 ): CargoGridPlacementPlan {
   const occupied = new Set<string>();
   const lotsByKey = new Map<string, OnboardLot[]>();
@@ -648,14 +659,17 @@ export function planZoneOccupancyAtStop(
     }
   };
 
+  const inViewZone = (storage: ShipStorageLocation) =>
+    zone == null || storage === zone;
+
   for (const row of rows) {
     const { deliveries, pickups } = splitRowCargo(row);
     const isTarget = row.id === rowId;
 
     if (isTarget) {
-      // Show crates leaving this bay (find them before freeing cells).
+      // Show crates leaving the bay(s) (find them before freeing cells).
       for (const { cargo, storage } of deliveries) {
-        if (storage !== zone) continue;
+        if (!inViewZone(storage)) continue;
         pushUniqueBoxes(peekDeliverBoxes(cargo, storage), "delivery");
       }
     }
@@ -666,18 +680,35 @@ export function planZoneOccupancyAtStop(
 
     for (const { cargo, storage } of pickups) {
       const plan = pickup(cargo, storage);
-      if (isTarget && storage === zone) {
+      if (isTarget && inViewZone(storage)) {
         pushUniqueBoxes(plan.boxes, "pickup");
         viewUnplaced.push(...plan.unplaced);
       }
     }
 
     if (isTarget) {
-      return { zone, boxes: viewBoxes, unplaced: viewUnplaced };
+      return {
+        zone: zone ?? "front",
+        boxes: viewBoxes,
+        unplaced: viewUnplaced,
+      };
     }
   }
 
-  return { zone, boxes: viewBoxes, unplaced: viewUnplaced };
+  return {
+    zone: zone ?? "front",
+    boxes: viewBoxes,
+    unplaced: viewUnplaced,
+  };
+}
+
+/** Whole-stop bay plan (all front/middle/rear cargo at `rowId`). */
+export function planStopOccupancyAtStop(
+  sketch: ShipCargoGridSketch,
+  rows: HaulingChecklistRow[],
+  rowId: string,
+): CargoGridPlacementPlan {
+  return planZoneOccupancyAtStop(sketch, rows, rowId, null);
 }
 
 /** Flat set of all occupied cells in a plan (for view highlighting). */
@@ -712,7 +743,12 @@ export function placementPlanTints(
   );
 }
 
-/** Unique commodities in placement order (for legends). */
+export type CargoBoxCountBySize = {
+  size: number;
+  count: number;
+};
+
+/** Unique commodities in placement order (for legends), with crate breakdown. */
 export function placementPlanLegend(
   plan: CargoGridPlacementPlan,
 ): Array<{
@@ -721,6 +757,8 @@ export function placementPlanLegend(
   color: string | null;
   color2: string | null;
   scu: number;
+  /** Counts of each physical crate size (8 / 4 / 2 / 1), largest first. */
+  boxCounts: CargoBoxCountBySize[];
 }> {
   const map = new Map<
     string,
@@ -730,12 +768,17 @@ export function placementPlanLegend(
       color: string | null;
       color2: string | null;
       scu: number;
+      sizeTallies: Map<number, number>;
     }
   >();
   for (const box of plan.boxes) {
     const existing = map.get(box.commoditySlug);
     if (existing) {
       existing.scu += box.size;
+      existing.sizeTallies.set(
+        box.size,
+        (existing.sizeTallies.get(box.size) ?? 0) + 1,
+      );
       continue;
     }
     map.set(box.commoditySlug, {
@@ -744,7 +787,25 @@ export function placementPlanLegend(
       color: box.color,
       color2: box.color2,
       scu: box.size,
+      sizeTallies: new Map([[box.size, 1]]),
     });
   }
-  return [...map.values()];
+  return [...map.values()].map((entry) => ({
+    commoditySlug: entry.commoditySlug,
+    commodityName: entry.commodityName,
+    color: entry.color,
+    color2: entry.color2,
+    scu: entry.scu,
+    boxCounts: [...entry.sizeTallies.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([size, count]) => ({ size, count })),
+  }));
+}
+
+/** e.g. "12×8" or "2×8 1×4 1×1". */
+export function formatCargoBoxCounts(
+  boxCounts: CargoBoxCountBySize[],
+): string {
+  if (boxCounts.length === 0) return "";
+  return boxCounts.map(({ count, size }) => `${count}×${size}`).join(" ");
 }

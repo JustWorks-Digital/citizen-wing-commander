@@ -37,7 +37,6 @@ export const C2FrontTwelveScu: Story = {
     open: true,
     onClose: () => {},
     shipSlug: "c2-hercules-starlifter",
-    zone: "front",
     locationLabel: "Area 18",
     segments: [
       {
@@ -57,7 +56,6 @@ export const ThirteenScuOdd: Story = {
     open: true,
     onClose: () => {},
     shipSlug: "c2-hercules-starlifter",
-    zone: "rear",
     locationLabel: "Orison",
     segments: [
       {
