@@ -10,7 +10,7 @@ export type ImageLightboxProps = {
   onClose: () => void;
 };
 
-/** Full-viewport lightbox showing the image at native resolution (scroll if needed). */
+/** Full-viewport lightbox; image scales to page width and keeps aspect ratio. */
 export function ImageLightbox({
   src,
   alt = "",
@@ -39,7 +39,7 @@ export function ImageLightbox({
       role="dialog"
       aria-modal="true"
       aria-label={title || alt || "Image preview"}
-      className="fixed inset-0 z-50 flex flex-col bg-rsi-bg"
+      className="fixed inset-0 z-[80] flex flex-col bg-rsi-bg"
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-rsi-border bg-rsi-bg-deep/80 px-4 py-3">
         <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-rsi-text-muted">
@@ -57,12 +57,12 @@ export function ImageLightbox({
         className="relative min-h-0 flex-1 overflow-auto bg-rsi-bg-deep/40 p-4"
         onClick={onClose}
       >
-        <div className="flex min-h-full min-w-full items-start justify-center">
-          {/* Native resolution — no max-width/height scaling */}
+        <div className="flex min-h-full w-full items-start justify-center">
+          {/* Fit page width; keep aspect ratio (no crop). */}
           <img
             src={src}
             alt={alt}
-            className="h-auto w-auto max-w-none select-none"
+            className="h-auto w-full max-w-full select-none"
             draggable={false}
             onClick={(event) => {
               event.stopPropagation();

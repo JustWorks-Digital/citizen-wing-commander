@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-import type { ClipboardEvent, DragEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import type { DragEvent } from "react";
 import {
   deleteSessionScreenshot,
   fetchSessionScreenshots,
@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 
 export type SessionScreenshotsPanelProps = {
+  open: boolean;
   sessionId: string;
+  onClose: () => void;
   /** Storybook / offline seed (skips network). */
   initialScreenshots?: ScreenshotListItem[];
 };
@@ -48,7 +50,7 @@ function imageFilesFromList(list: FileList | File[] | null): File[] {
   );
 }
 
-function imageFilesFromClipboard(data: DataTransfer | null): File[] {
+function imageFilesFromDataTransfer(data: DataTransfer | null): File[] {
   if (!data) return [];
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const fromItems: File[] = [];
@@ -78,47 +80,149 @@ function imageFilesFromClipboard(data: DataTransfer | null): File[] {
   }
 
   if (fromItems.length) return fromItems;
-
-  return imageFilesFromList(data.files).map((file, index) => {
-    const type = file.type.toLowerCase() || "image/png";
-    const ext = EXT_BY_MIME[type] ?? pathExt(file.name) ?? ".png";
-    const name =
-      file.name && file.name !== "image.png"
-        ? file.name
-        : `paste-${stamp}-${index + 1}${ext}`;
-    return new File([file], name, {
-      type: file.type || type,
-      lastModified: file.lastModified,
-    });
-  });
+  return imageFilesFromList(data.files);
 }
 
-function pathExt(name: string): string | null {
-  const match = /\.(png|jpe?g|webp|gif)$/i.exec(name);
-  return match ? `.${match[1]!.toLowerCase().replace("jpeg", "jpg")}` : null;
+async function imageFilesFromClipboardApi(): Promise<File[]> {
+  if (!navigator.clipboard?.read) return [];
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const items = await navigator.clipboard.read();
+  const files: File[] = [];
+  let index = 0;
+  for (const item of items) {
+    for (const type of item.types) {
+      const mime = type.toLowerCase();
+      if (!IMAGE_TYPES.has(mime)) continue;
+      const blob = await item.getType(type);
+      if (!blob || blob.size === 0) continue;
+      index += 1;
+      const ext = EXT_BY_MIME[mime] ?? ".png";
+      files.push(
+        new File([blob], `paste-${stamp}-${index}${ext}`, {
+          type: blob.type || mime,
+          lastModified: Date.now(),
+        }),
+      );
+    }
+  }
+  return files;
 }
 
-/** Upload + browse contract screenshots for a hauling session. */
+/** Lucide-style clipboard (clearer clip + board silhouette). */
+function ClipboardIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="M9 12h6" />
+      <path d="M9 16h4" />
+    </svg>
+  );
+}
+
+/** Modal: upload + browse contract screenshots for a hauling session. */
 export function SessionScreenshotsPanel({
+  open,
   sessionId,
+  onClose,
   initialScreenshots,
 }: SessionScreenshotsPanelProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
   const dragDepthRef = useRef(0);
+  const isUploadingRef = useRef(false);
   const [screenshots, setScreenshots] = useState<ScreenshotListItem[]>(
     initialScreenshots ?? [],
   );
-  const [isLoading, setIsLoading] = useState(!initialScreenshots);
+  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isPasteReady, setIsPasteReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ScreenshotListItem | null>(null);
 
+  isUploadingRef.current = isUploading;
+
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length || isUploadingRef.current) return;
+      setIsUploading(true);
+      setError(null);
+      try {
+        await uploadSessionScreenshots(sessionId, files);
+        if (!initialScreenshots) {
+          const result = await fetchSessionScreenshots(sessionId);
+          setScreenshots(result.screenshots);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setIsUploading(false);
+        if (inputRef.current) inputRef.current.value = "";
+      }
+    },
+    [sessionId, initialScreenshots],
+  );
+
+  const pasteFromClipboard = useCallback(
+    async (dataTransfer?: DataTransfer | null) => {
+      if (isUploadingRef.current) return;
+      let images = imageFilesFromDataTransfer(dataTransfer ?? null);
+      if (!images.length) {
+        try {
+          images = await imageFilesFromClipboardApi();
+        } catch {
+          setError(
+            "Clipboard access denied. Allow clipboard permission, or use ⌘V / Ctrl+V.",
+          );
+          return;
+        }
+      }
+      if (!images.length) {
+        setError("Clipboard has no image. Copy a screenshot, then paste.");
+        return;
+      }
+      await uploadFiles(images);
+    },
+    [uploadFiles],
+  );
+
   useEffect(() => {
-    if (initialScreenshots) return;
+    if (!open) {
+      setLightbox(null);
+      setIsDragging(false);
+      dragDepthRef.current = 0;
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !lightbox) onClose();
+    };
+    const onPaste = (event: globalThis.ClipboardEvent) => {
+      if (isUploadingRef.current) return;
+      const images = imageFilesFromDataTransfer(event.clipboardData);
+      if (!images.length) return;
+      event.preventDefault();
+      void uploadFiles(images);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("paste", onPaste);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("paste", onPaste);
+    };
+  }, [open, lightbox, onClose, uploadFiles]);
+
+  useEffect(() => {
+    if (!open || initialScreenshots) return;
     let cancelled = false;
     setIsLoading(true);
     void fetchSessionScreenshots(sessionId)
@@ -141,25 +245,15 @@ export function SessionScreenshotsPanel({
     return () => {
       cancelled = true;
     };
-  }, [sessionId, initialScreenshots]);
+  }, [open, sessionId, initialScreenshots]);
 
-  const uploadFiles = async (files: File[]) => {
-    if (!files.length) return;
-    setIsUploading(true);
-    setError(null);
-    try {
-      await uploadSessionScreenshots(sessionId, files);
-      if (!initialScreenshots) {
-        const result = await fetchSessionScreenshots(sessionId);
-        setScreenshots(result.screenshots);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setIsUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+  useEffect(() => {
+    if (open && initialScreenshots) {
+      setScreenshots(initialScreenshots);
     }
-  };
+  }, [open, initialScreenshots]);
+
+  if (!open) return null;
 
   const onPickFiles = (files: FileList | null) => {
     void uploadFiles(imageFilesFromList(files));
@@ -201,21 +295,6 @@ export function SessionScreenshotsPanel({
     void uploadFiles(images);
   };
 
-  const onPaste = (event: ClipboardEvent<HTMLElement>) => {
-    if (isUploading) return;
-    const images = imageFilesFromClipboard(event.clipboardData);
-    if (!images.length) {
-      setError("Clipboard has no image. Copy a screenshot, then paste here.");
-      return;
-    }
-    event.preventDefault();
-    void uploadFiles(images);
-  };
-
-  const focusPanelForPaste = () => {
-    panelRef.current?.focus();
-  };
-
   const onDelete = async (shot: ScreenshotListItem) => {
     setError(null);
     try {
@@ -230,141 +309,148 @@ export function SessionScreenshotsPanel({
   };
 
   return (
-    <section
-      ref={panelRef}
-      tabIndex={0}
-      aria-label="Session screenshots. Click to focus, then paste an image from the clipboard."
-      className={[
-        "rounded-rsi border bg-rsi-surface/90 p-4 shadow-rsi-panel transition-colors outline-none",
-        isDragging || isPasteReady
-          ? "border-rsi-accent bg-rsi-accent-muted/30"
-          : "border-rsi-border",
-        "focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-      ].join(" ")}
-      onClick={focusPanelForPaste}
-      onFocus={() => setIsPasteReady(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsPasteReady(false);
-        }
+    <div
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Session screenshots"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
       }}
-      onPaste={onPaste}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
     >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-            Screenshots
-          </p>
-          <p className="mt-1 text-xs text-rsi-text-muted">
-            Click this panel, then paste, drop, or upload — multiple images at
-            once are supported.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            ref={inputRef}
-            id={inputId}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            multiple
-            className="sr-only"
-            onChange={(event) => onPickFiles(event.target.files)}
-          />
-          <Button
-            variant="secondary"
-            disabled={isUploading}
-            onClick={() => inputRef.current?.click()}
-            className="!normal-case tracking-wide"
-          >
-            {isUploading ? "Uploading…" : "Upload"}
-          </Button>
-        </div>
-      </div>
-
-      {error ? (
-        <p className="mb-3 text-sm text-rsi-warn">{error}</p>
-      ) : null}
-
-      {isDragging ? (
-        <p className="mb-3 rounded-rsi border border-dashed border-rsi-accent bg-rsi-accent-muted/40 px-3 py-4 text-center font-mono text-xs uppercase tracking-[0.16em] text-rsi-accent">
-          Drop to upload
-        </p>
-      ) : isPasteReady ? (
-        <p className="mb-3 rounded-rsi border border-dashed border-rsi-accent/60 bg-rsi-accent-muted/25 px-3 py-3 text-center font-mono text-xs uppercase tracking-[0.16em] text-rsi-accent">
-          Ready — paste screenshot
-        </p>
-      ) : null}
-
-      {isLoading ? (
-        <p className="font-mono text-sm text-rsi-text-muted">Loading…</p>
-      ) : screenshots.length === 0 ? (
-        <div className="rounded-rsi border border-dashed border-rsi-border bg-rsi-bg-deep/40 px-3 py-8 text-center text-sm text-rsi-text-muted">
-          <p>No screenshots yet. Paste, drop, or browse to add contract shots.</p>
+      <div
+        className={[
+          "flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border",
+          isDragging ? "ring-2 ring-[var(--rsi-ring)]" : "",
+        ].join(" ")}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
           <button
             type="button"
-            disabled={isUploading}
-            onClick={(event) => {
-              event.stopPropagation();
-              inputRef.current?.click();
-            }}
-            className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent hover:text-rsi-accent-hover disabled:opacity-50"
+            onClick={onClose}
+            aria-label="Close screenshots"
+            className="absolute right-3 top-3 inline-flex size-9 items-center justify-center rounded-rsi text-rsi-text-muted transition-colors hover:bg-rsi-bg-deep/60 hover:text-rsi-text sm:right-4 sm:top-4"
           >
-            Browse files
+            <span aria-hidden className="text-xl leading-none">
+              ×
+            </span>
           </button>
-        </div>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
-          {screenshots.map((shot) => (
-            <li
-              key={shot.logicalPath}
-              className="overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50"
+          <div className="min-w-0">
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
+              Screenshots
+            </p>
+            <h2 className="text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
+              Contract shots
+            </h2>
+            <p className="mt-1 text-xs text-rsi-text-muted">
+              Paste (⌘V / Ctrl+V), drop, or upload — multiple images at once.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              multiple
+              className="sr-only"
+              onChange={(event) => onPickFiles(event.target.files)}
+            />
+            <button
+              type="button"
+              disabled={isUploading}
+              aria-label="Paste screenshot from clipboard"
+              title="Paste from clipboard"
+              onClick={() => void pasteFromClipboard()}
+              className="inline-flex size-9 items-center justify-center rounded-rsi border border-rsi-border text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-accent disabled:opacity-50"
             >
+              <ClipboardIcon className="size-4" />
+            </button>
+            <Button
+              variant="secondary"
+              disabled={isUploading}
+              onClick={() => inputRef.current?.click()}
+              className="!normal-case tracking-wide"
+            >
+              {isUploading ? "Uploading…" : "Upload"}
+            </Button>
+          </div>
+        </header>
+
+        <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
+          {error ? (
+            <p className="mb-3 text-sm text-rsi-warn">{error}</p>
+          ) : null}
+
+          {isDragging ? (
+            <p className="mb-3 rounded-rsi border border-dashed border-rsi-accent bg-rsi-accent-muted/40 px-3 py-4 text-center font-mono text-xs uppercase tracking-[0.16em] text-rsi-accent">
+              Drop to upload
+            </p>
+          ) : null}
+
+          {isLoading ? (
+            <p className="font-mono text-sm text-rsi-text-muted">Loading…</p>
+          ) : screenshots.length === 0 ? (
+            <div className="rounded-rsi border border-dashed border-rsi-border bg-rsi-bg-deep/40 px-3 py-8 text-center text-sm text-rsi-text-muted">
+              <p>
+                No screenshots yet. Paste, use the clipboard button, drop, or
+                browse.
+              </p>
               <button
                 type="button"
-                className="block w-full bg-rsi-bg-deep/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
-                onClick={() => setLightbox(shot)}
+                disabled={isUploading}
+                onClick={() => inputRef.current?.click()}
+                className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-accent hover:text-rsi-accent-hover disabled:opacity-50"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={shot.url}
-                  alt={shot.filename}
-                  className="aspect-video w-full object-cover object-top"
-                />
+                Browse files
               </button>
-              <div className="flex items-start justify-between gap-2 px-2.5 py-2">
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-[0.65rem] text-rsi-text">
-                    {shot.filename}
-                  </p>
-                  <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                    {formatBytes(shot.bytes)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void onDelete(shot)}
-                  className="shrink-0 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-danger hover:text-rsi-accent"
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+            </div>
+          ) : (
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 md:grid-cols-5">
+              {screenshots.map((shot) => (
+                <li key={shot.logicalPath} className="group relative">
+                  <button
+                    type="button"
+                    title={`${shot.filename} · ${formatBytes(shot.bytes)} — click to enlarge`}
+                    aria-label={`Enlarge ${shot.filename}`}
+                    className="block w-full overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/80 transition-colors hover:border-rsi-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
+                    onClick={() => setLightbox(shot)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={shot.url}
+                      alt={shot.filename}
+                      loading="lazy"
+                      className="aspect-square w-full object-cover object-top"
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${shot.filename}`}
+                    onClick={() => void onDelete(shot)}
+                    className="absolute right-1 top-1 rounded-sm bg-rsi-bg-deep/85 px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-danger opacity-0 shadow-rsi-panel transition-opacity hover:text-rsi-accent group-hover:opacity-100 focus-visible:opacity-100"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-      {lightbox ? (
-        <ImageLightbox
-          src={lightbox.url}
-          alt={lightbox.filename}
-          title={lightbox.filename}
-          onClose={() => setLightbox(null)}
-        />
-      ) : null}
-    </section>
+        {lightbox ? (
+          <ImageLightbox
+            src={lightbox.url}
+            alt={lightbox.filename}
+            title={lightbox.filename}
+            onClose={() => setLightbox(null)}
+          />
+        ) : null}
+      </div>
+    </div>
   );
 }

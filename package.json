@@ -16,6 +16,7 @@
     "db:upgrade": "node scripts/db-upgrade.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:sync-ships": "node scripts/sync-ships.mjs",
     "fixtures:fetch": "node scripts/fetch-sc-fixtures.mjs",
     "fixtures:fetch-commodity-icons": "node scripts/fetch-commodity-icons.mjs"
   },

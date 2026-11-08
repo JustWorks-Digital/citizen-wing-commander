@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import {
   describeCargoDeliveries,
@@ -18,7 +18,7 @@ import {
   buildShipStorageBars,
   type ShipStorageBar,
 } from "@/lib/missions/shipStorageBars";
-import { OutdoorFreightIcon } from "./OutdoorFreightIcon";
+import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
@@ -89,10 +89,12 @@ function groupCargoLines(lines: CargoLine[]): {
 
 function DoneCheckbox({
   location,
+  step,
   isCompleted,
   onToggle,
 }: {
   location: string;
+  step: number;
   isCompleted: boolean;
   onToggle: () => void;
 }) {
@@ -101,19 +103,36 @@ function DoneCheckbox({
       type="button"
       role="checkbox"
       aria-checked={isCompleted}
-      aria-label={`Mark done: ${location}`}
+      aria-label={`Stop ${step}, mark done: ${location}`}
       onClick={onToggle}
       className={[
-        "inline-flex size-9 shrink-0 items-center justify-center rounded-rsi border transition-colors sm:size-8",
+        "group inline-flex size-9 shrink-0 items-center justify-center rounded-rsi border transition-colors sm:size-8",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isCompleted
           ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
-          : "border-rsi-border bg-rsi-bg-deep/40 text-transparent hover:border-rsi-border-strong",
+          : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
       ].join(" ")}
     >
-      <span aria-hidden className="text-base leading-none">
-        ✓
-      </span>
+      {isCompleted ? (
+        <span aria-hidden className="text-base leading-none">
+          ✓
+        </span>
+      ) : (
+        <>
+          <span
+            aria-hidden
+            className="font-mono text-[0.7rem] tabular-nums leading-none tracking-wide group-hover:hidden"
+          >
+            {step}
+          </span>
+          <span
+            aria-hidden
+            className="hidden text-base leading-none group-hover:inline"
+          >
+            ✓
+          </span>
+        </>
+      )}
     </button>
   );
 }
@@ -199,38 +218,46 @@ function CargoGroups({
   );
 }
 
+const LOCATION_TITLE_MAX_CHARS = 28;
+
 function LocationHeader({
   row,
   location,
   hasOutdoorFreightElevator,
   isCopied,
   onCopy,
+  align = "start",
 }: {
   row: HaulingChecklistRow;
   location: string;
   hasOutdoorFreightElevator: boolean;
   isCopied: boolean;
   onCopy: () => void;
+  align?: "start" | "end";
 }) {
+  const locationLabel =
+    location.length > LOCATION_TITLE_MAX_CHARS
+      ? `${location.slice(0, LOCATION_TITLE_MAX_CHARS - 1)}…`
+      : location;
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        {legKindBadges(row.legKind).map((badge) => (
-          <Badge key={badge.label} variant={badge.variant}>
-            {badge.label}
-          </Badge>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5">
+    <div
+      className={[
+        "flex flex-col gap-2",
+        align === "end" ? "w-full items-stretch" : "",
+      ].join(" ")}
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
         <span
           className={[
-            "text-sm font-medium",
+            "whitespace-nowrap text-left text-base font-medium",
             row.isCompleted
               ? "text-rsi-text-muted line-through decoration-rsi-success/60"
               : "text-rsi-text",
           ].join(" ")}
+          title={location}
         >
-          {location}
+          {locationLabel}
         </span>
         <button
           type="button"
@@ -240,24 +267,31 @@ function LocationHeader({
           title={isCopied ? "Copied" : "Copy for starmap"}
           onClick={onCopy}
           className={[
-            "inline-flex size-8 shrink-0 items-center justify-center rounded-rsi border transition-colors sm:size-7",
+            "inline-flex size-5 shrink-0 items-center justify-center rounded-rsi border transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
             isCopied
               ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
               : "border-transparent text-rsi-text-muted hover:border-rsi-border hover:bg-rsi-bg-deep/40 hover:text-rsi-accent",
           ].join(" ")}
         >
-          <CopyIcon className="size-3.5" />
+          <CopyIcon className="size-3" />
         </button>
       </div>
-      {hasOutdoorFreightElevator ? (
-        <div className="mt-0.5 flex items-center gap-1.5 text-rsi-text-secondary">
-          <OutdoorFreightIcon locationSlug={row.locationSlug} />
-          <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em]">
-            Outdoor freight
-          </span>
-        </div>
-      ) : null}
+      <div
+        className={[
+          "flex flex-wrap items-center gap-2",
+          align === "end" ? "justify-end" : "",
+        ].join(" ")}
+      >
+        {legKindBadges(row.legKind).map((badge) => (
+          <Badge key={badge.label} variant={badge.variant} size="sm">
+            {badge.label}
+          </Badge>
+        ))}
+        {hasOutdoorFreightElevator ? (
+          <OutdoorFreightBadge locationSlug={row.locationSlug} />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -325,13 +359,13 @@ function ScuTotalDisplay({
       ) : null}
       <span
         className={[
-          "relative text-sm",
+          "text-sm",
           totalAlign,
           row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-text",
         ].join(" ")}
       >
         {total}
-        <span className="absolute left-full top-1/2 ml-1 -translate-y-1/2 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+        <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
           SCU
         </span>
       </span>
@@ -398,6 +432,14 @@ function ShipStorageBars({
                 />
               );
             })}
+            {isEmpty ? (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 flex items-center justify-center font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted/35"
+              >
+                {bar.label}
+              </span>
+            ) : null}
             {/* Center divider — two bay quadrants per zone */}
             <span
               aria-hidden
@@ -423,7 +465,7 @@ function MetaGrid({
     <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rsi-divider/80 pt-3 text-sm sm:grid-cols-3">
       <div>
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          SCU total
+          Total
         </dt>
         <dd className="mt-0.5">
           <ScuTotalDisplay
@@ -437,7 +479,7 @@ function MetaGrid({
       </div>
       <div>
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Ship storage
+          Storage location
         </dt>
         <dd className="mt-1">
           <ShipStorageBars row={row} bars={storageBars} />
@@ -445,7 +487,7 @@ function MetaGrid({
       </div>
       <div className="col-span-2 sm:col-span-1">
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Distance to next
+          Next Distance
         </dt>
         <dd
           className={[
@@ -462,16 +504,53 @@ function MetaGrid({
   );
 }
 
+function equalizeTableRowHeights(tbody: HTMLTableSectionElement) {
+  const trs = [...tbody.querySelectorAll(":scope > tr")].filter(
+    (tr) => !tr.querySelector(":scope > td[colspan]"),
+  );
+  for (const tr of trs) {
+    tr.style.height = "";
+  }
+  let maxHeight = 0;
+  for (const tr of trs) {
+    maxHeight = Math.max(maxHeight, tr.getBoundingClientRect().height);
+  }
+  if (maxHeight <= 0) return;
+  const height = `${Math.ceil(maxHeight)}px`;
+  for (const tr of trs) {
+    tr.style.height = height;
+  }
+}
+
 export function HaulingChecklistTable({
   rows,
   onToggle,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
-  const [hideCompleted, setHideCompleted] = useState(true);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const desktopTbodyRef = useRef<HTMLTableSectionElement>(null);
   const completedCount = rows.filter((row) => row.isCompleted).length;
   const visibleRows = hideCompleted
     ? rows.filter((row) => !row.isCompleted)
     : rows;
+
+  useLayoutEffect(() => {
+    const tbody = desktopTbodyRef.current;
+    if (!tbody) return;
+
+    const sync = () => {
+      equalizeTableRowHeights(tbody);
+    };
+
+    sync();
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("resize", sync);
+      for (const tr of tbody.querySelectorAll(":scope > tr")) {
+        (tr as HTMLTableRowElement).style.height = "";
+      }
+    };
+  }, [hideCompleted, rows]);
 
   async function copyStarmapName(rowId: string, name: string) {
     try {
@@ -562,19 +641,12 @@ export function HaulingChecklistTable({
               ].join(" ")}
             >
               <div className="flex gap-3">
-                <div className="flex flex-col items-center gap-2">
-                  <span
-                    className="font-mono text-[0.7rem] tabular-nums tracking-wide text-rsi-text-muted"
-                    aria-label={`Stop ${step}`}
-                  >
-                    {step}
-                  </span>
-                  <DoneCheckbox
-                    location={location}
-                    isCompleted={row.isCompleted}
-                    onToggle={() => onToggle(row.id)}
-                  />
-                </div>
+                <DoneCheckbox
+                  location={location}
+                  step={step}
+                  isCompleted={row.isCompleted}
+                  onToggle={() => onToggle(row.id)}
+                />
                 <div className="min-w-0 flex-1">
                   <LocationHeader
                     row={row}
@@ -604,65 +676,73 @@ export function HaulingChecklistTable({
 
       {/* Desktop: table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[48rem] border-collapse text-left">
+        <table
+          className={[
+            "w-full min-w-[48rem] border-collapse text-left",
+            /* Row rule under data cells; location starts at name (px-4), not into step col */
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:relative",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:pointer-events-none",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:absolute",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:right-0",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:bottom-0",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:left-4",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:h-px",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:bg-rsi-divider/80",
+            "[&_tbody_tr:not(:last-child)_td:nth-child(n+3)]:shadow-[inset_0_-1px_0_0_var(--rsi-divider)]",
+          ].join(" ")}
+        >
           <thead>
             <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
               <th
                 scope="col"
-                className="w-10 px-2 py-3 text-center font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="w-14 px-2 py-3 text-center font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                #
+                <span className="sr-only">Stop and done</span>
               </th>
               <th
                 scope="col"
-                className="w-12 px-3 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                <span className="sr-only">Done</span>
-              </th>
-              <th
-                scope="col"
-                className="min-w-[10rem] px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="min-w-[10rem] px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
                 Location
               </th>
               <th
                 scope="col"
-                className="min-w-[12rem] px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="min-w-[12rem] px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
                 Cargo
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                SCU total
+                Total
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                Ship storage location
+                Storage location
               </th>
               <th
                 scope="col"
-                className="px-4 py-3 font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
+                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
               >
-                Distance to next
+                Next Distance
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={desktopTbodyRef}>
             {visibleRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-sm text-rsi-text-muted"
                 >
                   {emptyMessage}
                 </td>
               </tr>
             ) : null}
-            {visibleRows.map((row) => {
+            {visibleRows.map((row, rowIndex) => {
               const locationFixture = getLocationBySlug(row.locationSlug);
               const location = locationFixture?.name ?? row.locationSlug;
               const cargoFallbackRole =
@@ -678,29 +758,44 @@ export function HaulingChecklistTable({
               const storageBars = buildShipStorageBars(row);
               const isCopied = copiedRowId === row.id;
               const step = stepById.get(row.id) ?? 0;
+              const isFirstStep = rowIndex === 0;
+              const isLastStep = rowIndex === visibleRows.length - 1;
 
               return (
                 <tr
                   key={row.id}
                   aria-checked={row.isCompleted}
                   className={[
-                    "border-b border-rsi-divider/80 last:border-b-0 transition-colors",
+                    "transition-colors",
                     row.isCompleted
                       ? "bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)]"
                       : "",
                   ].join(" ")}
                 >
-                  <td className="px-2 py-3 text-center font-mono text-xs tabular-nums tracking-wide text-rsi-text-muted">
-                    <span aria-label={`Stop ${step}`}>{step}</span>
+                  <td className="relative px-2 py-2 text-center align-middle">
+                    {/* Stop at checkbox edge: size-9 → 1.125rem half; sm:size-8 → 1rem half */}
+                    {!isFirstStep ? (
+                      <span
+                        aria-hidden
+                        className="absolute top-0 left-1/2 h-[calc(50%-1.125rem)] w-px -translate-x-1/2 bg-rsi-border-strong sm:h-[calc(50%-1rem)]"
+                      />
+                    ) : null}
+                    {!isLastStep ? (
+                      <span
+                        aria-hidden
+                        className="absolute top-[calc(50%+1.125rem)] bottom-0 left-1/2 w-px -translate-x-1/2 bg-rsi-border-strong sm:top-[calc(50%+1rem)]"
+                      />
+                    ) : null}
+                    <span className="relative z-10 inline-flex">
+                      <DoneCheckbox
+                        location={location}
+                        step={step}
+                        isCompleted={row.isCompleted}
+                        onToggle={() => onToggle(row.id)}
+                      />
+                    </span>
                   </td>
-                  <td className="px-3 py-2 text-center">
-                    <DoneCheckbox
-                      location={location}
-                      isCompleted={row.isCompleted}
-                      onToggle={() => onToggle(row.id)}
-                    />
-                  </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-4 py-3 text-left align-middle">
                     <LocationHeader
                       row={row}
                       location={location}
@@ -713,10 +808,10 @@ export function HaulingChecklistTable({
                       }}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-4 py-3 text-left align-middle">
                     <CargoGroups row={row} cargoLines={cargoLines} />
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-4 py-3 text-right align-middle">
                     <ScuTotalDisplay
                       row={row}
                       pickup={scu.pickup}
@@ -724,7 +819,7 @@ export function HaulingChecklistTable({
                       total={scu.total}
                     />
                   </td>
-                  <td className="relative w-[7.5rem] px-4 py-3 align-top text-sm">
+                  <td className="relative w-[7.5rem] px-4 py-3 text-right align-middle text-sm">
                     {/* Absolute so storage bars fill row height without growing it. */}
                     <div className="absolute inset-x-4 inset-y-3">
                       <ShipStorageBars
@@ -736,7 +831,7 @@ export function HaulingChecklistTable({
                   </td>
                   <td
                     className={[
-                      "px-4 py-3 align-top font-mono text-sm tabular-nums",
+                      "px-4 py-3 text-right align-middle font-mono text-sm tabular-nums",
                       row.isCompleted
                         ? "text-rsi-text-muted line-through"
                         : "text-rsi-text-secondary",

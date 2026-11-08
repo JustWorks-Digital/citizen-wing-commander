@@ -109,6 +109,44 @@ export const deliverySessions = pgTable(
   ],
 );
 
+/**
+ * Ship / vehicle stats synced from UEX (spaceships).
+ * Session UI currently offers a small selectable subset via `isSelectable`.
+ */
+export const ships = pgTable(
+  "ships",
+  {
+    /** UEX vehicle id when known; otherwise a stable local id. */
+    id: integer("id").primaryKey(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    nameFull: text("name_full").notNull(),
+    manufacturer: text("manufacturer"),
+    cargoScu: integer("cargo_scu").notNull().default(0),
+    isCargo: boolean("is_cargo").notNull().default(false),
+    containerSizes: jsonb("container_sizes")
+      .$type<number[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** Offered in the session ship dropdown. */
+    isSelectable: boolean("is_selectable").notNull().default(false),
+    source: text("source").notNull().default("uex"),
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("ships_slug_uidx").on(table.slug),
+    index("ships_selectable_idx").on(table.isSelectable),
+  ],
+);
+
 export const sessionPlayers = pgTable(
   "session_players",
   {
@@ -242,6 +280,7 @@ export const checklistProgressRelations = relations(
 export type Player = typeof players.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type DeliverySession = typeof deliverySessions.$inferSelect;
+export type Ship = typeof ships.$inferSelect;
 export type Mission = typeof missions.$inferSelect;
 export type ChecklistProgress = typeof checklistProgress.$inferSelect;
 export type HaulingMission = Mission & {

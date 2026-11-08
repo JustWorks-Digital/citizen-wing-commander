@@ -1,9 +1,11 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 export type BadgeVariant = "neutral" | "accent" | "success" | "warn";
+export type BadgeSize = "sm" | "md";
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   variant?: BadgeVariant;
+  size?: BadgeSize;
   children: ReactNode;
 };
 
@@ -18,8 +20,14 @@ const variantClasses: Record<BadgeVariant, string> = {
     "border-rsi-warn/40 bg-rsi-warn-muted text-rsi-warn",
 };
 
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: "px-1 py-px text-[0.5rem] tracking-[0.12em]",
+  md: "px-2 py-0.5 text-[0.65rem] tracking-[0.18em]",
+};
+
 export function Badge({
   variant = "neutral",
+  size = "md",
   className = "",
   children,
   ...props
@@ -27,7 +35,8 @@ export function Badge({
   return (
     <span
       className={[
-        "inline-flex items-center rounded-rsi border px-2 py-0.5 font-mono text-[0.65rem] font-medium uppercase tracking-[0.18em]",
+        "inline-flex items-center rounded-rsi border font-mono font-medium uppercase",
+        sizeClasses[size],
         variantClasses[variant],
         className,
       ]

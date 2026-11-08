@@ -14,6 +14,7 @@ export const appApi = {
   checklistSessionScreenshot: (sessionId: string, filename: string) =>
     `/api/checklist/sessions/${encodeURIComponent(sessionId)}/screenshots/${encodeURIComponent(filename)}`,
   sessions: "/api/sessions",
+  ships: "/api/ships",
   healthDb: "/api/health/db",
 } as const;
 

@@ -8,13 +8,15 @@ export type OutdoorFreightIconProps = {
   /** Wiki location slug — selects the station-specific reference photo. */
   locationSlug: string;
   tooltipDelayMs?: number;
-  /** Visual size — use `preview` while iterating on the glyph. */
-  size?: "sm" | "md" | "preview";
+  /** Visual size — use `preview` while iterating on the glyph; `xs` for badges. */
+  size?: "xs" | "sm" | "md" | "preview";
   /** Keep tooltip open (Storybook / sample previews). */
   forceOpen?: boolean;
+  className?: string;
 };
 
 const SIZE_CLASS = {
+  xs: { hit: "size-3.5", glyph: "size-3" },
   sm: { hit: "size-5", glyph: "size-4" },
   md: { hit: "size-8", glyph: "size-7" },
   /** Large review size so the glyph can be inspected and adjusted. */
@@ -27,6 +29,7 @@ export function OutdoorFreightIcon({
   tooltipDelayMs = 450,
   size = "sm",
   forceOpen = false,
+  className = "",
 }: OutdoorFreightIconProps) {
   const sizeClass = SIZE_CLASS[size];
   const referenceSrc = getOutdoorFreightReferenceSrc(locationSlug);
@@ -102,7 +105,10 @@ export function OutdoorFreightIcon({
             "inline-flex shrink-0 items-center justify-center rounded-sm text-rsi-text-secondary outline-none",
             "focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             sizeClass.hit,
-          ].join(" ")}
+            className,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           {/* Front-on outdoor FE bay: frame, hazard sides, grated deck */}
           <svg
@@ -149,7 +155,7 @@ export function OutdoorFreightIcon({
           <span
             id={tooltipId}
             role="tooltip"
-            className="absolute bottom-full left-1/2 z-20 mb-1.5 inline-flex w-max -translate-x-1/2 flex-col gap-1.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep px-2 py-1.5 shadow-rsi-panel"
+            className="absolute bottom-full left-0 z-20 mb-1.5 inline-flex w-max flex-col gap-1.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep px-2 py-1.5 shadow-rsi-panel"
           >
             {referenceSrc ? (
               <button

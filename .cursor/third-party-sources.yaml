@@ -81,10 +81,14 @@ sources:
     docs_url: https://uexcorp.space/api/documentation/id/get_vehicles/
     used_by:
       - scripts/fetch-sc-fixtures.mjs
+      - scripts/sync-ships.mjs
       - lib/fixtures/ships.json
+      - db/schema.ts
+      - app/api/ships/route.ts
     notes: >
       Ship/vehicle list including cargo SCU capacity (`scu`). Fixture filters to
-      spaceships. Used for session ship selection and future bay capacity.
+      spaceships. Synced into Postgres `ships` via `npm run db:sync-ships` for
+      the session ship dropdown (currently C2 Hercules + Mk V Centaurus).
     added: "2026-11-07"
     last_verified: "2026-11-07"
 

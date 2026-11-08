@@ -10,8 +10,13 @@ import {
   fetchChecklistSessions,
   saveChecklist,
 } from "@/lib/api/checklistApi";
+import {
+  fetchSelectableShips,
+  type CatalogShip,
+} from "@/lib/api/shipsApi";
 import { appPaths } from "@/lib/appPaths";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
+import { ShipSelect } from "@/components/ui/ShipSelect";
 import {
   getLocationBySlug,
   getShipBySlug,
@@ -32,6 +37,7 @@ import {
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
 } from "@/lib/missions/rebuildSessionRoute";
+import { SELECTABLE_SHIP_SLUGS } from "@/lib/ships/selectableShips";
 import {
   emptySessionChecklist,
   type SessionTabSummary,
@@ -83,7 +89,11 @@ export function SessionChecklistView({
   );
   const [tabsBusy, setTabsBusy] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
+  const [shipsLoading, setShipsLoading] = useState(true);
+  const [shipsError, setShipsError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const etagRef = useRef<string | null>(null);
   const savingRef = useRef(false);
@@ -91,6 +101,48 @@ export function SessionChecklistView({
   const activeIdRef = useRef(activeSessionId);
   sessionRef.current = session;
   activeIdRef.current = activeSessionId;
+
+  useEffect(() => {
+    let cancelled = false;
+    setShipsLoading(true);
+    void fetchSelectableShips()
+      .then((ships) => {
+        if (cancelled) return;
+        setShipCatalog(ships);
+        setShipsError(null);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setShipsError(
+          error instanceof Error ? error.message : "Failed to load ships",
+        );
+        // Offline / Storybook fallback from fixtures.
+        setShipCatalog(
+          SELECTABLE_SHIP_SLUGS.flatMap((slug) => {
+            const ship = getShipBySlug(slug);
+            if (!ship) return [];
+            return [
+              {
+                id: ship.id,
+                slug: ship.slug,
+                name: ship.name,
+                nameFull: ship.nameFull,
+                manufacturer: ship.manufacturer,
+                cargoScu: ship.cargoScu,
+                isCargo: ship.isCargo,
+                containerSizes: ship.containerSizes,
+              },
+            ];
+          }),
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setShipsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -194,13 +246,14 @@ export function SessionChecklistView({
     return () => window.clearInterval(tick);
   }, [session.completedAt, nowMs]);
 
-  const shipLabels = (session.shipSlugs ?? []).map((slug) => {
-    const ship = getShipBySlug(slug);
-    return ship
-      ? `${ship.name} (${ship.cargoScu} SCU)`
-      : slug;
-  });
-  const totalCapacity = sumShipCargoScu(session.shipSlugs ?? []);
+  const selectedShipSlug = session.shipSlugs?.[0] ?? null;
+  const shipBySlug = new Map(shipCatalog.map((ship) => [ship.slug, ship]));
+  const totalCapacity =
+    session.shipSlugs?.reduce((total, slug) => {
+      const fromCatalog = shipBySlug.get(slug)?.cargoScu;
+      if (typeof fromCatalog === "number") return total + fromCatalog;
+      return total + (getShipBySlug(slug)?.cargoScu ?? 0);
+    }, 0) ?? sumShipCargoScu(session.shipSlugs ?? []);
   const onboardScu = estimateOnboardScu(session.rows);
   const missionCargoScu = estimateMissionCargoScu(
     session.missions,
@@ -354,19 +407,27 @@ export function SessionChecklistView({
             </p>
           )}
         </div>
-        <p className="mt-3 text-sm text-rsi-text-secondary">
-          <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-            Ships
-          </span>
-          <span className="mt-1 block text-rsi-text">
-            {shipLabels.length > 0 ? shipLabels.join(" · ") : "None set"}
-          </span>
-          {shipLabels.length > 0 ? (
-            <span className="mt-1 block font-mono text-xs text-rsi-text-muted">
-              Combined cargo capacity {totalCapacity} SCU
-            </span>
-          ) : null}
-        </p>
+        <div className="mt-3">
+          <ShipSelect
+            valueSlug={selectedShipSlug}
+            options={shipCatalog.map((ship) => ({
+              slug: ship.slug,
+              name: ship.name,
+              cargoScu: ship.cargoScu,
+            }))}
+            isLoading={shipsLoading}
+            error={shipsError}
+            onChange={(slug) => {
+              persistSession(
+                applySessionCompletionTiming({
+                  ...session,
+                  shipSlugs: slug ? [slug] : [],
+                  startLocationSlug: session.startLocationSlug ?? null,
+                }),
+              );
+            }}
+          />
+        </div>
         <p className="mt-3 text-sm text-rsi-text-secondary">
           <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
             Total time
@@ -388,9 +449,7 @@ export function SessionChecklistView({
 
       <CargoBayLayout rows={session.rows} />
 
-      <SessionScreenshotsPanel sessionId={session.id} />
-
-      <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-3 sm:gap-3">
+      <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 lg:grid-cols-4 sm:gap-3">
         <div className="flex h-full flex-col justify-start rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel sm:px-4">
           <p className="mb-1 text-[0.6rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
             Inventory
@@ -495,6 +554,15 @@ export function SessionChecklistView({
             <span>{session.missionCount ?? 0}</span>
           </p>
         </button>
+        <button
+          type="button"
+          onClick={() => setScreenshotsOpen(true)}
+          className="flex h-full flex-col items-stretch justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 text-left font-mono tracking-wide shadow-rsi-panel transition-colors hover:border-rsi-border-strong hover:bg-rsi-surface-raised sm:px-4"
+        >
+          <p className="text-[0.65rem] uppercase leading-none tracking-[0.16em] text-rsi-text sm:text-[0.7rem] sm:tracking-[0.18em]">
+            Screenshots
+          </p>
+        </button>
       </div>
 
       <HaulingChecklistTable
@@ -513,6 +581,12 @@ export function SessionChecklistView({
             }),
           );
         }}
+      />
+
+      <SessionScreenshotsPanel
+        open={screenshotsOpen}
+        sessionId={session.id}
+        onClose={() => setScreenshotsOpen(false)}
       />
 
       <SessionMissionsModal
