@@ -16,14 +16,19 @@ export type ScreenshotListResponse = {
   screenshots: ScreenshotListItem[];
 };
 
-export type ScreenshotUploadResponse = {
-  ok: true;
-  sessionId: string;
-  batchId: string;
+export type ScreenshotUploadItem = {
   logicalPath: string;
   filename: string;
   bytes: number;
   url: string;
+};
+
+export type ScreenshotUploadResponse = {
+  ok: true;
+  sessionId: string;
+  batchId: string;
+  count: number;
+  screenshots: ScreenshotUploadItem[];
 };
 
 /** List screenshots stored for a hauling session (batch = sessionId). */
@@ -39,30 +44,31 @@ export async function fetchSessionScreenshots(
   return (await res.json()) as ScreenshotListResponse;
 }
 
-/** Upload one or more image files for a session. */
+/** Upload one or more image files for a session (single multipart request). */
 export async function uploadSessionScreenshots(
   sessionId: string,
   files: File[],
-): Promise<ScreenshotUploadResponse[]> {
-  const results: ScreenshotUploadResponse[] = [];
-  for (const file of files) {
-    const body = new FormData();
-    body.append("file", file, file.name);
-    const res = await fetch(appApi.checklistSessionScreenshots(sessionId), {
-      method: "POST",
-      body,
-    });
-    if (!res.ok) {
-      const payload = (await res.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      throw new Error(
-        payload?.error || `Screenshot upload failed (${res.status})`,
-      );
-    }
-    results.push((await res.json()) as ScreenshotUploadResponse);
+): Promise<ScreenshotUploadResponse> {
+  if (!files.length) {
+    throw new Error("No files to upload");
   }
-  return results;
+  const body = new FormData();
+  for (const file of files) {
+    body.append("file", file, file.name || "paste.png");
+  }
+  const res = await fetch(appApi.checklistSessionScreenshots(sessionId), {
+    method: "POST",
+    body,
+  });
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(
+      payload?.error || `Screenshot upload failed (${res.status})`,
+    );
+  }
+  return (await res.json()) as ScreenshotUploadResponse;
 }
 
 /** Delete one screenshot from a session batch. */

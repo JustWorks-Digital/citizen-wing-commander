@@ -58,6 +58,16 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
+function collectUploadFiles(form: FormData): File[] {
+  const files: File[] = [];
+  for (const key of ["file", "files"]) {
+    for (const entry of form.getAll(key)) {
+      if (entry instanceof File && entry.size > 0) files.push(entry);
+    }
+  }
+  return files;
+}
+
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
@@ -67,48 +77,76 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const form = await request.formData();
-    const file = form.get("file");
-    if (!(file instanceof File)) {
+    const incoming = collectUploadFiles(form);
+    if (!incoming.length) {
       return NextResponse.json(
-        { error: "Expected multipart field `file`" },
+        { error: "Expected multipart field `file` or `files`" },
         { status: 400 },
       );
     }
-    if (file.size > SCREENSHOT_MAX_BYTES) {
-      return NextResponse.json(
-        { error: "Screenshot exceeds 12MB limit" },
-        { status: 413 },
-      );
-    }
 
-    const mime = (file.type || "").toLowerCase();
-    const fromMime = EXT_BY_MIME[mime];
-    const fromName = path.extname(file.name || "").toLowerCase();
-    const ext = fromMime || (fromName || ".png");
-    if (!fromMime && ![".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)) {
-      return NextResponse.json(
-        { error: "Unsupported image type (png, jpg, webp, gif)" },
-        { status: 415 },
-      );
-    }
+    const uploaded = [];
+    for (let index = 0; index < incoming.length; index += 1) {
+      const file = incoming[index]!;
+      if (file.size > SCREENSHOT_MAX_BYTES) {
+        return NextResponse.json(
+          { error: `Screenshot exceeds 12MB limit: ${file.name || "file"}` },
+          { status: 413 },
+        );
+      }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const stored = await storeHaulingScreenshotBuffer({
-      batchId,
-      filename: file.name || undefined,
-      buffer,
-      ext,
-    });
+      const mime = (file.type || "").toLowerCase();
+      const fromMime = EXT_BY_MIME[mime];
+      const fromName = path.extname(file.name || "").toLowerCase();
+      const ext = fromMime || (fromName || ".png");
+      if (
+        !fromMime &&
+        ![".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)
+      ) {
+        return NextResponse.json(
+          { error: `Unsupported image type: ${file.name || mime || "unknown"}` },
+          { status: 415 },
+        );
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      let filename = file.name || undefined;
+      if (filename && incoming.length > 1) {
+        const base = path.basename(filename, path.extname(filename));
+        const fileExt = path.extname(filename) || ext;
+        filename = `${base}-${index + 1}${fileExt}`;
+      }
+
+      const stored = await storeHaulingScreenshotBuffer({
+        batchId,
+        filename,
+        buffer,
+        ext,
+      });
+      uploaded.push({
+        logicalPath: stored.logicalPath,
+        filename: stored.filename,
+        bytes: stored.bytes,
+        url: appApi.checklistSessionScreenshot(sessionId, stored.filename),
+      });
+    }
 
     return NextResponse.json(
       {
         ok: true as const,
         sessionId,
-        batchId: stored.batchId,
-        logicalPath: stored.logicalPath,
-        filename: stored.filename,
-        bytes: stored.bytes,
-        url: appApi.checklistSessionScreenshot(sessionId, stored.filename),
+        batchId,
+        count: uploaded.length,
+        screenshots: uploaded,
+        // Back-compat for single-file callers
+        ...(uploaded.length === 1
+          ? {
+              logicalPath: uploaded[0]!.logicalPath,
+              filename: uploaded[0]!.filename,
+              bytes: uploaded[0]!.bytes,
+              url: uploaded[0]!.url,
+            }
+          : {}),
       },
       { status: 201 },
     );

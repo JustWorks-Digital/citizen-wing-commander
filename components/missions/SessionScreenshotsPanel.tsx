@@ -50,24 +50,52 @@ function imageFilesFromList(list: FileList | File[] | null): File[] {
 
 function imageFilesFromClipboard(data: DataTransfer | null): File[] {
   if (!data) return [];
-  const files: File[] = [];
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fromItems: File[] = [];
+  const seen = new Set<string>();
+
   for (const item of Array.from(data.items)) {
     if (item.kind !== "file") continue;
     const type = item.type.toLowerCase();
     if (!IMAGE_TYPES.has(type)) continue;
     const file = item.getAsFile();
-    if (!file) continue;
+    if (!file || file.size === 0) continue;
+    const fingerprint = `${file.size}:${type}:${file.name}`;
+    if (seen.has(fingerprint)) continue;
+    seen.add(fingerprint);
     const ext = EXT_BY_MIME[type] ?? ".png";
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    files.push(
-      new File([file], file.name || `paste-${stamp}${ext}`, {
+    const index = fromItems.length + 1;
+    const name =
+      file.name && file.name !== "image.png"
+        ? file.name
+        : `paste-${stamp}-${index}${ext}`;
+    fromItems.push(
+      new File([file], name, {
         type: file.type || type,
         lastModified: file.lastModified,
       }),
     );
   }
-  if (files.length) return files;
-  return imageFilesFromList(data.files);
+
+  if (fromItems.length) return fromItems;
+
+  return imageFilesFromList(data.files).map((file, index) => {
+    const type = file.type.toLowerCase() || "image/png";
+    const ext = EXT_BY_MIME[type] ?? pathExt(file.name) ?? ".png";
+    const name =
+      file.name && file.name !== "image.png"
+        ? file.name
+        : `paste-${stamp}-${index + 1}${ext}`;
+    return new File([file], name, {
+      type: file.type || type,
+      lastModified: file.lastModified,
+    });
+  });
+}
+
+function pathExt(name: string): string | null {
+  const match = /\.(png|jpe?g|webp|gif)$/i.exec(name);
+  return match ? `.${match[1]!.toLowerCase().replace("jpeg", "jpg")}` : null;
 }
 
 /** Upload + browse contract screenshots for a hauling session. */
@@ -232,7 +260,8 @@ export function SessionScreenshotsPanel({
             Screenshots
           </p>
           <p className="mt-1 text-xs text-rsi-text-muted">
-            Click this panel, then paste (⌘/Ctrl+V), drop, or upload images.
+            Click this panel, then paste, drop, or upload — multiple images at
+            once are supported.
           </p>
         </div>
         <div className="flex items-center gap-2">

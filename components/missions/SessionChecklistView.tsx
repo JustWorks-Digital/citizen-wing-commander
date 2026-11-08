@@ -476,7 +476,7 @@ export function SessionChecklistView({
             Complete
           </p>
           <p className="text-base leading-none text-rsi-text sm:text-lg">
-            <span className="text-rsi-success">{completedLegs}</span>
+            <span>{completedLegs}</span>
             <span className="text-rsi-text-muted"> / </span>
             <span>{totalLegs}</span>
           </p>
@@ -490,9 +490,7 @@ export function SessionChecklistView({
             Missions
           </p>
           <p className="text-base leading-none text-rsi-text sm:text-lg">
-            <span className="text-rsi-success">
-              {session.missionsCompleted ?? 0}
-            </span>
+            <span>{session.missionsCompleted ?? 0}</span>
             <span className="text-rsi-text-muted"> / </span>
             <span>{session.missionCount ?? 0}</span>
           </p>
