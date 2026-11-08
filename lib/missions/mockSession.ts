@@ -2,8 +2,8 @@ import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 export type { SessionMission } from "@/lib/missions/sessionMissions";
 
-/** Units for distance-to-next (UI display; convert later if needed). */
-export type DistanceUnit = "m" | "km" | "Mm" | "Gm" | "AU";
+/** Units for distance-to-next (Star Citizen QT / starmap style). */
+export type DistanceUnit = "m" | "km" | "Mm" | "Gm";
 
 export type DistanceToNext = {
   value: number;
@@ -282,7 +282,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
         },
       ],
       shipStorageLocation: "middle",
-      distanceToNext: { value: 0.18, unit: "AU" },
+      distanceToNext: { value: 27, unit: "Gm" },
       isCompleted: false,
     },
     {

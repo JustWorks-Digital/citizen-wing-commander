@@ -132,6 +132,33 @@ export function sumCargoScu(
   return deliveries.reduce((total, row) => total + row.scu, 0);
 }
 
+/** Split SCU for both-stop legs (pickup vs delivery). */
+export function sumCargoScuByRole(
+  deliveries: {
+    scu: number;
+    role?: "pickup" | "delivery";
+  }[],
+  fallbackRole?: "pickup" | "delivery" | null,
+): { pickup: number; delivery: number; total: number } {
+  let pickup = 0;
+  let delivery = 0;
+  for (const row of deliveries) {
+    const role = row.role ?? fallbackRole ?? null;
+    if (role === "pickup") pickup += row.scu;
+    else if (role === "delivery") delivery += row.scu;
+    else {
+      // Untagged lines count toward total only via sum below.
+    }
+  }
+  const total = deliveries.reduce((sum, row) => sum + row.scu, 0);
+  if (pickup === 0 && delivery === 0 && fallbackRole === "pickup") {
+    pickup = total;
+  } else if (pickup === 0 && delivery === 0 && fallbackRole === "delivery") {
+    delivery = total;
+  }
+  return { pickup, delivery, total };
+}
+
 export const fixtureMeta = {
   locations: {
     source: locations.source,

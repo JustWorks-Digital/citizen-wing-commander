@@ -12,6 +12,8 @@ export type CommodityIconProps = {
   size?: "sm" | "md";
   /** Hover delay before the tooltip appears (ms). */
   tooltipDelayMs?: number;
+  /** When false, no hover/focus tooltip (use when the label is shown inline). */
+  showTooltip?: boolean;
 };
 
 const SIZE_CLASS = {
@@ -29,6 +31,7 @@ export function CommodityIcon({
   color2,
   size = "sm",
   tooltipDelayMs = 450,
+  showTooltip = true,
 }: CommodityIconProps) {
   const tooltipId = useId();
   const [isOpen, setIsOpen] = useState(false);
@@ -57,6 +60,7 @@ export function CommodityIcon({
   };
 
   const openSoon = () => {
+    if (!showTooltip) return;
     clearTimers();
     showTimer.current = window.setTimeout(() => {
       setIsOpen(true);
@@ -64,6 +68,7 @@ export function CommodityIcon({
   };
 
   const closeSoon = () => {
+    if (!showTooltip) return;
     clearTimers();
     hideTimer.current = window.setTimeout(() => {
       setIsOpen(false);
@@ -82,7 +87,7 @@ export function CommodityIcon({
         role="img"
         aria-label={label}
         aria-describedby={isOpen ? tooltipId : undefined}
-        tabIndex={0}
+        tabIndex={showTooltip ? 0 : undefined}
         className={[
           "inline-block shrink-0 rounded-sm outline-none",
           "focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
@@ -106,7 +111,7 @@ export function CommodityIcon({
           }}
         />
       </span>
-      {isOpen ? (
+      {showTooltip && isOpen ? (
         <span
           id={tooltipId}
           role="tooltip"

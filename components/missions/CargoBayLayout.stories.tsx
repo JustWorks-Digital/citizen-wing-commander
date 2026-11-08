@@ -17,3 +17,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+/** Narrow viewport: named cargo list (one line per commodity). */
+export const MobileList: Story = {
+  parameters: {
+    viewport: { defaultViewport: "mobile1" },
+  },
+};

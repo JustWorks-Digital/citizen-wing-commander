@@ -192,7 +192,7 @@ export type IncomingLeg = {
   cargo?: IncomingCargoLine[];
   /** Required: front | middle | rear (aliases like aft/fore accepted). */
   shipStorageLocation: string;
-  distanceToNext?: { value: number; unit: "m" | "km" | "Mm" | "Gm" | "AU" } | null;
+  distanceToNext?: { value: number; unit: "m" | "km" | "Mm" | "Gm" } | null;
   isCompleted?: boolean;
 };
 

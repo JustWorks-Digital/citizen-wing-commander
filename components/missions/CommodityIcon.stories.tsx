@@ -30,3 +30,18 @@ export const Food: Story = {
     color2: "gray",
   },
 };
+
+/** Label shown beside the icon (mobile cargo bay list). */
+export const InlineLabel: Story = {
+  args: {
+    showTooltip: false,
+    label: "12 SCU · Aluminum",
+    size: "sm",
+  },
+  render: (args) => (
+    <div className="flex items-center gap-1.5 text-xs text-rsi-text">
+      <CommodityIcon {...args} />
+      <span className="font-medium">{args.label}</span>
+    </div>
+  ),
+};

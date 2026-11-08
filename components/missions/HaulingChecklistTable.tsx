@@ -6,7 +6,7 @@ import {
   describeCargoDeliveries,
   getCommodityIconSrc,
   getLocationBySlug,
-  sumCargoScu,
+  sumCargoScuByRole,
 } from "@/lib/fixtures";
 import { namedCommodityColorToHex } from "@/lib/fixtures/commodityColors";
 import {
@@ -252,13 +252,74 @@ function LocationHeader({
   );
 }
 
+function ScuTotalDisplay({
+  row,
+  pickup,
+  delivery,
+  total,
+}: {
+  row: HaulingChecklistRow;
+  pickup: number;
+  delivery: number;
+  total: number;
+}) {
+  const showBreakdown = row.legKind === "both" && (pickup > 0 || delivery > 0);
+  const done = row.isCompleted
+    ? "line-through opacity-70 decoration-rsi-success/40"
+    : "";
+
+  return (
+    <div className="inline-flex min-w-[2.75rem] flex-col items-stretch font-mono tabular-nums">
+      {showBreakdown ? (
+        <>
+          <div className="flex flex-col items-end gap-1 text-xs leading-tight">
+            {pickup > 0 ? (
+              <span
+                className={["text-rsi-accent", done].join(" ")}
+                title={`Pickup ${pickup} SCU`}
+              >
+                {pickup}
+                <span className="sr-only"> pickup</span>
+              </span>
+            ) : null}
+            {delivery > 0 ? (
+              <span
+                className={["text-rsi-success", done].join(" ")}
+                title={`Delivery ${delivery} SCU`}
+              >
+                {delivery}
+                <span className="sr-only"> delivery</span>
+              </span>
+            ) : null}
+          </div>
+          <div
+            aria-hidden
+            className="my-1.5 w-full border-t border-rsi-border-strong"
+          />
+        </>
+      ) : null}
+      <span
+        className={[
+          "relative self-end text-sm",
+          row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-text",
+        ].join(" ")}
+      >
+        {total}
+        <span className="absolute left-full top-1/2 ml-1 -translate-y-1/2 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+          SCU
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function MetaGrid({
   row,
-  scuTotal,
+  scu,
   storageLines,
 }: {
   row: HaulingChecklistRow;
-  scuTotal: number;
+  scu: { pickup: number; delivery: number; total: number };
   storageLines: ReturnType<typeof describeShipStorageLines>;
 }) {
   return (
@@ -267,15 +328,13 @@ function MetaGrid({
         <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
           SCU total
         </dt>
-        <dd
-          className={[
-            "mt-0.5 font-mono tabular-nums",
-            row.isCompleted
-              ? "text-rsi-text-muted line-through"
-              : "text-rsi-text",
-          ].join(" ")}
-        >
-          {scuTotal}
+        <dd className="mt-0.5">
+          <ScuTotalDisplay
+            row={row}
+            pickup={scu.pickup}
+            delivery={scu.delivery}
+            total={scu.total}
+          />
         </dd>
       </div>
       <div>
@@ -405,7 +464,10 @@ export function HaulingChecklistTable({
             row.cargoDeliveries,
             cargoFallbackRole,
           );
-          const scuTotal = sumCargoScu(row.cargoDeliveries);
+          const scu = sumCargoScuByRole(
+            row.cargoDeliveries,
+            row.legKind === "both" ? null : row.legKind,
+          );
           const storageLines = describeShipStorageLines(row);
           const isCopied = copiedRowId === row.id;
 
@@ -443,7 +505,7 @@ export function HaulingChecklistTable({
                   </div>
                   <MetaGrid
                     row={row}
-                    scuTotal={scuTotal}
+                    scu={scu}
                     storageLines={storageLines}
                   />
                 </div>
@@ -510,7 +572,10 @@ export function HaulingChecklistTable({
                 row.cargoDeliveries,
                 cargoFallbackRole,
               );
-              const scuTotal = sumCargoScu(row.cargoDeliveries);
+              const scu = sumCargoScuByRole(
+                row.cargoDeliveries,
+                row.legKind === "both" ? null : row.legKind,
+              );
               const storageLines = describeShipStorageLines(row);
               const isCopied = copiedRowId === row.id;
 
@@ -548,15 +613,13 @@ export function HaulingChecklistTable({
                       <CargoGroups row={row} cargoLines={cargoLines} />
                     </div>
                   </td>
-                  <td
-                    className={[
-                      "px-4 py-3 font-mono text-sm tabular-nums",
-                      row.isCompleted
-                        ? "text-rsi-text-muted line-through"
-                        : "text-rsi-text",
-                    ].join(" ")}
-                  >
-                    {scuTotal}
+                  <td className="px-4 py-3">
+                    <ScuTotalDisplay
+                      row={row}
+                      pickup={scu.pickup}
+                      delivery={scu.delivery}
+                      total={scu.total}
+                    />
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex flex-col gap-0.5">

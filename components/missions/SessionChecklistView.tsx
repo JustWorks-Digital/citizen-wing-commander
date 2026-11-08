@@ -18,6 +18,7 @@ import {
   mockSessionChecklist,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
+import { estimateOnboardScu } from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
   setMissionCompletedAndRebuildRoute,
@@ -129,6 +130,9 @@ export function SessionChecklistView({
       : slug;
   });
   const totalCapacity = sumShipCargoScu(session.shipSlugs ?? []);
+  const onboardScu = estimateOnboardScu(session.rows);
+  const isOverCapacity =
+    totalCapacity > 0 && onboardScu > totalCapacity;
   const elapsedLabel =
     nowMs == null
       ? "—"
@@ -223,12 +227,34 @@ export function SessionChecklistView({
 
       <CargoBayLayout rows={session.rows} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-4 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel">
-          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel sm:px-4">
+          <p className="mb-1 text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
+            Inventory
+          </p>
+          <p className="text-base text-rsi-text sm:text-lg">
+            <span
+              className={
+                isOverCapacity ? "text-rsi-warn" : "text-rsi-accent"
+              }
+            >
+              {onboardScu}
+            </span>
+            <span className="text-rsi-text-muted"> / </span>
+            <span>{totalCapacity > 0 ? totalCapacity : "—"}</span>
+          </p>
+          <p className="mt-0.5 text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            SCU
+            {totalCapacity > 0
+              ? ` · ${Math.max(0, totalCapacity - onboardScu)} free`
+              : ""}
+          </p>
+        </div>
+        <div className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 font-mono tabular-nums tracking-wide shadow-rsi-panel sm:px-4">
+          <p className="mb-1 text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
             Complete
           </p>
-          <p className="text-lg text-rsi-text">
+          <p className="text-base text-rsi-text sm:text-lg">
             <span className="text-rsi-success">{completedLegs}</span>
             <span className="text-rsi-text-muted"> / </span>
             <span>{totalLegs}</span>
@@ -237,12 +263,12 @@ export function SessionChecklistView({
         <button
           type="button"
           onClick={() => setMissionsOpen(true)}
-          className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-4 py-3 text-left font-mono tabular-nums tracking-wide shadow-rsi-panel transition-colors hover:border-rsi-border-strong hover:bg-rsi-surface-raised"
+          className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-3 text-left font-mono tabular-nums tracking-wide shadow-rsi-panel transition-colors hover:border-rsi-border-strong hover:bg-rsi-surface-raised sm:px-4"
         >
-          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
+          <p className="mb-1 text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted sm:text-[0.65rem] sm:tracking-[0.18em]">
             Missions
           </p>
-          <p className="text-lg text-rsi-text">
+          <p className="text-base text-rsi-text sm:text-lg">
             <span className="text-rsi-success">
               {session.missionsCompleted ?? 0}
             </span>

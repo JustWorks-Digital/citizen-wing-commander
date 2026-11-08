@@ -29,7 +29,7 @@
         { "commoditySlug": "quartz-raw", "scu": 2, "shipStorageLocation": "rear" }
       ],
       "shipStorageLocation": "rear",
-      "distanceToNext": { "value": 0.05, "unit": "AU" },
+      "distanceToNext": { "value": 7.5, "unit": "Gm" },
       "isCompleted": false
     },
     {

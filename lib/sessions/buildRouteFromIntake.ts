@@ -192,7 +192,15 @@ function locationAffinity(
   return 80;
 }
 
-/** Greedy nearest-neighbor from start, with pickup-before-delivery bias. */
+function isPickupOnly(bucket: StopBucket): boolean {
+  return bucket.pickups.length > 0 && bucket.deliveries.length === 0;
+}
+
+/**
+ * Greedy nearest-neighbor from start.
+ * Pickup-only stops are exhausted before any delivery/both stop so cargo
+ * is collected before a later stop tries to turn it in.
+ */
 function orderBucketsFromStart(
   buckets: StopBucket[],
   startLocationSlug: string | null | undefined,
@@ -214,19 +222,25 @@ function orderBucketsFromStart(
     cursor = ordered[0]!.locationSlug;
   }
 
-  while (remaining.length > 0) {
-    remaining.sort((a, b) => {
-      const pickBias =
-        (a.pickups.length > 0 && a.deliveries.length === 0 ? -2 : 0) -
-        (b.pickups.length > 0 && b.deliveries.length === 0 ? -2 : 0);
+  const takeNearest = (candidates: StopBucket[]): StopBucket => {
+    candidates.sort((a, b) => {
       const dist =
         locationAffinity(cursor, a.locationSlug) -
         locationAffinity(cursor, b.locationSlug);
       if (dist !== 0) return dist;
-      if (pickBias !== 0) return pickBias;
       return stopRank(a) - stopRank(b);
     });
-    const next = remaining.shift()!;
+    return candidates[0]!;
+  };
+
+  while (remaining.length > 0) {
+    const pickupOnly = remaining.filter(isPickupOnly);
+    const pool = pickupOnly.length > 0 ? pickupOnly : remaining;
+    const next = takeNearest(pool);
+    const idx = remaining.findIndex(
+      (bucket) => bucket.locationSlug === next.locationSlug,
+    );
+    remaining.splice(idx, 1);
     ordered.push(next);
     cursor = next.locationSlug;
   }

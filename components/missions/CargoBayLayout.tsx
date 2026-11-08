@@ -58,18 +58,43 @@ function BaySection({
                 {tile.locationName}
               </span>
               {tile.commodities.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {tile.commodities.map((item) => (
-                    <CommodityIcon
-                      key={`${tile.key}-${item.commoditySlug}`}
-                      commoditySlug={item.commoditySlug}
-                      label={`${item.scu} SCU · ${item.commodityName}`}
-                      color={item.color}
-                      color2={item.color2}
-                      size="sm"
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Mobile: named list (tooltips are hard to use on touch). */}
+                  <ul className="mt-1.5 flex flex-col gap-1 md:hidden">
+                    {tile.commodities.map((item) => {
+                      const label = `${item.scu} SCU · ${item.commodityName}`;
+                      return (
+                        <li
+                          key={`${tile.key}-${item.commoditySlug}-list`}
+                          className="flex items-center gap-1.5 text-xs leading-snug text-rsi-text"
+                        >
+                          <CommodityIcon
+                            commoditySlug={item.commoditySlug}
+                            label={label}
+                            color={item.color}
+                            color2={item.color2}
+                            size="sm"
+                            showTooltip={false}
+                          />
+                          <span className="min-w-0 font-medium">{label}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {/* Desktop: compact icons + hover tooltips. */}
+                  <div className="mt-1.5 hidden flex-wrap items-center gap-1.5 md:flex">
+                    {tile.commodities.map((item) => (
+                      <CommodityIcon
+                        key={`${tile.key}-${item.commoditySlug}`}
+                        commoditySlug={item.commoditySlug}
+                        label={`${item.scu} SCU · ${item.commodityName}`}
+                        color={item.color}
+                        color2={item.color2}
+                        size="sm"
+                      />
+                    ))}
+                  </div>
+                </>
               ) : null}
               <span className="mt-1 font-mono text-xs tabular-nums opacity-90">
                 {tile.scu} SCU

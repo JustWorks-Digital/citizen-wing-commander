@@ -17,7 +17,7 @@ import {
   toolStoreHaulingScreenshot,
 } from "@/lib/mcp/tools";
 
-const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm", "AU"]);
+const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
 
 const shipStorageSchema = z
   .enum(["front", "middle", "rear"])
