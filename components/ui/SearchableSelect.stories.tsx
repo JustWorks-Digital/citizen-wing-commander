@@ -38,3 +38,22 @@ export const Interactive: Story = {
     );
   },
 };
+
+export const SingleSelect: Story = {
+  render: function SingleRouteSelect() {
+    const [values, setValues] = useState<string[]>([]);
+    return (
+      <div className="max-w-xs">
+        <SearchableSelect
+          label="Route"
+          showLabel={false}
+          multiple={false}
+          values={values}
+          onChange={setValues}
+          options={["Direct", "Non-direct", "One pickup", "One delivery"]}
+          placeholder="Route"
+        />
+      </div>
+    );
+  },
+};

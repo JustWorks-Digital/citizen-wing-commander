@@ -27,7 +27,11 @@ export const Default: Story = {};
 export const ActiveFilters: Story = {
   args: {
     query: "quartz",
-    filters: { from: ["Everus Harbor"], rank: ["Junior", "Rookie"] },
+    filters: {
+      route: ["One pickup"],
+      from: ["Everus Harbor"],
+      rank: ["Junior", "Rookie"],
+    },
     resultCount: 1,
     totalCount: 3,
   },

@@ -7,6 +7,12 @@ import {
   contractorDisplayName,
 } from "@/lib/missions/catalogMissionDisplay";
 import {
+  catalogRouteFilterTags,
+  catalogRouteFlagsFromLocationSplits,
+  CATALOG_ROUTE_FILTER_VALUES,
+  type CatalogRouteFlags,
+} from "@/lib/missions/catalogRouteFlags";
+import {
   MISSION_RANK_ORDER,
   type MissionRank,
 } from "@/lib/missions/missionRank";
@@ -24,7 +30,12 @@ export type CatalogTableSortKey =
 export type CatalogTableSortDir = "asc" | "desc";
 
 /** Dropdown filters managed outside the table. */
-export type CatalogTableFilterKey = "from" | "to" | "cargo" | "rank";
+export type CatalogTableFilterKey =
+  | "from"
+  | "to"
+  | "cargo"
+  | "rank"
+  | "route";
 
 export type CatalogTableFilters = Partial<
   Record<CatalogTableFilterKey, string[]>
@@ -36,11 +47,24 @@ export type CatalogTableSort = {
 } | null;
 
 export const CATALOG_TABLE_FILTER_KEYS: CatalogTableFilterKey[] = [
+  "route",
   "from",
   "to",
   "cargo",
   "rank",
 ];
+
+/** Prefer live derivation from splits so UI stays correct before/without backfill. */
+export function missionRouteFlags(mission: CatalogMission): CatalogRouteFlags {
+  const payload = catalogPayload(mission);
+  return catalogRouteFlagsFromLocationSplits(
+    mission.scuLocationSplits ?? payload?.scuLocationSplits,
+    {
+      fromSlugs: payload?.fromLocationSlugs,
+      toSlugs: payload?.toLocationSlugs,
+    },
+  );
+}
 
 export function catalogTableFiltersAreActive(
   filters: CatalogTableFilters,
@@ -105,6 +129,9 @@ function missionFieldValues(
   mission: CatalogMission,
   key: CatalogTableFilterKey,
 ): string[] {
+  if (key === "route") {
+    return catalogRouteFilterTags(missionRouteFlags(mission));
+  }
   if (key === "rank") {
     const rank = missionRank(mission);
     return rank ? [rank] : [];
@@ -191,6 +218,10 @@ export function catalogFilterOptions(
   missions: CatalogMission[],
   key: CatalogTableFilterKey,
 ): string[] {
+  if (key === "route") {
+    return [...CATALOG_ROUTE_FILTER_VALUES];
+  }
+
   const values = new Set<string>();
   for (const mission of missions) {
     if (key === "rank") {

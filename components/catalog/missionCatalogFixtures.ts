@@ -3,6 +3,7 @@ import {
   buildHaulingCatalogMissionPayload,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRouteFlags";
 
 function haulingPayload(
   partial: Parameters<typeof buildHaulingCatalogMissionPayload>[0],
@@ -10,11 +11,27 @@ function haulingPayload(
   return buildHaulingCatalogMissionPayload(partial);
 }
 
+function withRouteFlags(
+  row: Omit<
+    CatalogMission,
+    "isDirect" | "isOnePickup" | "isOneDelivery"
+  >,
+): CatalogMission {
+  const flags = catalogRouteFlagsFromLocationSplits(
+    row.scuLocationSplits ?? row.payload.scuLocationSplits,
+    {
+      fromSlugs: row.payload.fromLocationSlugs,
+      toSlugs: row.payload.toLocationSlugs,
+    },
+  );
+  return { ...row, ...flags };
+}
+
 const now = new Date("2026-11-08T18:00:00.000Z");
 
 /** Sample catalog rows for Storybook. */
 export const sampleCatalogMissions: CatalogMission[] = [
-  {
+  withRouteFlags({
     id: "11111111-1111-4111-8111-111111111111",
     type: "hauling",
     fingerprint: "fp-corundum",
@@ -26,7 +43,10 @@ export const sampleCatalogMissions: CatalogMission[] = [
     scuTotal: 10,
     scuMaxContainerSize: 8,
     scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1 },
-    scuLocationSplits: null,
+    scuLocationSplits: {
+      from: { "everus-harbor": 10 },
+      to: { lorville: 10 },
+    },
     payload: haulingPayload({
       title: "Junior Rank - Direct Small Cargo Haul",
       rank: "Junior",
@@ -45,6 +65,10 @@ export const sampleCatalogMissions: CatalogMission[] = [
       scuTotal: 10,
       scuMaxContainerSize: 8,
       scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1 },
+      scuLocationSplits: {
+        from: { "everus-harbor": 10 },
+        to: { lorville: 10 },
+      },
       latestScreenshotPath: "demo/contract-1_corundum_10scu.jpg",
     }),
     latestScreenshotPath: "demo/contract-1_corundum_10scu.jpg",
@@ -54,8 +78,8 @@ export const sampleCatalogMissions: CatalogMission[] = [
     lastObservedAt: now,
     createdAt: now,
     updatedAt: now,
-  },
-  {
+  }),
+  withRouteFlags({
     id: "22222222-2222-4222-8222-222222222222",
     type: "hauling",
     fingerprint: "fp-stims",
@@ -67,7 +91,10 @@ export const sampleCatalogMissions: CatalogMission[] = [
     scuTotal: 32,
     scuMaxContainerSize: 4,
     scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0 },
-    scuLocationSplits: null,
+    scuLocationSplits: {
+      from: { lorville: 32 },
+      to: { area18: 16, "port-tressler": 16 },
+    },
     payload: haulingPayload({
       title: "Member Rank - Small Cargo Haul",
       rank: "Member",
@@ -75,7 +102,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       rewards: [{ kind: "auec", amount: 18500 }],
       offerLocationSlug: "lorville",
       fromLocationSlugs: ["lorville"],
-      toLocationSlugs: ["area18"],
+      toLocationSlugs: ["area18", "port-tressler"],
       cargo: [
         {
           commoditySlug: "medical-supplies",
@@ -86,6 +113,10 @@ export const sampleCatalogMissions: CatalogMission[] = [
       scuTotal: 32,
       scuMaxContainerSize: 4,
       scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0 },
+      scuLocationSplits: {
+        from: { lorville: 32 },
+        to: { area18: 16, "port-tressler": 16 },
+      },
       latestScreenshotPath: null,
     }),
     latestScreenshotPath: null,
@@ -95,8 +126,8 @@ export const sampleCatalogMissions: CatalogMission[] = [
     lastObservedAt: now,
     createdAt: now,
     updatedAt: now,
-  },
-  {
+  }),
+  withRouteFlags({
     id: "33333333-3333-4333-8333-333333333333",
     type: "hauling",
     fingerprint: "fp-quartz",
@@ -108,14 +139,17 @@ export const sampleCatalogMissions: CatalogMission[] = [
     scuTotal: 48,
     scuMaxContainerSize: 8,
     scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6 },
-    scuLocationSplits: null,
+    scuLocationSplits: {
+      from: { magda: 24, "yela-asteroid-belt": 24 },
+      to: { "everus-harbor": 48 },
+    },
     payload: haulingPayload({
       title: "Rookie Rank - Extra Small Cargo Haul",
       rank: "Rookie",
       contractorSlug: "hd-mining",
       rewards: [{ kind: "auec", amount: 61000 }],
       offerLocationSlug: "everus-harbor",
-      fromLocationSlugs: ["magda"],
+      fromLocationSlugs: ["magda", "yela-asteroid-belt"],
       toLocationSlugs: ["everus-harbor"],
       cargo: [
         {
@@ -127,6 +161,10 @@ export const sampleCatalogMissions: CatalogMission[] = [
       scuTotal: 48,
       scuMaxContainerSize: 8,
       scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6 },
+      scuLocationSplits: {
+        from: { magda: 24, "yela-asteroid-belt": 24 },
+        to: { "everus-harbor": 48 },
+      },
       latestScreenshotPath: "demo/quartz.png",
     }),
     latestScreenshotPath: "demo/quartz.png",
@@ -136,5 +174,5 @@ export const sampleCatalogMissions: CatalogMission[] = [
     lastObservedAt: now,
     createdAt: now,
     updatedAt: now,
-  },
+  }),
 ];

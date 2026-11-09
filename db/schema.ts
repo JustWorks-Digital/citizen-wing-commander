@@ -374,6 +374,15 @@ export const catalogMissions = pgTable(
       ),
     /** SCU totals per location: { from: { slug: scu }, to: { slug: scu } }. */
     scuLocationSplits: jsonb("scu_location_splits").$type<ScuLocationSplits | null>(),
+    /**
+     * Route shape from `scuLocationSplits` (1→1 = direct).
+     * Non-direct is `!isDirect` — not stored separately.
+     */
+    isDirect: boolean("is_direct").notNull().default(false),
+    /** Exactly one pickup location. */
+    isOnePickup: boolean("is_one_pickup").notNull().default(false),
+    /** Exactly one delivery location. */
+    isOneDelivery: boolean("is_one_delivery").notNull().default(false),
     /** Full structured contract body. */
     payload: jsonb("payload")
       .$type<HaulingCatalogMissionPayload>()
@@ -400,6 +409,9 @@ export const catalogMissions = pgTable(
     index("catalog_missions_contractor_slug_idx").on(table.contractorSlug),
     index("catalog_missions_type_idx").on(table.type),
     index("catalog_missions_title_idx").on(table.title),
+    index("catalog_missions_is_direct_idx").on(table.isDirect),
+    index("catalog_missions_is_one_pickup_idx").on(table.isOnePickup),
+    index("catalog_missions_is_one_delivery_idx").on(table.isOneDelivery),
   ],
 );
 

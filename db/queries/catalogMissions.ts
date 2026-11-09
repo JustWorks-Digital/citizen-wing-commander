@@ -14,6 +14,7 @@ import {
   type CatalogMissionNoteSentiment,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRouteFlags";
 
 export type UpsertHaulingCatalogMissionInput = {
   /** Accepts builder input (including legacy rewardAuec → rewards). */
@@ -55,6 +56,14 @@ export async function upsertCatalogMission(
     }
   }
 
+  const routeFlags = catalogRouteFlagsFromLocationSplits(
+    payload.scuLocationSplits,
+    {
+      fromSlugs: payload.fromLocationSlugs,
+      toSlugs: payload.toLocationSlugs,
+    },
+  );
+
   const updateSet: Record<string, unknown> = {
     type: "hauling",
     title: payload.title,
@@ -66,6 +75,9 @@ export async function upsertCatalogMission(
     scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
     scuBoxSplits: payload.scuBoxSplits,
     scuLocationSplits: payload.scuLocationSplits ?? null,
+    isDirect: routeFlags.isDirect,
+    isOnePickup: routeFlags.isOnePickup,
+    isOneDelivery: routeFlags.isOneDelivery,
     payload,
     lastObservedAt: new Date(),
     updatedAt: new Date(),
@@ -88,6 +100,9 @@ export async function upsertCatalogMission(
       scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
       scuBoxSplits: payload.scuBoxSplits,
       scuLocationSplits: payload.scuLocationSplits ?? null,
+      isDirect: routeFlags.isDirect,
+      isOnePickup: routeFlags.isOnePickup,
+      isOneDelivery: routeFlags.isOneDelivery,
       payload,
       latestScreenshotPath: payload.latestScreenshotPath ?? null,
       lastObservedAt: new Date(),
@@ -128,12 +143,22 @@ export async function updateCatalogMissionScreenshotPath(input: {
     ...input.payload,
     latestScreenshotPath: input.latestScreenshotPath,
   });
+  const routeFlags = catalogRouteFlagsFromLocationSplits(
+    payload.scuLocationSplits,
+    {
+      fromSlugs: payload.fromLocationSlugs,
+      toSlugs: payload.toLocationSlugs,
+    },
+  );
   const [row] = await db
     .update(catalogMissions)
     .set({
       latestScreenshotPath: input.latestScreenshotPath,
       payload,
       scuLocationSplits: payload.scuLocationSplits ?? null,
+      isDirect: routeFlags.isDirect,
+      isOnePickup: routeFlags.isOnePickup,
+      isOneDelivery: routeFlags.isOneDelivery,
       updatedAt: new Date(),
     })
     .where(eq(catalogMissions.id, input.missionId))
@@ -160,6 +185,30 @@ export async function updateCatalogMissionRankFields(input: {
       rank: input.rank ?? null,
       fingerprint: input.fingerprint,
       payload: input.payload,
+      updatedAt: new Date(),
+    })
+    .where(eq(catalogMissions.id, input.missionId))
+    .returning();
+  if (!row) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  return row;
+}
+
+/** Rewrite denormalized route flags for one catalog mission (by id). */
+export async function updateCatalogMissionRouteFlags(input: {
+  missionId: string;
+  isDirect: boolean;
+  isOnePickup: boolean;
+  isOneDelivery: boolean;
+}): Promise<CatalogMission> {
+  const db = getDb();
+  const [row] = await db
+    .update(catalogMissions)
+    .set({
+      isDirect: input.isDirect,
+      isOnePickup: input.isOnePickup,
+      isOneDelivery: input.isOneDelivery,
       updatedAt: new Date(),
     })
     .where(eq(catalogMissions.id, input.missionId))

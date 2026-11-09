@@ -4,13 +4,15 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 export type SearchableSelectProps = {
   label: string;
-  /** Selected values (multi-select). */
+  /** Selected values (array of 0–1 when `multiple` is false). */
   values: string[];
   options: string[];
   onChange: (values: string[]) => void;
   placeholder?: string;
   /** When false, label is only used for accessibility (default true). */
   showLabel?: boolean;
+  /** Allow more than one selected value (default true). */
+  multiple?: boolean;
   disabled?: boolean;
 };
 
@@ -37,6 +39,7 @@ export function SearchableSelect({
   onChange,
   placeholder = "",
   showLabel = true,
+  multiple = true,
   disabled = false,
 }: SearchableSelectProps) {
   const listId = useId();
@@ -79,6 +82,16 @@ export function SearchableSelect({
   }, [open]);
 
   const toggle = (option: string) => {
+    if (!multiple) {
+      if (selectedSet.has(option)) {
+        onChange([]);
+      } else {
+        onChange([option]);
+      }
+      setOpen(false);
+      setQuery("");
+      return;
+    }
     if (selectedSet.has(option)) {
       onChange(values.filter((value) => value !== option));
     } else {
@@ -103,7 +116,7 @@ export function SearchableSelect({
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
-        aria-multiselectable="true"
+        aria-multiselectable={multiple ? "true" : undefined}
         disabled={disabled}
         value={displayValue}
         placeholder={closedLabel || placeholder}
@@ -148,7 +161,7 @@ export function SearchableSelect({
           id={listId}
           role="listbox"
           aria-label={label}
-          aria-multiselectable="true"
+          aria-multiselectable={multiple ? "true" : undefined}
           className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel"
         >
           {filtered.length === 0 ? (
@@ -175,18 +188,27 @@ export function SearchableSelect({
                       isSelected ? "text-rsi-text" : "",
                     ].join(" ")}
                   >
+                    {multiple ? (
+                      <span
+                        aria-hidden
+                        className={[
+                          "inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border text-[0.55rem]",
+                          isSelected
+                            ? "border-rsi-accent bg-rsi-accent text-rsi-bg"
+                            : "border-rsi-border text-transparent",
+                        ].join(" ")}
+                      >
+                        ✓
+                      </span>
+                    ) : null}
                     <span
-                      aria-hidden
                       className={[
-                        "inline-flex size-3.5 shrink-0 items-center justify-center rounded-sm border text-[0.55rem]",
-                        isSelected
-                          ? "border-rsi-accent bg-rsi-accent text-rsi-bg"
-                          : "border-rsi-border text-transparent",
+                        "min-w-0 truncate",
+                        !multiple && isSelected ? "text-rsi-accent" : "",
                       ].join(" ")}
                     >
-                      ✓
+                      {option}
                     </span>
-                    <span className="min-w-0 truncate">{option}</span>
                   </button>
                 </li>
               );

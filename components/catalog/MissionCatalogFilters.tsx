@@ -32,8 +32,10 @@ const fieldInputClass = [
 const DROPDOWN_FIELDS: Array<{
   key: CatalogTableFilterKey;
   label: string;
+  multiple?: boolean;
 }> = [
   { key: "rank", label: "Rank" },
+  { key: "route", label: "Route", multiple: false },
   { key: "from", label: "From" },
   { key: "to", label: "To" },
   { key: "cargo", label: "Cargo" },
@@ -96,12 +98,17 @@ export function MissionCatalogFilters({
     return badges;
   }, [filters, query]);
 
-  const setFilter = (key: CatalogTableFilterKey, values: string[]) => {
+  const setFilter = (
+    key: CatalogTableFilterKey,
+    values: string[],
+    multiple = true,
+  ) => {
     const next = { ...filters };
-    if (values.length === 0) {
+    const normalized = multiple ? values : values.slice(0, 1);
+    if (normalized.length === 0) {
       delete next[key];
     } else {
-      next[key] = values;
+      next[key] = normalized;
     }
     onFiltersChange(next);
   };
@@ -139,16 +146,19 @@ export function MissionCatalogFilters({
           />
         </div>
 
-        <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {DROPDOWN_FIELDS.map((field) => (
             <SearchableSelect
               key={field.key}
               label={field.label}
               showLabel={false}
+              multiple={field.multiple !== false}
               values={filters[field.key] ?? []}
               options={optionsByKey[field.key]}
               placeholder={field.label}
-              onChange={(values) => setFilter(field.key, values)}
+              onChange={(values) =>
+                setFilter(field.key, values, field.multiple !== false)
+              }
             />
           ))}
         </div>

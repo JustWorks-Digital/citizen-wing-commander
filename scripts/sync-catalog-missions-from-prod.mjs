@@ -45,6 +45,26 @@ function emptyScuBoxSplits() {
   return { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 0 };
 }
 
+function routeFlagsFromMission(mission, payload) {
+  const splits =
+    mission.scuLocationSplits ?? payload.scuLocationSplits ?? null;
+  let fromCount = splits?.from ? Object.keys(splits.from).length : 0;
+  let toCount = splits?.to ? Object.keys(splits.to).length : 0;
+  if (fromCount === 0) {
+    fromCount = new Set(payload.fromLocationSlugs ?? []).size;
+  }
+  if (toCount === 0) {
+    toCount = new Set(payload.toLocationSlugs ?? []).size;
+  }
+  const isOnePickup = fromCount === 1;
+  const isOneDelivery = toCount === 1;
+  return {
+    isDirect: isOnePickup && isOneDelivery,
+    isOnePickup,
+    isOneDelivery,
+  };
+}
+
 function fingerprintFromPayload(payload) {
   const cargoKey = [...(payload.cargo ?? [])]
     .map((line) => `${line.commoditySlug}:${line.scu}`)
@@ -98,11 +118,12 @@ try {
     const payload = mission.payload ?? {};
     const fingerprint =
       mission.fingerprint ?? fingerprintFromPayload(payload);
+    const routeFlags = routeFlagsFromMission(mission, payload);
     await sql`
       INSERT INTO catalog_missions (
         id, type, fingerprint, title, rank, contractor_slug, rewards,
         offer_location_slug, scu_total, scu_max_container_size, scu_box_splits,
-        scu_location_splits,
+        scu_location_splits, is_direct, is_one_pickup, is_one_delivery,
         payload, latest_screenshot_path, mission_run_count, mission_total_duration_ms,
         mission_avg_duration_ms, last_observed_at, created_at, updated_at
       ) VALUES (
@@ -133,6 +154,9 @@ try {
             payload.scuLocationSplits ??
             null,
         )},
+        ${routeFlags.isDirect},
+        ${routeFlags.isOnePickup},
+        ${routeFlags.isOneDelivery},
         ${sql.json((() => {
           const {
             contractor: _contractor,
@@ -175,6 +199,9 @@ try {
         scu_max_container_size = EXCLUDED.scu_max_container_size,
         scu_box_splits = EXCLUDED.scu_box_splits,
         scu_location_splits = EXCLUDED.scu_location_splits,
+        is_direct = EXCLUDED.is_direct,
+        is_one_pickup = EXCLUDED.is_one_pickup,
+        is_one_delivery = EXCLUDED.is_one_delivery,
         payload = EXCLUDED.payload,
         latest_screenshot_path = COALESCE(
           EXCLUDED.latest_screenshot_path,

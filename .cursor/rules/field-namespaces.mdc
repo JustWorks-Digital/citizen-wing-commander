@@ -42,6 +42,7 @@ Catalog hauling (current):
 | `missionRunCount` / `missionTotalDurationMs` / `missionAvgDurationMs` | `runCount`, `totalDurationMs`, `avgDurationMs` |
 | `contractorSlug` (FK to `contractors`) | free-text `contractor` on catalog rows |
 | `rank` (Trainee…Master; no “Rank” suffix) | `repLevel`, `Junior Rank` as a stored value |
+| `isDirect` / `isOnePickup` / `isOneDelivery` (from `scuLocationSplits`) | `routeType`, `directMission`, `nonDirect` as stored enum alone |
 | `rewards` (`[{ kind: "auec", amount }]` / `blueprint`) | `rewardAuec` alone |
 
 `objectives` (screenshot-style text bullets) stays separate — it is copy, not an SCU measure.
