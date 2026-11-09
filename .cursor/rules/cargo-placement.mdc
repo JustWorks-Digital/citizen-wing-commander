@@ -11,7 +11,7 @@ alwaysApply: false
 - Logical X remains nose → ramp; “back of bay” is high X (toward gap on the front bay, toward ramp on the rear bay).
 - Current rules:
   - `prefer-flat-layers` — scan Z outer so a layer (especially the deck) fills before crates stack higher; users prefer flat, organized floors.
-  - `prefer-smaller-on-larger` — when stacking, prefer smaller crates on larger ones; avoid bigger-on-smaller. Deck placements score highest.
+  - `prefer-flat-stable-support` — when stacking, prefer smaller crates on larger ones; avoid bigger-on-smaller. Deck placements score highest.
   - `prefer-back-when-full-height` — footprints with `dz >= bay height` scan X descending so full stacks sit at the back and do not wall off the rest of the bay.
 - Cargo layout pack modes (`CargoBayLayout` / `planStopOccupancyAtStop`):
   - **Suggested** — AI/route chronological bay layout.

@@ -10,7 +10,7 @@
         "preferredZoneOrder": ["rear", "middle", "front"],
         "preferredRuleIds": [
           "prefer-flat-layers",
-          "prefer-smaller-on-larger",
+          "prefer-flat-stable-support",
           "prefer-back-when-full-height"
         ],
         "commodityZoneHints": {},
@@ -27,7 +27,7 @@
         "preferredZoneOrder": ["rear", "middle", "front"],
         "preferredRuleIds": [
           "prefer-flat-layers",
-          "prefer-smaller-on-larger",
+          "prefer-flat-stable-support",
           "prefer-back-when-full-height"
         ],
         "commodityZoneHints": {},

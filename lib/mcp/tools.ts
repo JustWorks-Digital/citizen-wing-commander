@@ -1157,7 +1157,7 @@ export async function toolUpdateShipBayPreferences(input: {
   preferredZoneOrder?: Array<"front" | "middle" | "rear">;
   preferredRuleIds?: Array<
     | "prefer-flat-layers"
-    | "prefer-smaller-on-larger"
+    | "prefer-flat-stable-support"
     | "prefer-back-when-full-height"
   >;
   commodityZoneHints?: Record<string, "front" | "middle" | "rear">;

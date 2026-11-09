@@ -572,7 +572,7 @@ const handler = createMcpHandler(
             .array(
               z.enum([
                 "prefer-flat-layers",
-                "prefer-smaller-on-larger",
+                "prefer-flat-stable-support",
                 "prefer-back-when-full-height",
               ]),
             )

@@ -49,7 +49,7 @@ export function emptyShipBayPreferencePayload(): ShipBayPreferencePayload {
     preferredZoneOrder: ["rear", "middle", "front"],
     preferredRuleIds: [
       "prefer-flat-layers",
-      "prefer-smaller-on-larger",
+      "prefer-flat-stable-support",
       "prefer-back-when-full-height",
     ],
     commodityZoneHints: {},
@@ -79,7 +79,9 @@ export function normalizeShipBayPreferencePayload(
       ? input.preferredZoneOrder.filter(isZone)
       : base.preferredZoneOrder,
     preferredRuleIds: Array.isArray(input.preferredRuleIds)
-      ? input.preferredRuleIds.filter(isRuleId)
+      ? input.preferredRuleIds
+          .map((id) => (typeof id === "string" ? normalizeRuleId(id) : null))
+          .filter((id): id is CargoPlacementRuleId => id != null)
       : base.preferredRuleIds,
     commodityZoneHints:
       input.commodityZoneHints && typeof input.commodityZoneHints === "object"
@@ -122,7 +124,9 @@ export function mergeShipBayPreferencePayload(
     next.preferredZoneOrder = patch.preferredZoneOrder.filter(isZone);
   }
   if (patch.preferredRuleIds) {
-    next.preferredRuleIds = patch.preferredRuleIds.filter(isRuleId);
+    next.preferredRuleIds = patch.preferredRuleIds
+      .map((id) => normalizeRuleId(id))
+      .filter((id): id is CargoPlacementRuleId => id != null);
   }
   if (patch.commodityZoneHints) {
     next.commodityZoneHints = {
@@ -158,12 +162,16 @@ function isZone(value: unknown): value is CargoGridStorageLocation {
   return value === "front" || value === "middle" || value === "rear";
 }
 
-function isRuleId(value: unknown): value is CargoPlacementRuleId {
-  return (
+function normalizeRuleId(value: string): CargoPlacementRuleId | null {
+  if (value === "prefer-smaller-on-larger") return "prefer-flat-stable-support";
+  if (
     value === "prefer-flat-layers" ||
-    value === "prefer-smaller-on-larger" ||
+    value === "prefer-flat-stable-support" ||
     value === "prefer-back-when-full-height"
-  );
+  ) {
+    return value;
+  }
+  return null;
 }
 
 type FixtureFile = {
