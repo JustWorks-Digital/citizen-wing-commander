@@ -45,13 +45,13 @@ export const SingleSelect: Story = {
     return (
       <div className="max-w-xs">
         <SearchableSelect
-          label="Route"
+          label="Route type"
           showLabel={false}
           multiple={false}
           values={values}
           onChange={setValues}
           options={["Direct", "Non-direct", "One pickup", "One delivery"]}
-          placeholder="Route"
+          placeholder="Route type"
         />
       </div>
     );

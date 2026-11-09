@@ -173,3 +173,22 @@ sources:
       name only (no “Rank” suffix).
     added: "2026-11-09"
     last_verified: "2026-11-09"
+
+  - id: uex-star-systems
+    status: accepted
+    purpose:
+      - star-systems
+      - offer-star-system
+    label: UEX Corp star systems
+    url: https://api.uexcorp.uk/2.0/star_systems
+    docs_url: https://uexcorp.space/api/documentation/
+    used_by:
+      - lib/fixtures/starSystems.json
+      - lib/missions/starSystem.ts
+      - lib/api/externalEndpoints.mjs
+    notes: >
+      Full galaxy list with is_available_live. Our fixture keeps live-only rows
+      today (Stanton, Pyro, Nyx). Catalog missions store offerStarSystemSlug
+      (where the offer was seen); no DB default — backfill existing to stanton.
+    added: "2026-11-09"
+    last_verified: "2026-11-09"

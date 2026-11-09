@@ -40,6 +40,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     contractorSlug: "covalex-independent-contractors",
     rewards: [{ kind: "auec", amount: 42000 }],
     offerLocationSlug: "area18",
+    offerStarSystemSlug: "stanton",
     scuTotal: 10,
     scuMaxContainerSize: 8,
     scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1 },
@@ -53,6 +54,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       contractorSlug: "covalex-independent-contractors",
       rewards: [{ kind: "auec", amount: 42000 }],
       offerLocationSlug: "area18",
+      offerStarSystemSlug: "stanton",
       fromLocationSlugs: ["everus-harbor"],
       toLocationSlugs: ["lorville"],
       cargo: [
@@ -88,6 +90,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     contractorSlug: "red-wind",
     rewards: [{ kind: "auec", amount: 18500 }],
     offerLocationSlug: "lorville",
+    offerStarSystemSlug: "stanton",
     scuTotal: 32,
     scuMaxContainerSize: 4,
     scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0 },
@@ -101,6 +104,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       contractorSlug: "red-wind",
       rewards: [{ kind: "auec", amount: 18500 }],
       offerLocationSlug: "lorville",
+      offerStarSystemSlug: "stanton",
       fromLocationSlugs: ["lorville"],
       toLocationSlugs: ["area18", "port-tressler"],
       cargo: [
@@ -136,6 +140,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     contractorSlug: "hd-mining",
     rewards: [{ kind: "auec", amount: 61000 }],
     offerLocationSlug: "everus-harbor",
+    offerStarSystemSlug: "stanton",
     scuTotal: 48,
     scuMaxContainerSize: 8,
     scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6 },
@@ -149,6 +154,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       contractorSlug: "hd-mining",
       rewards: [{ kind: "auec", amount: 61000 }],
       offerLocationSlug: "everus-harbor",
+      offerStarSystemSlug: "stanton",
       fromLocationSlugs: ["magda", "yela-asteroid-belt"],
       toLocationSlugs: ["everus-harbor"],
       cargo: [

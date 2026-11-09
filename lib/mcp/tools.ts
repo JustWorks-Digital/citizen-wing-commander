@@ -14,6 +14,7 @@ import {
   getContractorBySlug,
   getLocationBySlug,
   getShipBySlug,
+  getStarSystemBySlug,
   sumCargoScu,
   sumShipCargoScu,
 } from "@/lib/fixtures";
@@ -27,6 +28,7 @@ import {
 } from "@/lib/missions/catalogMission";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { renameAllCatalogMissionScreenshots } from "@/lib/missions/renameCatalogScreenshot";
+import { normalizeStarSystemSlug } from "@/lib/missions/starSystem";
 import {
   describeShipStorageLines,
   formatSessionDuration,
@@ -763,6 +765,11 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
     offerLocationName: row.offerLocationSlug
       ? (getLocationBySlug(row.offerLocationSlug)?.name ?? row.offerLocationSlug)
       : null,
+    offerStarSystemSlug: row.offerStarSystemSlug,
+    offerStarSystemName: row.offerStarSystemSlug
+      ? (getStarSystemBySlug(row.offerStarSystemSlug)?.name ??
+        row.offerStarSystemSlug)
+      : null,
     scuTotal: row.scuTotal,
     scuMaxContainerSize: row.scuMaxContainerSize,
     scuBoxSplits: row.scuBoxSplits,
@@ -797,6 +804,8 @@ export async function toolCreateMission(input: {
   rewardAuec?: number;
   /** Where the offer was seen / screenshot taken. */
   offerLocation?: string;
+  /** Star system where the offer was seen (Stanton / Pyro / Nyx). */
+  offerStarSystem?: string;
   /** Hauling: pickup locations. */
   from?: string[];
   /** Hauling: delivery locations. */
@@ -842,6 +851,15 @@ export async function toolCreateMission(input: {
     if (input.offerLocation?.trim() && !offerLocationSlug) {
       return textResult({
         error: `Unknown offer location: ${input.offerLocation}`,
+      });
+    }
+
+    const offerStarSystemSlug = input.offerStarSystem?.trim()
+      ? normalizeStarSystemSlug(input.offerStarSystem)
+      : null;
+    if (input.offerStarSystem?.trim() && !offerStarSystemSlug) {
+      return textResult({
+        error: `Unknown offer star system: ${input.offerStarSystem}. Live fixtures: Stanton, Pyro, Nyx.`,
       });
     }
 
@@ -948,6 +966,7 @@ export async function toolCreateMission(input: {
         contractorSlug,
         rewards: normalizeCatalogRewards(input.rewards, input.rewardAuec),
         offerLocationSlug,
+        offerStarSystemSlug,
         fromLocationSlugs,
         toLocationSlugs,
         cargo,

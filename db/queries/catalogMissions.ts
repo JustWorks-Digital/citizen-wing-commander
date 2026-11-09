@@ -71,6 +71,7 @@ export async function upsertCatalogMission(
     contractorSlug: payload.contractorSlug ?? null,
     rewards: payload.rewards,
     offerLocationSlug: payload.offerLocationSlug ?? null,
+    offerStarSystemSlug: payload.offerStarSystemSlug ?? null,
     scuTotal: payload.scuTotal,
     scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
     scuBoxSplits: payload.scuBoxSplits,
@@ -96,6 +97,7 @@ export async function upsertCatalogMission(
       contractorSlug: payload.contractorSlug ?? null,
       rewards: payload.rewards,
       offerLocationSlug: payload.offerLocationSlug ?? null,
+      offerStarSystemSlug: payload.offerStarSystemSlug ?? null,
       scuTotal: payload.scuTotal,
       scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
       scuBoxSplits: payload.scuBoxSplits,
@@ -184,6 +186,28 @@ export async function updateCatalogMissionRankFields(input: {
       title: input.title,
       rank: input.rank ?? null,
       fingerprint: input.fingerprint,
+      payload: input.payload,
+      updatedAt: new Date(),
+    })
+    .where(eq(catalogMissions.id, input.missionId))
+    .returning();
+  if (!row) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  return row;
+}
+
+/** Set offer star system (+ payload) for one catalog mission. */
+export async function updateCatalogMissionOfferStarSystem(input: {
+  missionId: string;
+  offerStarSystemSlug: string | null;
+  payload: HaulingCatalogMissionPayload;
+}): Promise<CatalogMission> {
+  const db = getDb();
+  const [row] = await db
+    .update(catalogMissions)
+    .set({
+      offerStarSystemSlug: input.offerStarSystemSlug,
       payload: input.payload,
       updatedAt: new Date(),
     })

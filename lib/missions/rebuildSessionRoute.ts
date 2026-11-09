@@ -28,6 +28,37 @@ function routeMissions(missions: SessionMission[]): SessionMission[] {
   );
 }
 
+/**
+ * Append missions (skipping duplicates by id / catalogMissionId) and rebuild legs.
+ */
+export function addMissionsAndRebuildRoute(
+  session: SessionChecklistModel,
+  incoming: SessionMission[],
+): { ok: true; session: SessionChecklistModel; added: number; skipped: number } | { ok: false; error: string } {
+  const existing = session.missions ?? [];
+  const known = new Set<string>();
+  for (const mission of existing) {
+    known.add(mission.id);
+    if (mission.catalogMissionId) known.add(mission.catalogMissionId);
+  }
+
+  const toAdd: SessionMission[] = [];
+  let skipped = 0;
+  for (const mission of incoming) {
+    if (known.has(mission.id) || (mission.catalogMissionId && known.has(mission.catalogMissionId))) {
+      skipped += 1;
+      continue;
+    }
+    known.add(mission.id);
+    if (mission.catalogMissionId) known.add(mission.catalogMissionId);
+    toAdd.push(mission);
+  }
+
+  const rebuilt = rebuildRowsFromMissions(session, [...existing, ...toAdd]);
+  if (!rebuilt.ok) return rebuilt;
+  return { ok: true, session: rebuilt.session, added: toAdd.length, skipped };
+}
+
 function rebuildRowsFromMissions(
   session: SessionChecklistModel,
   missions: SessionMission[],

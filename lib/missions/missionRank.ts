@@ -61,8 +61,25 @@ export function parseRankFromTitle(title: string): MissionRank | null {
 }
 
 /**
+ * Canonical catalog title casing: Title Case words, collapsed whitespace.
+ * Turns "SMALL CARGO HAUL" / "direct medium cargo haul" into the same form.
+ */
+export function normalizeCatalogMissionTitle(title: string): string {
+  const trimmed = title.trim().replace(/\s+/g, " ");
+  if (!trimmed) return "";
+  return trimmed
+    .toLowerCase()
+    .replace(
+      /(^|[\s\-–—|/])(\p{L})/gu,
+      (_, boundary: string, letter: string) =>
+        `${boundary}${letter.toUpperCase()}`,
+    );
+}
+
+/**
  * Pull rank out of a title and return a cleaned title without "X Rank".
  * For "Ling Family Rookie Cargo Haul", removes only the rank token.
+ * Returned title is Title Case via `normalizeCatalogMissionTitle`.
  */
 export function stripRankFromTitle(title: string): {
   title: string;
@@ -75,7 +92,10 @@ export function stripRankFromTitle(title: string): {
   if (prefix) {
     const rank = normalizeMissionRank(prefix[1]!);
     const rest = trimmed.slice(prefix[0].length).trim();
-    return { title: rest || trimmed, rank };
+    return {
+      title: normalizeCatalogMissionTitle(rest || trimmed),
+      rank,
+    };
   }
 
   const embedded = EMBEDDED_RANK.exec(trimmed);
@@ -87,8 +107,11 @@ export function stripRankFromTitle(title: string): {
       .filter(Boolean)
       .join(" ")
       .replace(/\s+/g, " ");
-    return { title: cleaned || trimmed, rank };
+    return {
+      title: normalizeCatalogMissionTitle(cleaned || trimmed),
+      rank,
+    };
   }
 
-  return { title: trimmed, rank: null };
+  return { title: normalizeCatalogMissionTitle(trimmed), rank: null };
 }

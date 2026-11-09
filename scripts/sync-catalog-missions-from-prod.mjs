@@ -122,7 +122,7 @@ try {
     await sql`
       INSERT INTO catalog_missions (
         id, type, fingerprint, title, rank, contractor_slug, rewards,
-        offer_location_slug, scu_total, scu_max_container_size, scu_box_splits,
+        offer_location_slug, offer_star_system_slug, scu_total, scu_max_container_size, scu_box_splits,
         scu_location_splits, is_direct, is_one_pickup, is_one_delivery,
         payload, latest_screenshot_path, mission_run_count, mission_total_duration_ms,
         mission_avg_duration_ms, last_observed_at, created_at, updated_at
@@ -140,6 +140,7 @@ try {
               : []),
         )},
         ${mission.offerLocationSlug ?? null},
+        ${mission.offerStarSystemSlug ?? payload.offerStarSystemSlug ?? null},
         ${mission.scuTotal ?? mission.totalScu ?? 0},
         ${mission.scuMaxContainerSize ?? mission.maxContainerScu ?? null},
         ${sql.json(
@@ -195,6 +196,7 @@ try {
         contractor_slug = EXCLUDED.contractor_slug,
         rewards = EXCLUDED.rewards,
         offer_location_slug = EXCLUDED.offer_location_slug,
+        offer_star_system_slug = EXCLUDED.offer_star_system_slug,
         scu_total = EXCLUDED.scu_total,
         scu_max_container_size = EXCLUDED.scu_max_container_size,
         scu_box_splits = EXCLUDED.scu_box_splits,

@@ -28,3 +28,10 @@ export const SelectedRow: Story = {
 export const Empty: Story = {
   args: { missions: [] },
 };
+
+export const WithChecks: Story = {
+  args: {
+    checkedIds: [sampleCatalogMissions[0]!.id],
+    onCheckedIdsChange: () => {},
+  },
+};

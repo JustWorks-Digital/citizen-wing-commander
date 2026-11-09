@@ -35,7 +35,7 @@ const DROPDOWN_FIELDS: Array<{
   multiple?: boolean;
 }> = [
   { key: "rank", label: "Rank" },
-  { key: "route", label: "Route", multiple: false },
+  { key: "route", label: "Route type", multiple: false },
   { key: "from", label: "From" },
   { key: "to", label: "To" },
   { key: "cargo", label: "Cargo" },
@@ -134,7 +134,7 @@ export function MissionCatalogFilters({
       aria-label="Catalog filters"
       className="rounded-rsi border border-rsi-border bg-rsi-surface/80 p-3 shadow-rsi-panel sm:p-4"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
         <div className="min-w-0 flex-1">
           <input
             type="search"
@@ -151,7 +151,6 @@ export function MissionCatalogFilters({
             <SearchableSelect
               key={field.key}
               label={field.label}
-              showLabel={false}
               multiple={field.multiple !== false}
               values={filters[field.key] ?? []}
               options={optionsByKey[field.key]}
@@ -187,10 +186,9 @@ export function MissionCatalogFilters({
                 title="Remove filter"
                 onClick={() => removeBadge(badge)}
                 className={[
-                  "inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-rsi-text-muted transition-opacity",
-                  "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100",
+                  "inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-rsi-text-muted transition-colors",
                   "hover:bg-rsi-danger-muted hover:text-rsi-danger",
-                  "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--rsi-ring)]",
+                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--rsi-ring)] focus-visible:text-rsi-danger",
                 ].join(" ")}
               >
                 <svg

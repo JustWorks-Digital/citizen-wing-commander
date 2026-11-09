@@ -53,6 +53,16 @@ export type FixtureContractor = {
   aliases: string[];
 };
 
+/** Star system from UEX (`star_systems`), live-only fixture for now. */
+export type FixtureStarSystem = {
+  id: number;
+  slug: string;
+  name: string;
+  code: string;
+  isAvailableLive: boolean;
+  wiki: string | null;
+};
+
 export type FixtureFile<T> = {
   source: string;
   sourceLabel: string;

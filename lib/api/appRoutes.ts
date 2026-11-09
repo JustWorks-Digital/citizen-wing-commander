@@ -19,6 +19,9 @@ export const appApi = {
   catalogMissionsBackfillRanks: "/api/catalog/missions/backfill-ranks",
   catalogMissionsBackfillRouteFlags:
     "/api/catalog/missions/backfill-route-flags",
+  catalogMissionsBackfillOfferStarSystem:
+    "/api/catalog/missions/backfill-offer-star-system",
+  catalogMissionsAddToSession: "/api/catalog/missions/add-to-session",
   sessions: "/api/sessions",
   ships: "/api/ships",
   healthDb: "/api/health/db",

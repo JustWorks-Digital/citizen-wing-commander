@@ -24,6 +24,9 @@ export type MissionCatalogTableProps = {
   /** Controlled sort — headers cycle when provided. */
   sort?: CatalogTableSort;
   onSortChange?: (sort: CatalogTableSort) => void;
+  /** Row ids checked for bulk “add to session”. */
+  checkedIds?: string[];
+  onCheckedIdsChange?: (ids: string[]) => void;
 };
 
 const thClass =
@@ -43,19 +46,19 @@ const COLUMNS: Array<{
   className: string;
   align?: "left" | "right";
 }> = [
-  { key: "id", label: "ID", className: "w-[7.5rem]" },
-  { key: "title", label: "Title", className: "w-[26%]" },
-  { key: "rank", label: "Rank", className: "w-[6.5rem]" },
+  { key: "id", label: "ID", className: "w-[5.5rem]" },
+  { key: "title", label: "Title", className: "w-[24%] min-w-0" },
+  { key: "rank", label: "Rank", className: "w-[5.25rem]" },
   {
     key: "reward",
     label: "Reward",
-    className: "w-[7rem]",
+    className: "w-[5.5rem]",
     align: "right",
   },
-  { key: "scu", label: "SCU", className: "w-[3.5rem]", align: "right" },
-  { key: "from", label: "From", className: "w-[14%]" },
-  { key: "to", label: "To", className: "w-[14%]" },
-  { key: "cargo", label: "Cargo", className: "w-[12%]" },
+  { key: "scu", label: "SCU", className: "w-[3rem]", align: "right" },
+  { key: "from", label: "From", className: "w-[14%] min-w-0" },
+  { key: "to", label: "To", className: "w-[14%] min-w-0" },
+  { key: "cargo", label: "Cargo", className: "w-[12%] min-w-0" },
 ];
 
 function SourceIcon() {
@@ -98,12 +101,14 @@ function ObjectIcon() {
 function BulletList({ items }: { items: string[] }) {
   if (items.length === 0) return <span>—</span>;
   if (items.length === 1) {
-    return <span>{items[0]}</span>;
+    return <span className="break-words">{items[0]}</span>;
   }
   return (
     <ul className="list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug">
       {items.map((item, index) => (
-        <li key={`${item}-${index}`}>{item}</li>
+        <li key={`${item}-${index}`} className="break-words">
+          {item}
+        </li>
       ))}
     </ul>
   );
@@ -116,16 +121,42 @@ function SortGlyph({
   active: boolean;
   dir: "asc" | "desc" | null;
 }) {
+  const showUp = !active || dir === "asc";
+  const showDown = !active || dir === "desc";
   return (
     <span
       aria-hidden
       className={[
-        "inline-flex flex-col text-[0.45rem] leading-none",
-        active ? "text-rsi-accent" : "text-rsi-text-muted/70",
+        "inline-flex flex-col items-center leading-none",
+        !active ? "-space-y-0.5" : "",
+        active ? "text-rsi-accent" : "text-rsi-text-muted/45",
       ].join(" ")}
+      title={
+        active && dir === "asc"
+          ? "Sorted ascending"
+          : active && dir === "desc"
+            ? "Sorted descending"
+            : "Not sorted"
+      }
     >
-      <span className={dir === "asc" ? "text-rsi-accent" : ""}>▲</span>
-      <span className={dir === "desc" ? "text-rsi-accent" : ""}>▼</span>
+      {showUp ? (
+        <svg
+          viewBox="0 0 10 6"
+          className="size-2.5"
+          fill="currentColor"
+        >
+          <path d="M5 0.5 9.5 5.5H0.5Z" />
+        </svg>
+      ) : null}
+      {showDown ? (
+        <svg
+          viewBox="0 0 10 6"
+          className="size-2.5"
+          fill="currentColor"
+        >
+          <path d="M5 5.5 0.5 0.5h9Z" />
+        </svg>
+      ) : null}
     </span>
   );
 }
@@ -139,9 +170,41 @@ export function MissionCatalogTable({
   onViewObject,
   sort = null,
   onSortChange,
+  checkedIds,
+  onCheckedIdsChange,
 }: MissionCatalogTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const canSort = typeof onSortChange === "function";
+  const canCheck = typeof onCheckedIdsChange === "function";
+  const checkedSet = new Set(checkedIds ?? []);
+  const allVisibleChecked =
+    canCheck &&
+    missions.length > 0 &&
+    missions.every((mission) => checkedSet.has(mission.id));
+  const someVisibleChecked =
+    canCheck && missions.some((mission) => checkedSet.has(mission.id));
+
+  const toggleChecked = (missionId: string) => {
+    if (!canCheck) return;
+    const next = new Set(checkedIds ?? []);
+    if (next.has(missionId)) next.delete(missionId);
+    else next.add(missionId);
+    onCheckedIdsChange([...next]);
+  };
+
+  const toggleAllVisible = () => {
+    if (!canCheck) return;
+    if (allVisibleChecked) {
+      const visible = new Set(missions.map((mission) => mission.id));
+      onCheckedIdsChange(
+        (checkedIds ?? []).filter((id) => !visible.has(id)),
+      );
+      return;
+    }
+    const next = new Set(checkedIds ?? []);
+    for (const mission of missions) next.add(mission.id);
+    onCheckedIdsChange([...next]);
+  };
 
   const copyMissionId = async (id: string) => {
     try {
@@ -157,9 +220,27 @@ export function MissionCatalogTable({
 
   return (
     <div className="overflow-x-auto rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
-      <table className="w-full min-w-[64rem] table-fixed border-collapse text-left">
+      {/*
+        min-w keeps a usable layout under ~1000px without forcing scroll on
+        typical smaller desktops; overflow-x-auto still allows scroll below that.
+      */}
+      <table className="w-full min-w-[52rem] table-fixed border-collapse text-left">
         <thead>
           <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
+            {canCheck ? (
+              <th scope="col" className={`${thClass} w-10`}>
+                <input
+                  type="checkbox"
+                  checked={allVisibleChecked}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someVisibleChecked && !allVisibleChecked;
+                  }}
+                  onChange={toggleAllVisible}
+                  aria-label="Select all visible missions"
+                  className="size-3.5 accent-[var(--rsi-accent)]"
+                />
+              </th>
+            ) : null}
             {COLUMNS.map((column) => {
               const isActive = sort?.key === column.key;
               const alignRight = column.align === "right";
@@ -222,7 +303,7 @@ export function MissionCatalogTable({
           {missions.length === 0 ? (
             <tr>
               <td
-                colSpan={COLUMNS.length}
+                colSpan={COLUMNS.length + (canCheck ? 1 : 0)}
                 className={`${tdClass} py-8 text-center text-rsi-text-muted`}
               >
                 No missions to show.
@@ -236,6 +317,7 @@ export function MissionCatalogTable({
               );
               const isSelected = selectedId === mission.id;
               const isCopied = copiedId === mission.id;
+              const isChecked = checkedSet.has(mission.id);
               return (
                 <tr
                   key={mission.id}
@@ -247,6 +329,17 @@ export function MissionCatalogTable({
                   ].join(" ")}
                   aria-selected={isSelected}
                 >
+                  {canCheck ? (
+                    <td className={tdClass}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleChecked(mission.id)}
+                        aria-label={`Select ${mission.title}`}
+                        className="size-3.5 accent-[var(--rsi-accent)]"
+                      />
+                    </td>
+                  ) : null}
                   <td className={tdClass}>
                     <div className="flex flex-col gap-1.5">
                       <button
@@ -303,11 +396,11 @@ export function MissionCatalogTable({
                     className={`${tdClass} cursor-pointer`}
                     onClick={() => onSelect(mission)}
                   >
-                    <p className="text-xs font-semibold tracking-wide text-rsi-text">
+                    <p className="truncate text-xs font-semibold tracking-wide text-rsi-text-secondary">
                       {mission.title}
                     </p>
                     {mission.contractorSlug ? (
-                      <p className="mt-0.5 text-[0.65rem] text-rsi-text-muted">
+                      <p className="mt-0.5 truncate text-[0.65rem] text-rsi-text-muted">
                         {contractorDisplayName(mission.contractorSlug)}
                       </p>
                     ) : null}

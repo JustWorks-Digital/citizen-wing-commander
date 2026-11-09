@@ -22,7 +22,10 @@ function isHaulingPayload(
   );
 }
 
-/** Extract `rank` from titles and strip rank tokens from stored titles. */
+/**
+ * Extract `rank` from titles, strip rank tokens, and normalize Title Case.
+ * Safe to re-run — also fixes ALL-CAPS / mixed-case titles.
+ */
 export async function backfillCatalogRanks(): Promise<{
   total: number;
   updated: number;

@@ -44,6 +44,7 @@ Catalog hauling (current):
 | `rank` (Trainee…Master; no “Rank” suffix) | `repLevel`, `Junior Rank` as a stored value |
 | `isDirect` / `isOnePickup` / `isOneDelivery` (from `scuLocationSplits`) | `routeType`, `directMission`, `nonDirect` as stored enum alone |
 | `rewards` (`[{ kind: "auec", amount }]` / `blueprint`) | `rewardAuec` alone |
+| `offerLocationSlug` / `offerStarSystemSlug` | bare `system`, `starSystem` without the `offer` family |
 
 `objectives` (screenshot-style text bullets) stays separate — it is copy, not an SCU measure.
 

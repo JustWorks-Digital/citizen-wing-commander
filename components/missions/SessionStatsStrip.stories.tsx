@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Source (session header), Deliveries/Missions (checklist toolbar), Inventory (cargo layout).",
+          "Split session telemetry: Missions/Source (session header), Deliveries/Missions (checklist toolbar), Inventory (cargo layout).",
       },
     },
   },

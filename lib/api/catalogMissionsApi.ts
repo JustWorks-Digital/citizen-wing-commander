@@ -1,6 +1,22 @@
 import { appApi } from "@/lib/api/appRoutes";
 import type { CatalogMission } from "@/db/schema";
 
+export type AddCatalogMissionsToSessionInput = {
+  catalogMissionIds: string[];
+  sessionId?: string;
+  createSession?: boolean;
+  sessionName?: string;
+};
+
+export type AddCatalogMissionsToSessionResult = {
+  ok: true;
+  sessionId: string;
+  sessionName: string;
+  added: number;
+  skipped: number;
+  missionCount: number;
+};
+
 export type CatalogMissionListResponse = {
   count: number;
   missions: CatalogMission[];
@@ -46,4 +62,26 @@ export async function fetchCatalogMissionsByIds(
   }
   const data = (await res.json()) as CatalogMissionListResponse;
   return data.missions ?? [];
+}
+
+/** Append catalog missions onto a session (or create a session first). */
+export async function addCatalogMissionsToSession(
+  input: AddCatalogMissionsToSessionInput,
+): Promise<AddCatalogMissionsToSessionResult> {
+  const res = await fetch(appApi.catalogMissionsAddToSession, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | AddCatalogMissionsToSessionResult
+    | { error?: string };
+  if (!res.ok) {
+    throw new Error(
+      "error" in data && data.error
+        ? data.error
+        : `Failed to add missions to session (${res.status})`,
+    );
+  }
+  return data as AddCatalogMissionsToSessionResult;
 }

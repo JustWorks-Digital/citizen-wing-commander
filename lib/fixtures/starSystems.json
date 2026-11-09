@@ -1,0 +1,31 @@
+{
+  "source": "https://api.uexcorp.uk/2.0/star_systems",
+  "sourceLabel": "UEX Corp star systems (live only)",
+  "fetchedAt": "2026-11-09T15:44:53.222Z",
+  "items": [
+    {
+      "id": 55,
+      "slug": "nyx",
+      "name": "Nyx",
+      "code": "NX",
+      "isAvailableLive": true,
+      "wiki": "https://starcitizen.tools/Nyx_system"
+    },
+    {
+      "id": 64,
+      "slug": "pyro",
+      "name": "Pyro",
+      "code": "PY",
+      "isAvailableLive": true,
+      "wiki": "https://starcitizen.tools/Pyro_system"
+    },
+    {
+      "id": 68,
+      "slug": "stanton",
+      "name": "Stanton",
+      "code": "ST",
+      "isAvailableLive": true,
+      "wiki": "https://starcitizen.tools/Stanton_system"
+    }
+  ]
+}

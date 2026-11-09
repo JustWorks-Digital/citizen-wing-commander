@@ -4,6 +4,7 @@ import {
   stripRankFromTitle,
   type MissionRank,
 } from "@/lib/missions/missionRank";
+import { normalizeStarSystemSlug } from "@/lib/missions/starSystem";
 import {
   CARGO_BOX_SCU,
   type CargoBoxScu,
@@ -83,6 +84,11 @@ export type HaulingCatalogMissionPayload = {
   rewards: CatalogMissionReward[];
   /** Where the offer was seen / screenshot taken (availability context). */
   offerLocationSlug?: string | null;
+  /**
+   * Star system where the offer was seen (fixture slug: stanton / pyro / nyx).
+   * No default — set explicitly; existing catalog rows backfilled to stanton.
+   */
+  offerStarSystemSlug?: string | null;
   fromLocationSlugs: string[];
   toLocationSlugs: string[];
   cargo: CatalogMissionCargoLine[];
@@ -407,6 +413,9 @@ export function buildHaulingCatalogMissionPayload(
   });
   const fromTitle = stripRankFromTitle(partial.title);
   const rank = normalizeMissionRank(partial.rank) ?? fromTitle.rank ?? null;
+  const offerStarSystemSlug =
+    normalizeStarSystemSlug(partial.offerStarSystemSlug) ??
+    (partial.offerStarSystemSlug?.trim() || null);
   return {
     kind: "hauling",
     version: 1,
@@ -415,6 +424,7 @@ export function buildHaulingCatalogMissionPayload(
     contractorSlug: partial.contractorSlug ?? null,
     rewards: normalizeCatalogRewards(partial.rewards, partial.rewardAuec),
     offerLocationSlug: partial.offerLocationSlug ?? null,
+    offerStarSystemSlug,
     fromLocationSlugs: partial.fromLocationSlugs,
     toLocationSlugs: partial.toLocationSlugs,
     cargo: partial.cargo,

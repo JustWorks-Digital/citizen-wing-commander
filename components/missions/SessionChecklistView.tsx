@@ -49,6 +49,7 @@ import {
   defaultFocusedStopId,
   HaulingChecklistTable,
 } from "./HaulingChecklistTable";
+import { SessionCatalogMissionsPanel } from "./SessionCatalogMissionsPanel";
 import { SessionMissionsModal } from "./SessionMissionsModal";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import {
@@ -99,6 +100,7 @@ export function SessionChecklistView({
   );
   const [tabsBusy, setTabsBusy] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -415,6 +417,7 @@ export function SessionChecklistView({
           </div>
           <SessionSourceStat
             className="shrink-0"
+            onMissionsClick={() => setCatalogOpen(true)}
             onClick={() => setScreenshotsOpen(true)}
           />
         </div>
@@ -534,6 +537,33 @@ export function SessionChecklistView({
         open={screenshotsOpen}
         sessionId={session.id}
         onClose={() => setScreenshotsOpen(false)}
+      />
+
+      <SessionCatalogMissionsPanel
+        open={catalogOpen}
+        sessionId={session.id}
+        sessionName={session.sessionName}
+        onClose={() => setCatalogOpen(false)}
+        onAdded={() => {
+          void (async () => {
+            try {
+              const result = await fetchChecklist(null, session.id);
+              if (result.session) {
+                if (result.etag) etagRef.current = result.etag;
+                setSession(result.session);
+                setLoadError(null);
+              }
+              const list = await fetchChecklistSessions();
+              setTabs(list.sessions);
+            } catch (error) {
+              setLoadError(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to refresh session",
+              );
+            }
+          })();
+        }}
       />
 
       <SessionMissionsModal

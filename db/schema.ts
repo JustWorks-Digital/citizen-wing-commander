@@ -363,6 +363,11 @@ export const catalogMissions = pgTable(
       .default(sql`'[]'::jsonb`),
     /** Where the offer was seen / screenshot taken. */
     offerLocationSlug: text("offer_location_slug"),
+    /**
+     * Star system where the offer was seen (`stanton` / `pyro` / `nyx`, …).
+     * No DB default — set on create; backfill existing rows to stanton.
+     */
+    offerStarSystemSlug: text("offer_star_system_slug"),
     scuTotal: integer("scu_total").notNull().default(0),
     scuMaxContainerSize: integer("scu_max_container_size"),
     /** Crate counts: { scuOne, scuTwo, scuFour, scuEight }. */
@@ -406,6 +411,9 @@ export const catalogMissions = pgTable(
   (table) => [
     uniqueIndex("catalog_missions_fingerprint_uidx").on(table.fingerprint),
     index("catalog_missions_offer_location_idx").on(table.offerLocationSlug),
+    index("catalog_missions_offer_star_system_idx").on(
+      table.offerStarSystemSlug,
+    ),
     index("catalog_missions_contractor_slug_idx").on(table.contractorSlug),
     index("catalog_missions_type_idx").on(table.type),
     index("catalog_missions_title_idx").on(table.title),

@@ -8,6 +8,7 @@ const meta = {
   parameters: { layout: "padded" },
   args: {
     initialMissions: sampleCatalogMissions,
+    persistUrlState: false,
   },
 } satisfies Meta<typeof MissionsCatalogView>;
 
@@ -18,4 +19,11 @@ export const Table: Story = {};
 
 export const Empty: Story = {
   args: { initialMissions: [] },
+};
+
+export const TargetSession: Story = {
+  args: {
+    showHeading: false,
+    targetSessionId: "story-session",
+  },
 };

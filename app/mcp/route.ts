@@ -599,7 +599,7 @@ const handler = createMcpHandler(
       {
         title: "Create mission",
         description:
-          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, screenshot path, scuMaxContainerSize. Upserts by fingerprint.",
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), screenshot path, scuMaxContainerSize. Upserts by fingerprint.",
         inputSchema: z.object({
           type: z
             .enum(["hauling"])
@@ -655,6 +655,12 @@ const handler = createMcpHandler(
             .optional()
             .describe(
               "Where the mission was offered / screenshot taken (availability context).",
+            ),
+          offerStarSystem: z
+            .string()
+            .optional()
+            .describe(
+              "Star system where the offer was seen (Stanton / Pyro / Nyx). No default — set explicitly.",
             ),
           from: z
             .array(z.string())

@@ -97,6 +97,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `rank` (hauling career level: Trainee…Master; no “Rank” suffix in the value) | `repLevel`, `reputationRank`, `Junior Rank` as a stored value |
 | `isDirect` / `isOnePickup` / `isOneDelivery` (catalog route shape; Non-direct = `!isDirect`) | `routeType` enum alone, `directMission` without the boolean pair |
 | `rewards` (`kind: "auec" \| "blueprint"`) | `rewardAuec` as the only payout field |
+| `offerStarSystemSlug` (star system where the offer was seen; fixture slug) | bare `system` / `starSystem` without `offer` prefix |
 | `objectives` (catalog text bullets) | Structured split rows (those are `scuSplits`) |
 
 Related: **field namespaces** — prefix related DB/JSON keys so they sort together (`scu*`). See [`field-namespaces.mdc`](./field-namespaces.mdc).

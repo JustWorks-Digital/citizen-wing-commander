@@ -70,6 +70,21 @@ export function catalogCargoLines(mission: CatalogMission): string[] {
   return cargo.map((line) => line.commodityName);
 }
 
+/**
+ * Cargo identity for selection chips: `24 SCU - Medical Supplies`.
+ * Total SCU first, then commodity names (unique-ish vs title alone).
+ */
+export function catalogCargoIdentitySummary(mission: CatalogMission): string {
+  const names = catalogCargoLines(mission).filter(
+    (line) => !/^\d+\s*SCU$/i.test(line),
+  );
+  const scu = mission.scuTotal > 0 ? `${mission.scuTotal} SCU` : null;
+  if (scu && names.length > 0) return `${scu} - ${names.join(", ")}`;
+  if (scu) return scu;
+  if (names.length > 0) return names.join(", ");
+  return "—";
+}
+
 export function catalogCargoSummary(mission: CatalogMission): string {
   const lines = catalogCargoLines(mission);
   return lines.length > 0 ? lines.join(" · ") : "—";

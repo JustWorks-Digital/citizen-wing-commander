@@ -61,12 +61,16 @@ const interactiveCellClass = [
 ].join(" ");
 
 export type SessionSourceStatProps = {
+  /** Opens the missions catalog for this session. */
+  onMissionsClick?: () => void;
+  /** Opens session screenshots / source intake. */
   onClick?: () => void;
   className?: string;
 };
 
-/** Opens session screenshots / source intake. */
+/** Header actions: Missions catalog + Source screenshots. */
 export function SessionSourceStat({
+  onMissionsClick,
   onClick,
   className,
 }: SessionSourceStatProps) {
@@ -74,8 +78,20 @@ export function SessionSourceStat({
     <div
       className={[stripClass, className].filter(Boolean).join(" ")}
       role="group"
-      aria-label="Source"
+      aria-label="Session actions"
     >
+      <button
+        type="button"
+        onClick={onMissionsClick}
+        className={[
+          interactiveCellClass,
+          "items-center justify-center",
+        ].join(" ")}
+      >
+        <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
+          Missions
+        </span>
+      </button>
       <button
         type="button"
         onClick={onClick}

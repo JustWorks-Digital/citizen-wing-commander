@@ -2,18 +2,21 @@ import commoditiesFixture from "@/lib/fixtures/commodities.json";
 import contractorsFixture from "@/lib/fixtures/contractors.json";
 import locationsFixture from "@/lib/fixtures/locations.json";
 import shipsFixture from "@/lib/fixtures/ships.json";
+import starSystemsFixture from "@/lib/fixtures/starSystems.json";
 import type {
   FixtureCommodity,
   FixtureContractor,
   FixtureFile,
   FixtureLocation,
   FixtureShip,
+  FixtureStarSystem,
 } from "@/lib/fixtures/types";
 
 const locations = locationsFixture as FixtureFile<FixtureLocation>;
 const commodities = commoditiesFixture as FixtureFile<FixtureCommodity>;
 const ships = shipsFixture as FixtureFile<FixtureShip>;
 const contractors = contractorsFixture as FixtureFile<FixtureContractor>;
+const starSystems = starSystemsFixture as FixtureFile<FixtureStarSystem>;
 
 const locationsBySlug = new Map(
   locations.items.map((item) => [item.slug, item] as const),
@@ -26,6 +29,9 @@ const shipsBySlug = new Map(
 );
 const contractorsBySlug = new Map(
   contractors.items.map((item) => [item.slug, item] as const),
+);
+const starSystemsBySlug = new Map(
+  starSystems.items.map((item) => [item.slug, item] as const),
 );
 
 export function listLocations(): FixtureLocation[] {
@@ -64,6 +70,16 @@ export function getContractorBySlug(
   slug: string,
 ): FixtureContractor | undefined {
   return contractorsBySlug.get(slug);
+}
+
+export function listStarSystems(): FixtureStarSystem[] {
+  return starSystems.items;
+}
+
+export function getStarSystemBySlug(
+  slug: string,
+): FixtureStarSystem | undefined {
+  return starSystemsBySlug.get(slug);
 }
 
 export function sumShipCargoScu(shipSlugs: string[]): number {
