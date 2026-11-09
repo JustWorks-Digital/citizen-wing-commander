@@ -11,6 +11,7 @@ const meta = {
     selectedId: null,
     onSelect: () => {},
     onViewSource: () => {},
+    onViewObject: () => {},
   },
 } satisfies Meta<typeof MissionCatalogTable>;
 

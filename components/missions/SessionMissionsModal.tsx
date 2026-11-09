@@ -10,7 +10,7 @@ import {
   missionRewardLabel,
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
-import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { MissionBoxBreakdownPicker } from "./MissionBoxBreakdownPicker";
 
@@ -23,7 +23,7 @@ export type SessionMissionsModalProps = {
   onRemoveMission: (missionId: string) => void;
   onSelectBoxBreakdown: (
     missionId: string,
-    breakdown: CargoBoxBreakdown,
+    breakdown: ScuBoxSplits,
   ) => void;
 };
 
@@ -320,7 +320,7 @@ export function SessionMissionsModal({
                     <MissionBoxBreakdownPicker
                       totalScu={totalScu}
                       maxContainerScu={mission.maxContainerScu}
-                      selected={mission.boxBreakdown ?? null}
+                      selected={mission.scuBoxSplits ?? null}
                       disabled={isCompleted}
                       onSelect={(breakdown) =>
                         onSelectBoxBreakdown(mission.id, breakdown)

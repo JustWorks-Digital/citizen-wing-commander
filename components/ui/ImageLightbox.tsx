@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 
@@ -25,6 +25,14 @@ export type ImageLightboxProps = {
   onIndexChange?: (index: number) => void;
 };
 
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
+
+function clampZoom(value: number): number {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 100) / 100));
+}
+
 function NavChevron({ direction }: { direction: "prev" | "next" }) {
   return (
     <svg
@@ -46,7 +54,64 @@ function NavChevron({ direction }: { direction: "prev" | "next" }) {
   );
 }
 
-/** Full-viewport lightbox; image scales to page width and keeps aspect ratio. */
+function ZoomControls({
+  zoom,
+  onZoomIn,
+  onZoomOut,
+  onReset,
+}: {
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onReset: () => void;
+}) {
+  const buttonClass = [
+    "inline-flex size-8 items-center justify-center border-0 font-mono text-[0.75rem]",
+    "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
+    "disabled:cursor-default disabled:opacity-40",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+  ].join(" ");
+
+  return (
+    <div
+      className="inline-flex shrink-0 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/70"
+      role="group"
+      aria-label="Image zoom"
+    >
+      <button
+        type="button"
+        aria-label="Zoom out"
+        title="Zoom out (−)"
+        disabled={zoom <= ZOOM_MIN}
+        onClick={onZoomOut}
+        className={`${buttonClass} border-r border-rsi-border`}
+      >
+        −
+      </button>
+      <button
+        type="button"
+        aria-label="Reset zoom"
+        title="Reset zoom"
+        onClick={onReset}
+        className={`${buttonClass} min-w-[3rem] border-r border-rsi-border px-1.5 text-[0.6rem] tabular-nums`}
+      >
+        {Math.round(zoom * 100)}%
+      </button>
+      <button
+        type="button"
+        aria-label="Zoom in"
+        title="Zoom in (+)"
+        disabled={zoom >= ZOOM_MAX}
+        onClick={onZoomIn}
+        className={buttonClass}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/** Full-viewport lightbox; image scales to page width, with zoom for detail. */
 export function ImageLightbox({
   src,
   alt = "",
@@ -57,12 +122,29 @@ export function ImageLightbox({
   onIndexChange,
 }: ImageLightboxProps) {
   const gallery =
-    items && items.length > 0
-      ? items
-      : [{ src, alt, title }];
+    items && items.length > 0 ? items : [{ src, alt, title }];
   const safeIndex = Math.min(Math.max(0, index), gallery.length - 1);
   const current = gallery[safeIndex] ?? { src, alt, title };
   const hasGallery = gallery.length > 1 && Boolean(onIndexChange);
+  const [zoom, setZoom] = useState(1);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setZoom(1);
+  }, [safeIndex, current.src]);
+
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      setZoom((value) => clampZoom(value + delta));
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, []);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -71,6 +153,21 @@ export function ImageLightbox({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        setZoom((value) => clampZoom(value + ZOOM_STEP));
+        return;
+      }
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        setZoom((value) => clampZoom(value - ZOOM_STEP));
+        return;
+      }
+      if (event.key === "0") {
+        event.preventDefault();
+        setZoom(1);
         return;
       }
       if (!hasGallery || !onIndexChange) return;
@@ -105,6 +202,12 @@ export function ImageLightbox({
         <p className="min-w-0 flex-1 truncate font-mono text-[0.7rem] uppercase tracking-[0.18em] text-rsi-text-muted">
           {label}
         </p>
+        <ZoomControls
+          zoom={zoom}
+          onZoomIn={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
+          onZoomOut={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
+          onReset={() => setZoom(1)}
+        />
         {hasGallery ? (
           <p className="shrink-0 font-mono text-[0.65rem] tabular-nums tracking-[0.14em] text-rsi-text-secondary">
             {safeIndex + 1} / {gallery.length}
@@ -113,19 +216,25 @@ export function ImageLightbox({
         <ModalCloseButton onClick={onClose} />
       </div>
       <div
+        ref={scrollRef}
         className="relative min-h-0 flex-1 overflow-auto bg-rsi-bg-deep/40 p-4"
         onClick={onClose}
       >
         <div className="flex min-h-full w-full items-start justify-center">
-          {/* Fit page width; keep aspect ratio (no crop). */}
+          {/* Fit page width at 100%; zoom grows width so overflow scrolls for pan. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={current.src}
             alt={current.alt || alt}
-            className="h-auto w-full max-w-full select-none"
+            className={[
+              "h-auto max-w-none select-none transition-[width] duration-150",
+              zoom > 1 ? "cursor-zoom-out" : "cursor-zoom-in",
+            ].join(" ")}
+            style={{ width: `${zoom * 100}%` }}
             draggable={false}
             onClick={(event) => {
               event.stopPropagation();
+              setZoom((value) => (value > 1 ? 1 : 2));
             }}
           />
         </div>

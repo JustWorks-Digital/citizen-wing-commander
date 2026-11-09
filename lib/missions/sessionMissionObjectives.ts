@@ -1,4 +1,5 @@
 import { getLocationBySlug } from "@/lib/fixtures";
+import { formatAuecAmount } from "@/lib/missions/catalogMission";
 import type { HaulingIntakeCargoLine } from "@/lib/missions/haulingIntake";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -32,10 +33,7 @@ export function missionTotalScu(mission: SessionMission): number {
 export function missionRewardLabel(mission: SessionMission): string {
   if (mission.rewardDisplay?.trim()) return mission.rewardDisplay.trim();
   if (mission.rewardAuec > 0) {
-    if (mission.rewardAuec >= 1000) {
-      return `${Math.round(mission.rewardAuec / 1000)}k aUEC`;
-    }
-    return `${mission.rewardAuec} aUEC`;
+    return formatAuecAmount(mission.rewardAuec);
   }
   return "—";
 }

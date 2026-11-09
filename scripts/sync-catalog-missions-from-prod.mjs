@@ -41,8 +41,8 @@ async function mcpCall(method, params, id = 1) {
   throw new Error(`No MCP result for ${method}: ${raw.slice(0, 240)}`);
 }
 
-function emptyBoxBreakdown() {
-  return { size1: 0, size2: 0, size4: 0, size8: 0 };
+function emptyScuBoxSplits() {
+  return { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 0 };
 }
 
 function fingerprintFromPayload(payload) {
@@ -52,7 +52,9 @@ function fingerprintFromPayload(payload) {
     .join(",");
   const raw = [
     (payload.title ?? "").trim().toLowerCase(),
-    (payload.contractor ?? "").trim().toLowerCase(),
+    (payload.contractorSlug ?? payload.contractor ?? "")
+      .trim()
+      .toLowerCase(),
     (payload.offerLocationSlug ?? "").trim().toLowerCase(),
     [...(payload.fromLocationSlugs ?? [])]
       .map((s) => s.toLowerCase())
@@ -98,38 +100,79 @@ try {
       mission.fingerprint ?? fingerprintFromPayload(payload);
     await sql`
       INSERT INTO catalog_missions (
-        id, type, fingerprint, title, contractor, reward_auec,
-        offer_location_slug, total_scu, max_container_scu, box_breakdown,
-        payload, latest_screenshot_path, run_count, total_duration_ms,
-        avg_duration_ms, last_observed_at, created_at, updated_at
+        id, type, fingerprint, title, contractor_slug, rewards,
+        offer_location_slug, scu_total, scu_max_container_size, scu_box_splits,
+        scu_location_splits,
+        payload, latest_screenshot_path, mission_run_count, mission_total_duration_ms,
+        mission_avg_duration_ms, last_observed_at, created_at, updated_at
       ) VALUES (
         ${mission.id}::uuid,
         ${mission.type ?? "hauling"},
         ${fingerprint},
         ${mission.title},
-        ${mission.contractor ?? null},
-        ${mission.rewardAuec ?? null},
+        ${mission.contractorSlug ?? payload.contractorSlug ?? null},
+        ${sql.json(
+          mission.rewards ??
+            (mission.rewardAuec != null && mission.rewardAuec > 0
+              ? [{ kind: "auec", amount: mission.rewardAuec }]
+              : []),
+        )},
         ${mission.offerLocationSlug ?? null},
-        ${mission.totalScu ?? 0},
-        ${mission.maxContainerScu ?? null},
-        ${sql.json(mission.boxBreakdown ?? emptyBoxBreakdown())},
-        ${sql.json(payload)},
+        ${mission.scuTotal ?? mission.totalScu ?? 0},
+        ${mission.scuMaxContainerSize ?? mission.maxContainerScu ?? null},
+        ${sql.json(
+          mission.scuBoxSplits ??
+            mission.boxBreakdown ??
+            payload.scuBoxSplits ??
+            payload.boxBreakdown ??
+            emptyScuBoxSplits(),
+        )},
+        ${sql.json(
+          mission.scuLocationSplits ??
+            payload.scuLocationSplits ??
+            null,
+        )},
+        ${sql.json((() => {
+          const {
+            contractor: _contractor,
+            boxBreakdown: _boxBreakdown,
+            ...rest
+          } = payload;
+          return {
+            ...rest,
+            contractorSlug:
+              payload.contractorSlug ??
+              mission.contractorSlug ??
+              null,
+            scuBoxSplits:
+              payload.scuBoxSplits ??
+              payload.boxBreakdown ??
+              mission.scuBoxSplits ??
+              mission.boxBreakdown ??
+              emptyScuBoxSplits(),
+            scuLocationSplits:
+              payload.scuLocationSplits ??
+              mission.scuLocationSplits ??
+              null,
+          };
+        })())},
         ${mission.latestScreenshotPath ?? null},
-        ${mission.runCount ?? 0},
-        ${mission.totalDurationMs ?? 0},
-        ${mission.avgDurationMs ?? null},
+        ${mission.missionRunCount ?? mission.runCount ?? 0},
+        ${mission.missionTotalDurationMs ?? mission.totalDurationMs ?? 0},
+        ${mission.missionAvgDurationMs ?? mission.avgDurationMs ?? null},
         ${mission.lastObservedAt ?? new Date().toISOString()},
         ${mission.createdAt ?? new Date().toISOString()},
         ${mission.updatedAt ?? new Date().toISOString()}
       )
       ON CONFLICT (fingerprint) DO UPDATE SET
         title = EXCLUDED.title,
-        contractor = EXCLUDED.contractor,
-        reward_auec = EXCLUDED.reward_auec,
+        contractor_slug = EXCLUDED.contractor_slug,
+        rewards = EXCLUDED.rewards,
         offer_location_slug = EXCLUDED.offer_location_slug,
-        total_scu = EXCLUDED.total_scu,
-        max_container_scu = EXCLUDED.max_container_scu,
-        box_breakdown = EXCLUDED.box_breakdown,
+        scu_total = EXCLUDED.scu_total,
+        scu_max_container_size = EXCLUDED.scu_max_container_size,
+        scu_box_splits = EXCLUDED.scu_box_splits,
+        scu_location_splits = EXCLUDED.scu_location_splits,
         payload = EXCLUDED.payload,
         latest_screenshot_path = COALESCE(
           EXCLUDED.latest_screenshot_path,

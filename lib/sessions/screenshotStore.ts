@@ -27,13 +27,18 @@ export function screenshotContentType(filename: string): string {
   return MIME_BY_EXT[ext] ?? "application/octet-stream";
 }
 
-function sanitizeSegment(value: string): string {
+function sanitizeSegment(value: string, maxLen = 80): string {
   return value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+    .slice(0, maxLen);
+}
+
+/** Filenames may carry contract identity tokens; allow longer than batch ids. */
+function sanitizeFilename(value: string): string {
+  return sanitizeSegment(value, 180) || "shot.png";
 }
 
 function resolveBatchDir(batchId?: string): string {
@@ -44,16 +49,18 @@ function resolveBatchDir(batchId?: string): string {
 /** Logical path stored on transcripts: `<batchId>/<filename>`. */
 export function screenshotLogicalPath(batchId: string, filename: string): string {
   const batch = sanitizeSegment(batchId) || "default";
-  const file = sanitizeSegment(filename) || "shot.png";
+  const file = sanitizeFilename(filename);
   return `${batch}/${file}`;
 }
 
 export function absoluteScreenshotPath(logicalPath: string): string {
-  const parts = logicalPath.split("/").filter(Boolean).map(sanitizeSegment);
+  const parts = logicalPath.split("/").filter(Boolean);
   if (parts.length < 2) {
     throw new Error(`Invalid screenshot path: ${logicalPath}`);
   }
-  return path.join(STORE_ROOT, ...parts);
+  const batch = sanitizeSegment(parts[0]!);
+  const filename = sanitizeFilename(parts.slice(1).join("/"));
+  return path.join(STORE_ROOT, batch, filename);
 }
 
 function stripDataUrl(input: string): { buffer: Buffer; ext: string } {
@@ -141,7 +148,7 @@ export async function storeHaulingScreenshotBuffer(input: {
       : "shot";
     filename = `${prefix}-${stamp}${detectedExt}`;
   } else {
-    filename = sanitizeSegment(filename);
+    filename = sanitizeFilename(filename);
     const ext = path.extname(filename).toLowerCase();
     if (!ALLOWED_EXT.has(ext)) {
       filename = `${filename}${detectedExt}`;

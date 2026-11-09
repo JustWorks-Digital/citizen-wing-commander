@@ -6,9 +6,7 @@ export type MobiglasMissionDetailProps = {
 };
 
 function formatReward(panel: MobiglasContractPanel): string {
-  if (panel.rewardDisplay) {
-    return `${panel.rewardDisplay} (${panel.rewardAuec.toLocaleString("en-US")} aUEC)`;
-  }
+  if (panel.rewardDisplay?.trim()) return panel.rewardDisplay.trim();
   return `${panel.rewardAuec.toLocaleString("en-US")} aUEC`;
 }
 

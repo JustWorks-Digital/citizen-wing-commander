@@ -35,7 +35,7 @@ import {
 } from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
-  setMissionBoxBreakdown,
+  setMissionScuBoxSplits,
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
 } from "@/lib/missions/rebuildSessionRoute";
@@ -573,7 +573,7 @@ export function SessionChecklistView({
           persistSession(result.session);
         }}
         onSelectBoxBreakdown={(missionId, breakdown) => {
-          const result = setMissionBoxBreakdown(
+          const result = setMissionScuBoxSplits(
             session,
             missionId,
             breakdown,

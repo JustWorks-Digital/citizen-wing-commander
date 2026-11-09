@@ -1,0 +1,52 @@
+---
+description: Prefix related DB/JSON fields so they sort together (e.g. scuTotal, scuSplits)
+alwaysApply: true
+---
+
+# Field name namespaces (JSON / DB)
+
+Prefer a **common prefix** (namespace) at the start of related field names so they cluster when JSON keys or schema columns are listed alphabetically / naturally.
+
+## Rule
+
+- Put the **shared concept first**, then the qualifier: `scuTotal`, `scuSplits`, `scuMaxContainerSize`.
+- Avoid trailing-concept names that scatter related fields: `totalScu`, `maxContainerScu`.
+- Same idea for SQL columns: `scu_total`, `scu_splits` (JSON), `scu_max_container_size`.
+- Applies to Drizzle/TS properties, JSON payloads, and MCP tool argument names for the same data.
+
+## Examples
+
+```ts
+// ❌ BAD — related SCU fields do not sort together
+totalScu
+maxContainerScu
+cargo
+// …many keys…
+// total* and max* land far apart from each other
+
+// ✅ GOOD — SCU family groups under `scu*`
+scuMaxContainerSize
+scuSplits
+scuTotal
+```
+
+Catalog hauling (current):
+
+| Use | Avoid |
+| --- | --- |
+| `scuTotal` | `totalScu` |
+| `scuSplits` | ad-hoc split fields without the `scu` prefix |
+| `scuLocationSplits` (`{ from: {slug:scu}, to: {slug:scu} }`) | flat location maps without `scu` prefix |
+| `scuMaxContainerSize` | `maxContainerScu` |
+| `scuBoxSplits` (`scuOne` / `scuTwo` / `scuFour` / `scuEight`) | `boxBreakdown`, `size1`, `oneScu` |
+| `missionRunCount` / `missionTotalDurationMs` / `missionAvgDurationMs` | `runCount`, `totalDurationMs`, `avgDurationMs` |
+| `contractorSlug` (FK to `contractors`) | free-text `contractor` on catalog rows |
+| `rewards` (`[{ kind: "auec", amount }]` / `blueprint`) | `rewardAuec` alone |
+
+`objectives` (screenshot-style text bullets) stays separate — it is copy, not an SCU measure.
+
+## When adding fields
+
+1. Identify the family (`scu`, `reward`, `box`, …).
+2. Name new members `{family}{Qualifier}` in camelCase (`scuFoo`).
+3. Mirror in SQL as `{family}_{qualifier}` snake_case.

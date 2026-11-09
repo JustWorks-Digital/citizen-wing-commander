@@ -1,5 +1,9 @@
 import { upsertCatalogMission } from "@/db/queries/catalogMissions";
-import { resolveCommoditySlug, resolveLocationSlug } from "@/lib/sessions/resolveRefs";
+import {
+  resolveCommoditySlug,
+  resolveContractorSlug,
+  resolveLocationSlug,
+} from "@/lib/sessions/resolveRefs";
 import { getCommodityBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -46,13 +50,16 @@ export async function linkSessionMissionToCatalog(
     type: "hauling",
     payload: {
       title: mission.title,
-      contractor: mission.contractor,
-      rewardAuec: mission.rewardAuec,
+      contractorSlug: resolveContractorSlug(mission.contractor),
+      rewards:
+        mission.rewardAuec > 0
+          ? [{ kind: "auec" as const, amount: mission.rewardAuec }]
+          : [],
       offerLocationSlug,
       fromLocationSlugs,
       toLocationSlugs,
       cargo,
-      maxContainerScu: mission.maxContainerScu ?? null,
+      scuMaxContainerSize: mission.maxContainerScu ?? null,
       latestScreenshotPath: mission.screenshots[0] ?? null,
       extras: Object.keys(extras).length > 0 ? extras : undefined,
     },

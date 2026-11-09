@@ -17,8 +17,10 @@ import {
   toolListMissions,
   toolListShipBayPreferences,
   toolRecordMissionRun,
+  toolRenameCatalogScreenshots,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
+  toolSearchContractors,
   toolSearchLocations,
   toolSearchShips,
   toolSetActiveHaulingSession,
@@ -482,6 +484,21 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "search_contractors",
+      {
+        title: "Search contractors",
+        description:
+          "Use this to resolve mission contractor / org names (MobiGlas “Contracted by”) to fixture/DB slugs before create_mission.",
+        inputSchema: z.object({
+          query: z.string(),
+          limit: z.number().int().min(1).max(25).optional().default(10),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async ({ query, limit }) => toolSearchContractors(query, limit),
+    );
+
+    server.registerTool(
       "get_session_cargo_grid",
       {
         title: "Get session cargo grid",
@@ -582,7 +599,7 @@ const handler = createMcpHandler(
       {
         title: "Create mission",
         description:
-          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling include offerLocation, from/to, cargo, optional screenshot path and maxContainerScu. Upserts by fingerprint. Other mission types will be added later.",
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, screenshot path, scuMaxContainerSize. Upserts by fingerprint.",
         inputSchema: z.object({
           type: z
             .enum(["hauling"])
@@ -590,8 +607,35 @@ const handler = createMcpHandler(
             .default("hauling")
             .describe("Mission kind. Currently only hauling is implemented."),
           title: z.string().min(1),
-          contractor: z.string().optional(),
-          rewardAuec: z.number().nonnegative().optional(),
+          contractor: z
+            .string()
+            .optional()
+            .describe(
+              "Contractor name or slug (MobiGlas Contracted by). Prefer search_contractors first.",
+            ),
+          rewards: z
+            .array(
+              z.discriminatedUnion("kind", [
+                z.object({
+                  kind: z.literal("auec"),
+                  amount: z.number().nonnegative(),
+                }),
+                z.object({
+                  kind: z.literal("blueprint"),
+                  name: z.string().min(1),
+                  slug: z.string().optional().nullable(),
+                }),
+              ]),
+            )
+            .optional()
+            .describe(
+              "Payout lines (auec and/or blueprint). Prefer this over rewardAuec.",
+            ),
+          rewardAuec: z
+            .number()
+            .nonnegative()
+            .optional()
+            .describe("Deprecated: use rewards [{ kind: auec, amount }]"),
           offerLocation: z
             .string()
             .optional()
@@ -614,8 +658,42 @@ const handler = createMcpHandler(
               }),
             )
             .optional()
-            .describe("Hauling: cargo lines"),
-          maxContainerScu: z.number().int().positive().optional(),
+            .describe("Hauling: aggregated cargo lines (derived from scuSplits when omitted)"),
+          scuSplits: z
+            .array(
+              z.object({
+                kind: z.enum(["deliver", "collect"]).optional().default("deliver"),
+                from: z.string().describe("Pickup location for this split"),
+                to: z.string().describe("Delivery location for this split"),
+                commodity: z.string(),
+                scu: z.number().int().nonnegative(),
+              }),
+            )
+            .optional()
+            .describe(
+              "Hauling: structured per-stop SCU amounts (sibling of scuTotal). Prefer for multi-stop contracts.",
+            ),
+          scuLocationSplits: z
+            .object({
+              from: z.record(z.string(), z.number().int().nonnegative()),
+              to: z.record(z.string(), z.number().int().nonnegative()),
+            })
+            .optional()
+            .describe(
+              "Hauling: SCU totals per location slug — { from: {slug:scu}, to: {slug:scu} }. Derived from scuSplits when omitted.",
+            ),
+          objectives: z
+            .array(z.string())
+            .optional()
+            .describe(
+              "Hauling: screenshot-style Primary Objectives bullets (plain text). Derived from scuSplits when omitted.",
+            ),
+          scuMaxContainerSize: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Largest allowed crate size in SCU"),
           latestScreenshotPath: z
             .string()
             .optional()
@@ -641,6 +719,28 @@ const handler = createMcpHandler(
         annotations: { readOnlyHint: true },
       },
       async (input) => toolListMissions(input),
+    );
+
+    server.registerTool(
+      "rename_catalog_screenshots",
+      {
+        title: "Rename catalog screenshots",
+        description:
+          "Use this to rename catalog mission source screenshots on disk to the descriptive contract filename convention (title/SCU/reward/id/route/cargo), and update latestScreenshotPath. Shared files are copied. Pass dryRun to preview.",
+        inputSchema: z.object({
+          dryRun: z.boolean().optional().default(false),
+          limit: z.number().int().min(1).max(500).optional().default(500),
+          cleanupDuplicates: z
+            .boolean()
+            .optional()
+            .default(true)
+            .describe(
+              "Delete fingerprint-upsert duplicate rows whose screenshot filename embeds a different mission id",
+            ),
+        }),
+        annotations: { destructiveHint: true },
+      },
+      async (input) => toolRenameCatalogScreenshots(input),
     );
 
     server.registerTool(

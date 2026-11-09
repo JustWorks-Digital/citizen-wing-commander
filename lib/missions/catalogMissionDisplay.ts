@@ -1,6 +1,11 @@
 import type { CatalogMission } from "@/db/schema";
-import { getLocationBySlug } from "@/lib/fixtures";
-import type { HaulingCatalogMissionPayload } from "@/lib/missions/catalogMission";
+import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
+import {
+  auecFromRewards,
+  formatAuecAmount,
+  type CatalogMissionReward,
+  type HaulingCatalogMissionPayload,
+} from "@/lib/missions/catalogMission";
 
 export function catalogPayload(
   mission: CatalogMission,
@@ -15,11 +20,33 @@ export function locationDisplayName(slugOrName: string | null | undefined): stri
   return getLocationBySlug(slugOrName)?.name ?? slugOrName;
 }
 
+export function contractorDisplayName(
+  slugOrName: string | null | undefined,
+): string {
+  if (!slugOrName?.trim()) return "—";
+  return getContractorBySlug(slugOrName)?.name ?? slugOrName;
+}
+
+function formatRewardLine(reward: CatalogMissionReward): string {
+  if (reward.kind === "auec") {
+    if (reward.amount <= 0) return "";
+    return formatAuecAmount(reward.amount);
+  }
+  return reward.name;
+}
+
+/** Compact table/detail label for catalog rewards (aUEC + other kinds). */
 export function catalogRewardLabel(mission: CatalogMission): string {
-  const reward = mission.rewardAuec ?? 0;
-  if (reward <= 0) return "—";
-  if (reward >= 1000) return `${Math.round(reward / 1000)}k aUEC`;
-  return `${reward} aUEC`;
+  const rewards =
+    mission.rewards?.length
+      ? mission.rewards
+      : catalogPayload(mission)?.rewards ?? [];
+  const parts = rewards.map(formatRewardLine).filter(Boolean);
+  if (parts.length === 0) {
+    const auec = auecFromRewards(rewards);
+    return auec > 0 ? formatRewardLine({ kind: "auec", amount: auec }) : "—";
+  }
+  return parts.join(" · ");
 }
 
 export function catalogRouteSummary(mission: CatalogMission): {
@@ -37,9 +64,7 @@ export function catalogCargoSummary(mission: CatalogMission): string {
   const payload = catalogPayload(mission);
   const cargo = payload?.cargo ?? [];
   if (cargo.length === 0) {
-    return mission.totalScu > 0 ? `${mission.totalScu} SCU` : "—";
+    return mission.scuTotal > 0 ? `${mission.scuTotal} SCU` : "—";
   }
-  return cargo
-    .map((line) => `${line.scu} SCU ${line.commodityName}`)
-    .join(" · ");
+  return cargo.map((line) => line.commodityName).join(" · ");
 }

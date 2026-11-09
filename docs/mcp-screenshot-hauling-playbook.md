@@ -39,6 +39,8 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
 
 Multi-pickup contracts use `from: [...]` plus optional `pickupSplits` when totals are shared across sites.
 
+Catalog missions (`create_mission`) should pass **`scuSplits[]`** for each Primary Objective line (`kind`, `from`, `to`, `commodity`, `scu`) — sibling of **`scuTotal`**. Optional **`objectives[]`** are screenshot-style text bullets (derived from splits when omitted). Aggregated `cargo` / `from` / `to` can be omitted and will be derived.
+
 Link evidence on each contract:
 
 ```json

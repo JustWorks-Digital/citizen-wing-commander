@@ -4,7 +4,7 @@ import {
   resolveIncomingLeg,
 } from "@/lib/sessions/resolveRefs";
 import { assignBoxSizesFromBreakdown } from "@/lib/missions/boxBreakdownOptions";
-import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   intakeContractFromSessionMission,
   type SessionMission,
@@ -74,7 +74,7 @@ function rebuildRowsFromMissions(
 
   let nextRows = rows;
   for (const mission of missions) {
-    if (!mission.boxBreakdown) continue;
+    if (!mission.scuBoxSplits) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
 
@@ -136,7 +136,7 @@ function stampMissionBoxSizesOntoRows(
   rows: HaulingChecklistRow[],
   mission: SessionMission,
 ): HaulingChecklistRow[] {
-  const breakdown = mission.boxBreakdown;
+  const breakdown = mission.scuBoxSplits;
   const cleared = rows.map((row) => ({
     ...row,
     cargoDeliveries: row.cargoDeliveries.map((cargo) => {
@@ -189,14 +189,14 @@ function stampMissionBoxSizesOntoRows(
   }));
 }
 
-/** Persist a crate breakdown choice and restamp bay packing sizes onto the route. */
-export function setMissionBoxBreakdown(
+/** Persist a crate-mix choice and restamp bay packing sizes onto the route. */
+export function setMissionScuBoxSplits(
   session: SessionChecklistModel,
   missionId: string,
-  boxBreakdown: CargoBoxBreakdown,
+  scuBoxSplits: ScuBoxSplits,
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
   const missions = (session.missions ?? []).map((mission) =>
-    mission.id === missionId ? { ...mission, boxBreakdown } : mission,
+    mission.id === missionId ? { ...mission, scuBoxSplits } : mission,
   );
   const mission = missions.find((entry) => entry.id === missionId);
   if (!mission) {

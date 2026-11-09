@@ -1,4 +1,7 @@
-import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
+import {
+  formatAuecAmount,
+  type ScuBoxSplits,
+} from "@/lib/missions/catalogMission";
 import type {
   HaulingIntakeCargoLine,
   HaulingIntakeContract,
@@ -36,7 +39,7 @@ export type SessionMission = {
    * Selected physical crate mix for this mission’s total SCU.
    * Drives 2D/3D bay packing when stamped onto route cargo lines.
    */
-  boxBreakdown?: CargoBoxBreakdown;
+  scuBoxSplits?: ScuBoxSplits;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
   cargoSummary: string;
   isCompleted: boolean;
@@ -67,7 +70,7 @@ function synthesizeMobiglas(
     rewardAuec: contract.rewardAuec ?? 0,
     rewardDisplay:
       contract.rewardAuec != null
-        ? `${Math.round(contract.rewardAuec / 1000)}k`
+        ? formatAuecAmount(contract.rewardAuec)
         : undefined,
     timeRemaining: null,
     deadline: null,
@@ -100,7 +103,7 @@ export function sessionMissionFromIntakeContract(
     rewardAuec: contract.rewardAuec ?? 0,
     rewardDisplay:
       contract.rewardAuec != null
-        ? `${Math.round(contract.rewardAuec / 1000)}k`
+        ? formatAuecAmount(contract.rewardAuec)
         : undefined,
     from: [...contract.from],
     to: [...contract.to],

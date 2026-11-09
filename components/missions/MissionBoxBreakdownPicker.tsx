@@ -2,19 +2,19 @@
 
 import { useMemo } from "react";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
-import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
-import { boxBreakdownForScu } from "@/lib/missions/catalogMission";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import { scuBoxSplitsForScu } from "@/lib/missions/catalogMission";
 import { enumerateBoxBreakdowns } from "@/lib/missions/boxBreakdownOptions";
 
-function breakdownId(breakdown: CargoBoxBreakdown): string {
-  return `8:${breakdown.size8}|4:${breakdown.size4}|2:${breakdown.size2}|1:${breakdown.size1}`;
+function breakdownId(breakdown: ScuBoxSplits): string {
+  return `8:${breakdown.scuEight}|4:${breakdown.scuFour}|2:${breakdown.scuTwo}|1:${breakdown.scuOne}`;
 }
 
 export type MissionBoxBreakdownPickerProps = {
   totalScu: number;
   maxContainerScu?: number | null;
-  selected?: CargoBoxBreakdown | null;
-  onSelect: (breakdown: CargoBoxBreakdown) => void;
+  selected?: ScuBoxSplits | null;
+  onSelect: (breakdown: ScuBoxSplits) => void;
   disabled?: boolean;
 };
 
@@ -36,7 +36,7 @@ export function MissionBoxBreakdownPicker({
 
   const selectedId = useMemo(() => {
     if (selected) return breakdownId(selected);
-    return breakdownId(boxBreakdownForScu(totalScu, maxContainerScu));
+    return breakdownId(scuBoxSplitsForScu(totalScu, maxContainerScu));
   }, [selected, totalScu, maxContainerScu]);
 
   if (totalScu <= 0 || options.length === 0) return null;

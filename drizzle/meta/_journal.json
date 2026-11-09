@@ -43,6 +43,62 @@
       "when": 1794190102528,
       "tag": "0005_last_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794195000000,
+      "tag": "0006_catalog_scu_total",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794195600000,
+      "tag": "0007_catalog_scu_max_container_size",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794196200000,
+      "tag": "0008_catalog_rewards",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794196800000,
+      "tag": "0009_catalog_box_breakdown_scu_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794197400000,
+      "tag": "0010_catalog_scu_box_splits",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794198000000,
+      "tag": "0011_catalog_mission_duration_prefix",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794198600000,
+      "tag": "0012_contractors",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794199200000,
+      "tag": "0013_catalog_scu_location_splits",
+      "breakpoints": true
     }
   ]
 }

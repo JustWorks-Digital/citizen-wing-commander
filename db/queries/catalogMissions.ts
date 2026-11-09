@@ -16,11 +16,8 @@ import {
 } from "@/lib/missions/catalogMission";
 
 export type UpsertHaulingCatalogMissionInput = {
-  payload: Omit<
-    HaulingCatalogMissionPayload,
-    "kind" | "version" | "totalScu" | "boxBreakdown"
-  > &
-    Partial<Pick<HaulingCatalogMissionPayload, "totalScu" | "boxBreakdown">>;
+  /** Accepts builder input (including legacy rewardAuec → rewards). */
+  payload: Parameters<typeof buildHaulingCatalogMissionPayload>[0];
 };
 
 /** Create/update a catalog mission. Currently implements `hauling`. */
@@ -31,19 +28,43 @@ export async function upsertCatalogMission(
     throw new Error(`Unsupported mission type: ${String(input.type)}`);
   }
 
-  const payload = buildHaulingCatalogMissionPayload(input.payload);
+  let payload = buildHaulingCatalogMissionPayload(input.payload);
   const fingerprint = catalogMissionFingerprint(payload);
   const db = getDb();
+
+  // Preserve scuSplits / scuLocationSplits / objectives when an upsert omits them.
+  if (
+    payload.scuSplits === undefined ||
+    payload.scuLocationSplits === undefined ||
+    payload.objectives === undefined
+  ) {
+    const [existing] = await db
+      .select()
+      .from(catalogMissions)
+      .where(eq(catalogMissions.fingerprint, fingerprint))
+      .limit(1);
+    const existingPayload = existing?.payload as HaulingCatalogMissionPayload | null;
+    if (existingPayload) {
+      payload = buildHaulingCatalogMissionPayload({
+        ...payload,
+        scuSplits: payload.scuSplits ?? existingPayload.scuSplits,
+        scuLocationSplits:
+          payload.scuLocationSplits ?? existingPayload.scuLocationSplits,
+        objectives: payload.objectives ?? existingPayload.objectives,
+      });
+    }
+  }
 
   const updateSet: Record<string, unknown> = {
     type: "hauling",
     title: payload.title,
-    contractor: payload.contractor ?? null,
-    rewardAuec: payload.rewardAuec ?? null,
+    contractorSlug: payload.contractorSlug ?? null,
+    rewards: payload.rewards,
     offerLocationSlug: payload.offerLocationSlug ?? null,
-    totalScu: payload.totalScu,
-    maxContainerScu: payload.maxContainerScu ?? null,
-    boxBreakdown: payload.boxBreakdown,
+    scuTotal: payload.scuTotal,
+    scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
+    scuBoxSplits: payload.scuBoxSplits,
+    scuLocationSplits: payload.scuLocationSplits ?? null,
     payload,
     lastObservedAt: new Date(),
     updatedAt: new Date(),
@@ -58,12 +79,13 @@ export async function upsertCatalogMission(
       type: "hauling",
       fingerprint,
       title: payload.title,
-      contractor: payload.contractor ?? null,
-      rewardAuec: payload.rewardAuec ?? null,
+      contractorSlug: payload.contractorSlug ?? null,
+      rewards: payload.rewards,
       offerLocationSlug: payload.offerLocationSlug ?? null,
-      totalScu: payload.totalScu,
-      maxContainerScu: payload.maxContainerScu ?? null,
-      boxBreakdown: payload.boxBreakdown,
+      scuTotal: payload.scuTotal,
+      scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
+      scuBoxSplits: payload.scuBoxSplits,
+      scuLocationSplits: payload.scuLocationSplits ?? null,
       payload,
       latestScreenshotPath: payload.latestScreenshotPath ?? null,
       lastObservedAt: new Date(),
@@ -93,6 +115,47 @@ export async function getCatalogMission(
   return row ?? null;
 }
 
+/** Patch screenshot path + payload on a specific catalog mission (by id). */
+export async function updateCatalogMissionScreenshotPath(input: {
+  missionId: string;
+  latestScreenshotPath: string;
+  payload: HaulingCatalogMissionPayload;
+}): Promise<CatalogMission> {
+  const db = getDb();
+  const payload = buildHaulingCatalogMissionPayload({
+    ...input.payload,
+    latestScreenshotPath: input.latestScreenshotPath,
+  });
+  const [row] = await db
+    .update(catalogMissions)
+    .set({
+      latestScreenshotPath: input.latestScreenshotPath,
+      payload,
+      scuLocationSplits: payload.scuLocationSplits ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(catalogMissions.id, input.missionId))
+    .returning();
+  if (!row) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  return row;
+}
+
+/** Delete catalog missions by id (notes/runs cascade). */
+export async function deleteCatalogMissionsByIds(
+  ids: string[],
+): Promise<number> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return 0;
+  const db = getDb();
+  const deleted = await db
+    .delete(catalogMissions)
+    .where(inArray(catalogMissions.id, unique))
+    .returning({ id: catalogMissions.id });
+  return deleted.length;
+}
+
 export async function getCatalogMissionsByIds(
   ids: string[],
 ): Promise<CatalogMission[]> {
@@ -111,7 +174,7 @@ export async function listCatalogMissions(input?: {
   limit?: number;
 }): Promise<CatalogMission[]> {
   const db = getDb();
-  const limit = Math.min(Math.max(input?.limit ?? 50, 1), 200);
+  const limit = Math.min(Math.max(input?.limit ?? 50, 1), 500);
   const offer = input?.offerLocationSlug?.trim() || null;
   const type = input?.type ?? null;
   const filters = [
@@ -183,9 +246,9 @@ export async function recordCatalogMissionRun(input: {
   const [mission] = await db
     .update(catalogMissions)
     .set({
-      runCount: sql`${catalogMissions.runCount} + 1`,
-      totalDurationMs: sql`${catalogMissions.totalDurationMs} + ${durationMs}`,
-      avgDurationMs: sql`((${catalogMissions.totalDurationMs} + ${durationMs}) / (${catalogMissions.runCount} + 1))`,
+      missionRunCount: sql`${catalogMissions.missionRunCount} + 1`,
+      missionTotalDurationMs: sql`${catalogMissions.missionTotalDurationMs} + ${durationMs}`,
+      missionAvgDurationMs: sql`((${catalogMissions.missionTotalDurationMs} + ${durationMs}) / (${catalogMissions.missionRunCount} + 1))`,
       updatedAt: new Date(),
     })
     .where(eq(catalogMissions.id, input.missionId))

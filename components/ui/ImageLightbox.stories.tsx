@@ -27,6 +27,9 @@ export const Default: Story = {
     const [open, setOpen] = useState(true);
     return (
       <div className="flex flex-col items-center gap-3">
+        <p className="max-w-sm text-center text-sm text-rsi-text-muted">
+          Zoom with +/− in the header, click the image, or Ctrl/⌘+scroll.
+        </p>
         <Button type="button" onClick={() => setOpen(true)}>
           Open lightbox
         </Button>

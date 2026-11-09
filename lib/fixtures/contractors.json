@@ -1,0 +1,31 @@
+{
+  "source": "curated",
+  "sourceLabel": "Hauling / mission contractors (curated)",
+  "fetchedAt": "2026-11-09T06:00:00.000Z",
+  "items": [
+    {
+      "slug": "covalex-independent-contractors",
+      "name": "Covalex Independent Contractors",
+      "aliases": [
+        "Covalex",
+        "Covalex Shipping",
+        "Covalex Independent Contractor"
+      ]
+    },
+    {
+      "slug": "ling-family-hauling",
+      "name": "Ling Family Hauling",
+      "aliases": ["Ling Family", "Ling Hauling"]
+    },
+    {
+      "slug": "red-wind",
+      "name": "Red Wind",
+      "aliases": ["Red Wind Shipping"]
+    },
+    {
+      "slug": "hd-mining",
+      "name": "HD Mining",
+      "aliases": ["Hurston Dynamics Mining", "HD"]
+    }
+  ]
+}

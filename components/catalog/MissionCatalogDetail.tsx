@@ -7,6 +7,7 @@ import {
   catalogPayload,
   catalogRewardLabel,
   catalogRouteSummary,
+  contractorDisplayName,
   locationDisplayName,
 } from "@/lib/missions/catalogMissionDisplay";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
@@ -36,7 +37,7 @@ export function MissionCatalogDetail({
   const payload = catalogPayload(mission);
   const route = catalogRouteSummary(mission);
   const sourceUrl = screenshotUrlFromLogicalPath(mission.latestScreenshotPath);
-  const box = mission.boxBreakdown;
+  const box = mission.scuBoxSplits;
 
   return (
     <div
@@ -57,8 +58,10 @@ export function MissionCatalogDetail({
           <h2 className="mt-1 text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
             {mission.title}
           </h2>
-          {mission.contractor ? (
-            <p className="mt-1 text-sm text-rsi-text-muted">{mission.contractor}</p>
+          {mission.contractorSlug ? (
+            <p className="mt-1 text-sm text-rsi-text-muted">
+              {contractorDisplayName(mission.contractorSlug)}
+            </p>
           ) : null}
         </header>
 
@@ -75,20 +78,20 @@ export function MissionCatalogDetail({
             />
             <MetaRow label="To" value={route.to.join(" · ") || "—"} />
             <MetaRow label="Cargo" value={catalogCargoSummary(mission)} />
-            <MetaRow label="Total SCU" value={`${mission.totalScu}`} />
-            {mission.maxContainerScu ? (
+            <MetaRow label="SCU total" value={`${mission.scuTotal}`} />
+            {mission.scuMaxContainerSize ? (
               <MetaRow
-                label="Max crate"
-                value={`${mission.maxContainerScu} SCU`}
+                label="SCU max container"
+                value={`${mission.scuMaxContainerSize}`}
               />
             ) : null}
             <MetaRow
               label="Crates"
               value={[
-                box.size8 ? `${box.size8}×8` : null,
-                box.size4 ? `${box.size4}×4` : null,
-                box.size2 ? `${box.size2}×2` : null,
-                box.size1 ? `${box.size1}×1` : null,
+                box.scuEight ? `${box.scuEight}×8` : null,
+                box.scuFour ? `${box.scuFour}×4` : null,
+                box.scuTwo ? `${box.scuTwo}×2` : null,
+                box.scuOne ? `${box.scuOne}×1` : null,
               ]
                 .filter(Boolean)
                 .join(" · ") || "—"}
@@ -96,10 +99,10 @@ export function MissionCatalogDetail({
             <MetaRow
               label="Runs"
               value={
-                mission.runCount > 0
-                  ? `${mission.runCount}${
-                      mission.avgDurationMs
-                        ? ` · avg ${Math.round(mission.avgDurationMs / 60000)}m`
+                mission.missionRunCount > 0
+                  ? `${mission.missionRunCount}${
+                      mission.missionAvgDurationMs
+                        ? ` · avg ${Math.round(mission.missionAvgDurationMs / 60000)}m`
                         : ""
                     }`
                   : "None recorded"
@@ -118,7 +121,7 @@ export function MissionCatalogDetail({
                     key={`${line.commoditySlug}-${line.scu}`}
                     className="font-mono text-sm tabular-nums text-rsi-text-secondary"
                   >
-                    {line.scu} SCU {line.commodityName}
+                    {line.scu} {line.commodityName}
                   </li>
                 ))}
               </ul>

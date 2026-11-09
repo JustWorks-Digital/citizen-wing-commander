@@ -20,7 +20,7 @@ export type MobiglasContractPanel = {
   title: string;
   contractor: string;
   rewardAuec: number;
-  /** Sidebar / header short form when different (e.g. "80k"). */
+  /** Display label when set (full amount, e.g. "80,000 aUEC"). */
   rewardDisplay?: string;
   timeRemaining?: string | null;
   deadline?: string | null;
@@ -64,9 +64,7 @@ export function isMobiglasContractTranscript(
 }
 
 function formatReward(panel: MobiglasContractPanel): string {
-  if (panel.rewardDisplay) {
-    return `${panel.rewardDisplay} (${panel.rewardAuec.toLocaleString("en-US")} aUEC)`;
-  }
+  if (panel.rewardDisplay?.trim()) return panel.rewardDisplay.trim();
   return `${panel.rewardAuec.toLocaleString("en-US")} aUEC`;
 }
 

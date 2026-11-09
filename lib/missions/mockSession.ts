@@ -240,7 +240,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
       title: "Junior Rank - Direct Medium Cargo Haul",
       contractor: "Covalex Independent Contractors",
       rewardAuec: 80000,
-      rewardDisplay: "80k",
+      rewardDisplay: "80,000 aUEC",
       from: ["Area18"],
       to: ["Baijini Point"],
       cargo: [
@@ -257,7 +257,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
         title: "Junior Rank - Direct Medium Cargo Haul",
         contractor: "Covalex Independent Contractors",
         rewardAuec: 80000,
-        rewardDisplay: "80k",
+        rewardDisplay: "80,000 aUEC",
         timeRemaining: null,
         deadline: null,
         details:

@@ -12,6 +12,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`database.mdc`](./database.mdc) | Postgres + Drizzle schema & migrations |
 | [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |
 | [`naming.mdc`](./naming.mdc) | TypeScript/React/DB/token naming conventions |
+| [`field-namespaces.mdc`](./field-namespaces.mdc) | Prefix related DB/JSON fields (`scuTotal`, `scuSplits`, …) so they group together |
 | [`general.mdc`](./general.mdc) | Catch-all project conventions |
 | [`api-endpoints.mdc`](./api-endpoints.mdc) | Named API domains — no hardcoded URL strings at call sites |
 | [`concise-answers.mdc`](./concise-answers.mdc) | Short answers by default; no verbose Q&A |

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
-import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import { MissionBoxBreakdownPicker } from "./MissionBoxBreakdownPicker";
 
 const meta = {
@@ -23,7 +23,7 @@ export const Default: Story = {};
 
 export const Interactive: Story = {
   render: function InteractivePicker() {
-    const [selected, setSelected] = useState<CargoBoxBreakdown | null>(null);
+    const [selected, setSelected] = useState<ScuBoxSplits | null>(null);
     return (
       <div className="max-w-xl rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4">
         <MissionBoxBreakdownPicker

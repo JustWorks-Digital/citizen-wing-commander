@@ -11,11 +11,21 @@ import {
 import {
   formatCargoDeliveries,
   getCommodityBySlug,
+  getContractorBySlug,
   getLocationBySlug,
   getShipBySlug,
   sumCargoScu,
   sumShipCargoScu,
 } from "@/lib/fixtures";
+import {
+  cargoFromScuSplits,
+  locationsFromScuSplits,
+  normalizeCatalogRewards,
+  objectivesFromScuSplits,
+  type CatalogMissionReward,
+  type CatalogMissionScuSplit,
+} from "@/lib/missions/catalogMission";
+import { renameAllCatalogMissionScreenshots } from "@/lib/missions/renameCatalogScreenshot";
 import {
   describeShipStorageLines,
   formatSessionDuration,
@@ -43,10 +53,12 @@ import {
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
   resolveCommoditySlug,
+  resolveContractorSlug,
   resolveIncomingLeg,
   resolveLocationSlug,
   resolveShipSlugs,
   searchCommodities,
+  searchContractors,
   searchLocations,
   searchShips,
   type IncomingLeg,
@@ -481,6 +493,16 @@ export function toolSearchShips(query: string, limit = 10) {
   });
 }
 
+export function toolSearchContractors(query: string, limit = 10) {
+  return textResult({
+    results: searchContractors(query, limit).map((contractor) => ({
+      slug: contractor.slug,
+      name: contractor.name,
+      aliases: contractor.aliases,
+    })),
+  });
+}
+
 /**
  * Bay geometry + packing-rule summaries for AI guidance.
  * Prefer session ships; optional shipSlug/name looks up one sketch directly.
@@ -730,19 +752,23 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
     type: row.type,
     fingerprint: row.fingerprint,
     title: row.title,
-    contractor: row.contractor,
-    rewardAuec: row.rewardAuec,
+    contractorSlug: row.contractorSlug,
+    contractorName: row.contractorSlug
+      ? (getContractorBySlug(row.contractorSlug)?.name ?? row.contractorSlug)
+      : null,
+    rewards: row.rewards,
     offerLocationSlug: row.offerLocationSlug,
     offerLocationName: row.offerLocationSlug
       ? (getLocationBySlug(row.offerLocationSlug)?.name ?? row.offerLocationSlug)
       : null,
-    totalScu: row.totalScu,
-    maxContainerScu: row.maxContainerScu,
-    boxBreakdown: row.boxBreakdown,
+    scuTotal: row.scuTotal,
+    scuMaxContainerSize: row.scuMaxContainerSize,
+    scuBoxSplits: row.scuBoxSplits,
+    scuLocationSplits: row.scuLocationSplits,
     latestScreenshotPath: row.latestScreenshotPath,
-    runCount: row.runCount,
-    totalDurationMs: row.totalDurationMs,
-    avgDurationMs: row.avgDurationMs,
+    missionRunCount: row.missionRunCount,
+    missionTotalDurationMs: row.missionTotalDurationMs,
+    missionAvgDurationMs: row.missionAvgDurationMs,
     lastObservedAt: row.lastObservedAt,
     payload: row.payload,
     createdAt: row.createdAt,
@@ -758,6 +784,12 @@ export async function toolCreateMission(input: {
   type?: "hauling";
   title: string;
   contractor?: string;
+  /**
+   * Payout lines. Prefer over rewardAuec.
+   * Hauling: usually [{ kind: "auec", amount }]. Blueprint for other mission types.
+   */
+  rewards?: CatalogMissionReward[];
+  /** @deprecated Prefer rewards: [{ kind: "auec", amount }] */
   rewardAuec?: number;
   /** Where the offer was seen / screenshot taken. */
   offerLocation?: string;
@@ -767,7 +799,28 @@ export async function toolCreateMission(input: {
   to?: string[];
   /** Hauling: cargo lines. */
   cargo?: Array<{ commodity: string; scu: number }>;
-  maxContainerScu?: number;
+  /**
+   * Hauling: structured per-stop SCU amounts (sibling of scuTotal).
+   * Prefer for multi-stop contracts; cargo/from/to can be derived.
+   */
+  scuSplits?: Array<{
+    kind?: "deliver" | "collect";
+    from: string;
+    to: string;
+    commodity: string;
+    scu: number;
+  }>;
+  /** SCU totals per location: `{ from: { slug: scu }, to: { slug: scu } }`. */
+  scuLocationSplits?: {
+    from: Record<string, number>;
+    to: Record<string, number>;
+  };
+  /**
+   * Screenshot-style Primary Objectives bullets (plain text).
+   * When omitted and scuSplits are present, derived automatically.
+   */
+  objectives?: string[];
+  scuMaxContainerSize?: number;
   latestScreenshotPath?: string;
   extras?: Record<string, unknown>;
 }) {
@@ -776,12 +829,6 @@ export async function toolCreateMission(input: {
     if (type !== "hauling") {
       return textResult({
         error: `Unsupported mission type: ${type}. Supported: hauling.`,
-      });
-    }
-
-    if (!input.from?.length || !input.to?.length || !input.cargo?.length) {
-      return textResult({
-        error: "Hauling missions require from[], to[], and cargo[].",
       });
     }
 
@@ -794,25 +841,61 @@ export async function toolCreateMission(input: {
       });
     }
 
-    const fromLocationSlugs: string[] = [];
-    for (const loc of input.from) {
+    const contractorSlug = input.contractor?.trim()
+      ? resolveContractorSlug(input.contractor)
+      : null;
+    if (input.contractor?.trim() && !contractorSlug) {
+      return textResult({
+        error: `Unknown contractor: ${input.contractor}. Prefer search_contractors first.`,
+      });
+    }
+
+    const scuSplits: CatalogMissionScuSplit[] = [];
+    for (const line of input.scuSplits ?? []) {
+      const fromLocationSlug = resolveLocationSlug(line.from);
+      if (!fromLocationSlug) {
+        return textResult({ error: `Unknown scuSplit from: ${line.from}` });
+      }
+      const toLocationSlug = resolveLocationSlug(line.to);
+      if (!toLocationSlug) {
+        return textResult({ error: `Unknown scuSplit to: ${line.to}` });
+      }
+      const commoditySlug = resolveCommoditySlug(line.commodity);
+      if (!commoditySlug) {
+        return textResult({
+          error: `Unknown scuSplit commodity: ${line.commodity}`,
+        });
+      }
+      scuSplits.push({
+        kind: line.kind ?? "deliver",
+        fromLocationSlug,
+        toLocationSlug,
+        commoditySlug,
+        commodityName:
+          getCommodityBySlug(commoditySlug)?.name ?? commoditySlug,
+        scu: line.scu,
+      });
+    }
+
+    let fromLocationSlugs: string[] = [];
+    for (const loc of input.from ?? []) {
       const slug = resolveLocationSlug(loc);
       if (!slug) return textResult({ error: `Unknown from location: ${loc}` });
       if (!fromLocationSlugs.includes(slug)) fromLocationSlugs.push(slug);
     }
-    const toLocationSlugs: string[] = [];
-    for (const loc of input.to) {
+    let toLocationSlugs: string[] = [];
+    for (const loc of input.to ?? []) {
       const slug = resolveLocationSlug(loc);
       if (!slug) return textResult({ error: `Unknown to location: ${loc}` });
       if (!toLocationSlugs.includes(slug)) toLocationSlugs.push(slug);
     }
 
-    const cargo: Array<{
+    let cargo: Array<{
       commoditySlug: string;
       commodityName: string;
       scu: number;
     }> = [];
-    for (const line of input.cargo) {
+    for (const line of input.cargo ?? []) {
       const commoditySlug = resolveCommoditySlug(line.commodity);
       if (!commoditySlug) {
         return textResult({ error: `Unknown commodity: ${line.commodity}` });
@@ -825,17 +908,49 @@ export async function toolCreateMission(input: {
       });
     }
 
+    if (scuSplits.length > 0) {
+      if (cargo.length === 0) cargo = cargoFromScuSplits(scuSplits);
+      const derived = locationsFromScuSplits(scuSplits);
+      if (fromLocationSlugs.length === 0) {
+        fromLocationSlugs = derived.fromLocationSlugs;
+      }
+      if (toLocationSlugs.length === 0) {
+        toLocationSlugs = derived.toLocationSlugs;
+      }
+    }
+
+    if (!fromLocationSlugs.length || !toLocationSlugs.length || !cargo.length) {
+      return textResult({
+        error:
+          "Hauling missions require from/to/cargo, or scuSplits[] that can derive them.",
+      });
+    }
+
+    const objectives =
+      input.objectives !== undefined
+        ? input.objectives
+        : scuSplits.length > 0
+          ? objectivesFromScuSplits(
+              scuSplits,
+              (slug) => getLocationBySlug(slug)?.name ?? slug,
+            )
+          : undefined;
+
     const row = await upsertCatalogMission({
       type: "hauling",
       payload: {
         title: input.title,
-        contractor: input.contractor ?? null,
-        rewardAuec: input.rewardAuec ?? null,
+        contractorSlug,
+        rewards: normalizeCatalogRewards(input.rewards, input.rewardAuec),
         offerLocationSlug,
         fromLocationSlugs,
         toLocationSlugs,
         cargo,
-        maxContainerScu: input.maxContainerScu ?? null,
+        scuSplits:
+          input.scuSplits !== undefined ? scuSplits : undefined,
+        scuLocationSplits: input.scuLocationSplits,
+        objectives,
+        scuMaxContainerSize: input.scuMaxContainerSize ?? null,
         latestScreenshotPath: input.latestScreenshotPath ?? null,
         extras: input.extras,
       },
@@ -948,13 +1063,41 @@ export async function toolRecordMissionRun(input: {
     });
     return textResult({
       ok: true,
-      message: `Recorded run; avgDurationMs=${result.mission.avgDurationMs}`,
+      message: `Recorded run; missionAvgDurationMs=${result.mission.missionAvgDurationMs}`,
       run: result.run,
       mission: presentCatalogMission(result.mission),
     });
   } catch (error) {
     return textResult({
       error: error instanceof Error ? error.message : "Failed to record run",
+    });
+  }
+}
+
+export async function toolRenameCatalogScreenshots(input?: {
+  dryRun?: boolean;
+  limit?: number;
+  cleanupDuplicates?: boolean;
+}) {
+  try {
+    const result = await renameAllCatalogMissionScreenshots({
+      dryRun: Boolean(input?.dryRun),
+      limit: input?.limit ?? 500,
+      cleanupDuplicates: input?.cleanupDuplicates !== false,
+    });
+    return textResult({
+      ok: true,
+      message: input?.dryRun
+        ? `Dry run: ${result.changed} would change, ${result.skipped} already match, ${result.errors.length} errors.`
+        : `Renamed/copied/relinked ${result.changed}; skipped ${result.skipped}; duplicatesDeleted ${result.duplicatesDeleted}; errors ${result.errors.length}.`,
+      ...result,
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to rename catalog screenshots",
     });
   }
 }

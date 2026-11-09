@@ -16,6 +16,7 @@ import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 import type {
   CatalogMissionNoteSentiment,
   HaulingCatalogMissionPayload,
+  ScuLocationSplits,
 } from "@/lib/missions/catalogMission";
 import type {
   ChecklistItemProgressMeta,
@@ -308,6 +309,29 @@ export const checklistProgressRelations = relations(
 );
 
 /**
+ * Contractors / orgs that post missions (MobiGlas “Contracted by”).
+ * Seeded from `lib/fixtures/contractors.json`; catalog missions store `contractorSlug`.
+ */
+export const contractors = pgTable(
+  "contractors",
+  {
+    slug: text("slug").primaryKey(),
+    name: text("name").notNull(),
+    aliases: jsonb("aliases")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("contractors_name_idx").on(table.name)],
+);
+
+/**
  * Planning catalog of observed missions (not live checklist `missions` rows).
  * Dedupe via `fingerprint`. Timing averages come from `catalog_mission_runs`.
  */
@@ -316,28 +340,44 @@ export const catalogMissions = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     type: missionTypeEnum("type").notNull().default("hauling"),
-    /** sha256 of normalized title/contractor/offer/from/to/cargo */
+    /** sha256 of normalized title/contractorSlug/offer/from/to/cargo */
     fingerprint: text("fingerprint").notNull(),
     title: text("title").notNull(),
-    contractor: text("contractor"),
-    rewardAuec: integer("reward_auec"),
+    /** FK to `contractors.slug` (fixture-backed catalog). */
+    contractorSlug: text("contractor_slug").references(() => contractors.slug, {
+      onDelete: "set null",
+    }),
+    /**
+     * Payout lines: [{ kind: "auec", amount }, { kind: "blueprint", name, slug? }, …].
+     * Hauling is usually a single aUEC line; other mission types may mix rewards.
+     */
+    rewards: jsonb("rewards")
+      .$type<HaulingCatalogMissionPayload["rewards"]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     /** Where the offer was seen / screenshot taken. */
     offerLocationSlug: text("offer_location_slug"),
-    totalScu: integer("total_scu").notNull().default(0),
-    maxContainerScu: integer("max_container_scu"),
-    /** Crate counts: { size1, size2, size4, size8 }. */
-    boxBreakdown: jsonb("box_breakdown")
-      .$type<HaulingCatalogMissionPayload["boxBreakdown"]>()
+    scuTotal: integer("scu_total").notNull().default(0),
+    scuMaxContainerSize: integer("scu_max_container_size"),
+    /** Crate counts: { scuOne, scuTwo, scuFour, scuEight }. */
+    scuBoxSplits: jsonb("scu_box_splits")
+      .$type<HaulingCatalogMissionPayload["scuBoxSplits"]>()
       .notNull()
-      .default(sql`'{"size1":0,"size2":0,"size4":0,"size8":0}'::jsonb`),
+      .default(
+        sql`'{"scuOne":0,"scuTwo":0,"scuFour":0,"scuEight":0}'::jsonb`,
+      ),
+    /** SCU totals per location: { from: { slug: scu }, to: { slug: scu } }. */
+    scuLocationSplits: jsonb("scu_location_splits").$type<ScuLocationSplits | null>(),
     /** Full structured contract body. */
     payload: jsonb("payload")
       .$type<HaulingCatalogMissionPayload>()
       .notNull(),
     latestScreenshotPath: text("latest_screenshot_path"),
-    runCount: integer("run_count").notNull().default(0),
-    totalDurationMs: integer("total_duration_ms").notNull().default(0),
-    avgDurationMs: integer("avg_duration_ms"),
+    missionRunCount: integer("mission_run_count").notNull().default(0),
+    missionTotalDurationMs: integer("mission_total_duration_ms")
+      .notNull()
+      .default(0),
+    missionAvgDurationMs: integer("mission_avg_duration_ms"),
     lastObservedAt: timestamp("last_observed_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -351,6 +391,7 @@ export const catalogMissions = pgTable(
   (table) => [
     uniqueIndex("catalog_missions_fingerprint_uidx").on(table.fingerprint),
     index("catalog_missions_offer_location_idx").on(table.offerLocationSlug),
+    index("catalog_missions_contractor_slug_idx").on(table.contractorSlug),
     index("catalog_missions_type_idx").on(table.type),
     index("catalog_missions_title_idx").on(table.title),
   ],
@@ -396,11 +437,19 @@ export const catalogMissionRuns = pgTable(
   (table) => [index("catalog_mission_runs_mission_idx").on(table.missionId)],
 );
 
+export const contractorsRelations = relations(contractors, ({ many }) => ({
+  catalogMissions: many(catalogMissions),
+}));
+
 export const catalogMissionsRelations = relations(
   catalogMissions,
-  ({ many }) => ({
+  ({ many, one }) => ({
     notes: many(catalogMissionNotes),
     runs: many(catalogMissionRuns),
+    contractor: one(contractors, {
+      fields: [catalogMissions.contractorSlug],
+      references: [contractors.slug],
+    }),
   }),
 );
 
@@ -435,6 +484,7 @@ export type Ship = typeof ships.$inferSelect;
 export type ShipBayPreference = typeof shipBayPreferences.$inferSelect;
 export type Mission = typeof missions.$inferSelect;
 export type ChecklistProgress = typeof checklistProgress.$inferSelect;
+export type Contractor = typeof contractors.$inferSelect;
 export type CatalogMission = typeof catalogMissions.$inferSelect;
 export type CatalogMissionNote = typeof catalogMissionNotes.$inferSelect;
 export type CatalogMissionRun = typeof catalogMissionRuns.$inferSelect;

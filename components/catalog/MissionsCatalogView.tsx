@@ -10,6 +10,7 @@ import {
   type ImageLightboxItem,
 } from "@/components/ui/ImageLightbox";
 import { MissionCatalogDetail } from "./MissionCatalogDetail";
+import { MissionCatalogJsonModal } from "./MissionCatalogJsonModal";
 import { MissionCatalogTable } from "./MissionCatalogTable";
 
 export type MissionsCatalogViewProps = {
@@ -27,6 +28,7 @@ export function MissionsCatalogView({
   const [isLoading, setIsLoading] = useState(!initialMissions);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CatalogMission | null>(null);
+  const [jsonMission, setJsonMission] = useState<CatalogMission | null>(null);
   const [lightbox, setLightbox] = useState<ImageLightboxItem | null>(null);
 
   useEffect(() => {
@@ -55,13 +57,18 @@ export function MissionsCatalogView({
   }, [initialMissions]);
 
   useEffect(() => {
-    if (!selected) return;
+    if (!selected && !jsonMission) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !lightbox) setSelected(null);
+      if (event.key !== "Escape" || lightbox) return;
+      if (jsonMission) {
+        setJsonMission(null);
+        return;
+      }
+      setSelected(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, lightbox]);
+  }, [selected, jsonMission, lightbox]);
 
   const filtered = useMemo(
     () => searchCatalogMissions(missions, query),
@@ -91,9 +98,6 @@ export function MissionsCatalogView({
           <h2 className="text-xl font-semibold tracking-wide text-rsi-text sm:text-2xl">
             Missions catalog
           </h2>
-          <p className="mt-1 text-sm text-rsi-text-muted">
-            Observed contracts stored for planning — not the live checklist.
-          </p>
         </div>
         <label className="block w-full sm:max-w-sm">
           <span className="mb-1 block font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
@@ -133,6 +137,7 @@ export function MissionsCatalogView({
             selectedId={selected?.id ?? null}
             onSelect={setSelected}
             onViewSource={openSource}
+            onViewObject={setJsonMission}
           />
         </>
       )}
@@ -142,6 +147,13 @@ export function MissionsCatalogView({
           mission={selected}
           onClose={() => setSelected(null)}
           onViewSource={openSource}
+        />
+      ) : null}
+
+      {jsonMission ? (
+        <MissionCatalogJsonModal
+          mission={jsonMission}
+          onClose={() => setJsonMission(null)}
         />
       ) : null}
 

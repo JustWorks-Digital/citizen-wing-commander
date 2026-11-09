@@ -1,8 +1,10 @@
 import {
   getCommodityBySlug,
+  getContractorBySlug,
   getLocationBySlug,
   getShipBySlug,
   listCommodities,
+  listContractors,
   listLocations,
   listShips,
 } from "@/lib/fixtures";
@@ -130,6 +132,46 @@ export function searchShips(query: string, limit = 10) {
         normalize(ship.nameFull).includes(needle) ||
         normalize(ship.slug).includes(needle) ||
         normalize(ship.manufacturer ?? "").includes(needle),
+    )
+    .slice(0, limit);
+}
+
+export function resolveContractorSlug(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (getContractorBySlug(trimmed)) return trimmed;
+
+  const needle = normalize(trimmed);
+  const exact = listContractors().find(
+    (contractor) =>
+      normalize(contractor.slug) === needle ||
+      normalize(contractor.name) === needle ||
+      contractor.aliases.some((alias) => normalize(alias) === needle),
+  );
+  if (exact) return exact.slug;
+
+  const partial = listContractors().find(
+    (contractor) =>
+      normalize(contractor.name).includes(needle) ||
+      needle.includes(normalize(contractor.name)) ||
+      contractor.aliases.some(
+        (alias) =>
+          normalize(alias).includes(needle) ||
+          needle.includes(normalize(alias)),
+      ),
+  );
+  return partial?.slug ?? null;
+}
+
+export function searchContractors(query: string, limit = 10) {
+  const needle = normalize(query);
+  if (!needle) return listContractors().slice(0, limit);
+  return listContractors()
+    .filter(
+      (contractor) =>
+        normalize(contractor.name).includes(needle) ||
+        normalize(contractor.slug).includes(needle) ||
+        contractor.aliases.some((alias) => normalize(alias).includes(needle)),
     )
     .slice(0, limit);
 }

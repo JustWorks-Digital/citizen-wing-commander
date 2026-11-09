@@ -45,6 +45,14 @@ export type FixtureShip = {
   containerSizes: number[];
 };
 
+/** Mission contractor / org that posts contracts (MobiGlas “Contracted by”). */
+export type FixtureContractor = {
+  slug: string;
+  name: string;
+  /** Alternate spellings / short names used in OCR / UI. */
+  aliases: string[];
+};
+
 export type FixtureFile<T> = {
   source: string;
   sourceLabel: string;
