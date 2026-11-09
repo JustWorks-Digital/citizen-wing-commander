@@ -39,6 +39,13 @@ export type CargoDelivery = {
    * When set, prefer this over coarse `shipStorageLocation` for UI hints.
    */
   gridCoord?: CargoGridCoordRef;
+  /**
+   * Explicit crate sizes for bay packing (from a selected mission breakdown).
+   * When set, the placer uses these instead of greedy 8→4→2→1.
+   */
+  boxSizes?: Array<1 | 2 | 4 | 8>;
+  /** Session mission id this cargo line came from (when known). */
+  missionId?: string;
 };
 
 /** Stop role for the location badge. */
@@ -242,7 +249,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
       ],
       cargoSummary: "8 SCU Pressurized Ice · 9 SCU Processed Food",
       isCompleted: false,
-      screenshots: [],
+      screenshots: ["demo-batch/area18-baijini-contract.png"],
       mobiglas: {
         tab: "Accepted",
         acceptedCount: "1/10",

@@ -1,3 +1,4 @@
+import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
 import type {
   HaulingIntakeCargoLine,
   HaulingIntakeContract,
@@ -31,6 +32,11 @@ export type SessionMission = {
     scu: number;
   }>;
   maxContainerScu?: number;
+  /**
+   * Selected physical crate mix for this mission’s total SCU.
+   * Drives 2D/3D bay packing when stamped onto route cargo lines.
+   */
+  boxBreakdown?: CargoBoxBreakdown;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
   cargoSummary: string;
   isCompleted: boolean;

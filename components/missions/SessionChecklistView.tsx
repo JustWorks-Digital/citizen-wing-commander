@@ -35,6 +35,7 @@ import {
 } from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
+  setMissionBoxBreakdown,
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
 } from "@/lib/missions/rebuildSessionRoute";
@@ -502,6 +503,8 @@ export function SessionChecklistView({
         rows={session.rows}
         focusedStopId={resolvedFocusedStopId}
         onFocusStop={setFocusedStopId}
+        missions={session.missions ?? []}
+        sessionId={session.id}
         toolbarStart={
           <SessionRouteProgressStats
             completedLegs={completedLegs}
@@ -563,6 +566,18 @@ export function SessionChecklistView({
         }}
         onRemoveMission={(missionId) => {
           const result = removeMissionAndRebuildRoute(session, missionId);
+          if (!result.ok) {
+            setLoadError(result.error);
+            return;
+          }
+          persistSession(result.session);
+        }}
+        onSelectBoxBreakdown={(missionId, breakdown) => {
+          const result = setMissionBoxBreakdown(
+            session,
+            missionId,
+            breakdown,
+          );
           if (!result.ok) {
             setLoadError(result.error);
             return;

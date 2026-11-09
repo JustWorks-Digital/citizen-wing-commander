@@ -1,0 +1,41 @@
+{
+  "source": "local-fixture",
+  "sourceLabel": "Committed ship bay organization preferences",
+  "fetchedAt": "2026-11-09T02:05:00.000Z",
+  "items": [
+    {
+      "shipSlug": "c2-hercules-starlifter",
+      "payload": {
+        "notes": "C2 Hercules: large rear-access bay. Prefer flat deck layers; keep a clear center aisle when practical.",
+        "preferredZoneOrder": ["rear", "middle", "front"],
+        "preferredRuleIds": [
+          "prefer-flat-layers",
+          "prefer-smaller-on-larger",
+          "prefer-back-when-full-height"
+        ],
+        "commodityZoneHints": {},
+        "guidelines": [
+          "Load from the ramp (rear) first when stacking deep.",
+          "Keep full-height stacks toward the back of the bay."
+        ]
+      }
+    },
+    {
+      "shipSlug": "constellation-mk-v-centaurus",
+      "payload": {
+        "notes": "Mk V Centaurus: narrower bay; pack flat layers and avoid blocking the center path.",
+        "preferredZoneOrder": ["rear", "middle", "front"],
+        "preferredRuleIds": [
+          "prefer-flat-layers",
+          "prefer-smaller-on-larger",
+          "prefer-back-when-full-height"
+        ],
+        "commodityZoneHints": {},
+        "guidelines": [
+          "Prefer three-wide 8 SCU footprints where the bay allows.",
+          "Do not wall off forward cells with full-height stacks."
+        ]
+      }
+    }
+  ]
+}

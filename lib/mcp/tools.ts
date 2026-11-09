@@ -66,6 +66,12 @@ import {
   getCargoGridViewScale,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
+import {
+  listResolvedShipBayPreferences,
+  resolveShipBayPreferences,
+  updateShipBayPreferences,
+} from "@/lib/ships/resolveShipBayPreferences";
+import type { ShipBayPreferencePayload } from "@/lib/ships/shipBayPreferences";
 
 const PLAYBOOK_PATH = path.join(
   process.cwd(),
@@ -501,6 +507,9 @@ export async function toolGetSessionCargoGrid(input?: {
     }
     const slug = resolved.shipSlugs[0] ?? null;
     const sketch = getCargoGridSketchBySlug(slug);
+    const bayPreferences = slug
+      ? await resolveShipBayPreferences(slug)
+      : null;
     if (!sketch) {
       return textResult({
         ok: false,
@@ -510,6 +519,7 @@ export async function toolGetSessionCargoGrid(input?: {
           .join(", ")}.`,
         coordinateSystem: cargoGridCoordinateSystem,
         placementRules,
+        bayPreferences,
         knownSketches,
       });
     }
@@ -520,6 +530,7 @@ export async function toolGetSessionCargoGrid(input?: {
       grid: presentCargoGridSketch(sketch),
       coordinateSystem: cargoGridCoordinateSystem,
       placementRules,
+      bayPreferences,
       knownSketches,
     });
   }
@@ -544,6 +555,9 @@ export async function toolGetSessionCargoGrid(input?: {
   const missingSketches = session.shipSlugs.filter(
     (slug) => !getCargoGridSketchBySlug(slug),
   );
+  const bayPreferences = await Promise.all(
+    session.shipSlugs.map((slug) => resolveShipBayPreferences(slug)),
+  );
 
   return textResult({
     ok: true,
@@ -551,6 +565,7 @@ export async function toolGetSessionCargoGrid(input?: {
     sessionId: session.id,
     ships,
     grids,
+    bayPreferences,
     missingSketches,
     message:
       grids.length > 0
@@ -889,6 +904,90 @@ export async function toolRecordMissionRun(input: {
   } catch (error) {
     return textResult({
       error: error instanceof Error ? error.message : "Failed to record run",
+    });
+  }
+}
+
+export async function toolListShipBayPreferences() {
+  const items = await listResolvedShipBayPreferences();
+  return textResult({
+    ok: true,
+    priority: "database_over_file",
+    note: "Database rows override the committed file fixture for the same shipSlug. File entries are defaults until DB is written.",
+    items,
+  });
+}
+
+export async function toolGetShipBayPreferences(ship: string) {
+  const resolved = resolveShipSlugs([ship]);
+  if (!resolved.ok) {
+    return textResult({ error: resolved.error });
+  }
+  const shipSlug = resolved.shipSlugs[0]!;
+  const prefs = await resolveShipBayPreferences(shipSlug);
+  return textResult({
+    ok: true,
+    priority: "database_over_file",
+    ...prefs,
+  });
+}
+
+export async function toolUpdateShipBayPreferences(input: {
+  ship: string;
+  notes?: string;
+  appendNotes?: boolean;
+  preferredZoneOrder?: Array<"front" | "middle" | "rear">;
+  preferredRuleIds?: Array<
+    | "prefer-flat-layers"
+    | "prefer-smaller-on-larger"
+    | "prefer-back-when-full-height"
+  >;
+  commodityZoneHints?: Record<string, "front" | "middle" | "rear">;
+  guidelines?: string[];
+  appendGuidelines?: string[];
+}) {
+  const resolved = resolveShipSlugs([input.ship]);
+  if (!resolved.ok) {
+    return textResult({ error: resolved.error });
+  }
+  const shipSlug = resolved.shipSlugs[0]!;
+
+  const patch: Partial<ShipBayPreferencePayload> & {
+    appendGuidelines?: string[];
+    replaceNotes?: boolean;
+  } = {
+    replaceNotes: !input.appendNotes,
+  };
+  if (typeof input.notes === "string") patch.notes = input.notes;
+  if (input.preferredZoneOrder) {
+    patch.preferredZoneOrder = input.preferredZoneOrder;
+  }
+  if (input.preferredRuleIds) patch.preferredRuleIds = input.preferredRuleIds;
+  if (input.commodityZoneHints) {
+    patch.commodityZoneHints = input.commodityZoneHints;
+  }
+  if (input.guidelines) patch.guidelines = input.guidelines;
+  if (input.appendGuidelines?.length) {
+    patch.appendGuidelines = input.appendGuidelines;
+  }
+
+  try {
+    const prefs = await updateShipBayPreferences({
+      shipSlug,
+      patch,
+      updatedBy: "mcp",
+    });
+    return textResult({
+      ok: true,
+      message: `Updated bay preferences for ${shipSlug} (stored in database; file fixture unchanged).`,
+      ...prefs,
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update ship bay preferences",
     });
   }
 }

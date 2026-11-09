@@ -48,7 +48,7 @@
         }
       ],
       "notes": [
-        "6×10×4 = 240 SCU. Width fits three 8 SCU crates (2×2 base) across."
+        "6×10×4 = 240 SCU. Width: three 8 SCU crates across. Height: two 8 SCU crates stacked (not three)."
       ],
       "viewScale": {
         "top": 2

@@ -22,6 +22,7 @@ import type {
   HaulingMissionPayload,
   MissionPayload,
 } from "@/lib/missions/types";
+import type { ShipBayPreferencePayload } from "@/lib/ships/shipBayPreferences";
 
 /** Extensible mission kinds. Start with hauling; add more without reshaping tables. */
 export const missionTypeEnum = pgEnum("mission_type", [
@@ -155,6 +156,26 @@ export const ships = pgTable(
     index("ships_selectable_idx").on(table.isSelectable),
   ],
 );
+
+/**
+ * Per-ship cargo bay organization preferences.
+ * DB is the live source of truth (MCP updates accumulate here).
+ * A committed file fixture mirrors defaults; DB wins when both exist.
+ */
+export const shipBayPreferences = pgTable("ship_bay_preferences", {
+  shipSlug: text("ship_slug").primaryKey(),
+  payload: jsonb("payload")
+    .$type<ShipBayPreferencePayload>()
+    .notNull(),
+  /** Who/what last wrote: mcp | manual | import */
+  updatedBy: text("updated_by").notNull().default("mcp"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const sessionPlayers = pgTable(
   "session_players",
@@ -411,6 +432,7 @@ export type Player = typeof players.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type DeliverySession = typeof deliverySessions.$inferSelect;
 export type Ship = typeof ships.$inferSelect;
+export type ShipBayPreference = typeof shipBayPreferences.$inferSelect;
 export type Mission = typeof missions.$inferSelect;
 export type ChecklistProgress = typeof checklistProgress.$inferSelect;
 export type CatalogMission = typeof catalogMissions.$inferSelect;

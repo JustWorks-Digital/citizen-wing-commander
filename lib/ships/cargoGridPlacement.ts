@@ -29,6 +29,8 @@ import type {
 } from "@/lib/missions/mockSession";
 
 export type CargoPlacementSegment = {
+  /** Explicit crates; when set, skips greedy decompose. */
+  boxSizes?: CargoBoxScu[];
   commoditySlug: string;
   commodityName: string;
   scu: number;
@@ -259,9 +261,16 @@ export function placeCargoInZone(
     occupiedSizes.set(key, Number.POSITIVE_INFINITY);
   }
 
+  const sizesForSegment = (segment: CargoPlacementSegment): CargoBoxScu[] => {
+    if (segment.boxSizes && segment.boxSizes.length > 0) {
+      return segment.boxSizes;
+    }
+    return decomposeScuIntoBoxes(segment.scu);
+  };
+
   if (!bounds) {
     for (const segment of segments) {
-      for (const size of decomposeScuIntoBoxes(segment.scu)) {
+      for (const size of sizesForSegment(segment)) {
         unplaced.push({
           size,
           commoditySlug: segment.commoditySlug,
@@ -282,7 +291,7 @@ export function placeCargoInZone(
 
   const pending: Pending[] = [];
   for (const segment of segments) {
-    for (const size of decomposeScuIntoBoxes(segment.scu)) {
+    for (const size of sizesForSegment(segment)) {
       pending.push({
         size,
         commoditySlug: segment.commoditySlug,
@@ -546,6 +555,7 @@ function segmentFromCargo(cargo: CargoDelivery): CargoPlacementSegment {
     scu: cargo.scu,
     color: commodity?.color ?? null,
     color2: commodity?.color2 ?? null,
+    boxSizes: cargo.boxSizes,
   };
 }
 

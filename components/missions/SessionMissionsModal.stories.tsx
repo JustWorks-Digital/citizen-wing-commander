@@ -15,6 +15,7 @@ const meta = {
     onToggleHidden: () => {},
     onToggleCompleted: () => {},
     onRemoveMission: () => {},
+    onSelectBoxBreakdown: () => {},
   },
 } satisfies Meta<typeof SessionMissionsModal>;
 

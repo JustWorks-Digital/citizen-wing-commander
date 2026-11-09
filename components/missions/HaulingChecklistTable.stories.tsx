@@ -26,6 +26,8 @@ type Story = StoryObj<typeof meta>;
 function InteractiveTable(args: {
   rows: typeof mockSessionChecklist.rows;
   onToggle: (rowId: string) => void;
+  missions?: typeof mockSessionChecklist.missions;
+  sessionId?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(
@@ -37,6 +39,8 @@ function InteractiveTable(args: {
       rows={rows}
       focusedStopId={focusedStopId}
       onFocusStop={setFocusedStopId}
+      missions={args.missions ?? mockSessionChecklist.missions}
+      sessionId={args.sessionId ?? mockSessionChecklist.id}
       onToggle={(rowId) => {
         setRows((prev) =>
           prev.map((row) =>
@@ -54,6 +58,8 @@ export const Default: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
+    missions: mockSessionChecklist.missions,
+    sessionId: mockSessionChecklist.id,
   },
   render: (args) => <InteractiveTable {...args} />,
 };
@@ -62,6 +68,8 @@ export const Mobile: Story = {
   args: {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
+    missions: mockSessionChecklist.missions,
+    sessionId: mockSessionChecklist.id,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },

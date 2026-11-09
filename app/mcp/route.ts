@@ -11,9 +11,11 @@ import {
   toolGetHaulingScreenshot,
   toolGetMission,
   toolGetSessionCargoGrid,
+  toolGetShipBayPreferences,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
   toolListMissions,
+  toolListShipBayPreferences,
   toolRecordMissionRun,
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
@@ -25,6 +27,7 @@ import {
   toolSetSessionName,
   toolSetSessionShips,
   toolStoreHaulingScreenshot,
+  toolUpdateShipBayPreferences,
 } from "@/lib/mcp/tools";
 
 const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
@@ -444,7 +447,7 @@ const handler = createMcpHandler(
       {
         title: "Get session cargo grid",
         description:
-          "Use this before planning bay packing. Returns bay width/length/height in 1-SCU cells, zone layout (front/middle/rear), coordinate axes, and placement-rule summaries. Defaults to the session’s ships; pass ship to look up one sketch by name/slug. Do not invent grid sizes.",
+          "Use this before planning bay packing. Returns bay width/length/height in 1-SCU cells, zone layout (front/middle/rear), coordinate axes, placement-rule summaries, and per-ship bay organization preferences (DB overrides committed file). Defaults to the session’s ships; pass ship to look up one sketch by name/slug. Do not invent grid sizes.",
         inputSchema: z.object({
           sessionId: sessionIdSchema,
           ship: z
@@ -457,6 +460,82 @@ const handler = createMcpHandler(
         annotations: { readOnlyHint: true },
       },
       async (input) => toolGetSessionCargoGrid(input),
+    );
+
+    server.registerTool(
+      "list_ship_bay_preferences",
+      {
+        title: "List ship bay preferences",
+        description:
+          "Use this to see per-ship cargo bay organization preferences. Database rows override the committed file fixture for the same ship.",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => toolListShipBayPreferences(),
+    );
+
+    server.registerTool(
+      "get_ship_bay_preferences",
+      {
+        title: "Get ship bay preferences",
+        description:
+          "Use this before packing a specific hull. Returns bay organization preferences for one ship (database wins over file defaults).",
+        inputSchema: z.object({
+          ship: z
+            .string()
+            .describe("Ship name or slug (e.g. C2 Hercules, c2-hercules-starlifter)"),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async ({ ship }) => toolGetShipBayPreferences(ship),
+    );
+
+    server.registerTool(
+      "update_ship_bay_preferences",
+      {
+        title: "Update ship bay preferences",
+        description:
+          "Use this when you learn a better way to organize a ship's bay. Writes to the database only (committed file fixture is unchanged and may differ). Prefer appendNotes/appendGuidelines to accumulate knowledge over time.",
+        inputSchema: z.object({
+          ship: z.string().describe("Ship name or slug"),
+          notes: z
+            .string()
+            .optional()
+            .describe("Freeform packing guidance for this hull"),
+          appendNotes: z
+            .boolean()
+            .optional()
+            .describe(
+              "When true with notes, append to existing notes instead of replacing",
+            ),
+          preferredZoneOrder: z
+            .array(z.enum(["front", "middle", "rear"]))
+            .optional()
+            .describe("Preferred bay zone order for organizing cargo"),
+          preferredRuleIds: z
+            .array(
+              z.enum([
+                "prefer-flat-layers",
+                "prefer-smaller-on-larger",
+                "prefer-back-when-full-height",
+              ]),
+            )
+            .optional(),
+          commodityZoneHints: z
+            .record(z.string(), z.enum(["front", "middle", "rear"]))
+            .optional()
+            .describe("Map commodity slug → preferred bay zone"),
+          guidelines: z
+            .array(z.string())
+            .optional()
+            .describe("Replace the guidelines list"),
+          appendGuidelines: z
+            .array(z.string())
+            .optional()
+            .describe("Append guideline bullets without clearing existing ones"),
+        }),
+      },
+      async (input) => toolUpdateShipBayPreferences(input),
     );
 
     server.registerTool(

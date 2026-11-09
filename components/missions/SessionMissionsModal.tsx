@@ -10,7 +10,9 @@ import {
   missionRewardLabel,
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
+import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { MissionBoxBreakdownPicker } from "./MissionBoxBreakdownPicker";
 
 export type SessionMissionsModalProps = {
   open: boolean;
@@ -19,6 +21,10 @@ export type SessionMissionsModalProps = {
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
   onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
   onRemoveMission: (missionId: string) => void;
+  onSelectBoxBreakdown: (
+    missionId: string,
+    breakdown: CargoBoxBreakdown,
+  ) => void;
 };
 
 function VisibilityIcon({ isHidden }: { isHidden: boolean }) {
@@ -120,6 +126,7 @@ export function SessionMissionsModal({
   onToggleHidden,
   onToggleCompleted,
   onRemoveMission,
+  onSelectBoxBreakdown,
 }: SessionMissionsModalProps) {
   const [enriched, setEnriched] = useState<SessionMission[]>(missions);
 
@@ -310,6 +317,15 @@ export function SessionMissionsModal({
 
                     <ObjectiveGroup label="Collect" lines={collect} />
                     <ObjectiveGroup label="Deliver" lines={deliver} />
+                    <MissionBoxBreakdownPicker
+                      totalScu={totalScu}
+                      maxContainerScu={mission.maxContainerScu}
+                      selected={mission.boxBreakdown ?? null}
+                      disabled={isCompleted}
+                      onSelect={(breakdown) =>
+                        onSelectBoxBreakdown(mission.id, breakdown)
+                      }
+                    />
                   </article>
                 );
               })}

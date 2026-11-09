@@ -1,10 +1,16 @@
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
-import { resolveIncomingLeg } from "@/lib/sessions/resolveRefs";
+import {
+  resolveCommoditySlug,
+  resolveIncomingLeg,
+} from "@/lib/sessions/resolveRefs";
+import { assignBoxSizesFromBreakdown } from "@/lib/missions/boxBreakdownOptions";
+import type { CargoBoxBreakdown } from "@/lib/missions/catalogMission";
 import {
   intakeContractFromSessionMission,
   type SessionMission,
 } from "@/lib/missions/sessionMissions";
 import type {
+  CargoDelivery,
   HaulingChecklistRow,
   SessionChecklistModel,
 } from "@/lib/missions/mockSession";
@@ -66,6 +72,12 @@ function rebuildRowsFromMissions(
     rows.push(resolved.row);
   }
 
+  let nextRows = rows;
+  for (const mission of missions) {
+    if (!mission.boxBreakdown) continue;
+    nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
+  }
+
   return {
     ok: true,
     session: applySessionCompletionTiming({
@@ -73,7 +85,7 @@ function rebuildRowsFromMissions(
       missions,
       missionCount,
       missionsCompleted,
-      rows,
+      rows: nextRows,
     }),
   };
 }
@@ -114,6 +126,92 @@ export function removeMissionAndRebuildRoute(
     (mission) => mission.id !== missionId,
   );
   return rebuildRowsFromMissions(session, missions);
+}
+
+/**
+ * Stamp selected crate sizes onto route cargo lines that match this mission.
+ * Clears prior sizes for this missionId first, then assigns from the breakdown.
+ */
+function stampMissionBoxSizesOntoRows(
+  rows: HaulingChecklistRow[],
+  mission: SessionMission,
+): HaulingChecklistRow[] {
+  const breakdown = mission.boxBreakdown;
+  const cleared = rows.map((row) => ({
+    ...row,
+    cargoDeliveries: row.cargoDeliveries.map((cargo) => {
+      if (cargo.missionId === mission.id) {
+        const { boxSizes: _removed, ...rest } = cargo;
+        return rest;
+      }
+      return cargo;
+    }),
+  }));
+
+  if (!breakdown) return cleared;
+
+  const assignments = assignBoxSizesFromBreakdown(
+    mission.cargo.map((line) => ({
+      commoditySlug:
+        resolveCommoditySlug(line.commodity) ??
+        line.commodity.trim().toLowerCase(),
+      scu: line.scu,
+    })),
+    breakdown,
+  );
+
+  const pending = assignments.map((entry) => ({
+    ...entry,
+    used: false,
+  }));
+
+  const matchCargo = (cargo: CargoDelivery): CargoDelivery => {
+    if (cargo.missionId && cargo.missionId !== mission.id) return cargo;
+    const hit = pending.find(
+      (entry) =>
+        !entry.used &&
+        entry.commoditySlug === cargo.commoditySlug &&
+        entry.scu === cargo.scu &&
+        entry.boxSizes.length > 0,
+    );
+    if (!hit) return cargo;
+    hit.used = true;
+    return {
+      ...cargo,
+      missionId: mission.id,
+      boxSizes: [...hit.boxSizes],
+    };
+  };
+
+  return cleared.map((row) => ({
+    ...row,
+    cargoDeliveries: row.cargoDeliveries.map(matchCargo),
+  }));
+}
+
+/** Persist a crate breakdown choice and restamp bay packing sizes onto the route. */
+export function setMissionBoxBreakdown(
+  session: SessionChecklistModel,
+  missionId: string,
+  boxBreakdown: CargoBoxBreakdown,
+): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  const missions = (session.missions ?? []).map((mission) =>
+    mission.id === missionId ? { ...mission, boxBreakdown } : mission,
+  );
+  const mission = missions.find((entry) => entry.id === missionId);
+  if (!mission) {
+    return { ok: false, error: `Unknown mission: ${missionId}` };
+  }
+
+  const rows = stampMissionBoxSizesOntoRows(session.rows, mission);
+  return {
+    ok: true,
+    session: {
+      ...session,
+      missions,
+      rows,
+    },
+  };
 }
 
 export type { SessionMission };

@@ -14,7 +14,10 @@ import {
   type HaulingChecklistRow,
   type LegKind,
 } from "@/lib/missions/mockSession";
+import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
+import { StopMissionScreenshots } from "./StopMissionScreenshots";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
@@ -25,6 +28,10 @@ export type HaulingChecklistTableProps = {
   onFocusStop?: (rowId: string) => void;
   /** Left side of the toolbar (e.g. Deliveries / Missions stats). */
   toolbarStart?: ReactNode;
+  /** Session missions — used to attach contract screenshot refs per stop. */
+  missions?: SessionMission[];
+  /** Session id (screenshot batch) for image URLs. */
+  sessionId?: string | null;
 };
 
 /** Default focus: first incomplete stop, else last stop. */
@@ -497,6 +504,8 @@ export function HaulingChecklistTable({
   focusedStopId = null,
   onFocusStop,
   toolbarStart = null,
+  missions = [],
+  sessionId = null,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -638,6 +647,11 @@ export function HaulingChecklistTable({
                   <div className="mt-3">
                     <CargoGroups row={row} cargoLines={cargoLines} />
                   </div>
+                  {sessionId ? (
+                    <StopMissionScreenshots
+                      refs={screenshotRefsForRow(missions, row, sessionId)}
+                    />
+                  ) : null}
                   <MetaGrid row={row} scu={scu} />
                 </div>
               </div>
@@ -757,6 +771,11 @@ export function HaulingChecklistTable({
                         void copyStarmapName(row.id, location);
                       }}
                     />
+                    {sessionId ? (
+                      <StopMissionScreenshots
+                        refs={screenshotRefsForRow(missions, row, sessionId)}
+                      />
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-left align-middle">
                     <CargoGroups row={row} cargoLines={cargoLines} />

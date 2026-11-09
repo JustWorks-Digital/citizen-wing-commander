@@ -36,6 +36,13 @@
       "when": 1794174633575,
       "tag": "0004_military_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794190102528,
+      "tag": "0005_last_tarantula",
+      "breakpoints": true
     }
   ]
 }
