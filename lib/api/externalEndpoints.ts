@@ -1,4 +1,6 @@
 export {
+  citizenHqApi,
+  rsiStarmapApi,
   scToolsWikiApi,
   scWikiApi,
   uexApi,

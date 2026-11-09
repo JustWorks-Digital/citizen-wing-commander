@@ -382,8 +382,8 @@ export function StopDeliveryStacksView({
               );
               const isPickup = (box.action ?? plan.action) === "pickup";
               const actionStroke = isPickup
-                ? "color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
-                : "color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))";
+                ? "color-mix(in srgb, var(--rsi-accent) 32%, var(--rsi-border-strong))"
+                : "color-mix(in srgb, var(--rsi-success) 38%, var(--rsi-border-strong))";
               const actionDash = isPickup ? undefined : "2.5 2";
               return (
                 <g key={box.id} opacity={dimmed ? 0.28 : 1}>

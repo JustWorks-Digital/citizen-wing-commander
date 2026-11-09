@@ -22,6 +22,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+export const WithInlineSource: Story = {
+  args: {
+    screenshotRefs: [
+      {
+        logicalPath: "demo/everus-pickup.png",
+        filename: "everus-pickup.png",
+        label: "everus-pickup",
+        missionTitles: ["Member Rank — Corundum"],
+        url: "/images/outdoor-freight-elevators/port-tressler.jpg",
+      },
+    ],
+  },
+};
+
 export const Empty: Story = {
   args: { missions: [] },
 };

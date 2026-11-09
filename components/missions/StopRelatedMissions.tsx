@@ -3,13 +3,18 @@
 import { useId, useState } from "react";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
-import { missionsRelevantToRow } from "@/lib/missions/rowMissionScreenshots";
+import {
+  missionsRelevantToRow,
+  type RowMissionScreenshotRef,
+} from "@/lib/missions/rowMissionScreenshots";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
+import { StopMissionScreenshots } from "./StopMissionScreenshots";
 
 export type StopRelatedMissionsProps = {
   row: HaulingChecklistRow;
   missions: SessionMission[];
+  screenshotRefs?: RowMissionScreenshotRef[];
   onSelectBoxBreakdown?: (
     missionId: string,
     breakdown: ScuBoxSplits,
@@ -53,6 +58,7 @@ function ExpandChevronIcon({ open }: { open: boolean }) {
 export function StopRelatedMissions({
   row,
   missions,
+  screenshotRefs = [],
   onSelectBoxBreakdown,
   className,
 }: StopRelatedMissionsProps) {
@@ -74,24 +80,25 @@ export function StopRelatedMissions({
         .join(" ")}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        onClick={() => setIsOpen((value) => !value)}
-        className={[
-          "mx-auto flex items-center justify-center gap-1.5 rounded-rsi px-2 py-1",
-          "font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted",
-          "transition-colors hover:text-rsi-text",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-        ].join(" ")}
-      >
-        <span>Missions</span>
-        <span className="tabular-nums text-rsi-text-secondary">
-          ({related.length})
-        </span>
-        <ExpandChevronIcon open={isOpen} />
-      </button>
+      <div className="mx-auto flex items-center justify-center gap-1.5">
+        <StopMissionScreenshots refs={screenshotRefs} variant="inline" />
+        <button
+          type="button"
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => setIsOpen((value) => !value)}
+          className={[
+            "flex items-center justify-center gap-1.5 rounded-rsi px-2 py-1",
+            "font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted",
+            "transition-colors hover:text-rsi-text",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+          ].join(" ")}
+        >
+          <span>Missions</span>
+          <span className="tabular-nums">({related.length})</span>
+          <ExpandChevronIcon open={isOpen} />
+        </button>
+      </div>
 
       {isOpen ? (
         <ul

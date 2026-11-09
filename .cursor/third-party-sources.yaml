@@ -192,3 +192,42 @@ sources:
       (where the offer was seen); no DB default — backfill existing to stanton.
     added: "2026-11-09"
     last_verified: "2026-11-09"
+
+  - id: rsi-ark-starmap-orbits
+    status: trial
+    purpose:
+      - starmap-orbits
+    label: RSI ARK Starmap (orbital bake)
+    url: https://robertsspaceindustries.com/api/starmap
+    docs_url: https://robertsspaceindustries.com/starmap
+    used_by:
+      - scripts/fetch-starmap.mjs
+      - lib/fixtures/starmap.json
+      - lib/api/externalEndpoints.mjs
+    notes: >
+      POST star-systems/{CODE} + celestial-objects/{CODE} for distanceAu /
+      latitudeDeg / longitudeDeg. Useful for body orbits; surface POIs collapse
+      to the parent planet so checklist hop distances prefer CitizenHQ XYZ.
+    added: "2026-11-09"
+    last_verified: "2026-11-09"
+
+  - id: citizenhq-positions
+    status: trial
+    purpose:
+      - location-distances
+      - location-positions
+    label: CitizenHQ starmap positions (XYZ meters)
+    url: https://citizenhq.space/api/v1/positions
+    docs_url: https://citizenhq.space/api
+    used_by:
+      - scripts/fetch-location-positions.mjs
+      - lib/fixtures/locationPositions.json
+      - lib/starmap/distance.ts
+      - lib/api/externalEndpoints.mjs
+    notes: >
+      GET /positions?system=stanton|pyro|nyx returns per-POI x/y/z in meters
+      (origin = system star) plus qtValid. Matched onto locations.json by name
+      for offline Euclidean QT-style distances between checklist stops.
+      In-system only — cross-system hops have no straight-line distance.
+    added: "2026-11-09"
+    last_verified: "2026-11-09"

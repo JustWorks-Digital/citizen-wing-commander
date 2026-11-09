@@ -24,9 +24,9 @@ import {
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
-import { StopMissionScreenshots } from "./StopMissionScreenshots";
 import { StopRelatedMissions } from "./StopRelatedMissions";
 
 export type HaulingChecklistTableProps = {
@@ -249,7 +249,13 @@ function CargoGroups({
           >
             {group.role ? (
               <span
-                className={`font-mono text-[0.65rem] uppercase tracking-[0.16em] ${roleClass}`}
+                className={[
+                  "mb-2 w-fit border-b pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]",
+                  roleClass,
+                  group.role === "pickup"
+                    ? "border-rsi-accent/45"
+                    : "border-rsi-success/45",
+                ].join(" ")}
               >
                 {group.role === "pickup" ? "Pickup" : "Delivery"}
               </span>
@@ -513,28 +519,47 @@ function ExpectedCompletionsMeta({
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
       <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Completions
+        {missions.length > 0 ? (
+          <span className="ml-1 tabular-nums text-rsi-text-secondary">
+            ({missions.length})
+          </span>
+        ) : null}
       </p>
       {missions.length === 0 ? (
-        <p className="mt-0.5 text-rsi-text-muted">None</p>
+        <p className="mt-1.5 text-rsi-text-muted">None</p>
       ) : (
-        <ul className="mt-0.5 space-y-0.5">
+        <ul className="mt-2 grid grid-cols-3 gap-1.5">
           {missions.map((mission) => (
-            <li
-              key={mission.id}
-              className={[
-                "text-sm",
-                mission.isCompleted
-                  ? "text-rsi-text-muted line-through decoration-rsi-success/40"
-                  : "text-rsi-text-secondary",
-              ].join(" ")}
-            >
-              {mission.title}
-              {mission.cargoSummary ? (
-                <span className="text-rsi-text-muted">
-                  {" "}
-                  · {mission.cargoSummary}
-                </span>
-              ) : null}
+            <li key={mission.id} className="min-w-0">
+              <div
+                className={[
+                  "flex w-full min-w-0 items-start rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-2 py-1",
+                  mission.isCompleted ? "opacity-70" : "",
+                ].join(" ")}
+              >
+                <div className="min-w-0 w-full">
+                  <p
+                    className={[
+                      "truncate text-[0.6rem] font-semibold tracking-wide",
+                      mission.isCompleted
+                        ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                        : "text-rsi-text",
+                    ].join(" ")}
+                  >
+                    {mission.title}
+                  </p>
+                  {mission.cargoSummary ? (
+                    <p
+                      className={[
+                        "mt-0.5 truncate text-[0.5rem] leading-snug text-rsi-text-secondary",
+                        mission.isCompleted ? "line-through opacity-80" : "",
+                      ].join(" ")}
+                    >
+                      {mission.cargoSummary}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
             </li>
           ))}
         </ul>
@@ -543,21 +568,45 @@ function ExpectedCompletionsMeta({
   );
 }
 
-function NextDistanceMeta({ row }: { row: HaulingChecklistRow }) {
+function NextDistanceMeta({
+  row,
+  nextLocationName,
+  nextLocationSlug,
+}: {
+  row: HaulingChecklistRow;
+  nextLocationName: string | null;
+  nextLocationSlug: string | null;
+}) {
+  const starmapDistance =
+    nextLocationSlug != null
+      ? distanceBetweenLocationSlugs(row.locationSlug, nextLocationSlug)
+      : null;
+  const distance = formatDistanceToNext(
+    starmapDistance ?? row.distanceToNext,
+  );
+
   return (
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
       <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Next Distance
+        Next / Distance
       </p>
       <p
         className={[
-          "mt-0.5 font-mono tabular-nums",
+          "mt-0.5 text-sm",
           row.isCompleted
             ? "text-rsi-text-muted line-through"
             : "text-rsi-text-secondary",
         ].join(" ")}
       >
-        {formatDistanceToNext(row.distanceToNext)}
+        <span className="font-medium tracking-wide">
+          {nextLocationName ?? "—"}
+        </span>
+        {nextLocationName ? (
+          <>
+            <span className="text-rsi-text-muted"> / </span>
+            <span className="font-mono tabular-nums">{distance}</span>
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -645,6 +694,13 @@ export function HaulingChecklistTable({
         {visibleRows.map((row) => {
           const locationFixture = getLocationBySlug(row.locationSlug);
           const location = locationFixture?.name ?? row.locationSlug;
+          const routeIndex = rows.findIndex((entry) => entry.id === row.id);
+          const nextRow =
+            routeIndex >= 0 ? (rows[routeIndex + 1] ?? null) : null;
+          const nextLocationSlug = nextRow?.locationSlug ?? null;
+          const nextLocationName = nextLocationSlug
+            ? (getLocationBySlug(nextLocationSlug)?.name ?? nextLocationSlug)
+            : null;
           const cargoFallbackRole =
             row.legKind === "both" ? null : row.legKind;
           const cargoLines = describeCargoDeliveries(
@@ -692,14 +748,9 @@ export function HaulingChecklistTable({
                           void copyStarmapName(row.id, location);
                         }}
                       />
-                      <div className="mt-3">
+                      <div className="mt-5">
                         <CargoGroups row={row} cargoLines={cargoLines} />
                       </div>
-                      {sessionId ? (
-                        <StopMissionScreenshots
-                          refs={screenshotRefsForRow(missions, row, sessionId)}
-                        />
-                      ) : null}
                       <TotalMeta row={row} scu={scu} />
                       <ExpectedCompletionsMeta
                         missions={missionsExpectedToCompleteAtStop(
@@ -708,7 +759,11 @@ export function HaulingChecklistTable({
                           row.id,
                         )}
                       />
-                      <NextDistanceMeta row={row} />
+                      <NextDistanceMeta
+                        row={row}
+                        nextLocationName={nextLocationName}
+                        nextLocationSlug={nextLocationSlug}
+                      />
                     </div>
                     <StopDeliveryBayPreview
                       row={row}
@@ -718,6 +773,11 @@ export function HaulingChecklistTable({
                   <StopRelatedMissions
                     row={row}
                     missions={missions}
+                    screenshotRefs={
+                      sessionId
+                        ? screenshotRefsForRow(missions, row, sessionId)
+                        : []
+                    }
                     onSelectBoxBreakdown={onSelectBoxBreakdown}
                   />
                 </div>

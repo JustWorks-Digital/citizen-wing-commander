@@ -11,6 +11,8 @@ import type { RowMissionScreenshotRef } from "@/lib/missions/rowMissionScreensho
 export type StopMissionScreenshotsProps = {
   refs: RowMissionScreenshotRef[];
   className?: string;
+  /** Compact control for embedding next to a section label. */
+  variant?: "block" | "inline";
 };
 
 const sourceBtnClass = [
@@ -25,6 +27,7 @@ const sourceBtnClass = [
 export function StopMissionScreenshots({
   refs,
   className,
+  variant = "block",
 }: StopMissionScreenshotsProps) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -50,45 +53,54 @@ export function StopMissionScreenshots({
 
   const canOpenGallery = galleryItems.length > 0;
 
+  const control = canOpenGallery ? (
+    <button
+      type="button"
+      title={
+        galleryItems.length > 1
+          ? `Open ${galleryItems.length} source screenshots for this stop`
+          : "Open source screenshot for this stop"
+      }
+      aria-label="View source"
+      onClick={() => {
+        setGalleryIndex(0);
+        setGalleryOpen(true);
+      }}
+      className={[
+        sourceBtnClass,
+        "border-rsi-border bg-rsi-surface text-rsi-text-secondary",
+        "hover:border-rsi-accent/50 hover:text-rsi-accent",
+      ].join(" ")}
+    >
+      <SourceIcon />
+    </button>
+  ) : textOnlyCount > 0 ? (
+    <span
+      title={refs.map((ref) => ref.label).join(", ")}
+      aria-label="No source screenshot available"
+      className={[
+        sourceBtnClass,
+        "cursor-default border-rsi-border/50 text-rsi-text-muted opacity-40",
+      ].join(" ")}
+    >
+      <SourceIcon />
+    </span>
+  ) : null;
+
+  if (!control) return null;
+
   return (
     <div
-      className={["mt-2", className].filter(Boolean).join(" ")}
+      className={[
+        variant === "block" ? "mt-2" : "inline-flex shrink-0",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      {canOpenGallery ? (
-        <button
-          type="button"
-          title={
-            galleryItems.length > 1
-              ? `Open ${galleryItems.length} source screenshots for this stop`
-              : "Open source screenshot for this stop"
-          }
-          aria-label="View source"
-          onClick={() => {
-            setGalleryIndex(0);
-            setGalleryOpen(true);
-          }}
-          className={[
-            sourceBtnClass,
-            "border-rsi-border bg-rsi-surface text-rsi-text-secondary",
-            "hover:border-rsi-accent/50 hover:text-rsi-accent",
-          ].join(" ")}
-        >
-          <SourceIcon />
-        </button>
-      ) : textOnlyCount > 0 ? (
-        <span
-          title={refs.map((ref) => ref.label).join(", ")}
-          aria-label="No source screenshot available"
-          className={[
-            sourceBtnClass,
-            "cursor-default border-rsi-border/50 text-rsi-text-muted opacity-40",
-          ].join(" ")}
-        >
-          <SourceIcon />
-        </span>
-      ) : null}
+      {control}
 
       {galleryOpen && galleryItems.length > 0 ? (
         <ImageLightbox

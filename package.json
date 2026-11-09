@@ -20,7 +20,9 @@
     "db:sync-catalog-missions": "node scripts/sync-catalog-missions-from-prod.mjs",
     "fixtures:fetch": "node scripts/fetch-sc-fixtures.mjs",
     "fixtures:fetch-commodity-icons": "node scripts/fetch-commodity-icons.mjs",
-    "fixtures:fetch-commodity-crate-colors": "node scripts/fetch-commodity-crate-colors.mjs"
+    "fixtures:fetch-commodity-crate-colors": "node scripts/fetch-commodity-crate-colors.mjs",
+    "fixtures:fetch-starmap": "node scripts/fetch-starmap.mjs",
+    "fixtures:fetch-location-positions": "node scripts/fetch-location-positions.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

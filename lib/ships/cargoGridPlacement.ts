@@ -310,13 +310,15 @@ function regionAffinity(
 }
 
 /**
- * True when every column under the footprint rests on the deck or on a crate
- * at least as large as `boxScu` (never larger-on-smaller).
+ * True when every column under the footprint rests on a filled cell (deck or
+ * crate). Size mixing is allowed when the support forms a flat platform
+ * (e.g. 8 on 4, or 8/4 on two adjacent 2s). A lone 1 or 2 cannot support an
+ * 8 because it cannot cover the 2×2 footprint alone.
  */
 function hasValidSupport(
   origin: CargoGridCoord,
   footprint: CargoBoxFootprint,
-  boxScu: number,
+  _boxScu: number,
   occupiedSizes: ReadonlyMap<string, number>,
 ): boolean {
   if (origin.z === 0) return true;
@@ -330,7 +332,6 @@ function hasValidSupport(
         }),
       );
       if (supportSize == null) return false;
-      if (supportSize < boxScu) return false;
     }
   }
   return true;
@@ -404,7 +405,8 @@ function edgeDistanceFromBayCenter(
 }
 
 /**
- * Early deliveries → edges (or center) based on ship bias.
+ * Early deliveries → edges (or center) based on ship bias, and higher layers
+ * so first-to-deliver cargo sits on top of later deliveries of the same type.
  * Rank 0 is earliest; rankMax is latest.
  */
 function missionPriorityScore(
@@ -423,12 +425,15 @@ function missionPriorityScore(
   }
   const edge = edgeDistanceFromBayCenter(origin, footprint, bounds);
   const t = cluster.missionRank / cluster.missionRankMax; // 0 early → 1 late
+  // Early unload → prefer higher Z; late unload → prefer lower Z.
+  const layer =
+    origin.z * (1 - t) * 14 - origin.z * t * 6;
   if (cluster.missionPriorityBias === "edges-first") {
     // Early: want high edge distance; late: want low (center).
-    return edge * (1 - t) * 18 - edge * t * 18;
+    return layer + edge * (1 - t) * 18 - edge * t * 18;
   }
   // center-first: early toward center, late toward edges
-  return edge * t * 18 - edge * (1 - t) * 18;
+  return layer + edge * t * 18 - edge * (1 - t) * 18;
 }
 
 /**
@@ -496,7 +501,7 @@ function findSlot(
   const candidates: Candidate[] = [];
   forEachPlacementOrigin(order, (origin) => {
     if (!fits(bounds, origin, footprint, occupied)) return;
-    // Hard rule: larger crates never sit on smaller ones.
+    // Hard rule: stacked crates need a complete flat support under the footprint.
     if (!hasValidSupport(origin, footprint, boxScu, occupiedSizes)) return;
     const affinity = clusterAffinity(origin, footprint, cluster);
     const regionPull = regionAffinity(origin, footprint, cluster);
@@ -647,7 +652,7 @@ function findSlot(
     const identicalStacks = candidates.filter(
       (c) => c.identicalSizeStack && c.otherSupport === 0,
     );
-    // 2) Otherwise grow on our own pile (sideways or smaller-on-larger).
+    // 2) Otherwise grow on our own pile (sideways or on our own support).
     const onOwn = candidates.filter(
       (c) =>
         c.affinity.horizontal > 0 ||
@@ -663,8 +668,21 @@ function findSlot(
     const stackedOnOwn = candidates.filter(
       (c) => c.sameSupport > 0 && c.otherSupport === 0,
     );
+    // Larger crates prefer their own column/stack over riding smaller others.
+    const ownDeckOrSide = candidates.filter(
+      (c) =>
+        c.otherSupport === 0 &&
+        (c.onDeck || c.affinity.horizontal > 0 || c.sameSupport > 0),
+    );
+    // Prioritized unload: grow height on the existing type pile before
+    // spreading a new deck column (early stops should sit on top of later).
+    const preferUnloadStack = Boolean(cluster?.missionPriorityBias);
     if (identicalStacks.length > 0) {
       pool = identicalStacks;
+    } else if (preferUnloadStack && stackedOnOwn.length > 0) {
+      pool = stackedOnOwn;
+    } else if (boxScu >= 4 && ownDeckOrSide.length > 0) {
+      pool = ownDeckOrSide;
     } else if (stackedOnOwn.length > 0 && boxScu <= 2) {
       // Remainders (2 / 1 SCU): sit on our own larger crates when we can.
       pool = stackedOnOwn;
@@ -783,6 +801,26 @@ function itemClusterLabel(item: CargoPlacementItem): string {
 }
 
 /**
+ * Within one cluster: when prioritized, place later delivery stops before
+ * earlier ones so first-to-unload ends up on higher layers (placer fills
+ * bottom-up). Within the same stop, largest crates first.
+ */
+function sortItemsForStackPriority(
+  items: CargoPlacementItem[],
+  prioritized: boolean,
+): void {
+  items.sort((a, b) => {
+    if (prioritized) {
+      const rankA = a.missionRank ?? Number.POSITIVE_INFINITY;
+      const rankB = b.missionRank ?? Number.POSITIVE_INFINITY;
+      if (rankA !== rankB) return rankB - rankA;
+    }
+    if (a.size !== b.size) return b.size - a.size;
+    return 0;
+  });
+}
+
+/**
  * Place explicit crates into one bay zone. Optionally keeps each cluster
  * contiguous (by cargo type or by delivery location).
  */
@@ -884,14 +922,15 @@ export function placeCargoItemsInZone(
         });
         for (const loc of locationOrder) {
           const locGroup = byLocation.get(loc)!;
-          locGroup.sort((a, b) => b.size - a.size);
+          sortItemsForStackPriority(locGroup, Boolean(missionPriorityBias));
           pending.push(...locGroup);
         }
       }
     } else {
       // Group by cluster key; order by delivery rank when prioritized,
       // then by total SCU (largest cargo type first), then label.
-      // Largest crates first within each group.
+      // Within a type: largest crates first; late deliveries before early
+      // so first-to-deliver ends up on higher layers.
       const byKey = new Map<string, CargoPlacementItem[]>();
       const keyOrder: string[] = [];
       for (const item of pending) {
@@ -926,7 +965,7 @@ export function placeCargoItemsInZone(
       pending.length = 0;
       for (const key of keyOrder) {
         const group = byKey.get(key)!;
-        group.sort((a, b) => b.size - a.size);
+        sortItemsForStackPriority(group, Boolean(missionPriorityBias));
         pending.push(...group);
       }
     }
@@ -1829,18 +1868,14 @@ export function planOccupancyByCargoTypeAtStop(
     missionPrioritized && shipPrefs.missionPriorityPacking
       ? shipPrefs.missionPriorityPacking.bias
       : null;
-  const deliveryRanks = missionPrioritized
-    ? missionDeliveryRanks(rows, rowId)
-    : null;
-  const defaultRank = deliveryRanks
-    ? Math.max(0, ...deliveryRanks.values(), 0) + 1
-    : 0;
 
   const { deliveries, pickups } = splitRowCargo(row);
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
-  const locationGroups = locationGroupIndexMap(
-    upcomingDeliveryLocationSlugs(rows, rowId),
-  );
+  // Rank by upcoming delivery *stop* (0 = first unload), not by mission
+  // first-seen — multi-stop contracts split crates across locations.
+  const locationOrder = upcomingDeliveryLocationSlugs(rows, rowId);
+  const locationGroups = locationGroupIndexMap(locationOrder);
+  const defaultRank = locationOrder.length;
   // Shared pool so multi-mission aggregates still map boxes to real unload stops.
   const deliveryPool = buildDeliveryScuPool(rows, rowIndex);
 
@@ -1855,9 +1890,6 @@ export function planOccupancyByCargoTypeAtStop(
     action: CargoGridBoxAction,
   ) => {
     const segment = segmentFromCargo(cargo);
-    const missionRank = deliveryRanks
-      ? (deliveryRanks.get(cargoMissionKey(cargo)) ?? defaultRank)
-      : undefined;
     const splits =
       action === "delivery"
         ? deliveryLocationScuSplitsForCargo(rows, rowIndex, cargo, action)
@@ -1868,6 +1900,13 @@ export function planOccupancyByCargoTypeAtStop(
       splits,
     )) {
       const meta = locationMetaForSlug(locationSlug, locationGroups);
+      const missionRank = missionPrioritized
+        ? locationSlug
+          ? (locationGroups.has(locationSlug)
+              ? (locationGroups.get(locationSlug)! - 1)
+              : defaultRank)
+          : defaultRank
+        : undefined;
       for (const size of sizes) {
         list.push({
           size,

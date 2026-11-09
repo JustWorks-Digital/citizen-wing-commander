@@ -291,18 +291,21 @@ export function CargoGridSketch({
   );
 
   const z = Math.min(Math.max(activeZ, 0), sketch.heightCells - 1);
+  const boxesVisibleForLocations = useMemo(() => {
+    if (locationLegendItems.length === 0) return placementBoxes;
+    return placementBoxes.filter(
+      (box) =>
+        box.deliveryLocationSlug != null &&
+        !hiddenLocations.has(box.deliveryLocationSlug),
+    );
+  }, [placementBoxes, hiddenLocations, locationLegendItems.length]);
+
   const locationOutlines = useMemo(
     () =>
       showLocationOutlines
-        ? locationGroupBoxOutlines(
-            placementBoxes.filter(
-              (box) =>
-                box.deliveryLocationSlug == null ||
-                !hiddenLocations.has(box.deliveryLocationSlug),
-            ),
-          )
+        ? locationGroupBoxOutlines(boxesVisibleForLocations)
         : new Map(),
-    [placementBoxes, hiddenLocations, showLocationOutlines],
+    [boxesVisibleForLocations, showLocationOutlines],
   );
   const locationLabelBoxIds = useMemo(() => {
     const best = new Map<string, { boxId: string; size: number }>();
@@ -447,7 +450,7 @@ export function CargoGridSketch({
               onSelectCoord={onSelectCoord}
               highlightedCoords={highlightedCoords}
               placementTints={placementTints}
-              placementBoxes={placementBoxes}
+              placementBoxes={boxesVisibleForLocations}
               legendItems={legendItems}
               locationLegendItems={locationLegendItems}
               showLocationOutlines={showLocationOutlines}
@@ -697,7 +700,7 @@ export function CargoGridSketch({
                 }
 
                 const boxesOnLayer = useBoxFootprints
-                  ? placementBoxes.filter(
+                  ? boxesVisibleForLocations.filter(
                       (box) =>
                         box.origin.z <= z &&
                         z < box.origin.z + box.footprint.dz &&
@@ -855,12 +858,6 @@ export function CargoGridSketch({
                       );
                     })}
                     {boxesOnLayer.map((box) => {
-                      if (
-                        box.deliveryLocationSlug != null &&
-                        hiddenLocations.has(box.deliveryLocationSlug)
-                      ) {
-                        return null;
-                      }
                       const hex =
                         resolveCommodityColorHex(
                           box.color,

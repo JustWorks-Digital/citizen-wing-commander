@@ -19,7 +19,7 @@ export type CargoPlacementBounds = {
 
 export type CargoPlacementRuleId =
   | "prefer-flat-layers"
-  | "prefer-smaller-on-larger"
+  | "prefer-flat-stable-support"
   | "prefer-back-when-full-height";
 
 export type CargoPlacementRuleContext = {
@@ -110,16 +110,20 @@ const preferFlatLayers: CargoPlacementRule = {
 };
 
 /**
- * When stacking, prefer smaller crates on larger ones — not larger on smaller.
- * Deck placements always score highest.
+ * Prefer stable flat platforms when stacking.
+ * - Deck is best.
+ * - Equal/larger support cells are ideal.
+ * - 8 may sit on 4s; 8 or 4 may sit on a composed flat of 2s.
+ * - Large crates should not rest only on 1 SCU cells.
  */
-const preferSmallerOnLarger: CargoPlacementRule = {
-  id: "prefer-smaller-on-larger",
+const preferFlatStableSupport: CargoPlacementRule = {
+  id: "prefer-flat-stable-support",
   summary:
-    "Prefer smaller crates stacked on larger ones; avoid placing a bigger crate on a smaller one.",
+    "Prefer flat, stable support: 8-on-4 and composed 2s OK; avoid large crates on 1 SCU alone.",
   scoreSlot(ctx, origin) {
-    if (origin.z === 0) return 2;
+    if (origin.z === 0) return 3;
     const { footprint, boxScu, occupiedSizes } = ctx;
+    const support: number[] = [];
     for (let dx = 0; dx < footprint.dx; dx += 1) {
       for (let dy = 0; dy < footprint.dy; dy += 1) {
         const supportSize = occupiedSizes.get(
@@ -130,10 +134,15 @@ const preferSmallerOnLarger: CargoPlacementRule = {
           }),
         );
         if (supportSize == null) return 0;
-        if (supportSize < boxScu) return 0;
+        support.push(supportSize);
       }
     }
-    return 1;
+    const min = Math.min(...support);
+    if (min >= boxScu) return 2;
+    if (boxScu === 8 && min >= 4) return 2;
+    if ((boxScu === 8 || boxScu === 4) && min >= 2) return 1;
+    if (boxScu >= 4 && min <= 1) return 0;
+    return 0;
   },
 };
 
@@ -161,7 +170,7 @@ const preferBackWhenFullHeight: CargoPlacementRule = {
  */
 export const cargoPlacementRules: readonly CargoPlacementRule[] = [
   preferFlatLayers,
-  preferSmallerOnLarger,
+  preferFlatStableSupport,
   preferBackWhenFullHeight,
 ];
 

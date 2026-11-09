@@ -56,3 +56,30 @@ export const PlacementOnly: Story = {
     ],
   },
 };
+
+/** Parent passes already location-filtered boxes; empty = no crates. */
+export const EmptyAfterLocationFilter: Story = {
+  args: {
+    sketch: mkVCentaurusCargoGridSketch,
+    mode: "placement",
+    showFacingPad: true,
+    placementBoxes: [],
+    locationLegendItems: [
+      {
+        locationSlug: "hdpc-cassillo",
+        locationName: "HDPC-Cassillo",
+        groupIndex: 1,
+        scu: 33,
+        stroke: "#54a0f7",
+      },
+      {
+        locationSlug: "lorville",
+        locationName: "Lorville",
+        groupIndex: 2,
+        scu: 42,
+        stroke: "#e85d5d",
+      },
+    ],
+    hiddenLocations: new Set(["hdpc-cassillo", "lorville"]),
+  },
+};
