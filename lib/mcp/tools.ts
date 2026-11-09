@@ -53,6 +53,7 @@ import {
 import type { CatalogMissionNoteSentiment } from "@/lib/missions/catalogMission";
 import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import { linkSessionMissionsToCatalog } from "@/lib/missions/linkSessionMissionToCatalog";
 import { buildSessionMissionsFromIntake } from "@/lib/missions/sessionMissionsFromIntake";
 import { cargoPlacementRules } from "@/lib/ships/cargoGridPlacementRules";
 import {
@@ -385,7 +386,11 @@ export async function toolApplyHaulingContractsIntake(
     legs = built.legs;
   }
 
-  const missions = await buildSessionMissionsFromIntake(intake.contracts);
+  const builtMissions = await buildSessionMissionsFromIntake(intake.contracts);
+  const missions = await linkSessionMissionsToCatalog(
+    builtMissions,
+    intake.startLocation ?? null,
+  );
 
   const replaced = await toolReplaceHaulingChecklist({
     sessionId: intake.sessionId,

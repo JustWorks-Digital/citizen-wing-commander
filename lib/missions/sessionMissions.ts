@@ -7,6 +7,11 @@ import type { MobiglasContractPanel } from "@/lib/missions/mobiglasTranscript";
 /** Mission card stored on the active checklist session for UI / MCP. */
 export type SessionMission = {
   id: string;
+  /**
+   * Optional link to `catalog_missions.id` for durable mission details.
+   * When set, the missions modal prefers catalog payload fields.
+   */
+  catalogMissionId?: string | null;
   title: string;
   contractor: string;
   rewardAuec: number;
@@ -15,6 +20,16 @@ export type SessionMission = {
   to: string[];
   cargo: HaulingIntakeCargoLine[];
   pickupSplits?: Record<string, HaulingIntakeCargoLine[]>;
+  /**
+   * Per-leg collect→deliver splits (from catalog / OCR extras).
+   * When present, drives Collect / Deliver objective lines in the modal.
+   */
+  deliverySplits?: Array<{
+    from: string;
+    to: string;
+    commodity: string;
+    scu: number;
+  }>;
   maxContainerScu?: number;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
   cargoSummary: string;

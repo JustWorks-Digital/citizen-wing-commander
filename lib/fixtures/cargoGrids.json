@@ -35,19 +35,21 @@
     {
       "shipSlug": "constellation-mk-v-centaurus",
       "shipName": "Constellation Mk V Centaurus",
-      "widthCells": 4,
-      "heightCells": 6,
+      "widthCells": 6,
+      "heightCells": 4,
       "zones": [
         {
           "id": "hold",
           "label": "Bay",
           "lengthCells": 10,
-          "widthCells": 4,
+          "widthCells": 6,
           "kind": "cargo",
           "storageLocation": "middle"
         }
       ],
-      "notes": [],
+      "notes": [
+        "6×10×4 = 240 SCU. Width fits three 8 SCU crates (2×2 base) across."
+      ],
       "viewScale": {
         "top": 2
       }

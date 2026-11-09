@@ -21,7 +21,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Tiles: Story = {};
+export const BlockList: Story = {};
 
 export const Empty: Story = {
   args: {

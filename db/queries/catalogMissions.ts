@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   catalogMissionNotes,
@@ -91,6 +91,18 @@ export async function getCatalogMission(
     .where(eq(catalogMissions.id, id))
     .limit(1);
   return row ?? null;
+}
+
+export async function getCatalogMissionsByIds(
+  ids: string[],
+): Promise<CatalogMission[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return [];
+  const db = getDb();
+  return db
+    .select()
+    .from(catalogMissions)
+    .where(inArray(catalogMissions.id, unique));
 }
 
 export async function listCatalogMissions(input?: {
