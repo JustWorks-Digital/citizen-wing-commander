@@ -60,11 +60,17 @@ export function catalogRouteSummary(mission: CatalogMission): {
   };
 }
 
-export function catalogCargoSummary(mission: CatalogMission): string {
+/** Per-line cargo labels for table lists (commodity names). */
+export function catalogCargoLines(mission: CatalogMission): string[] {
   const payload = catalogPayload(mission);
   const cargo = payload?.cargo ?? [];
   if (cargo.length === 0) {
-    return mission.scuTotal > 0 ? `${mission.scuTotal} SCU` : "—";
+    return mission.scuTotal > 0 ? [`${mission.scuTotal} SCU`] : [];
   }
-  return cargo.map((line) => line.commodityName).join(" · ");
+  return cargo.map((line) => line.commodityName);
+}
+
+export function catalogCargoSummary(mission: CatalogMission): string {
+  const lines = catalogCargoLines(mission);
+  return lines.length > 0 ? lines.join(" · ") : "—";
 }

@@ -100,7 +100,7 @@ try {
       mission.fingerprint ?? fingerprintFromPayload(payload);
     await sql`
       INSERT INTO catalog_missions (
-        id, type, fingerprint, title, contractor_slug, rewards,
+        id, type, fingerprint, title, rank, contractor_slug, rewards,
         offer_location_slug, scu_total, scu_max_container_size, scu_box_splits,
         scu_location_splits,
         payload, latest_screenshot_path, mission_run_count, mission_total_duration_ms,
@@ -110,6 +110,7 @@ try {
         ${mission.type ?? "hauling"},
         ${fingerprint},
         ${mission.title},
+        ${mission.rank ?? payload.rank ?? null},
         ${mission.contractorSlug ?? payload.contractorSlug ?? null},
         ${sql.json(
           mission.rewards ??
@@ -166,6 +167,7 @@ try {
       )
       ON CONFLICT (fingerprint) DO UPDATE SET
         title = EXCLUDED.title,
+        rank = EXCLUDED.rank,
         contractor_slug = EXCLUDED.contractor_slug,
         rewards = EXCLUDED.rewards,
         offer_location_slug = EXCLUDED.offer_location_slug,

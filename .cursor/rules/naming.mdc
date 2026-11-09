@@ -94,6 +94,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |
 | `Hauling` / `hauling` | `Delivery` as the type name (delivery can be a checklist group) |
 | `scuTotal` / `scuSplits` / `scuLocationSplits` / `scuBoxSplits` / `scuMaxContainerSize` (catalog hauling) | `totalScu`, `boxBreakdown`, `maxContainerScu`, `size1`; `legs` for per-stop cargo inside a catalog mission |
+| `rank` (hauling career level: Trainee…Master; no “Rank” suffix in the value) | `repLevel`, `reputationRank`, `Junior Rank` as a stored value |
 | `rewards` (`kind: "auec" \| "blueprint"`) | `rewardAuec` as the only payout field |
 | `objectives` (catalog text bullets) | Structured split rows (those are `scuSplits`) |
 

@@ -4,12 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import type { CatalogMission } from "@/db/schema";
 import { fetchCatalogMissions } from "@/lib/api/catalogMissionsApi";
 import { searchCatalogMissions } from "@/lib/missions/searchCatalogMissions";
+import {
+  filterAndSortCatalogMissions,
+  type CatalogTableFilters,
+  type CatalogTableSort,
+} from "@/lib/missions/catalogMissionTableQuery";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import {
   ImageLightbox,
   type ImageLightboxItem,
 } from "@/components/ui/ImageLightbox";
 import { MissionCatalogDetail } from "./MissionCatalogDetail";
+import { MissionCatalogFilters } from "./MissionCatalogFilters";
 import { MissionCatalogJsonModal } from "./MissionCatalogJsonModal";
 import { MissionCatalogTable } from "./MissionCatalogTable";
 
@@ -25,6 +31,8 @@ export function MissionsCatalogView({
     initialMissions ?? [],
   );
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<CatalogTableFilters>({});
+  const [sort, setSort] = useState<CatalogTableSort>(null); // table header sort only
   const [isLoading, setIsLoading] = useState(!initialMissions);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CatalogMission | null>(null);
@@ -70,9 +78,14 @@ export function MissionsCatalogView({
     return () => window.removeEventListener("keydown", onKey);
   }, [selected, jsonMission, lightbox]);
 
-  const filtered = useMemo(
+  const searched = useMemo(
     () => searchCatalogMissions(missions, query),
     [missions, query],
+  );
+
+  const visible = useMemo(
+    () => filterAndSortCatalogMissions(searched, filters, sort),
+    [searched, filters, sort],
   );
 
   const openSource = (mission: CatalogMission) => {
@@ -90,55 +103,47 @@ export function MissionsCatalogView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-            Planning
-          </p>
-          <h2 className="text-xl font-semibold tracking-wide text-rsi-text sm:text-2xl">
-            Missions catalog
-          </h2>
-        </div>
-        <label className="block w-full sm:max-w-sm">
-          <span className="mb-1 block font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-            Search
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Title, location, cargo, contractor…"
-            className={[
-              "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-3 py-2",
-              "text-sm text-rsi-text placeholder:text-rsi-text-muted",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-            ].join(" ")}
-          />
-        </label>
+      <div>
+        <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
+          Planning
+        </p>
+        <h2 className="text-xl font-semibold tracking-wide text-rsi-text sm:text-2xl">
+          Missions catalog
+        </h2>
       </div>
 
       {error ? <p className="text-sm text-rsi-warn">{error}</p> : null}
 
       {isLoading ? (
         <p className="font-mono text-sm text-rsi-text-muted">Loading missions…</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-rsi-text-muted">
-          {missions.length === 0
-            ? "No catalog missions yet."
-            : "No missions match that search."}
-        </p>
+      ) : missions.length === 0 ? (
+        <p className="text-sm text-rsi-text-muted">No catalog missions yet.</p>
       ) : (
         <>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-            {filtered.length} mission{filtered.length === 1 ? "" : "s"}
-          </p>
-          <MissionCatalogTable
-            missions={filtered}
-            selectedId={selected?.id ?? null}
-            onSelect={setSelected}
-            onViewSource={openSource}
-            onViewObject={setJsonMission}
+          <MissionCatalogFilters
+            missions={missions}
+            query={query}
+            onQueryChange={setQuery}
+            filters={filters}
+            onFiltersChange={setFilters}
+            resultCount={visible.length}
+            totalCount={missions.length}
           />
+          {visible.length === 0 ? (
+            <p className="text-sm text-rsi-text-muted">
+              No missions match these filters.
+            </p>
+          ) : (
+            <MissionCatalogTable
+              missions={visible}
+              selectedId={selected?.id ?? null}
+              onSelect={setSelected}
+              onViewSource={openSource}
+              onViewObject={setJsonMission}
+              sort={sort}
+              onSortChange={setSort}
+            />
+          )}
         </>
       )}
 

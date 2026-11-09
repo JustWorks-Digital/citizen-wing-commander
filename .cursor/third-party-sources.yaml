@@ -154,3 +154,22 @@ sources:
       hasOutdoorFreightElevator. Unknown / false → no UI icon.
     added: "2026-11-07"
     last_verified: "2026-11-07"
+
+  - id: sc-wiki-hauling-ranks
+    status: accepted
+    purpose:
+      - hauling-reputation-ranks
+      - mission-ranks
+    label: Star Citizen Wiki — Hauling reputation ranks
+    url: https://starcitizen.tools/Hauling
+    docs_url: https://starcitizen.tools/Hauling
+    used_by:
+      - lib/missions/missionRank.ts
+      - lib/fixtures/missionRanks.json
+    notes: >
+      Covalex / hauling career progression table: Trainee, Rookie, Junior,
+      Member, Experienced, Senior, Master (plus Not Eligible). Contract titles
+      often embed "{Level} Rank - …"; we store `rank` separately as the level
+      name only (no “Rank” suffix).
+    added: "2026-11-09"
+    last_verified: "2026-11-09"

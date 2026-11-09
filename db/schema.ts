@@ -18,6 +18,7 @@ import type {
   HaulingCatalogMissionPayload,
   ScuLocationSplits,
 } from "@/lib/missions/catalogMission";
+import type { MissionRank } from "@/lib/missions/missionRank";
 import type {
   ChecklistItemProgressMeta,
   HaulingMissionPayload,
@@ -343,6 +344,11 @@ export const catalogMissions = pgTable(
     /** sha256 of normalized title/contractorSlug/offer/from/to/cargo */
     fingerprint: text("fingerprint").notNull(),
     title: text("title").notNull(),
+    /**
+     * Hauling career rank (Trainee…Master), without the word “Rank” in the value.
+     * Also stored on `payload.rank`.
+     */
+    rank: text("rank").$type<MissionRank | null>(),
     /** FK to `contractors.slug` (fixture-backed catalog). */
     contractorSlug: text("contractor_slug").references(() => contractors.slug, {
       onDelete: "set null",

@@ -16,6 +16,7 @@ export const appApi = {
   catalogMissions: "/api/catalog/missions",
   catalogMissionsRenameScreenshots:
     "/api/catalog/missions/rename-screenshots",
+  catalogMissionsBackfillRanks: "/api/catalog/missions/backfill-ranks",
   sessions: "/api/sessions",
   ships: "/api/ships",
   healthDb: "/api/health/db",

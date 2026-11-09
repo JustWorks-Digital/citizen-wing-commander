@@ -19,13 +19,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Compact one-line dropdown trigger; open to pick another mix. */
 export const Default: Story = {};
 
 export const Interactive: Story = {
   render: function InteractivePicker() {
     const [selected, setSelected] = useState<ScuBoxSplits | null>(null);
     return (
-      <div className="max-w-xl rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4">
+      <div className="max-w-md rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4">
         <MissionBoxBreakdownPicker
           totalScu={32}
           maxContainerScu={8}

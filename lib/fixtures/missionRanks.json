@@ -1,0 +1,9 @@
+[
+  { "slug": "trainee", "name": "Trainee", "order": 1 },
+  { "slug": "rookie", "name": "Rookie", "order": 2 },
+  { "slug": "junior", "name": "Junior", "order": 3 },
+  { "slug": "member", "name": "Member", "order": 4 },
+  { "slug": "experienced", "name": "Experienced", "order": 5 },
+  { "slug": "senior", "name": "Senior", "order": 6 },
+  { "slug": "master", "name": "Master", "order": 7 }
+]

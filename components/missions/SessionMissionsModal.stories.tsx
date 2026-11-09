@@ -22,6 +22,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Contracts start collapsed; use the chevron to reveal collect / deliver / box types. */
 export const BlockList: Story = {};
 
 export const Empty: Story = {

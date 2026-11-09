@@ -119,6 +119,26 @@ function ObjectiveGroup({
   );
 }
 
+function ExpandChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={[
+        "h-4 w-4 transition-transform",
+        open ? "rotate-180" : "",
+      ].join(" ")}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
 export function SessionMissionsModal({
   open,
   missions,
@@ -129,6 +149,7 @@ export function SessionMissionsModal({
   onSelectBoxBreakdown,
 }: SessionMissionsModalProps) {
   const [enriched, setEnriched] = useState<SessionMission[]>(missions);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -142,6 +163,7 @@ export function SessionMissionsModal({
   useEffect(() => {
     if (!open) {
       setEnriched(missions);
+      setExpandedIds({});
       return;
     }
     let cancelled = false;
@@ -210,10 +232,12 @@ export function SessionMissionsModal({
               {displayMissions.map((mission) => {
                 const isHidden = Boolean(mission.isHidden);
                 const isCompleted = Boolean(mission.isCompleted);
+                const isExpanded = Boolean(expandedIds[mission.id]);
                 const totalScu = missionTotalScu(mission);
                 const reward = missionRewardLabel(mission);
                 const collect = missionCollectObjectives(mission);
                 const deliver = missionDeliverObjectives(mission);
+                const detailsId = `mission-details-${mission.id}`;
 
                 return (
                   <article
@@ -228,104 +252,145 @@ export function SessionMissionsModal({
                     ].join(" ")}
                   >
                     <div className="absolute right-3 top-3 flex gap-1">
-                        <button
-                          type="button"
-                          aria-label={
-                            isCompleted
-                              ? `Reopen ${mission.title}`
-                              : `Complete ${mission.title}`
-                          }
-                          title={
-                            isCompleted
-                              ? "Reopen mission (restore cargo to route)"
-                              : "Complete mission (drop cargo from route)"
-                          }
-                          onClick={() =>
-                            onToggleCompleted(mission.id, !isCompleted)
-                          }
-                          className={[
-                            "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
-                            isCompleted
-                              ? "border-rsi-success/50 text-rsi-success hover:border-rsi-success"
-                              : "border-rsi-border text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success",
-                          ].join(" ")}
-                        >
-                          <CompleteIcon isCompleted={isCompleted} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={
-                            isHidden
-                              ? `Show ${mission.title} in route`
-                              : `Hide ${mission.title} from route`
-                          }
-                          title={
-                            isHidden
-                              ? "Show in route table"
-                              : "Hide from route table"
-                          }
-                          onClick={() => onToggleHidden(mission.id, !isHidden)}
-                          className={[
-                            "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
-                            isHidden
-                              ? "border-rsi-accent/40 text-rsi-accent hover:border-rsi-accent"
-                              : "border-rsi-border text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                          ].join(" ")}
-                        >
-                          <VisibilityIcon isHidden={isHidden} />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${mission.title}`}
-                          title="Remove from session"
-                          onClick={() => onRemoveMission(mission.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-rsi border border-rsi-danger/40 bg-rsi-surface font-mono text-[0.7rem] text-rsi-danger hover:bg-rsi-danger-muted"
-                        >
-                          ×
-                        </button>
-                      </div>
-
-                    <h3 className="text-base font-semibold tracking-wide text-rsi-text">
-                      {mission.title}
-                    </h3>
-                    <p className="mt-2 font-mono text-sm tabular-nums tracking-wide text-rsi-text">
-                      <span
-                        className={
-                          isCompleted ? "text-rsi-success" : "text-rsi-accent"
+                      <button
+                        type="button"
+                        aria-label={
+                          isCompleted
+                            ? `Reopen ${mission.title}`
+                            : `Complete ${mission.title}`
                         }
+                        title={
+                          isCompleted
+                            ? "Reopen mission (restore cargo to route)"
+                            : "Complete mission (drop cargo from route)"
+                        }
+                        onClick={() =>
+                          onToggleCompleted(mission.id, !isCompleted)
+                        }
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
+                          isCompleted
+                            ? "border-rsi-success/50 text-rsi-success hover:border-rsi-success"
+                            : "border-rsi-border text-rsi-text-secondary hover:border-rsi-success/50 hover:text-rsi-success",
+                        ].join(" ")}
                       >
-                        {totalScu} SCU
-                      </span>
-                      <span className="mx-2 text-rsi-text-muted">·</span>
-                      <span>{reward}</span>
-                      {isCompleted ? (
-                        <span className="ml-2 text-[0.65rem] uppercase tracking-[0.14em] text-rsi-success">
-                          complete
-                        </span>
-                      ) : null}
-                      {isHidden ? (
-                        <span className="ml-2 text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                          hidden
-                        </span>
-                      ) : null}
-                    </p>
-                    {mission.contractor ? (
-                      <p className="mt-1 text-xs text-rsi-text-secondary">
-                        {mission.contractor}
-                      </p>
-                    ) : null}
+                        <CompleteIcon isCompleted={isCompleted} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={
+                          isHidden
+                            ? `Show ${mission.title} in route`
+                            : `Hide ${mission.title} from route`
+                        }
+                        title={
+                          isHidden
+                            ? "Show in route table"
+                            : "Hide from route table"
+                        }
+                        onClick={() => onToggleHidden(mission.id, !isHidden)}
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-rsi border bg-rsi-surface",
+                          isHidden
+                            ? "border-rsi-accent/40 text-rsi-accent hover:border-rsi-accent"
+                            : "border-rsi-border text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        <VisibilityIcon isHidden={isHidden} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${mission.title}`}
+                        title="Remove from session"
+                        onClick={() => onRemoveMission(mission.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-rsi border border-rsi-danger/40 bg-rsi-surface text-rsi-danger hover:bg-rsi-danger-muted"
+                      >
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
 
-                    <ObjectiveGroup label="Collect" lines={collect} />
-                    <ObjectiveGroup label="Deliver" lines={deliver} />
-                    <MissionBoxBreakdownPicker
-                      totalScu={totalScu}
-                      maxContainerScu={mission.maxContainerScu}
-                      selected={mission.scuBoxSplits ?? null}
-                      disabled={isCompleted}
-                      onSelect={(breakdown) =>
-                        onSelectBoxBreakdown(mission.id, breakdown)
-                      }
-                    />
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        aria-controls={detailsId}
+                        aria-label={
+                          isExpanded
+                            ? `Collapse ${mission.title} details`
+                            : `Expand ${mission.title} details`
+                        }
+                        title={isExpanded ? "Collapse details" : "Expand details"}
+                        onClick={() =>
+                          setExpandedIds((prev) => ({
+                            ...prev,
+                            [mission.id]: !prev[mission.id],
+                          }))
+                        }
+                        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text"
+                      >
+                        <ExpandChevronIcon open={isExpanded} />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-semibold tracking-wide text-rsi-text">
+                          {mission.title}
+                        </h3>
+                        <p className="mt-2 font-mono text-sm tabular-nums tracking-wide text-rsi-text">
+                          <span
+                            className={
+                              isCompleted
+                                ? "text-rsi-success"
+                                : "text-rsi-accent"
+                            }
+                          >
+                            {totalScu} SCU
+                          </span>
+                          <span className="mx-2 text-rsi-text-muted">·</span>
+                          <span>{reward}</span>
+                          {isCompleted ? (
+                            <span className="ml-2 text-[0.65rem] uppercase tracking-[0.14em] text-rsi-success">
+                              complete
+                            </span>
+                          ) : null}
+                          {isHidden ? (
+                            <span className="ml-2 text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                              hidden
+                            </span>
+                          ) : null}
+                        </p>
+                        {mission.contractor ? (
+                          <p className="mt-1 text-xs text-rsi-text-secondary">
+                            {mission.contractor}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {isExpanded ? (
+                      <div id={detailsId} className="mt-1">
+                        <ObjectiveGroup label="Collect" lines={collect} />
+                        <ObjectiveGroup label="Deliver" lines={deliver} />
+                        <MissionBoxBreakdownPicker
+                          totalScu={totalScu}
+                          maxContainerScu={mission.maxContainerScu}
+                          selected={mission.scuBoxSplits ?? null}
+                          disabled={isCompleted}
+                          onSelect={(breakdown) =>
+                            onSelectBoxBreakdown(mission.id, breakdown)
+                          }
+                        />
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}

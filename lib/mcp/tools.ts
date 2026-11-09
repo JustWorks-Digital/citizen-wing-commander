@@ -25,6 +25,7 @@ import {
   type CatalogMissionReward,
   type CatalogMissionScuSplit,
 } from "@/lib/missions/catalogMission";
+import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { renameAllCatalogMissionScreenshots } from "@/lib/missions/renameCatalogScreenshot";
 import {
   describeShipStorageLines,
@@ -752,6 +753,7 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
     type: row.type,
     fingerprint: row.fingerprint,
     title: row.title,
+    rank: row.rank,
     contractorSlug: row.contractorSlug,
     contractorName: row.contractorSlug
       ? (getContractorBySlug(row.contractorSlug)?.name ?? row.contractorSlug)
@@ -783,6 +785,8 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
 export async function toolCreateMission(input: {
   type?: "hauling";
   title: string;
+  /** Hauling career rank (Trainee…Master). Extracted from title when omitted. */
+  rank?: string;
   contractor?: string;
   /**
    * Payout lines. Prefer over rewardAuec.
@@ -940,6 +944,7 @@ export async function toolCreateMission(input: {
       type: "hauling",
       payload: {
         title: input.title,
+        rank: normalizeMissionRank(input.rank) ?? undefined,
         contractorSlug,
         rewards: normalizeCatalogRewards(input.rewards, input.rewardAuec),
         offerLocationSlug,

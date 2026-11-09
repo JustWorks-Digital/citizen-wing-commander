@@ -58,6 +58,7 @@ export async function upsertCatalogMission(
   const updateSet: Record<string, unknown> = {
     type: "hauling",
     title: payload.title,
+    rank: payload.rank ?? null,
     contractorSlug: payload.contractorSlug ?? null,
     rewards: payload.rewards,
     offerLocationSlug: payload.offerLocationSlug ?? null,
@@ -79,6 +80,7 @@ export async function upsertCatalogMission(
       type: "hauling",
       fingerprint,
       title: payload.title,
+      rank: payload.rank ?? null,
       contractorSlug: payload.contractorSlug ?? null,
       rewards: payload.rewards,
       offerLocationSlug: payload.offerLocationSlug ?? null,
@@ -132,6 +134,32 @@ export async function updateCatalogMissionScreenshotPath(input: {
       latestScreenshotPath: input.latestScreenshotPath,
       payload,
       scuLocationSplits: payload.scuLocationSplits ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(catalogMissions.id, input.missionId))
+    .returning();
+  if (!row) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  return row;
+}
+
+/** Rewrite title/rank/fingerprint for one catalog mission (by id). */
+export async function updateCatalogMissionRankFields(input: {
+  missionId: string;
+  title: string;
+  rank: HaulingCatalogMissionPayload["rank"];
+  payload: HaulingCatalogMissionPayload;
+  fingerprint: string;
+}): Promise<CatalogMission> {
+  const db = getDb();
+  const [row] = await db
+    .update(catalogMissions)
+    .set({
+      title: input.title,
+      rank: input.rank ?? null,
+      fingerprint: input.fingerprint,
+      payload: input.payload,
       updatedAt: new Date(),
     })
     .where(eq(catalogMissions.id, input.missionId))

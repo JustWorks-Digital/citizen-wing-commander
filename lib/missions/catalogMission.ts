@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 import {
+  normalizeMissionRank,
+  stripRankFromTitle,
+  type MissionRank,
+} from "@/lib/missions/missionRank";
+import {
   CARGO_BOX_SCU,
   type CargoBoxScu,
   decomposeScuIntoBoxes,
@@ -98,6 +103,11 @@ export type HaulingCatalogMissionPayload = {
    * Prefer OCR/transcript wording; can be derived from `scuSplits`.
    */
   objectives?: string[];
+  /**
+   * Hauling career rank on the contract (Trainee…Master).
+   * Extracted from titles like "Junior Rank - …"; value has no “Rank” suffix.
+   */
+  rank?: MissionRank | null;
   /** Largest allowed crate size in SCU (from contract text). */
   scuMaxContainerSize?: number | null;
   /** Crate-size counts for the contract total (1/2/4/8 SCU). */
@@ -336,6 +346,7 @@ export function catalogMissionFingerprint(
   input: Pick<
     HaulingCatalogMissionPayload,
     | "title"
+    | "rank"
     | "contractorSlug"
     | "offerLocationSlug"
     | "fromLocationSlugs"
@@ -343,12 +354,16 @@ export function catalogMissionFingerprint(
     | "cargo"
   >,
 ): string {
+  const stripped = stripRankFromTitle(input.title);
+  const rank = normalizeMissionRank(input.rank) ?? stripped.rank ?? "";
+  const titleKey = stripped.title.trim().toLowerCase();
   const cargoKey = [...input.cargo]
     .map((line) => `${line.commoditySlug}:${line.scu}`)
     .sort()
     .join(",");
   const raw = [
-    input.title.trim().toLowerCase(),
+    titleKey,
+    String(rank).toLowerCase(),
     (input.contractorSlug ?? "").trim().toLowerCase(),
     (input.offerLocationSlug ?? "").trim().toLowerCase(),
     [...input.fromLocationSlugs].map((s) => s.toLowerCase()).sort().join("|"),
@@ -390,10 +405,13 @@ export function buildHaulingCatalogMissionPayload(
     toLocationSlugs: partial.toLocationSlugs,
     scuTotal,
   });
+  const fromTitle = stripRankFromTitle(partial.title);
+  const rank = normalizeMissionRank(partial.rank) ?? fromTitle.rank ?? null;
   return {
     kind: "hauling",
     version: 1,
-    title: partial.title,
+    title: fromTitle.title,
+    rank,
     contractorSlug: partial.contractorSlug ?? null,
     rewards: normalizeCatalogRewards(partial.rewards, partial.rewardAuec),
     offerLocationSlug: partial.offerLocationSlug ?? null,

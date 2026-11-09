@@ -20,6 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** Optional header sort when `sort` / `onSortChange` are provided by the parent. */
 export const SelectedRow: Story = {
   args: { selectedId: sampleCatalogMissions[0]!.id },
 };

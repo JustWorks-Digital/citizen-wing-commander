@@ -607,6 +607,20 @@ const handler = createMcpHandler(
             .default("hauling")
             .describe("Mission kind. Currently only hauling is implemented."),
           title: z.string().min(1),
+          rank: z
+            .enum([
+              "Trainee",
+              "Rookie",
+              "Junior",
+              "Member",
+              "Experienced",
+              "Senior",
+              "Master",
+            ])
+            .optional()
+            .describe(
+              "Hauling career rank (no “Rank” suffix). Extracted from title when omitted.",
+            ),
           contractor: z
             .string()
             .optional()

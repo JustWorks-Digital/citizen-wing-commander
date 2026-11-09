@@ -99,6 +99,13 @@
       "when": 1794199200000,
       "tag": "0013_catalog_scu_location_splits",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794199800000,
+      "tag": "0014_catalog_rank",
+      "breakpoints": true
     }
   ]
 }

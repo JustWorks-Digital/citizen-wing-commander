@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
 import { Button } from "@/components/ui/Button";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+
+const COLLAPSED_SESSION_COUNT = 3;
 
 export type SessionTabsProps = {
   sessions: SessionTabSummary[];
@@ -46,6 +48,38 @@ function SessionGlyph({ active }: { active: boolean }) {
   );
 }
 
+function sortSessionsByRecent(sessions: SessionTabSummary[]): SessionTabSummary[] {
+  return [...sessions].sort((a, b) => {
+    const aTime = Date.parse(a.updatedAt) || 0;
+    const bTime = Date.parse(b.updatedAt) || 0;
+    return bTime - aTime;
+  });
+}
+
+/**
+ * Visible tabs when collapsed: up to 3 most recent, always including the
+ * active session if it falls outside that window.
+ */
+function visibleSessions(
+  sessions: SessionTabSummary[],
+  activeSessionId: string | null,
+  expanded: boolean,
+): SessionTabSummary[] {
+  const sorted = sortSessionsByRecent(sessions);
+  if (expanded || sorted.length <= COLLAPSED_SESSION_COUNT) {
+    return sorted;
+  }
+
+  const recent = sorted.slice(0, COLLAPSED_SESSION_COUNT);
+  if (!activeSessionId || recent.some((tab) => tab.id === activeSessionId)) {
+    return recent;
+  }
+
+  const active = sorted.find((tab) => tab.id === activeSessionId);
+  if (!active) return recent;
+  return [active, ...sorted.filter((tab) => tab.id !== activeSessionId).slice(0, COLLAPSED_SESSION_COUNT - 1)];
+}
+
 /** Open session tabs + create control for multi-session hauling. */
 export function SessionTabs({
   sessions,
@@ -58,6 +92,19 @@ export function SessionTabs({
   const [pendingClose, setPendingClose] = useState<SessionTabSummary | null>(
     null,
   );
+  const [expanded, setExpanded] = useState(false);
+
+  const hiddenCount = Math.max(0, sessions.length - COLLAPSED_SESSION_COUNT);
+  const canToggle = sessions.length > COLLAPSED_SESSION_COUNT;
+
+  const shown = useMemo(
+    () => visibleSessions(sessions, activeSessionId, expanded),
+    [sessions, activeSessionId, expanded],
+  );
+
+  useEffect(() => {
+    if (!canToggle) setExpanded(false);
+  }, [canToggle]);
 
   useEffect(() => {
     if (!pendingClose) return;
@@ -73,9 +120,9 @@ export function SessionTabs({
       <div
         role="tablist"
         aria-label="Hauling sessions"
-        className="flex min-w-0 items-stretch gap-1 overflow-x-auto pb-0.5"
+        className="flex min-w-0 flex-wrap items-stretch gap-1"
       >
-        {sessions.map((tab) => {
+        {shown.map((tab) => {
           const isActive = tab.id === activeSessionId;
           return (
             <div
@@ -146,6 +193,43 @@ export function SessionTabs({
             </div>
           );
         })}
+        {canToggle ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={
+              expanded
+                ? "Show fewer sessions"
+                : `Show ${hiddenCount} more sessions`
+            }
+            title={expanded ? "Show less" : `Show ${hiddenCount} more`}
+            disabled={isBusy}
+            onClick={() => setExpanded((prev) => !prev)}
+            className={[
+              "inline-flex h-9 shrink-0 items-center gap-1 rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-2.5 font-mono text-[0.65rem] uppercase tracking-[0.12em] text-rsi-text-secondary transition-colors",
+              "hover:border-rsi-border-strong hover:bg-rsi-surface/60 hover:text-rsi-text",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+              isBusy ? "opacity-60" : "",
+            ].join(" ")}
+          >
+            {expanded ? "Show less" : `+${hiddenCount} more`}
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className={[
+                "size-3.5 transition-transform",
+                expanded ? "rotate-180" : "",
+              ].join(" ")}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        ) : null}
         <button
           type="button"
           aria-label="Add session"
