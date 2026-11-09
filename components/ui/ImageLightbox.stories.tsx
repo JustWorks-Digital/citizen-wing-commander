@@ -42,3 +42,51 @@ export const Default: Story = {
     );
   },
 };
+
+export const Gallery: Story = {
+  args: {
+    src: "/images/outdoor-freight-elevators/port-tressler.jpg",
+    title: "Contract 1",
+    alt: "Contract screenshot 1",
+    onClose: () => {},
+  },
+  render: function Render() {
+    const items = [
+      {
+        src: "/images/outdoor-freight-elevators/port-tressler.jpg",
+        title: "Contract 1 · Corundum",
+        alt: "Contract 1",
+      },
+      {
+        src: "/images/outdoor-freight-elevators/port-tressler.jpg",
+        title: "Contract 2 · Quartz",
+        alt: "Contract 2",
+      },
+      {
+        src: "/images/outdoor-freight-elevators/port-tressler.jpg",
+        title: "Contract 3 · Tin",
+        alt: "Contract 3",
+      },
+    ];
+    const [open, setOpen] = useState(true);
+    const [index, setIndex] = useState(0);
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <Button type="button" onClick={() => setOpen(true)}>
+          Open gallery
+        </Button>
+        {open ? (
+          <ImageLightbox
+            src={items[index]!.src}
+            title={items[index]!.title}
+            alt={items[index]!.alt}
+            items={items}
+            index={index}
+            onIndexChange={setIndex}
+            onClose={() => setOpen(false)}
+          />
+        ) : null}
+      </div>
+    );
+  },
+};

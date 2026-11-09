@@ -12,7 +12,35 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const TextChips: Story = {
+export const ContractSourceButton: Story = {
+  args: {
+    refs: [
+      {
+        logicalPath: "demo/lorville-a.png",
+        filename: "lorville-a.png",
+        label: "lorville-a",
+        missionTitles: ["Member Rank — Corundum"],
+        url: "/images/outdoor-freight-elevators/port-tressler.jpg",
+      },
+      {
+        logicalPath: "demo/lorville-b.png",
+        filename: "lorville-b.png",
+        label: "lorville-b",
+        missionTitles: ["Member Rank — Quartz"],
+        url: "/images/outdoor-freight-elevators/port-tressler.jpg",
+      },
+      {
+        logicalPath: "demo/lorville-c.png",
+        filename: "lorville-c.png",
+        label: "lorville-c",
+        missionTitles: ["Member Rank — Tin"],
+        url: "/images/outdoor-freight-elevators/port-tressler.jpg",
+      },
+    ],
+  },
+};
+
+export const TextOnlyPaths: Story = {
   args: {
     refs: [
       {
