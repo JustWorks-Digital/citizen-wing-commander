@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Checklist rows with location, cargo, totals, and next distance. Click a row to focus it in cargo layout (including completed stops).",
+          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right.",
       },
     },
   },

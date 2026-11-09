@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import {
   describeCargoDeliveries,
@@ -9,6 +9,7 @@ import {
   sumCargoScuByRole,
 } from "@/lib/fixtures";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   formatDistanceToNext,
   type HaulingChecklistRow,
@@ -17,7 +18,9 @@ import {
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
+import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 import { StopMissionScreenshots } from "./StopMissionScreenshots";
+import { StopRelatedMissions } from "./StopRelatedMissions";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
@@ -32,6 +35,11 @@ export type HaulingChecklistTableProps = {
   missions?: SessionMission[];
   /** Session id (screenshot batch) for image URLs. */
   sessionId?: string | null;
+  /** Persist crate-mix correction from a stop mission tile. */
+  onSelectBoxBreakdown?: (
+    missionId: string,
+    breakdown: ScuBoxSplits,
+  ) => void;
 };
 
 /** Default focus: first incomplete stop, else last stop. */
@@ -438,7 +446,7 @@ function ScuTotalDisplay({
   );
 }
 
-function MetaGrid({
+function TotalMeta({
   row,
   scu,
 }: {
@@ -446,56 +454,41 @@ function MetaGrid({
   scu: { pickup: number; delivery: number; total: number };
 }) {
   return (
-    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rsi-divider/80 pt-3 text-sm">
-      <div>
-        <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Total
-        </dt>
-        <dd className="mt-0.5">
-          <ScuTotalDisplay
-            row={row}
-            pickup={scu.pickup}
-            delivery={scu.delivery}
-            total={scu.total}
-            align="start"
-          />
-        </dd>
+    <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
+      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Total
+      </p>
+      <div className="mt-0.5">
+        <ScuTotalDisplay
+          row={row}
+          pickup={scu.pickup}
+          delivery={scu.delivery}
+          total={scu.total}
+          align="start"
+        />
       </div>
-      <div>
-        <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Next Distance
-        </dt>
-        <dd
-          className={[
-            "mt-0.5 font-mono tabular-nums",
-            row.isCompleted
-              ? "text-rsi-text-muted line-through"
-              : "text-rsi-text-secondary",
-          ].join(" ")}
-        >
-          {formatDistanceToNext(row.distanceToNext)}
-        </dd>
-      </div>
-    </dl>
+    </div>
   );
 }
 
-function equalizeTableRowHeights(tbody: HTMLTableSectionElement) {
-  const trs = [...tbody.querySelectorAll<HTMLTableRowElement>(":scope > tr")].filter(
-    (tr) => !tr.querySelector(":scope > td[colspan]"),
+function NextDistanceMeta({ row }: { row: HaulingChecklistRow }) {
+  return (
+    <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
+      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Next Distance
+      </p>
+      <p
+        className={[
+          "mt-0.5 font-mono tabular-nums",
+          row.isCompleted
+            ? "text-rsi-text-muted line-through"
+            : "text-rsi-text-secondary",
+        ].join(" ")}
+      >
+        {formatDistanceToNext(row.distanceToNext)}
+      </p>
+    </div>
   );
-  for (const tr of trs) {
-    tr.style.height = "";
-  }
-  let maxHeight = 0;
-  for (const tr of trs) {
-    maxHeight = Math.max(maxHeight, tr.getBoundingClientRect().height);
-  }
-  if (maxHeight <= 0) return;
-  const height = `${Math.ceil(maxHeight)}px`;
-  for (const tr of trs) {
-    tr.style.height = height;
-  }
 }
 
 export function HaulingChecklistTable({
@@ -506,32 +499,14 @@ export function HaulingChecklistTable({
   toolbarStart = null,
   missions = [],
   sessionId = null,
+  onSelectBoxBreakdown,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const desktopTbodyRef = useRef<HTMLTableSectionElement>(null);
   const completedCount = rows.filter((row) => row.isCompleted).length;
   const visibleRows = hideCompleted
     ? rows.filter((row) => !row.isCompleted)
     : rows;
-
-  useLayoutEffect(() => {
-    const tbody = desktopTbodyRef.current;
-    if (!tbody) return;
-
-    const sync = () => {
-      equalizeTableRowHeights(tbody);
-    };
-
-    sync();
-    window.addEventListener("resize", sync);
-    return () => {
-      window.removeEventListener("resize", sync);
-      for (const tr of tbody.querySelectorAll<HTMLTableRowElement>(":scope > tr")) {
-        tr.style.height = "";
-      }
-    };
-  }, [hideCompleted, rows]);
 
   async function copyStarmapName(rowId: string, name: string) {
     try {
@@ -589,8 +564,7 @@ export function HaulingChecklistTable({
     <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
       {toolbar}
 
-      {/* Mobile: stacked cards (no horizontal scroll) */}
-      <ul className="flex flex-col md:hidden">
+      <ul className="flex flex-col">
         {visibleRows.length === 0 ? (
           <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
             {emptyMessage}
@@ -632,178 +606,47 @@ export function HaulingChecklistTable({
                   isActive={isFocused}
                   onToggle={() => onToggle(row.id)}
                 />
-                <div className="min-w-0 flex-1">
-                  <LocationHeader
-                    row={row}
-                    location={location}
-                    hasOutdoorFreightElevator={Boolean(
-                      locationFixture?.hasOutdoorFreightElevator,
-                    )}
-                    isCopied={isCopied}
-                    onCopy={() => {
-                      void copyStarmapName(row.id, location);
-                    }}
-                  />
-                  <div className="mt-3">
-                    <CargoGroups row={row} cargoLines={cargoLines} />
-                  </div>
-                  {sessionId ? (
-                    <StopMissionScreenshots
-                      refs={screenshotRefsForRow(missions, row, sessionId)}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <LocationHeader
+                        row={row}
+                        location={location}
+                        hasOutdoorFreightElevator={Boolean(
+                          locationFixture?.hasOutdoorFreightElevator,
+                        )}
+                        isCopied={isCopied}
+                        onCopy={() => {
+                          void copyStarmapName(row.id, location);
+                        }}
+                      />
+                      <div className="mt-3">
+                        <CargoGroups row={row} cargoLines={cargoLines} />
+                      </div>
+                      {sessionId ? (
+                        <StopMissionScreenshots
+                          refs={screenshotRefsForRow(missions, row, sessionId)}
+                        />
+                      ) : null}
+                      <TotalMeta row={row} scu={scu} />
+                      <NextDistanceMeta row={row} />
+                    </div>
+                    <StopDeliveryBayPreview
+                      row={row}
+                      className="hidden w-full md:block md:w-1/2 md:shrink-0 md:self-start"
                     />
-                  ) : null}
-                  <MetaGrid row={row} scu={scu} />
+                  </div>
+                  <StopRelatedMissions
+                    row={row}
+                    missions={missions}
+                    onSelectBoxBreakdown={onSelectBoxBreakdown}
+                  />
                 </div>
               </div>
             </li>
           );
         })}
       </ul>
-
-      {/* Desktop: table */}
-      <div className="hidden overflow-x-auto md:block">
-        <table
-          className={[
-            "w-full min-w-[40rem] border-collapse text-left",
-            /* Row rule under data cells; location starts at name (px-4), not into step col */
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:relative",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:pointer-events-none",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:absolute",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:right-0",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:bottom-0",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:left-4",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:h-px",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(2)]:after:bg-rsi-divider/80",
-            "[&_tbody_tr:not(:last-child)_td:nth-child(n+3)]:shadow-[inset_0_-1px_0_0_var(--rsi-divider)]",
-          ].join(" ")}
-        >
-          <thead>
-            <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
-              <th
-                scope="col"
-                className="w-14 px-2 py-3 text-center font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                <span className="sr-only">Stop and done</span>
-              </th>
-              <th
-                scope="col"
-                className="min-w-[10rem] px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                Location
-              </th>
-              <th
-                scope="col"
-                className="min-w-[12rem] px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                Cargo
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                Total
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-rsi-text-muted"
-              >
-                Next Distance
-              </th>
-            </tr>
-          </thead>
-          <tbody ref={desktopTbodyRef}>
-            {visibleRows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-sm text-rsi-text-muted"
-                >
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : null}
-            {visibleRows.map((row) => {
-              const locationFixture = getLocationBySlug(row.locationSlug);
-              const location = locationFixture?.name ?? row.locationSlug;
-              const cargoFallbackRole =
-                row.legKind === "both" ? null : row.legKind;
-              const cargoLines = describeCargoDeliveries(
-                row.cargoDeliveries,
-                cargoFallbackRole,
-              );
-              const scu = sumCargoScuByRole(
-                row.cargoDeliveries,
-                row.legKind === "both" ? null : row.legKind,
-              );
-              const isCopied = copiedRowId === row.id;
-              const step = stepById.get(row.id) ?? 0;
-              const isFocused = row.id === activeRowId;
-
-              return (
-                <tr
-                  key={row.id}
-                  aria-checked={row.isCompleted}
-                  aria-current={isFocused ? "step" : undefined}
-                  className={[
-                    "transition-colors",
-                    checklistRowToneClass(row.isCompleted, isFocused),
-                  ].join(" ")}
-                  onClick={() => onFocusStop?.(row.id)}
-                >
-                  <td className="px-2 py-2 text-center align-middle">
-                    <DoneCheckbox
-                      location={location}
-                      step={step}
-                      isCompleted={row.isCompleted}
-                      isActive={isFocused}
-                      onToggle={() => onToggle(row.id)}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-left align-middle">
-                    <LocationHeader
-                      row={row}
-                      location={location}
-                      hasOutdoorFreightElevator={Boolean(
-                        locationFixture?.hasOutdoorFreightElevator,
-                      )}
-                      isCopied={isCopied}
-                      onCopy={() => {
-                        void copyStarmapName(row.id, location);
-                      }}
-                    />
-                    {sessionId ? (
-                      <StopMissionScreenshots
-                        refs={screenshotRefsForRow(missions, row, sessionId)}
-                      />
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-left align-middle">
-                    <CargoGroups row={row} cargoLines={cargoLines} />
-                  </td>
-                  <td className="px-4 py-3 text-right align-middle">
-                    <ScuTotalDisplay
-                      row={row}
-                      pickup={scu.pickup}
-                      delivery={scu.delivery}
-                      total={scu.total}
-                    />
-                  </td>
-                  <td
-                    className={[
-                      "px-4 py-3 text-right align-middle font-mono text-sm tabular-nums",
-                      row.isCompleted
-                        ? "text-rsi-text-muted line-through"
-                        : "text-rsi-text-secondary",
-                    ].join(" ")}
-                  >
-                    {formatDistanceToNext(row.distanceToNext)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

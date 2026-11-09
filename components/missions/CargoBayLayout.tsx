@@ -142,17 +142,30 @@ export function CargoBayLayout({
           Select a ship with a known cargo grid to see bay placement.
         </p>
       ) : plan && plan.boxes.length > 0 ? (
-        <CargoGridSketch
-          sketch={sketch}
-          cellPx={14}
-          isoCellPx={16}
-          compact
-          views={viewTab}
-          inlineTopLegend={viewTab === "top"}
-          placementTints={placementTints}
-          placementBoxes={plan.boxes}
-          legendItems={legendItems}
-        />
+        <div className="relative">
+          <div
+            className="pointer-events-none mb-1.5 flex items-center justify-between px-1 font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+            aria-hidden
+          >
+            <span title="Ramp / aft">Back</span>
+            <span title="Nose / fore">Front</span>
+          </div>
+          <CargoGridSketch
+            sketch={sketch}
+            cellPx={14}
+            isoCellPx={16}
+            compact
+            views={viewTab}
+            inlineTopLegend={viewTab === "top"}
+            placementTints={placementTints}
+            placementBoxes={plan.boxes}
+            legendItems={legendItems}
+          />
+          <p className="sr-only">
+            Ship orientation: back (ramp) on the left, front (nose) on the
+            right.
+          </p>
+        </div>
       ) : (
         <p className="py-6 text-center text-sm text-rsi-text-muted">
           {activeRow

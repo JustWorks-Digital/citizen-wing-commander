@@ -508,6 +508,18 @@ export function SessionChecklistView({
         onFocusStop={setFocusedStopId}
         missions={session.missions ?? []}
         sessionId={session.id}
+        onSelectBoxBreakdown={(missionId, breakdown) => {
+          const result = setMissionScuBoxSplits(
+            session,
+            missionId,
+            breakdown,
+          );
+          if (!result.ok) {
+            setLoadError(result.error);
+            return;
+          }
+          persistSession(result.session);
+        }}
         toolbarStart={
           <SessionRouteProgressStats
             completedLegs={completedLegs}
