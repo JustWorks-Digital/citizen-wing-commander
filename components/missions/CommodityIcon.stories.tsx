@@ -55,3 +55,43 @@ export const InlineLabel: Story = {
     </div>
   ),
 };
+
+/** Kind crate tint as family base; per-slug uniquify keeps siblings distinct. */
+export const DistinctSameKind: Story = {
+  args: {
+    showTooltip: false,
+    size: "sm",
+  },
+  render: () => {
+    const samples = [
+      { slug: "aluminum", label: "Aluminum", color: "green", color2: "yellow" },
+      { slug: "agricium", label: "Agricium", color: "green", color2: "yellow" },
+      { slug: "borase", label: "Borase", color: "green", color2: "yellow" },
+      { slug: "titanium", label: "Titanium", color: "green", color2: "yellow" },
+      { slug: "tungsten", label: "Tungsten", color: "green", color2: "yellow" },
+      { slug: "copper", label: "Copper", color: "green", color2: "yellow" },
+      { slug: "beryl", label: "Beryl", color: "gray", color2: "yellow" },
+      { slug: "scrap", label: "Scrap", color: "black", color2: "orange" },
+    ] as const;
+    return (
+      <ul className="space-y-2">
+        {samples.map((item) => (
+          <li
+            key={item.slug}
+            className="flex items-center gap-2 text-xs text-rsi-text"
+          >
+            <CommodityIcon
+              commoditySlug={item.slug}
+              label={item.label}
+              color={item.color}
+              color2={item.color2}
+              size="sm"
+              showTooltip={false}
+            />
+            <span className="font-medium">{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  },
+};

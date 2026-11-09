@@ -1,0 +1,2130 @@
+{
+  "source": "https://api.star-citizen.wiki/api/commodities",
+  "sourceLabel": "Star Citizen Wiki commodities (cargo crate / product images)",
+  "fetchedAt": "2026-11-09T01:45:37.800Z",
+  "matchedUexSlugs": 204,
+  "kindFilledUexSlugs": 137,
+  "totalUexSlugs": 204,
+  "items": [
+    {
+      "slug": "ace-interceptor-helmet",
+      "colorHex": "#8c6d37",
+      "colorHex2": "#6b8c5b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/f/f0/Ace_interceptor_helmet.png?7bpnp",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "acryliplex-composite",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "agricium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "aluminum",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "agricium-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "agricultural-supplies",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [
+        "ck13-gid-seed-blend"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "altruciatoxin",
+      "colorHex": "#5b8c7d",
+      "colorHex2": "#4d788c",
+      "image": "crates/slamdrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/17/Slamdrug.png?aks8z",
+      "sharedWith": [
+        "slam"
+      ],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "aluminium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "aluminum",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "aluminum-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "amioshi-plague",
+      "colorHex": "#8c5b28",
+      "colorHex2": "#8c884d",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/a/a0/Revenant_Pods.png?6be4f",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "ammonia",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "anti-hydrogen",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "aphorite",
+      "colorHex": "#8c5c45",
+      "colorHex2": "#8c5b6a",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/6/6e/Aphorite.jpg?hs0c0",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "apoxygenite",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo-diluthermex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/ae/Cargo-Diluthermex.jpg?k4can",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "argon",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "arsenic",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "aslarite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "aslarite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "astatine",
+      "colorHex": "#4a5562",
+      "colorHex2": "#54adf7",
+      "image": "crates/cargo_-_gas_-_astatine.png",
+      "sourceUrl": "https://media.starcitizen.tools/a/aa/Cargo_-_Gas_-_Astatine.png?5kbk2",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "atacamite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "atlasium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "audio-visual-equipment",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "beradom",
+      "colorHex": "#8c451e",
+      "colorHex2": "#8c4f39",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/f/fc/Beradom_Rock.jpg?jp5zn",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "beryl",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "bexalite",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "beryl-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "bexalite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "bexalite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "bioplastic",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "blue-bilva",
+      "colorHex": "#288bb7",
+      "colorHex2": "#5b828c",
+      "image": "crates/consumable_fruit_-_blue_bilva.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Consumable_Fruit_-_Blue_Bilva.jpg?1tx8h",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "borase",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "borase-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "cadmium-allinide",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "caranite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "caranite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "carbon",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "carbon-silk",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "carinite",
+      "colorHex": "#8c1e2b",
+      "colorHex2": "#795b8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/6/6b/Carinite.png?6wega",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "carinite-pure",
+      "colorHex": "#8c1e28",
+      "colorHex2": "#8c1e23",
+      "image": "crates/pure_carnite.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/b/b2/Pure_carnite.jpg?1zsr1",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "cave-kopion-horn",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "chlorine",
+      "colorHex": "#4a5562",
+      "colorHex2": "#54adf7",
+      "image": "crates/cargo_-_gas_-_astatine.png",
+      "sourceUrl": "https://media.starcitizen.tools/a/aa/Cargo_-_Gas_-_Astatine.png?5kbk2",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ck13-gid-seed-blend",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [
+        "agricultural-supplies"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "coal",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "cobalt",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "compboard",
+      "colorHex": "#b35427",
+      "colorHex2": "#534d8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/5/59/Compboard-Closeup-Alpha3.16.jpg?h8st2",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "construction-material-pebbles",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "construction-material-rubble",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "construction-material-salvage",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "construction-materials",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#3a3f46",
+      "image": "crates/rmc_container.png",
+      "sourceUrl": "https://media.starcitizen.tools/7/7d/RMC_Container.png?bnj8l",
+      "sharedWith": [
+        "recycled-material-composite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "construction-pieces",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "copper",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "copper-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "corundum",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "corundum-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "crude-oil",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "cryopod",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "dcsr2",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "decari-pod",
+      "colorHex": "#8d4533",
+      "colorHex2": "#4d508c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/6/67/DecariPod-Closeup-Alpha3.15.jpg?m4fs0",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "degnous-root",
+      "colorHex": "#8c581e",
+      "colorHex2": "#7794b7",
+      "image": "crates/degnousroot-closeup-alpha3.16.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/7/79/DegnousRoot-Closeup-Alpha3.16.jpg?ivwpl",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "detatrine",
+      "colorHex": "#8c4b1e",
+      "colorHex2": "#4d648c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/3/32/2SCU_Detotrean.png?5u1ud",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "diamond",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "diamond-laminate",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "diamond-raw",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "diluthermex",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo-diluthermex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/ae/Cargo-Diluthermex.jpg?k4can",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "distilled-spirits",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "dolivine",
+      "colorHex": "#3a818c",
+      "colorHex2": "#5b868c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/b/b2/Dolivine-in-space-3.10.jpg?8mqjz",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "dopple",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "dymantium",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#4a5562",
+      "image": "crates/cargo-zeta-prolanide.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/4/48/Cargo-Zeta-Prolanide.jpg?30ii5",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "dynaflex",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "e-tam",
+      "colorHex": "#7b8c4d",
+      "colorHex2": "#6f8c4d",
+      "image": "crates/vicecommodity_e-tam.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/3/31/ViceCommodity_E%27tam.jpg?184io",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "elespo",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "etam",
+      "colorHex": "#7b8c4d",
+      "colorHex2": "#6f8c4d",
+      "image": "crates/vicecommodity_e-tam.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/3/31/ViceCommodity_E%27tam.jpg?184io",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "feynmaline",
+      "colorHex": "#8c451e",
+      "colorHex2": "#8c4c38",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/e/e2/Feynmaline_Rock.jpg?61rgy",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "fireworks",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "fluorine",
+      "colorHex": "#4a5562",
+      "colorHex2": "#54adf7",
+      "image": "crates/cargo_-_gas_-_astatine.png",
+      "sourceUrl": "https://media.starcitizen.tools/a/aa/Cargo_-_Gas_-_Astatine.png?5kbk2",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "freeze",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "fresh-food",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "gasping-weevil-eggs",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "glacosite",
+      "colorHex": "#8c4623",
+      "colorHex2": "#8c6347",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/3/37/Glacosite_Rock.jpg?9uwhn",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "glow",
+      "colorHex": "#1e638c",
+      "colorHex2": "#1e588c",
+      "image": "crates/platzhalter.webp",
+      "sourceUrl": "https://cdn.star-citizen.wiki/images/7/7f/Platzhalter.webp",
+      "sharedWith": [
+        "mala",
+        "thrust",
+        "zip"
+      ],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "gold",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "gold-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "golden-medmon",
+      "colorHex": "#8c541e",
+      "colorHex2": "#8c734f",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/f/f9/Golden_Medmon.png?pxzup",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "hadanite",
+      "colorHex": "#41588c",
+      "colorHex2": "#6b5b8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/a/a7/Hadanite-chunk-in-space-3.10.jpg?qbjeg",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "heart-of-the-woods",
+      "colorHex": "#8c5f32",
+      "colorHex2": "#4d6c8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/9/94/Heart_of_The_Woods.png?51ien",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "helium",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "hephaestanite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "diamond",
+        "laranite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "hephaestanite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "hexapolymesh-coating",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "human-food-bars",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "hydrogen",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [
+        "hydrogen-fuel"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "hydrogen-fuel",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [
+        "hydrogen"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "ice-raw",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "inert-materials",
+      "colorHex": "#a67c52",
+      "colorHex2": "#7d8a97",
+      "image": "crates/cargo_-_waste.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/07/Cargo_-_Waste.png?t5h0b",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "iodine",
+      "colorHex": "#4a5562",
+      "colorHex2": "#54adf7",
+      "image": "crates/cargo_-_gas_-_astatine.png",
+      "sourceUrl": "https://media.starcitizen.tools/a/aa/Cargo_-_Gas_-_Astatine.png?5kbk2",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "iron",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "gold",
+        "lindinium",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "iron-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "irradiated-kopion-horn",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "jaclium",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "jaclium-ore",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "jahlium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "janalite",
+      "colorHex": "#8c7c1e",
+      "colorHex2": "#8c805b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/e/e0/Star_Citizen_29.05.2025_11_40_47.png?phlex",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "jumping-limes",
+      "colorHex": "#8c7b1e",
+      "colorHex2": "#8c7c5b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/5/53/Jumping_Limes_Closeup.jpg?idd7o",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "kopion-horn",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "krypton",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "laranite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "quantainium",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "laranite-raw",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "lastaphrene",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "lifecure-medsticks",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "lindinium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "gold",
+        "iron",
+        "savrilium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "lindinium-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "luminalia-gift",
+      "colorHex": "#738c5b",
+      "colorHex2": "#5e6f90",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/7/70/Luminalia-gift-box.jpg?3qgxq",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "lunes",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "lunes-spiral-fruit",
+      "colorHex": "#8c581f",
+      "colorHex2": "#9e5796",
+      "image": "crates/lunesfruit-alpha3.15.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/d/d7/LunesFruit-Alpha3.15.jpg?fjvw2",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "lycara",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "magnesium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "mala",
+      "colorHex": "#1e638c",
+      "colorHex2": "#1e588c",
+      "image": "crates/platzhalter.webp",
+      "sourceUrl": "https://cdn.star-citizen.wiki/images/7/7f/Platzhalter.webp",
+      "sharedWith": [
+        "glow",
+        "thrust",
+        "zip"
+      ],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "marok-gem",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "maze",
+      "colorHex": "#497e8c",
+      "colorHex2": "#4d828c",
+      "image": "crates/mazedrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2a/Mazedrug.png?pkcem",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "medical-supplies",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "mercury",
+      "colorHex": "#8c3145",
+      "colorHex2": "#4d748c",
+      "image": "crates/crsd_mercury_star_runner_oberdeck_top_shot.jpg",
+      "sourceUrl": "https://cdn.star-citizen.wiki/images/a/a5/CRSD_Mercury_Star_Runner_Oberdeck_Top_Shot.jpg",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "methane",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "molina-mold",
+      "colorHex": "#8c581e",
+      "colorHex2": "#8c735b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/4/4a/Molina_Mold_growing_in_Levski_-_cropped.jpg?glfk8",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "molina-mold-samples",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "molina-mold-treatment",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "molina-ventilation-filters",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "neograph",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "neon",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "nitrogen",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "omnapoxy",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "organics",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "osoian-hides",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ouratite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ouratite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "oza",
+      "colorHex": "#8c7735",
+      "colorHex2": "#8c775b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/9/92/Oza_Fruit_on_display.jpg?hm108",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "partillium",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "party-favors",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "phosphorus",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "pingala-seeds",
+      "colorHex": "#8c1e53",
+      "colorHex2": "#a2595f",
+      "image": "crates/pingala_seeds.webp",
+      "sourceUrl": "https://media.starcitizen.tools/a/a0/Pingala_Seeds.webp?i17p8",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "pitambu",
+      "colorHex": "#8c2c1e",
+      "colorHex2": "#8c5c4f",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/e/ec/Pitambu.png?089wu",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "potassium",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "pressurized-ice",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "processed-food",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "prota",
+      "colorHex": "#5b6f8c",
+      "colorHex2": "#4d6a8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/0/07/Prota.png?ssmb1",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "quantainium",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quartz",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "quantainium-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "quantum-fuel",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "quartz",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "taranite"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "quartz-raw",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ranta-dung",
+      "colorHex": "#8c5e41",
+      "colorHex2": "#7f4d8c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/c/cf/Ranta_Dung.png?s2kny",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "recycled-material-composite",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#3a3f46",
+      "image": "crates/rmc_container.png",
+      "sourceUrl": "https://media.starcitizen.tools/7/7d/RMC_Container.png?bnj8l",
+      "sharedWith": [
+        "construction-materials"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "redfin-energy-modulators",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "revenant-pod",
+      "colorHex": "#30728c",
+      "colorHex2": "#4d738c",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/e/e6/Amioshi_Plague.png?c7yre",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "revenant-tree-pollen",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "riccite",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "riccite-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "sadaryx",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "sadaryx-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "saldynium-ore",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "sarilus",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "savrilium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "titanium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "savrilium-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "scrap",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "selenium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-1",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-2",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-3",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-4",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-5",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-6",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-ammunition---size-7",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-decoy-countermeasures",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "ship-noise-countermeasures",
+      "colorHex": "#e07a3a",
+      "colorHex2": "#4a4f56",
+      "image": "crates/cargo_-_scrap.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "silicon",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "silicone-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "silnex",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "slam",
+      "colorHex": "#5b8c7d",
+      "colorHex2": "#4d788c",
+      "image": "crates/slamdrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/17/Slamdrug.png?aks8z",
+      "sharedWith": [
+        "altruciatoxin"
+      ],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "souvenirs",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "steel",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "stileron",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "stileron-raw",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "stims",
+      "colorHex": "#8c3736",
+      "colorHex2": "#8c4d57",
+      "image": "crates/neondrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "stone-bug-shell",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "sunset-berries",
+      "colorHex": "#b77828",
+      "colorHex2": "#8c644d",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/d/d9/Sunset_Berries.jpg?1m0oc",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "sunset-berry",
+      "colorHex": "#b77828",
+      "colorHex2": "#8c644d",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/d/d9/Sunset_Berries.jpg?1m0oc",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "taranite",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [
+        "beryl",
+        "bexalite",
+        "corundum",
+        "diamond",
+        "hephaestanite",
+        "laranite",
+        "quantainium",
+        "quartz"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "taranite-raw",
+      "colorHex": "#8a93a0",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_minerals.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "tellurium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "thermalfoam",
+      "colorHex": "#54adf7",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo-acryliplex.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/a8/Cargo-AcryliPlex.jpg?lgw1t",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "thrust",
+      "colorHex": "#1e638c",
+      "colorHex2": "#1e588c",
+      "image": "crates/platzhalter.webp",
+      "sourceUrl": "https://cdn.star-citizen.wiki/images/7/7f/Platzhalter.webp",
+      "sharedWith": [
+        "glow",
+        "mala",
+        "zip"
+      ],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "tin",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "tin-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "titanium",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "tungsten"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "titanium-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "torite",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "torite-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "tritium",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "tundra-kopion-horn",
+      "colorHex": "#e25555",
+      "colorHex2": "#f3f6f9",
+      "image": "crates/cargo_-_medical_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/d/dd/Cargo_-_Medical_Supplies.png?4m8he",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "tungsten",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [
+        "agricium",
+        "aluminum",
+        "copper",
+        "gold",
+        "iron",
+        "lindinium",
+        "savrilium",
+        "titanium"
+      ],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "tungsten-ore",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "waste",
+      "colorHex": "#a67c52",
+      "colorHex2": "#7d8a97",
+      "image": "crates/cargo_-_waste.png",
+      "sourceUrl": "https://media.starcitizen.tools/0/07/Cargo_-_Waste.png?t5h0b",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "widow",
+      "colorHex": "#5b798c",
+      "colorHex2": "#5b738c",
+      "image": "crates/widowdrug.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Widowdrug.png?4yqe6",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "wuotan-seed",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#3a3f46",
+      "image": "crates/cargo_-_agricultural_supplies.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/15/Cargo_-_Agricultural_Supplies.png?hfm0a",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "xapyen",
+      "colorHex": "#4f8f5c",
+      "colorHex2": "#e0a63a",
+      "image": "crates/cargo_-_metal.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "xenon",
+      "colorHex": "#4a5562",
+      "colorHex2": "#e25555",
+      "image": "crates/cargo_-_gas_-_hydrogen.png",
+      "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "year-of-the-dog-envelope",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "year-of-the-monkey-envelope",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "year-of-the-pig-envelope",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "year-of-the-rat-envelope",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "year-rooster-envelope",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#a9b3bd",
+      "image": "crates/cargo_-_non-perishable_foodstuff.png",
+      "sourceUrl": "https://media.starcitizen.tools/5/5b/Cargo_-_Non-Perishable_Foodstuff.png?1bs41",
+      "sharedWith": [],
+      "colorSource": "kind-crate-image"
+    },
+    {
+      "slug": "yormandi-eye",
+      "colorHex": "#8c611e",
+      "colorHex2": "#8c6e5b",
+      "image": null,
+      "sourceUrl": "https://media.starcitizen.tools/b/bd/Yormandi_eye.png?n6y7v",
+      "sharedWith": [],
+      "colorSource": "wiki-image"
+    },
+    {
+      "slug": "zeta-prolanide",
+      "colorHex": "#3dbf8f",
+      "colorHex2": "#4a5562",
+      "image": "crates/cargo-zeta-prolanide.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/4/48/Cargo-Zeta-Prolanide.jpg?30ii5",
+      "sharedWith": [],
+      "colorSource": "wiki-crate-tuned"
+    },
+    {
+      "slug": "zip",
+      "colorHex": "#1e638c",
+      "colorHex2": "#1e588c",
+      "image": "crates/platzhalter.webp",
+      "sourceUrl": "https://cdn.star-citizen.wiki/images/7/7f/Platzhalter.webp",
+      "sharedWith": [
+        "glow",
+        "mala",
+        "thrust"
+      ],
+      "colorSource": "wiki-image"
+    }
+  ]
+}

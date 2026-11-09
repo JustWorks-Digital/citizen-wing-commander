@@ -112,6 +112,29 @@ sources:
     added: "2026-11-07"
     last_verified: "2026-11-07"
 
+  - id: sc-wiki-commodity-crate-images
+    status: accepted
+    purpose:
+      - commodity-colors
+      - cargo-crate-colors
+      - cargo-crate-images
+    label: Star Citizen Wiki commodities (crate / product images)
+    url: https://api.star-citizen.wiki/api/commodities
+    docs_url: https://api.star-citizen.wiki/commodities
+    used_by:
+      - scripts/fetch-commodity-crate-colors.mjs
+      - lib/fixtures/commodityCrateColors.json
+      - public/icons/commodities/crates/
+      - lib/fixtures/commodityColors.ts
+    notes: >
+      Wiki commodities API returns per-substance images — kind cargo-box
+      renders (Cargo - Metal.png, …) or unique product photos. Script
+      downloads unique images, samples UI hex from the picture, and maps
+      slugs for resolveCommodityColorHex. UEX item color/color2 are often
+      empty, so this is the preferred visual color source.
+    added: "2026-11-09"
+    last_verified: "2026-11-09"
+
   - id: uex-terminals-outdoor-freight
     status: accepted
     purpose:
