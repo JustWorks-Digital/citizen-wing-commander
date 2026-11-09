@@ -31,9 +31,13 @@
           "prefer-back-when-full-height"
         ],
         "commodityZoneHints": {},
+        "missionPriorityPacking": {
+          "bias": "edges-first"
+        },
         "guidelines": [
           "Prefer three-wide 8 SCU footprints where the bay allows.",
-          "Do not wall off forward cells with full-height stacks."
+          "Do not wall off forward cells with full-height stacks.",
+          "Prioritized / Mission based: early deliveries toward bay edges; later deliveries toward the center."
         ]
       }
     }

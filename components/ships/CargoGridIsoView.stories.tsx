@@ -39,6 +39,7 @@ export const WithSelectedCell: Story = {
 export const PlacementOnly: Story = {
   args: {
     mode: "placement",
+    showFacingPad: true,
     highlightedCoords: [
       { x: 1, y: 2, z: 0 },
       { x: 2, y: 2, z: 0 },

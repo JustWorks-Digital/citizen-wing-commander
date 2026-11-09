@@ -13,6 +13,7 @@ import {
   type CatalogTableSort,
   type CatalogTableSortKey,
 } from "@/lib/missions/catalogMissionTableQuery";
+import { SourceIcon } from "@/components/ui/SourceIcon";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 
 export type MissionCatalogTableProps = {
@@ -60,25 +61,6 @@ const COLUMNS: Array<{
   { key: "to", label: "To", className: "w-[14%] min-w-0" },
   { key: "cargo", label: "Cargo", className: "w-[12%] min-w-0" },
 ];
-
-function SourceIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      className="size-3"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <circle cx="8.5" cy="10.5" r="1.5" />
-      <path d="m21 16-5.5-5.5L9 17" />
-    </svg>
-  );
-}
 
 function ObjectIcon() {
   return (

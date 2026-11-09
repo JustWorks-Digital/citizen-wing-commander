@@ -163,6 +163,48 @@ export async function updateDeliverySessionChecklist(
   return row ?? null;
 }
 
+/**
+ * Rewrite a screenshot logical path inside every delivery session checklist
+ * (mission.screenshots arrays). Used when catalog rename moves a file on disk.
+ */
+export async function rewriteScreenshotLogicalPathInSessions(
+  fromLogicalPath: string,
+  toLogicalPath: string,
+): Promise<{ sessionsUpdated: number; refsUpdated: number }> {
+  if (!fromLogicalPath || !toLogicalPath || fromLogicalPath === toLogicalPath) {
+    return { sessionsUpdated: 0, refsUpdated: 0 };
+  }
+  const db = getDb();
+  const rows = await db.select().from(deliverySessions);
+  let sessionsUpdated = 0;
+  let refsUpdated = 0;
+
+  for (const row of rows) {
+    const checklist = rowToChecklist(row);
+    let changed = false;
+    const missions = checklist.missions.map((mission) => {
+      let missionChanged = false;
+      const screenshots = mission.screenshots.map((path) => {
+        if (path !== fromLogicalPath) return path;
+        missionChanged = true;
+        refsUpdated += 1;
+        return toLogicalPath;
+      });
+      if (!missionChanged) return mission;
+      changed = true;
+      return { ...mission, screenshots };
+    });
+    if (!changed) continue;
+    const updated = await updateDeliverySessionChecklist(row.id, {
+      ...checklist,
+      missions,
+    });
+    if (updated) sessionsUpdated += 1;
+  }
+
+  return { sessionsUpdated, refsUpdated };
+}
+
 /** Soft-delete: mark inactive, keep history. */
 export async function softDeleteDeliverySession(id: string) {
   const db = getDb();

@@ -10,10 +10,12 @@ import {
   fetchChecklistSessions,
   saveChecklist,
 } from "@/lib/api/checklistApi";
+import { updateCatalogMissionScuBoxSplits } from "@/lib/api/catalogMissionsApi";
 import {
   fetchSelectableShips,
   type CatalogShip,
 } from "@/lib/api/shipsApi";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import { appPaths } from "@/lib/appPaths";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import { ShipSelect } from "@/components/ui/ShipSelect";
@@ -333,6 +335,28 @@ export function SessionChecklistView({
       });
   };
 
+  const applyBoxBreakdown = (
+    missionId: string,
+    breakdown: ScuBoxSplits,
+  ) => {
+    const result = setMissionScuBoxSplits(session, missionId, breakdown);
+    if (!result.ok) {
+      setLoadError(result.error);
+      return;
+    }
+    persistSession(result.session);
+    const catalogId =
+      result.session.missions?.find((mission) => mission.id === missionId)
+        ?.catalogMissionId ?? null;
+    if (!catalogId) return;
+    void updateCatalogMissionScuBoxSplits({
+      missionId: catalogId,
+      scuBoxSplits: breakdown,
+    }).catch(() => {
+      setLoadError("Saved on session, but failed to update catalog default");
+    });
+  };
+
   const selectSession = async (nextSessionId: string) => {
     if (initial || nextSessionId === routeSessionId) return;
     setTabsBusy(true);
@@ -508,18 +532,7 @@ export function SessionChecklistView({
         onFocusStop={setFocusedStopId}
         missions={session.missions ?? []}
         sessionId={session.id}
-        onSelectBoxBreakdown={(missionId, breakdown) => {
-          const result = setMissionScuBoxSplits(
-            session,
-            missionId,
-            breakdown,
-          );
-          if (!result.ok) {
-            setLoadError(result.error);
-            return;
-          }
-          persistSession(result.session);
-        }}
+        onSelectBoxBreakdown={applyBoxBreakdown}
         toolbarStart={
           <SessionRouteProgressStats
             completedLegs={completedLegs}
@@ -614,18 +627,7 @@ export function SessionChecklistView({
           }
           persistSession(result.session);
         }}
-        onSelectBoxBreakdown={(missionId, breakdown) => {
-          const result = setMissionScuBoxSplits(
-            session,
-            missionId,
-            breakdown,
-          );
-          if (!result.ok) {
-            setLoadError(result.error);
-            return;
-          }
-          persistSession(result.session);
-        }}
+        onSelectBoxBreakdown={applyBoxBreakdown}
       />
     </div>
   );

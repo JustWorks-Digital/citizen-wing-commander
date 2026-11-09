@@ -1,5 +1,17 @@
+import shipBayPreferencesFixture from "@/lib/fixtures/shipBayPreferences.json";
 import type { CargoPlacementRuleId } from "@/lib/ships/cargoGridPlacementRules";
 import type { CargoGridStorageLocation } from "@/lib/ships/cargoGrids";
+
+/**
+ * How mission-priority packing places early vs late deliveries in the bay.
+ * Used for Cargo type + Prioritized, and automatically for Mission based.
+ */
+export type MissionPriorityPackBias = "edges-first" | "center-first";
+
+export type MissionPriorityPackingConfig = {
+  /** Prefer early-delivery cargo toward edges or toward the bay center. */
+  bias: MissionPriorityPackBias;
+};
 
 /** Structured per-ship bay organization preferences (DB + committed file). */
 export type ShipBayPreferencePayload = {
@@ -13,6 +25,12 @@ export type ShipBayPreferencePayload = {
   commodityZoneHints?: Partial<
     Record<string, CargoGridStorageLocation>
   >;
+  /**
+   * Ship-specific early-vs-late delivery layout bias.
+   * Cargo type + Prioritized, and Mission based (always when set).
+   * Mk V: early deliveries on bay edges; later deliveries toward center.
+   */
+  missionPriorityPacking?: MissionPriorityPackingConfig | null;
   /** Short durable guidelines (bullets). */
   guidelines?: string[];
 };
@@ -35,8 +53,19 @@ export function emptyShipBayPreferencePayload(): ShipBayPreferencePayload {
       "prefer-back-when-full-height",
     ],
     commodityZoneHints: {},
+    missionPriorityPacking: null,
     guidelines: [],
   };
+}
+
+function normalizeMissionPriorityPacking(
+  input: Partial<MissionPriorityPackingConfig> | null | undefined,
+): MissionPriorityPackingConfig | null {
+  if (!input || typeof input !== "object") return null;
+  if (input.bias !== "edges-first" && input.bias !== "center-first") {
+    return null;
+  }
+  return { bias: input.bias };
 }
 
 export function normalizeShipBayPreferencePayload(
@@ -61,6 +90,9 @@ export function normalizeShipBayPreferencePayload(
             ),
           )
         : base.commodityZoneHints,
+    missionPriorityPacking: normalizeMissionPriorityPacking(
+      input.missionPriorityPacking,
+    ),
     guidelines: Array.isArray(input.guidelines)
       ? input.guidelines
           .filter((line): line is string => typeof line === "string")
@@ -103,6 +135,11 @@ export function mergeShipBayPreferencePayload(
       ),
     };
   }
+  if (patch.missionPriorityPacking !== undefined) {
+    next.missionPriorityPacking = normalizeMissionPriorityPacking(
+      patch.missionPriorityPacking,
+    );
+  }
   if (patch.guidelines) {
     next.guidelines = patch.guidelines
       .map((line) => line.trim())
@@ -126,5 +163,35 @@ function isRuleId(value: unknown): value is CargoPlacementRuleId {
     value === "prefer-flat-layers" ||
     value === "prefer-smaller-on-larger" ||
     value === "prefer-back-when-full-height"
+  );
+}
+
+type FixtureFile = {
+  items: Array<{
+    shipSlug: string;
+    payload: Partial<ShipBayPreferencePayload>;
+  }>;
+};
+
+const fixtureFile = shipBayPreferencesFixture as FixtureFile;
+
+const fixturePayloadBySlug = new Map(
+  fixtureFile.items.map(
+    (row) =>
+      [
+        row.shipSlug.trim().toLowerCase(),
+        normalizeShipBayPreferencePayload(row.payload),
+      ] as const,
+  ),
+);
+
+/** Committed file prefs only (safe for client / packer; DB may override on server). */
+export function getShipBayPreferenceFixture(
+  shipSlug: string | null | undefined,
+): ShipBayPreferencePayload {
+  if (!shipSlug) return emptyShipBayPreferencePayload();
+  return (
+    fixturePayloadBySlug.get(shipSlug.trim().toLowerCase()) ??
+    emptyShipBayPreferencePayload()
   );
 }

@@ -8,13 +8,20 @@ import {
   getLocationBySlug,
   sumCargoScuByRole,
 } from "@/lib/fixtures";
-import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import {
+  commodityBadgeBackground,
+  commodityBadgeBorder,
+  commodityBadgeForeground,
+  resolveCommodityColorHex,
+} from "@/lib/fixtures/commodityColors";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import { missionsExpectedToCompleteAtStop } from "@/lib/missions/expectedCompletions";
 import {
   formatDistanceToNext,
   type HaulingChecklistRow,
   type LegKind,
 } from "@/lib/missions/mockSession";
+import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
@@ -234,7 +241,7 @@ function CargoGroups({
           <div
             key={`${row.id}-cargo-${group.role ?? "none"}`}
             className={[
-              "flex flex-col gap-0.5",
+              "flex flex-col gap-1",
               showRoleDivider
                 ? "border-t border-rsi-divider pt-2 md:pt-1.5"
                 : "",
@@ -247,40 +254,66 @@ function CargoGroups({
                 {group.role === "pickup" ? "Pickup" : "Delivery"}
               </span>
             ) : null}
-            {group.items.map((line, index) => {
-              const cargoHex = resolveCommodityColorHex(
-                line.color,
-                line.color2,
-                line.commoditySlug,
-              );
-              const iconSrc = getCommodityIconSrc(line.commoditySlug);
-              return (
-                <span
-                  key={`${row.id}-cargo-${group.role}-${index}`}
-                  className={[
-                    "inline-flex items-center gap-1.5 font-medium tabular-nums",
-                    doneClass,
-                  ].join(" ")}
-                  style={cargoHex ? { color: cargoHex } : undefined}
-                >
+            <div className="grid max-w-[15.5rem] grid-cols-4 gap-1.5">
+              {group.items.map((line, index) => {
+                const cargoHex = resolveCommodityColorHex(
+                  line.color,
+                  line.color2,
+                  line.commoditySlug,
+                );
+                const iconSrc = getCommodityIconSrc(line.commoditySlug);
+                const abbrev = abbreviateCommodityName(
+                  line.commodityName ?? line.commoditySlug ?? "?",
+                );
+                const fullLabel = `${line.scu} ${line.commodityName}`;
+                const tileBg = cargoHex
+                  ? commodityBadgeBackground(cargoHex)
+                  : "var(--rsi-bg-deep)";
+                const tileBorder = cargoHex
+                  ? commodityBadgeBorder(cargoHex)
+                  : "var(--rsi-border)";
+                const tileFg = cargoHex
+                  ? commodityBadgeForeground(cargoHex)
+                  : "var(--rsi-text-secondary)";
+                return (
                   <span
-                    aria-hidden
-                    className="inline-block size-4 shrink-0 bg-current"
+                    key={`${row.id}-cargo-${group.role}-${index}`}
+                    title={fullLabel}
+                    aria-label={fullLabel}
+                    className={[
+                      "inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
+                      doneClass,
+                    ].join(" ")}
                     style={{
-                      WebkitMaskImage: `url(${iconSrc})`,
-                      maskImage: `url(${iconSrc})`,
-                      WebkitMaskSize: "contain",
-                      maskSize: "contain",
-                      WebkitMaskRepeat: "no-repeat",
-                      maskRepeat: "no-repeat",
-                      WebkitMaskPosition: "center",
-                      maskPosition: "center",
+                      backgroundColor: tileBg,
+                      borderColor: tileBorder,
+                      color: tileFg,
                     }}
-                  />
-                  {line.scu} {line.commodityName}
-                </span>
-              );
-            })}
+                  >
+                    <span
+                      aria-hidden
+                      className="inline-block size-3.5 shrink-0 bg-current"
+                      style={{
+                        WebkitMaskImage: `url(${iconSrc})`,
+                        maskImage: `url(${iconSrc})`,
+                        WebkitMaskSize: "contain",
+                        maskSize: "contain",
+                        WebkitMaskRepeat: "no-repeat",
+                        maskRepeat: "no-repeat",
+                        WebkitMaskPosition: "center",
+                        maskPosition: "center",
+                      }}
+                    />
+                    <span className="text-[0.7rem] font-semibold leading-none">
+                      {line.scu}
+                    </span>
+                    <span className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90">
+                      {abbrev}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
           </div>
         );
       })}
@@ -456,7 +489,7 @@ function TotalMeta({
   return (
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
       <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Total
+        Total SCU
       </p>
       <div className="mt-0.5">
         <ScuTotalDisplay
@@ -467,6 +500,45 @@ function TotalMeta({
           align="start"
         />
       </div>
+    </div>
+  );
+}
+
+function ExpectedCompletionsMeta({
+  missions,
+}: {
+  missions: SessionMission[];
+}) {
+  return (
+    <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
+      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Completions
+      </p>
+      {missions.length === 0 ? (
+        <p className="mt-0.5 text-rsi-text-muted">None</p>
+      ) : (
+        <ul className="mt-0.5 space-y-0.5">
+          {missions.map((mission) => (
+            <li
+              key={mission.id}
+              className={[
+                "text-sm",
+                mission.isCompleted
+                  ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                  : "text-rsi-text-secondary",
+              ].join(" ")}
+            >
+              {mission.title}
+              {mission.cargoSummary ? (
+                <span className="text-rsi-text-muted">
+                  {" "}
+                  · {mission.cargoSummary}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -629,6 +701,13 @@ export function HaulingChecklistTable({
                         />
                       ) : null}
                       <TotalMeta row={row} scu={scu} />
+                      <ExpectedCompletionsMeta
+                        missions={missionsExpectedToCompleteAtStop(
+                          missions,
+                          rows,
+                          row.id,
+                        )}
+                      />
                       <NextDistanceMeta row={row} />
                     </div>
                     <StopDeliveryBayPreview

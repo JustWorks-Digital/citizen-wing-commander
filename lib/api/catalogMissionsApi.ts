@@ -1,5 +1,6 @@
 import { appApi } from "@/lib/api/appRoutes";
 import type { CatalogMission } from "@/db/schema";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 
 export type AddCatalogMissionsToSessionInput = {
   catalogMissionIds: string[];
@@ -84,4 +85,27 @@ export async function addCatalogMissionsToSession(
     );
   }
   return data as AddCatalogMissionsToSessionResult;
+}
+
+/** Persist crate-mix as the catalog mission default for future sessions. */
+export async function updateCatalogMissionScuBoxSplits(input: {
+  missionId: string;
+  scuBoxSplits: ScuBoxSplits;
+}): Promise<CatalogMission> {
+  const res = await fetch(appApi.catalogMissionsScuBoxSplits, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = (await res.json().catch(() => ({}))) as
+    | { ok: true; mission: CatalogMission }
+    | { error?: string };
+  if (!res.ok) {
+    throw new Error(
+      "error" in data && data.error
+        ? data.error
+        : `Failed to update catalog scuBoxSplits (${res.status})`,
+    );
+  }
+  return (data as { ok: true; mission: CatalogMission }).mission;
 }

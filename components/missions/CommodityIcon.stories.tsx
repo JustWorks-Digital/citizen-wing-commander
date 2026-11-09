@@ -68,7 +68,7 @@ export const DistinctSameKind: Story = {
       { slug: "agricium", label: "Agricium", color: "green", color2: "yellow" },
       { slug: "borase", label: "Borase", color: "green", color2: "yellow" },
       { slug: "titanium", label: "Titanium", color: "green", color2: "yellow" },
-      { slug: "tungsten", label: "Tungsten", color: "green", color2: "yellow" },
+      { slug: "tungsten", label: "Tungsten", color: "red", color2: "gray" },
       { slug: "copper", label: "Copper", color: "green", color2: "yellow" },
       { slug: "beryl", label: "Beryl", color: "gray", color2: "yellow" },
       { slug: "scrap", label: "Scrap", color: "black", color2: "orange" },

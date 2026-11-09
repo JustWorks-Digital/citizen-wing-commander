@@ -8,11 +8,17 @@ import {
 import { getLocationBySlug } from "@/lib/fixtures";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
+  cargoBayPackModes,
+  defaultCargoBayPackMode,
   planStopOccupancyAtStop,
   placementPlanLegend,
+  placementPlanLocationLegend,
   placementPlanTints,
+  upcomingDeliveryLocationSlugs,
+  type CargoBayPackMode,
 } from "@/lib/ships/cargoGridPlacement";
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
+import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
@@ -40,6 +46,20 @@ export function CargoBayLayout({
     [shipSlug],
   );
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
+  const [packMode, setPackMode] = useState<CargoBayPackMode>(
+    defaultCargoBayPackMode,
+  );
+  const [prioritized, setPrioritized] = useState(false);
+
+  const shipBayPrefs = useMemo(
+    () => getShipBayPreferenceFixture(shipSlug),
+    [shipSlug],
+  );
+  const supportsPrioritized = Boolean(
+    shipBayPrefs.missionPriorityPacking?.bias,
+  );
+  const showPrioritizedToggle =
+    packMode === "by-cargo-type" && supportsPrioritized;
 
   const activeRow = useMemo(() => {
     if (focusedStopId) {
@@ -51,8 +71,19 @@ export function CargoBayLayout({
 
   const plan = useMemo(() => {
     if (!sketch || !activeRow) return null;
-    return planStopOccupancyAtStop(sketch, rows, activeRow.id);
-  }, [sketch, rows, activeRow]);
+    return planStopOccupancyAtStop(sketch, rows, activeRow.id, {
+      packMode,
+      missionPrioritized:
+        packMode === "by-cargo-type" && supportsPrioritized && prioritized,
+    });
+  }, [
+    sketch,
+    rows,
+    activeRow,
+    packMode,
+    prioritized,
+    supportsPrioritized,
+  ]);
 
   const placementTints = useMemo(
     () => (plan ? placementPlanTints(plan) : []),
@@ -62,6 +93,13 @@ export function CargoBayLayout({
     () => (plan ? placementPlanLegend(plan) : []),
     [plan],
   );
+  const locationLegendItems = useMemo(() => {
+    if (!plan || !activeRow) return [];
+    return placementPlanLocationLegend(plan, {
+      locationOrder: upcomingDeliveryLocationSlugs(rows, activeRow.id),
+    });
+  }, [plan, rows, activeRow]);
+  const showLocationOutlines = packMode === "by-mission-location";
 
   const locationLabel = activeRow
     ? (getLocationBySlug(activeRow.locationSlug)?.name ??
@@ -160,6 +198,68 @@ export function CargoBayLayout({
             placementTints={placementTints}
             placementBoxes={plan.boxes}
             legendItems={legendItems}
+            locationLegendItems={locationLegendItems}
+            showLocationOutlines={showLocationOutlines}
+            isoToolbarBelow={
+              <div
+                role="group"
+                aria-label="Cargo grouping"
+                className="inline-flex w-fit max-w-full items-start gap-0.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 p-0.5"
+              >
+                {cargoBayPackModes.map((mode) => {
+                  const selected = packMode === mode.id;
+                  const showPrioritizedUnder =
+                    mode.id === "by-cargo-type" && supportsPrioritized;
+                  return (
+                    <div
+                      key={mode.id}
+                      className="flex min-w-0 flex-col items-stretch"
+                    >
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        title={mode.summary}
+                        onClick={() => setPackMode(mode.id)}
+                        className={[
+                          "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                          selected
+                            ? "bg-rsi-accent-muted/50 text-rsi-accent"
+                            : "text-rsi-text-muted hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        {mode.label}
+                      </button>
+                      {showPrioritizedUnder ? (
+                        <button
+                          type="button"
+                          aria-pressed={showPrioritizedToggle && prioritized}
+                          title={
+                            shipBayPrefs.missionPriorityPacking?.bias ===
+                            "edges-first"
+                              ? "Early deliveries toward bay edges; later deliveries toward the center."
+                              : "Order cargo by upcoming delivery stops."
+                          }
+                          onClick={() => {
+                            setPackMode("by-cargo-type");
+                            setPrioritized((value) =>
+                              packMode === "by-cargo-type" ? !value : true,
+                            );
+                          }}
+                          className={[
+                            "mt-0.5 w-full rounded-[calc(var(--radius-rsi)-2px)] border px-1 py-px font-mono text-[0.4rem] uppercase leading-tight tracking-[0.1em] transition-colors",
+                            showPrioritizedToggle && prioritized
+                              ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                              : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
+                          ].join(" ")}
+                        >
+                          Prioritized
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            }
           />
           <p className="sr-only">
             Ship orientation: back (ramp) on the left, front (nose) on the
@@ -169,7 +269,9 @@ export function CargoBayLayout({
       ) : (
         <p className="py-6 text-center text-sm text-rsi-text-muted">
           {activeRow
-            ? "No cargo placed at this stop yet."
+            ? packMode === "by-mission-location"
+              ? "No upcoming delivery cargo to group by location."
+              : "No cargo placed at this stop yet."
             : "No route stops yet."}
         </p>
       )}

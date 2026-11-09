@@ -1,5 +1,5 @@
-import { appApi } from "@/lib/api/appRoutes";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
 
@@ -11,8 +11,8 @@ export type RowMissionScreenshotRef = {
   /** Mission title(s) this shot belongs to. */
   missionTitles: string[];
   /**
-   * Image URL when the shot lives in this session’s screenshot batch.
-   * Null when the logical path uses a different batch (text-only ref).
+   * Image URL for `<batchId>/<filename>` under the screenshot store.
+   * Null when the logical path cannot be resolved to an API URL.
    */
   url: string | null;
 };
@@ -91,13 +91,11 @@ function screenshotUrlForSession(
 ): string | null {
   const parts = logicalPath.split("/").filter(Boolean);
   if (parts.length === 0) return null;
-  const filename = parts[parts.length - 1]!;
+  // Bare filename → treat as this session’s batch.
   if (parts.length === 1) {
-    return appApi.checklistSessionScreenshot(sessionId, filename);
+    return screenshotUrlFromLogicalPath(`${sessionId}/${parts[0]}`);
   }
-  const batchId = parts[0]!;
-  if (batchId !== sessionId) return null;
-  return appApi.checklistSessionScreenshot(sessionId, filename);
+  return screenshotUrlFromLogicalPath(logicalPath);
 }
 
 /**

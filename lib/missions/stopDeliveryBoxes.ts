@@ -193,6 +193,10 @@ export type StopCargoStackLabel = {
   commodityName: string;
   /** Short label drawn under the stack. */
   abbrev: string;
+  /** Total SCU in this stack (shown above the column). */
+  scu: number;
+  /** Stack height in cells — anchors the top SCU label. */
+  heightCells: number;
 };
 
 export type StopCargoStacksPlan = {
@@ -257,13 +261,6 @@ export function planStopCargoStacks(
   for (const group of groups) {
     const sizes = [...group.sizes].sort((a, b) => b - a);
     let z = 0;
-    stackLabels.push({
-      id: group.id,
-      x: cursorX,
-      commoditySlug: group.commoditySlug,
-      commodityName: group.commodityName,
-      abbrev: abbreviateCommodityName(group.commodityName),
-    });
 
     for (const size of sizes) {
       const footprint = flatFootprint(size);
@@ -290,6 +287,16 @@ export function planStopCargoStacks(
       maxY = Math.max(maxY, footprint.dy);
       maxZ = Math.max(maxZ, z);
     }
+
+    stackLabels.push({
+      id: group.id,
+      x: cursorX,
+      commoditySlug: group.commoditySlug,
+      commodityName: group.commodityName,
+      abbrev: abbreviateCommodityName(group.commodityName),
+      scu: group.scu,
+      heightCells: Math.max(1, z),
+    });
 
     cursorX += STACK_WIDTH_CELLS + STACK_GAP_CELLS;
   }

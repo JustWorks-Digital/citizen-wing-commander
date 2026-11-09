@@ -35,13 +35,16 @@ const PALETTE_SIZE = 96;
 const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   corundum: "#8ec8f8", // light blue
   quartz: "#1f4e8c", // dark blue
-  aluminum: "#c5d0da", // cool silver
-  "aluminum-ore": "#9aa8b5",
-  titanium: "#5a6169", // dark gray
-  "titanium-ore": "#454b52",
-  tin: "#8b949e", // mid gray (between aluminum silver and titanium dark)
+  aluminum: "#8eb0c8", // cool steel blue-silver
+  "aluminum-ore": "#6f93ad",
+  titanium: "#5a463c", // warm iron charcoal
+  "titanium-ore": "#46362e",
+  tin: "#8b949e", // neutral mid gray (between cool Al and warm Ti)
   "tin-ore": "#6f7882",
   waste: "#9a7a62", // rust brown mixed with gray
+  tungsten: "#c45a5a", // red–gray mixture
+  "tungsten-ore": "#a84a4a",
+  carbon: "#1f6b42", // darker green
 };
 
 type CrateColorRow = {
@@ -198,5 +201,47 @@ export function resolveCommodityColorHex(
   if (slug) return uniqueHexForSlug(slug);
   const fromImage = getCommodityCrateColor(commoditySlug);
   return fromImage?.colorHex ?? baseNamedHex(color, color2);
+}
+
+function relativeLuminance(r: number, g: number, b: number): number {
+  const toLinear = (channel: number) => {
+    const s = channel / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+  );
+}
+
+/**
+ * Muted chip fill matching Badge (`bg-*-muted`): commodity hue into bg-deep.
+ */
+export function commodityBadgeBackground(hex: string): string {
+  return `color-mix(in srgb, ${hex} 28%, var(--rsi-bg-deep))`;
+}
+
+/**
+ * Chip rim matching Badge border at 40% opacity.
+ * Dark hues lift so the edge still reads on the muted fill.
+ */
+export function commodityBadgeBorder(hex: string): string {
+  const rgb = parseHex(hex);
+  if (rgb && relativeLuminance(rgb[0], rgb[1], rgb[2]) < 0.28) {
+    return `color-mix(in srgb, color-mix(in srgb, ${hex} 55%, white) 45%, transparent)`;
+  }
+  return `color-mix(in srgb, ${hex} 40%, transparent)`;
+}
+
+/**
+ * Icon/label color on muted badge chips. Dark commodity hues (quartz,
+ * carbon, titanium, …) lift into white so they contrast like Badge text.
+ */
+export function commodityBadgeForeground(hex: string): string {
+  const rgb = parseHex(hex);
+  if (!rgb) return hex;
+  if (relativeLuminance(rgb[0], rgb[1], rgb[2]) < 0.28) {
+    return `color-mix(in srgb, ${hex} 52%, white)`;
+  }
+  return hex;
 }
 

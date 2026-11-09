@@ -57,6 +57,23 @@ function boxFaces(
     south: poly([d, c, g, h]),
     /** East (+X) — right face. */
     east: poly([b, c, g, f]),
+    /**
+     * Visible wire edges drawn after fills. Face-polygon strokes alone drop the
+     * bottom silhouette (shared edges / sub-pixel width), so crates look open.
+     */
+    edges: [
+      poly([e, h]), // west bottom
+      poly([h, g]), // south bottom (front)
+      poly([g, f]), // east bottom
+      poly([e, a]), // west back upright
+      poly([f, b]), // east back upright
+      poly([h, d]), // west front upright
+      poly([g, c]), // east front upright
+      poly([a, b]), // top far
+      poly([b, c]), // top right
+      poly([c, d]), // top near
+      poly([d, a]), // top left
+    ],
   };
 }
 
@@ -155,7 +172,7 @@ export function StopDeliveryStacksView({
   const showPeel = heightCells > 1;
   const viewHeight = visualHz(heightCells, peelStack);
   const stackWidthCells = 2;
-  const labelPad = cellPx * 1.15;
+  const labelPad = cellPx * 2.75;
 
   const bounds = useMemo(() => {
     const corners = [
@@ -364,74 +381,113 @@ export function StopDeliveryStacksView({
                 cellPx,
               );
               const isPickup = (box.action ?? plan.action) === "pickup";
-              const sideStroke = isPickup
+              const actionStroke = isPickup
                 ? "color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
                 : "color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))";
-              const sideDash = isPickup ? undefined : "2.5 2";
+              const actionDash = isPickup ? undefined : "2.5 2";
               return (
                 <g key={box.id} opacity={dimmed ? 0.28 : 1}>
                   <title>
                     {isPickup ? "Pickup" : "Delivery"} · {box.commodityName} ·{" "}
                     {box.size} SCU
                   </title>
-                  <polygon
-                    points={faces.west}
-                    fill={colors.west}
-                    stroke={sideStroke}
-                    strokeWidth={0.65}
-                    strokeDasharray={sideDash}
-                  />
-                  <polygon
-                    points={faces.south}
-                    fill={colors.south}
-                    stroke={sideStroke}
-                    strokeWidth={0.65}
-                    strokeDasharray={sideDash}
-                  />
-                  <polygon
-                    points={faces.east}
-                    fill={colors.east}
-                    stroke={sideStroke}
-                    strokeWidth={0.65}
-                    strokeDasharray={sideDash}
-                  />
-                  <polygon
-                    points={faces.top}
-                    fill={colors.top}
-                    stroke={sideStroke}
-                    strokeWidth={0.85}
-                    strokeDasharray={sideDash}
-                  />
+                  <polygon points={faces.west} fill={colors.west} />
+                  <polygon points={faces.south} fill={colors.south} />
+                  <polygon points={faces.east} fill={colors.east} />
+                  <polygon points={faces.top} fill={colors.top} />
+                  {/* Explicit edges: black under + blue/green action rim. */}
+                  {faces.edges.map((points, edgeIndex) => (
+                    <g key={`${box.id}-edge-${edgeIndex}`}>
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke="rgba(0,0,0,0.9)"
+                        strokeWidth={1.35}
+                        strokeLinecap="square"
+                        strokeLinejoin="miter"
+                      />
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke={actionStroke}
+                        strokeWidth={0.85}
+                        strokeDasharray={actionDash}
+                        strokeLinecap="square"
+                        strokeLinejoin="miter"
+                      />
+                    </g>
+                  ))}
                 </g>
               );
             })}
             {stackLabels.map((label) => {
               const dimmed = hiddenCommodities.has(label.commoditySlug);
-              const anchor = project(
+              const foot = project(
                 label.x + stackWidthCells / 2,
                 widthCells / 2,
                 0,
                 cellPx,
               );
+              const scuTitle =
+                plan.action === "pickup"
+                  ? `${label.scu} SCU pickup · ${label.commodityName}`
+                  : `${label.scu} SCU delivery · ${label.commodityName}`;
+              const abbrevSize = Math.max(8, Math.round(cellPx * 0.55));
+              const scuSize = Math.max(9, Math.round(cellPx * 0.65));
+              const padX = cellPx * 0.45;
+              const padTop = cellPx * 0.42;
+              const padBottom = cellPx * 0.22;
+              const boxW = Math.max(cellPx * 2.1, padX * 2 + abbrevSize * 2.6);
+              const boxH =
+                padTop + padBottom + abbrevSize + scuSize + cellPx * 0.35;
+              const boxX = foot.x - boxW / 2;
+              const boxY = foot.y + cellPx * 0.85;
+              const abbrevY = boxY + padTop;
+              const scuY = abbrevY + abbrevSize + cellPx * 0.2;
               return (
-                <text
-                  key={`label-${label.id}`}
-                  x={anchor.x}
-                  y={anchor.y + cellPx * 0.85}
-                  textAnchor="middle"
-                  dominantBaseline="hanging"
-                  fill="var(--rsi-text-muted)"
-                  style={{
-                    fontFamily: "var(--font-mono, ui-monospace, monospace)",
-                    fontSize: Math.max(8, Math.round(cellPx * 0.55)),
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    opacity: dimmed ? 0.35 : 0.95,
-                  }}
-                >
-                  <title>{label.commodityName}</title>
-                  {label.abbrev}
-                </text>
+                <g key={`label-${label.id}`} opacity={dimmed ? 0.35 : 1}>
+                  <title>{scuTitle}</title>
+                  <rect
+                    x={boxX}
+                    y={boxY}
+                    width={boxW}
+                    height={boxH}
+                    rx={3}
+                    fill="var(--rsi-bg-deep)"
+                    stroke="var(--rsi-border-strong)"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={foot.x}
+                    y={abbrevY}
+                    textAnchor="middle"
+                    dominantBaseline="hanging"
+                    fill="var(--rsi-text-secondary)"
+                    style={{
+                      fontFamily: "var(--font-mono, ui-monospace, monospace)",
+                      fontSize: abbrevSize,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {label.abbrev}
+                  </text>
+                  <text
+                    x={foot.x}
+                    y={scuY}
+                    textAnchor="middle"
+                    dominantBaseline="hanging"
+                    fill="var(--rsi-text)"
+                    style={{
+                      fontFamily: "var(--font-mono, ui-monospace, monospace)",
+                      fontSize: scuSize,
+                      fontVariantNumeric: "tabular-nums",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {label.scu}
+                  </text>
+                </g>
               );
             })}
           </svg>

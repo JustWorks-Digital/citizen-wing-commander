@@ -39,8 +39,8 @@ export function StopDeliveryBayPreview({
       onClick={(event) => event.stopPropagation()}
     >
       {deliveryPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-border/70 bg-rsi-bg-deep/30">
-          <p className="border-b border-rsi-divider/70 px-2.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-success">
+        <section className="min-w-0 rounded-rsi border border-rsi-success/40 bg-rsi-bg-deep/30">
+          <p className="border-b border-rsi-success/30 px-2.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-success">
             Delivery
           </p>
           <div className="p-1.5">
@@ -49,8 +49,8 @@ export function StopDeliveryBayPreview({
         </section>
       ) : null}
       {pickupPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-border/70 bg-rsi-bg-deep/30">
-          <p className="border-b border-rsi-divider/70 px-2.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
+        <section className="min-w-0 rounded-rsi border border-rsi-accent/40 bg-rsi-bg-deep/30">
+          <p className="border-b border-rsi-accent/30 px-2.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
             Pickup
           </p>
           <div className="p-1.5">

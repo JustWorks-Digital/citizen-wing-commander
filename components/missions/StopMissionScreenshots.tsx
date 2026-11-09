@@ -5,6 +5,7 @@ import {
   ImageLightbox,
   type ImageLightboxItem,
 } from "@/components/ui/ImageLightbox";
+import { SourceIcon } from "@/components/ui/SourceIcon";
 import type { RowMissionScreenshotRef } from "@/lib/missions/rowMissionScreenshots";
 
 export type StopMissionScreenshotsProps = {
@@ -12,9 +13,14 @@ export type StopMissionScreenshotsProps = {
   className?: string;
 };
 
+const sourceBtnClass = [
+  "inline-flex size-6 items-center justify-center rounded-rsi border",
+  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+].join(" ");
+
 /**
  * Opens a gallery of contract screenshots for missions active at this stop.
- * One “Contract source” control — not a thumbnail strip.
+ * Icon-only control (same glyph as the missions table source button).
  */
 export function StopMissionScreenshots({
   refs,
@@ -55,30 +61,33 @@ export function StopMissionScreenshots({
           type="button"
           title={
             galleryItems.length > 1
-              ? `Open ${galleryItems.length} contract screenshots for this stop`
-              : "Open contract screenshot for this stop"
+              ? `Open ${galleryItems.length} source screenshots for this stop`
+              : "Open source screenshot for this stop"
           }
-          aria-label="Contract source"
+          aria-label="View source"
           onClick={() => {
             setGalleryIndex(0);
             setGalleryOpen(true);
           }}
           className={[
-            "rounded-rsi border border-rsi-border bg-rsi-surface px-2.5 py-1.5",
-            "font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-secondary",
-            "transition-colors hover:border-rsi-accent/50 hover:text-rsi-accent",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            sourceBtnClass,
+            "border-rsi-border bg-rsi-surface text-rsi-text-secondary",
+            "hover:border-rsi-accent/50 hover:text-rsi-accent",
           ].join(" ")}
         >
-          Contract source
+          <SourceIcon />
         </button>
       ) : textOnlyCount > 0 ? (
-        <p
-          className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+        <span
           title={refs.map((ref) => ref.label).join(", ")}
+          aria-label="No source screenshot available"
+          className={[
+            sourceBtnClass,
+            "cursor-default border-rsi-border/50 text-rsi-text-muted opacity-40",
+          ].join(" ")}
         >
-          Contract source
-        </p>
+          <SourceIcon />
+        </span>
       ) : null}
 
       {galleryOpen && galleryItems.length > 0 ? (

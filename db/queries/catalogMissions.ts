@@ -11,8 +11,10 @@ import {
 import {
   buildHaulingCatalogMissionPayload,
   catalogMissionFingerprint,
+  normalizeScuBoxSplits,
   type CatalogMissionNoteSentiment,
   type HaulingCatalogMissionPayload,
+  type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRouteFlags";
 
@@ -233,6 +235,37 @@ export async function updateCatalogMissionRouteFlags(input: {
       isDirect: input.isDirect,
       isOnePickup: input.isOnePickup,
       isOneDelivery: input.isOneDelivery,
+      updatedAt: new Date(),
+    })
+    .where(eq(catalogMissions.id, input.missionId))
+    .returning();
+  if (!row) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  return row;
+}
+
+/** Persist crate-mix choice as the catalog mission default (column + payload). */
+export async function updateCatalogMissionScuBoxSplits(input: {
+  missionId: string;
+  scuBoxSplits: ScuBoxSplits;
+}): Promise<CatalogMission> {
+  const existing = await getCatalogMission(input.missionId);
+  if (!existing) {
+    throw new Error(`Catalog mission not found: ${input.missionId}`);
+  }
+  const scuBoxSplits = normalizeScuBoxSplits(input.scuBoxSplits);
+  const existingPayload = existing.payload as HaulingCatalogMissionPayload;
+  const payload = buildHaulingCatalogMissionPayload({
+    ...existingPayload,
+    scuBoxSplits,
+  });
+  const db = getDb();
+  const [row] = await db
+    .update(catalogMissions)
+    .set({
+      scuBoxSplits,
+      payload,
       updatedAt: new Date(),
     })
     .where(eq(catalogMissions.id, input.missionId))

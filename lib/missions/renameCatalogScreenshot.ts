@@ -8,6 +8,7 @@ import {
   listCatalogMissions,
   updateCatalogMissionScreenshotPath,
 } from "@/db/queries/catalogMissions";
+import { rewriteScreenshotLogicalPathInSessions } from "@/db/queries/deliverySessions";
 import { catalogMissions } from "@/db/schema";
 import type { HaulingCatalogMissionPayload } from "@/lib/missions/catalogMission";
 import { buildCatalogScreenshotFilenameFromPayload } from "@/lib/missions/catalogScreenshotFilename";
@@ -199,6 +200,9 @@ export async function renameCatalogMissionScreenshot(
     latestScreenshotPath: newLogicalPath,
     payload,
   });
+
+  // Keep live checklist mission.screenshots in sync with the renamed file.
+  await rewriteScreenshotLogicalPathInSessions(oldLogicalPath, newLogicalPath);
 
   return {
     missionId: mission.id,

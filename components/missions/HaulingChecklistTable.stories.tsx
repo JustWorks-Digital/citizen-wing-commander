@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right.",
+          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right. Commodity lines render as square abbrev tiles (icon + SCU + code); each stop lists mission completions under Total SCU.",
       },
     },
   },

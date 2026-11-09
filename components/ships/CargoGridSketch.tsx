@@ -21,8 +21,11 @@ import {
 import type {
   CargoGridBoxAction,
   CargoGridPlacementTint,
+  PlacementLocationLegendItem,
   PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
+import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
+import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { CargoBoxCountIcons } from "./CargoBoxSizeIcon";
 import {
   CargoGridIsoView,
@@ -101,6 +104,13 @@ export type CargoGridSketchProps = {
   /** Whole 8/4/2/1 crates for solid 3D box rendering. */
   placementBoxes?: PlacedCargoBox[];
   legendItems?: CargoGridIsoLegendItem[];
+  /** Delivery location groups for the legend / show-hide filter. */
+  locationLegendItems?: PlacementLocationLegendItem[];
+  /**
+   * When true, draw mission-location perimeter outlines + number badges.
+   * Filter toggles still work when false (Suggested / Cargo type).
+   */
+  showLocationOutlines?: boolean;
   /** When set, other commodities start dimmed so this one stands out. */
   focusCommoditySlug?: string | null;
   /** Hide sketch chrome when embedded in a placement modal. */
@@ -115,6 +125,8 @@ export type CargoGridSketchProps = {
    * Session bay layout keeps its own legend outside the sketch.
    */
   inlineTopLegend?: boolean;
+  /** Controls stacked under Peel in the 3D view. */
+  isoToolbarBelow?: ReactNode;
 };
 
 const CARGO_ZONE_FILL = [
@@ -144,10 +156,13 @@ export function CargoGridSketch({
   placementTints = [],
   placementBoxes = [],
   legendItems,
+  locationLegendItems = [],
+  showLocationOutlines = false,
   focusCommoditySlug = null,
   compact = false,
   views = "both",
   inlineTopLegend = false,
+  isoToolbarBelow = null,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
@@ -207,12 +222,23 @@ export function CargoGridSketch({
   const [hiddenActions, setHiddenActions] = useState<
     ReadonlySet<CargoGridBoxAction>
   >(() => new Set());
+  const [hiddenLocations, setHiddenLocations] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  const locationSlugsKey = locationLegendItems
+    .map((item) => item.locationSlug)
+    .join("|");
 
   useEffect(() => {
     // New stop / cargo click: show every material so the full location is visible.
     setHiddenCommodities(new Set());
     setHiddenActions(new Set());
   }, [focusCommoditySlug, commoditySlugs.join("|")]);
+
+  useEffect(() => {
+    setHiddenLocations(new Set());
+  }, [locationSlugsKey]);
 
   function toggleCommodity(slug: string) {
     setHiddenCommodities((prev) => {
@@ -228,6 +254,15 @@ export function CargoGridSketch({
       const next = new Set(prev);
       if (next.has(action)) next.delete(action);
       else next.add(action);
+      return next;
+    });
+  }
+
+  function toggleLocation(slug: string) {
+    setHiddenLocations((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
       return next;
     });
   }
@@ -256,6 +291,31 @@ export function CargoGridSketch({
   );
 
   const z = Math.min(Math.max(activeZ, 0), sketch.heightCells - 1);
+  const locationOutlines = useMemo(
+    () =>
+      showLocationOutlines
+        ? locationGroupBoxOutlines(
+            placementBoxes.filter(
+              (box) =>
+                box.deliveryLocationSlug == null ||
+                !hiddenLocations.has(box.deliveryLocationSlug),
+            ),
+          )
+        : new Map(),
+    [placementBoxes, hiddenLocations, showLocationOutlines],
+  );
+  const locationLabelBoxIds = useMemo(() => {
+    const best = new Map<string, { boxId: string; size: number }>();
+    for (const box of placementBoxes) {
+      const outline = locationOutlines.get(box.id);
+      if (!outline) continue;
+      const current = best.get(outline.componentId);
+      if (!current || box.size > current.size) {
+        best.set(outline.componentId, { boxId: box.id, size: box.size });
+      }
+    }
+    return new Set([...best.values()].map((entry) => entry.boxId));
+  }, [placementBoxes, locationOutlines]);
   const tintByKey = new Map(
     placementTints.map((tint) => [cargoGridCoordKey(tint.coord), tint]),
   );
@@ -282,10 +342,11 @@ export function CargoGridSketch({
   const hasDelivery = placementTints.some(
     (tint) => tint.action === "delivery",
   );
+  const showLocationKey = locationLegendItems.length > 0;
   const showTopLegend =
     showTop &&
     (tabbed || inlineTopLegend) &&
-    (topLegend != null || hasPickup || hasDelivery);
+    (topLegend != null || hasPickup || hasDelivery || showLocationKey);
 
   function selectCell(coord: CargoGridCoord) {
     if (!onSelectCoord) return;
@@ -388,12 +449,18 @@ export function CargoGridSketch({
               placementTints={placementTints}
               placementBoxes={placementBoxes}
               legendItems={legendItems}
+              locationLegendItems={locationLegendItems}
+              showLocationOutlines={showLocationOutlines}
+              hiddenLocations={hiddenLocations}
+              onToggleLocation={toggleLocation}
               hiddenCommodities={hiddenCommodities}
               onToggleCommodity={toggleCommodity}
               hiddenActions={hiddenActions}
               onToggleAction={toggleAction}
               mode={isPlacementView ? "placement" : "full"}
               toolbarExtra={zoomControls}
+              toolbarBelow={isoToolbarBelow}
+              showFacingPad={isPlacementView}
             />
           ) : null}
 
@@ -435,8 +502,61 @@ export function CargoGridSketch({
                 className="absolute top-2 right-2 z-10 w-[13rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
                 aria-label="Cargo color legend"
               >
+                {showLocationKey ? (
+                  <ul className="space-y-0.5" aria-label="Delivery locations">
+                    {locationLegendItems.map((item) => {
+                      const isOn = !hiddenLocations.has(item.locationSlug);
+                      return (
+                        <li key={item.locationSlug}>
+                          <button
+                            type="button"
+                            aria-pressed={isOn}
+                            aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
+                            onClick={() => toggleLocation(item.locationSlug)}
+                            className={[
+                              "flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left",
+                              isOn ? "" : "opacity-55",
+                            ].join(" ")}
+                          >
+                            <span
+                              className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
+                              style={{
+                                borderColor: item.stroke,
+                                backgroundColor: isOn
+                                  ? item.stroke
+                                  : "transparent",
+                                color: isOn ? undefined : item.stroke,
+                              }}
+                              aria-hidden
+                            >
+                              {item.groupIndex}
+                            </span>
+                            <span
+                              className={[
+                                "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
+                                isOn ? "text-rsi-text" : "text-rsi-text-muted",
+                              ].join(" ")}
+                            >
+                              {item.locationName}
+                            </span>
+                            <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
+                              {item.scu}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
                 {topLegend ? (
-                  <ul className="space-y-0.5">
+                  <ul
+                    className={[
+                      "space-y-0.5",
+                      showLocationKey
+                        ? "border-t border-rsi-border/60 pt-1.5"
+                        : "",
+                    ].join(" ")}
+                  >
                     {topLegend.map((item) => {
                       const hex =
                         resolveCommodityColorHex(
@@ -492,7 +612,9 @@ export function CargoGridSketch({
                   <div
                     className={[
                       "flex flex-wrap items-center gap-x-2 gap-y-1",
-                      topLegend ? "border-t border-rsi-border/60 pt-1.5" : "",
+                      topLegend || showLocationKey
+                        ? "border-t border-rsi-border/60 pt-1.5"
+                        : "",
                     ].join(" ")}
                   >
                     {hasPickup ? (
@@ -733,6 +855,12 @@ export function CargoGridSketch({
                       );
                     })}
                     {boxesOnLayer.map((box) => {
+                      if (
+                        box.deliveryLocationSlug != null &&
+                        hiddenLocations.has(box.deliveryLocationSlug)
+                      ) {
+                        return null;
+                      }
                       const hex =
                         resolveCommodityColorHex(
                           box.color,
@@ -748,18 +876,52 @@ export function CargoGridSketch({
                           box.footprint.dx) *
                         viewCellPx;
                       const top = (box.origin.y - yOffset) * viewCellPx;
+                      const outline = showLocationOutlines
+                        ? locationOutlines.get(box.id)
+                        : undefined;
+                      const groupStroke = showLocationOutlines
+                        ? locationGroupStroke(box.locationGroupIndex)
+                        : null;
+                      const fallbackBorder =
+                        box.action === "pickup"
+                          ? "1px solid color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
+                          : box.action === "delivery"
+                            ? "1px dashed color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))"
+                            : "1px solid color-mix(in srgb, var(--rsi-border-strong) 70%, black)";
+                      const groupEdge = (exposed: boolean) =>
+                        groupStroke != null &&
+                        (outline?.isIsolated || exposed)
+                          ? `2px solid ${groupStroke}`
+                          : fallbackBorder;
+                      const hasGroupOutline =
+                        groupStroke != null && outline != null;
+                      // Top view mirrors X (ramp→nose): screen left = sketch +X.
+                      const borderStyle = hasGroupOutline
+                          ? {
+                              borderTop: groupEdge(outline.exposed.ny),
+                              borderBottom: groupEdge(outline.exposed.py),
+                              borderLeft: groupEdge(outline.exposed.px),
+                              borderRight: groupEdge(outline.exposed.nx),
+                              // Thin black halo so colored mission edges pop.
+                              boxShadow: "0 0 0 1px #000",
+                            }
+                          : { border: fallbackBorder };
                       const actionLabel =
                         box.action === "pickup"
                           ? "Pickup · "
                           : box.action === "delivery"
                             ? "Delivery · "
                             : "";
+                      const locationLabel =
+                        box.locationGroupIndex != null
+                          ? `Loc ${box.locationGroupIndex} · `
+                          : "";
                       return (
                         <div
                           key={box.id}
-                          title={`${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}`}
+                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}`}
                           aria-hidden
-                          className="pointer-events-none absolute z-[5] box-border rounded-[2px]"
+                          className="pointer-events-none absolute z-[5] box-border flex items-center justify-center rounded-[2px]"
                           style={{
                             left,
                             top,
@@ -767,14 +929,25 @@ export function CargoGridSketch({
                             height: box.footprint.dy * viewCellPx,
                             backgroundColor: hex,
                             opacity: dimmed ? 0.2 : 0.92,
-                            border:
-                              box.action === "pickup"
-                                ? "1px solid color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
-                                : box.action === "delivery"
-                                  ? "1px dashed color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))"
-                                  : "1px solid color-mix(in srgb, var(--rsi-border-strong) 70%, black)",
+                            ...borderStyle,
                           }}
-                        />
+                        >
+                          {groupStroke != null &&
+                          box.locationGroupIndex != null &&
+                          !dimmed &&
+                          locationLabelBoxIds.has(box.id) ? (
+                            <span
+                              className="inline-flex size-4 items-center justify-center rounded-full font-mono text-[0.6rem] font-bold tabular-nums leading-none"
+                              style={{
+                                color: groupStroke,
+                                backgroundColor: "var(--rsi-bg-deep)",
+                                boxShadow: `0 0 0 1px #000, 0 0 0 2.5px ${groupStroke}`,
+                              }}
+                            >
+                              {box.locationGroupIndex}
+                            </span>
+                          ) : null}
+                        </div>
                       );
                     })}
                     <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text">
