@@ -17,7 +17,7 @@ async function SessionChecklistFromParams({
 
 export default function SessionPage({ params }: SessionPageProps) {
   return (
-    <AppShell>
+    <AppShell activeNav="sessions">
       <Suspense
         fallback={
           <p className="font-mono text-sm text-rsi-text-muted">

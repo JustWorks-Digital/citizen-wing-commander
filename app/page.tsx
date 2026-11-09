@@ -43,7 +43,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <AppShell>
+    <AppShell activeNav="sessions">
       {error ? (
         <p className="text-sm text-rsi-warn">{error}</p>
       ) : (

@@ -14,8 +14,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
+    activeNav: "sessions",
     children: (
       <p className="text-sm text-rsi-text-secondary">Session content</p>
+    ),
+  },
+};
+
+export const MissionsNav: Story = {
+  args: {
+    activeNav: "missions",
+    children: (
+      <p className="text-sm text-rsi-text-secondary">Catalog content</p>
     ),
   },
 };
