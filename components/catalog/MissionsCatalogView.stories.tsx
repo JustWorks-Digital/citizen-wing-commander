@@ -14,7 +14,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Grid: Story = {};
+export const Table: Story = {};
 
 export const Empty: Story = {
   args: { initialMissions: [] },

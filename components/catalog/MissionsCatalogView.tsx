@@ -9,8 +9,8 @@ import {
   ImageLightbox,
   type ImageLightboxItem,
 } from "@/components/ui/ImageLightbox";
-import { MissionCatalogCard } from "./MissionCatalogCard";
 import { MissionCatalogDetail } from "./MissionCatalogDetail";
+import { MissionCatalogTable } from "./MissionCatalogTable";
 
 export type MissionsCatalogViewProps = {
   /** Optional initial rows (Storybook / SSR). When omitted, loads from API. */
@@ -128,17 +128,12 @@ export function MissionsCatalogView({
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
             {filtered.length} mission{filtered.length === 1 ? "" : "s"}
           </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((mission) => (
-              <MissionCatalogCard
-                key={mission.id}
-                mission={mission}
-                isSelected={selected?.id === mission.id}
-                onSelect={setSelected}
-                onViewSource={openSource}
-              />
-            ))}
-          </div>
+          <MissionCatalogTable
+            missions={filtered}
+            selectedId={selected?.id ?? null}
+            onSelect={setSelected}
+            onViewSource={openSource}
+          />
         </>
       )}
 
