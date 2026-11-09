@@ -5,8 +5,6 @@ import {
   listCatalogMissions,
 } from "@/db/queries/catalogMissions";
 
-export const runtime = "nodejs";
-
 /** GET /api/catalog/missions?ids=uuid,uuid — or list recent when ids omitted. */
 export async function GET(request: Request) {
   try {
