@@ -33,9 +33,10 @@ import {
 
 const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
 
-const sessionIdSchema = z
-  .string()
-  .uuid()
+/** Prefer plain string over z.uuid() — Zod's uuid JSON Schema pattern is huge and bloats tools/list. */
+const uuidString = z.string().min(1).describe("UUID string");
+
+const sessionIdSchema = uuidString
   .optional()
   .describe(
     "Target hauling session UUID from list_hauling_sessions / UI tabs. Omit to use the active session.",
@@ -122,7 +123,7 @@ const handler = createMcpHandler(
         description:
           "Use this to switch which session tab is active (UI focus + default MCP target when sessionId is omitted).",
         inputSchema: z.object({
-          sessionId: z.string().uuid(),
+          sessionId: uuidString,
         }),
         annotations: { idempotentHint: true },
       },
@@ -234,6 +235,29 @@ const handler = createMcpHandler(
         annotations: { destructiveHint: true },
       },
       async ({ batchId }) => toolClearHaulingScreenshots(batchId),
+    );
+
+    server.registerTool(
+      "set_mission_screenshots",
+      {
+        title: "Set mission screenshots",
+        description:
+          "Use this to attach or replace screenshot logical paths on an existing session mission without rewriting the route/checklist. Call store_hauling_screenshot first (batchId = sessionId), then pass the returned logicalPath(s) here. Prefer this when screenshots were uploaded after the checklist was already built.",
+        inputSchema: z.object({
+          missionId: z
+            .string()
+            .min(1)
+            .describe("Session mission id from get_hauling_checklist (e.g. contract-1)"),
+          screenshots: z
+            .array(z.string())
+            .describe(
+              "Logical paths from store_hauling_screenshot (`<sessionId>/<filename>`). Pass [] to clear.",
+            ),
+          sessionId: sessionIdSchema,
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolSetMissionScreenshots(input),
     );
 
     server.registerTool(
@@ -376,29 +400,6 @@ const handler = createMcpHandler(
           legs: input.legs,
           resetTimer: input.resetTimer,
         }),
-    );
-
-    server.registerTool(
-      "set_mission_screenshots",
-      {
-        title: "Set mission screenshots",
-        description:
-          "Use this to attach or replace screenshot logical paths on an existing session mission without rewriting the route/checklist. Call store_hauling_screenshot first (batchId = sessionId), then pass the returned logicalPath(s) here. Prefer this when screenshots were uploaded after the checklist was already built.",
-        inputSchema: z.object({
-          missionId: z
-            .string()
-            .min(1)
-            .describe("Session mission id from get_hauling_checklist (e.g. contract-1)"),
-          screenshots: z
-            .array(z.string())
-            .describe(
-              "Logical paths from store_hauling_screenshot (`<sessionId>/<filename>`). Pass [] to clear.",
-            ),
-          sessionId: sessionIdSchema,
-        }),
-        annotations: { idempotentHint: true },
-      },
-      async (input) => toolSetMissionScreenshots(input),
     );
 
     server.registerTool(
@@ -649,7 +650,7 @@ const handler = createMcpHandler(
         description:
           "Use this to fetch one catalog mission plus its player notes.",
         inputSchema: z.object({
-          missionId: z.string().uuid(),
+          missionId: uuidString,
         }),
         annotations: { readOnlyHint: true },
       },
@@ -663,7 +664,7 @@ const handler = createMcpHandler(
         description:
           "Use this to store a player note (good/bad/neutral) about a catalog mission for future planning.",
         inputSchema: z.object({
-          missionId: z.string().uuid(),
+          missionId: uuidString,
           body: z.string().min(1),
           sentiment: z.enum(["good", "bad", "neutral"]).optional(),
         }),
@@ -679,10 +680,10 @@ const handler = createMcpHandler(
         description:
           "Use this after a completed run to update total/average mission time for a catalog mission.",
         inputSchema: z.object({
-          missionId: z.string().uuid(),
+          missionId: uuidString,
           durationMs: z.number().int().nonnegative(),
           offerLocation: z.string().optional(),
-          deliverySessionId: z.string().uuid().optional(),
+          deliverySessionId: uuidString.optional(),
         }),
         annotations: { destructiveHint: false },
       },
@@ -692,7 +693,8 @@ const handler = createMcpHandler(
   {
     serverInfo: {
       name: "citizen-wing-commander",
-      version: "0.1.0",
+      // Bump when tool schemas change so MCP clients invalidate cached tools/list.
+      version: "0.2.1",
     },
     instructions: [
       "Citizen Wing Commander manages hauling session checklists.",
