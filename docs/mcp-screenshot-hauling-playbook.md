@@ -7,7 +7,7 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
 ## Goal
 
 1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/hurston-covalex-2026-11-08/`.
-2. For each user-attached screenshot, call **`store_hauling_screenshot`** with base64 (or data URL). Files go to ephemeral `.data/mcp-screenshots/<batchId>/` — **not git**. Use returned `logicalPath` on the contract / transcript.
+2. For each user-attached screenshot, call **`store_hauling_screenshot`** with base64 (or data URL) and **`batchId` = session UUID**. Files go to `.data/mcp-screenshots/<batchId>/` — **not git**. Put returned `logicalPath` on each contract’s **`screenshots: [...]`**. If the checklist already exists, call **`set_mission_screenshots`** instead of re-applying the whole intake.
 3. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths. Keep a MobiGlas-layout `.md` next to the JSON in the batch folder.
 4. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
 5. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
@@ -53,8 +53,9 @@ Link evidence on each contract:
 
 | Tool | Purpose |
 | --- | --- |
-| `store_hauling_screenshot` | Save base64/data-URL image → `.data/mcp-screenshots/<batchId>/` |
+| `store_hauling_screenshot` | Save base64/data-URL image → `.data/mcp-screenshots/<batchId>/` (prefer batchId = sessionId) |
 | `list_hauling_screenshots` | List stored files for a batch |
+| `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
 | `clear_hauling_screenshots` | Delete a batch’s temp images |
 
 Railway without a volume: store is wiped on redeploy (same as checklist `.data`).

@@ -27,6 +27,7 @@ import {
   getChecklistSession,
   listChecklistSessions,
   replaceChecklistRows,
+  saveChecklistSession,
   setActiveChecklistSession,
   setLegCompleted,
   setSessionName,
@@ -626,6 +627,56 @@ export async function toolListHaulingScreenshots(batchId?: string) {
     screenshots,
     note: "UI uploads use sessionId as batchId. Pass that id here to see app-uploaded shots.",
   });
+}
+
+/**
+ * Attach screenshot logical paths to an existing session mission.
+ * Does not rebuild route rows — only updates `mission.screenshots`.
+ */
+export async function toolSetMissionScreenshots(input: {
+  missionId: string;
+  screenshots: string[];
+  sessionId?: string | null;
+}) {
+  try {
+    const session = await getChecklistSession(input.sessionId);
+    const missionId = input.missionId.trim();
+    const paths = (input.screenshots ?? [])
+      .map((path) => path.trim())
+      .filter(Boolean);
+    const missions = (session.missions ?? []).map((mission) =>
+      mission.id === missionId
+        ? { ...mission, screenshots: [...paths] }
+        : mission,
+    );
+    if (!(session.missions ?? []).some((mission) => mission.id === missionId)) {
+      return textResult({
+        error: `Unknown mission id: ${missionId}`,
+        knownMissionIds: (session.missions ?? []).map((mission) => mission.id),
+      });
+    }
+    const next = await saveChecklistSession({
+      ...session,
+      missions,
+    });
+    const updated = (next.missions ?? []).find(
+      (mission) => mission.id === missionId,
+    );
+    return textResult({
+      ok: true,
+      sessionId: next.id,
+      missionId,
+      screenshots: updated?.screenshots ?? paths,
+      note: "Route/checklist rows unchanged. Contract source UI reads mission.screenshots.",
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to set mission screenshots",
+    });
+  }
 }
 
 /** Return screenshot bytes (base64) so agents can read UI-uploaded images. */

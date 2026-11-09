@@ -24,6 +24,7 @@ import {
   toolSetActiveHaulingSession,
   toolSetSessionStartLocation,
   toolSetLegCompleted,
+  toolSetMissionScreenshots,
   toolSetSessionName,
   toolSetSessionShips,
   toolStoreHaulingScreenshot,
@@ -173,7 +174,7 @@ const handler = createMcpHandler(
             .string()
             .optional()
             .describe(
-              "Optional batch folder id (e.g. hurston-covalex-2026-11-08). Defaults to default.",
+              "Screenshot batch folder. Prefer the session UUID (same as sessionId / UI tabs). Defaults to default.",
             ),
           contractId: z
             .string()
@@ -306,6 +307,10 @@ const handler = createMcpHandler(
     });
 
     const intakeContractSchema = z.object({
+      id: z
+        .string()
+        .optional()
+        .describe("Stable contract/mission id (e.g. contract-1). Prefer setting this."),
       title: z.string(),
       contractor: z.string().optional(),
       rewardAuec: z.number().nonnegative().optional(),
@@ -314,6 +319,16 @@ const handler = createMcpHandler(
       cargo: z.array(intakeCargoSchema).min(1),
       maxContainerScu: z.number().int().positive().optional(),
       pickupSplits: z.record(z.string(), z.array(intakeCargoSchema)).optional(),
+      screenshots: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Logical paths from store_hauling_screenshot (`<batchId>/<filename>`). Required for Contract source UI.",
+        ),
+      transcript: z
+        .string()
+        .optional()
+        .describe("Optional path to mobiglas transcript JSON relative to the batch."),
     });
 
     server.registerTool(
@@ -321,7 +336,7 @@ const handler = createMcpHandler(
       {
         title: "Apply hauling contracts intake",
         description:
-          "Use this to apply accepted hauling_contracts_intake JSON (from screenshots). Pass contracts; optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Resets the session timer by default.",
+          "Use this to apply accepted hauling_contracts_intake JSON (from screenshots). Pass contracts (include screenshots[] logical paths from store_hauling_screenshot); optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Resets the session timer by default.",
         inputSchema: z.object({
           kind: z.literal("hauling_contracts_intake").optional(),
           version: z.literal(1).optional(),
@@ -361,6 +376,29 @@ const handler = createMcpHandler(
           legs: input.legs,
           resetTimer: input.resetTimer,
         }),
+    );
+
+    server.registerTool(
+      "set_mission_screenshots",
+      {
+        title: "Set mission screenshots",
+        description:
+          "Use this to attach or replace screenshot logical paths on an existing session mission without rewriting the route/checklist. Call store_hauling_screenshot first (batchId = sessionId), then pass the returned logicalPath(s) here. Prefer this when screenshots were uploaded after the checklist was already built.",
+        inputSchema: z.object({
+          missionId: z
+            .string()
+            .min(1)
+            .describe("Session mission id from get_hauling_checklist (e.g. contract-1)"),
+          screenshots: z
+            .array(z.string())
+            .describe(
+              "Logical paths from store_hauling_screenshot (`<sessionId>/<filename>`). Pass [] to clear.",
+            ),
+          sessionId: sessionIdSchema,
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolSetMissionScreenshots(input),
     );
 
     server.registerTool(
@@ -659,10 +697,11 @@ const handler = createMcpHandler(
     instructions: [
       "Citizen Wing Commander manages hauling session checklists.",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
-      "When the user attaches contract screenshots, call store_hauling_screenshot (base64) so files land in the ephemeral .data/mcp-screenshots store; reference returned logical paths from mobiglas transcripts. Do not put screenshot binaries in git.",
-      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo).",
+      "When the user attaches contract screenshots, call store_hauling_screenshot (base64, batchId=session UUID) so files land in .data/mcp-screenshots; keep returned logicalPath. Do not put screenshot binaries in git.",
+      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
+      "To attach screenshots to an existing mission without rebuilding the route, call set_mission_screenshots after store_hauling_screenshot.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
       "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids.",
