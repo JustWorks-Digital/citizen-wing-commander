@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import {
   describeCargoDeliveries,
@@ -14,10 +21,7 @@ import {
   commodityBadgeForeground,
   resolveCommodityColorHex,
 } from "@/lib/fixtures/commodityColors";
-import {
-  formatAuecAmount,
-  type ScuBoxSplits,
-} from "@/lib/missions/catalogMission";
+import { formatAuecAmount } from "@/lib/missions/catalogMission";
 import { missionsExpectedToCompleteAtStop } from "@/lib/missions/expectedCompletions";
 import {
   formatDistanceToNext,
@@ -29,12 +33,14 @@ import {
   estimateOnboardScuByStop,
   type StopOnboardScuReceipt,
 } from "@/lib/missions/cargoInventory";
+import { stripRankFromTitle } from "@/lib/missions/missionRank";
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
+import { SessionMissionDetailModal } from "./SessionMissionDetailModal";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
-import { StopRelatedMissions } from "./StopRelatedMissions";
+import { StopMissionScreenshots } from "./StopMissionScreenshots";
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
@@ -45,15 +51,14 @@ export type HaulingChecklistTableProps = {
   onFocusStop?: (rowId: string) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
+  /** Right side of the toolbar, left of Hide history (e.g. total time). */
+  toolbarEnd?: ReactNode;
+  /** Session ship display name for pickup transfer labels. */
+  shipName?: string | null;
   /** Session missions — used to attach contract screenshot refs per stop. */
   missions?: SessionMission[];
   /** Session id (screenshot batch) for image URLs. */
   sessionId?: string | null;
-  /** Persist crate-mix correction from a stop mission tile. */
-  onSelectBoxBreakdown?: (
-    missionId: string,
-    breakdown: ScuBoxSplits,
-  ) => void;
   /** Toggle shared pickup/delivery brick handled state (persisted). */
   onToggleCargoHandled?: (rowId: string, cargoIndex: number) => void;
 };
@@ -256,7 +261,7 @@ function CargoTileHandledMark({
 }: {
   isPickup: boolean;
 }) {
-  const stroke = isPickup ? "var(--rsi-accent)" : "var(--rsi-success)";
+  const stroke = isPickup ? "var(--rsi-accent)" : "var(--rsi-gold)";
   return (
     <span
       aria-hidden
@@ -302,7 +307,7 @@ function CargoGroups({
           group.role === "pickup"
             ? "text-rsi-accent"
             : group.role === "delivery"
-              ? "text-rsi-success"
+              ? "text-rsi-gold"
               : "text-rsi-text-muted";
         const doneClass = row.isCompleted
           ? "line-through opacity-70 decoration-rsi-success/40"
@@ -344,10 +349,10 @@ function CargoGroups({
                   roleClass,
                   group.role === "pickup"
                     ? "border-rsi-accent/45"
-                    : "border-rsi-success/45",
+                    : "border-rsi-gold/45",
                 ].join(" ")}
               >
-                {group.role === "pickup" ? "Pickup" : "Delivery"}
+                {group.role === "pickup" ? "Collect" : "Drop off"}
               </span>
             ) : null}
             <div className="grid max-w-[19rem] grid-cols-5 gap-1.5">
@@ -495,7 +500,7 @@ function LocationHeader({
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className={[
-              "whitespace-nowrap text-left text-base font-medium",
+              "whitespace-nowrap text-left text-lg font-semibold tracking-wide sm:text-xl",
               row.isCompleted
                 ? "text-rsi-text-muted line-through decoration-rsi-success/60"
                 : "text-rsi-text",
@@ -597,19 +602,16 @@ function TransferColumnLabel({ children }: { children: ReactNode }) {
 function TransferBlockFrame({
   title,
   isDone,
-  showTopRule = true,
   children,
 }: {
   title: string;
   isDone: boolean;
-  showTopRule?: boolean;
   children: ReactNode;
 }) {
   return (
     <div
       className={[
         "mx-auto grid w-fit grid-cols-[auto_auto_auto] items-start gap-x-2 py-5 sm:gap-x-4",
-        showTopRule ? "border-t border-rsi-divider/80" : "",
         isDone ? "text-rsi-text-muted" : "",
       ].join(" ")}
       title={title}
@@ -657,10 +659,12 @@ function TransferScuLine({
 
 function PickupTransferBlock({
   location,
+  shipName,
   receipt,
   isDone,
 }: {
   location: string;
+  shipName: string;
   receipt: StopOnboardScuReceipt;
   isDone: boolean;
 }) {
@@ -672,15 +676,13 @@ function PickupTransferBlock({
       title={`Load ${receipt.pickup} SCU from ${location}`}
       isDone={isDone}
     >
-      <TransferColumnLabel>Pickup</TransferColumnLabel>
-      <div className="row-span-4 flex items-center self-stretch">
-        <TransferArrow />
-      </div>
-      <TransferColumnLabel>Receiving</TransferColumnLabel>
+      <TransferColumnLabel>Station</TransferColumnLabel>
+      <span aria-hidden className="col-start-2" />
+      <TransferColumnLabel>Ship</TransferColumnLabel>
 
       <p
         className={[
-          "max-w-[20rem] text-sm font-medium leading-5",
+          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -688,31 +690,52 @@ function PickupTransferBlock({
       >
         {location}
       </p>
-      <TransferScuLine
-        amount={String(receipt.beforePickup)}
-        suffix="aboard"
-        tone="text-rsi-text-muted"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
+      <div className="mb-2.5 flex items-center self-center">
+        <TransferArrow />
+      </div>
+      <p
+        className={[
+          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
+          isDone ? mute : "text-rsi-text-muted",
+          strike,
+        ].join(" ")}
+        title={shipName}
+      >
+        {shipName}
+      </p>
 
-      <TransferScuLine
-        amount={`−${receipt.pickup}`}
-        suffix="loading"
-        tone="text-rsi-danger"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
-      <TransferScuLine
-        amount={`+${receipt.pickup}`}
-        suffix="receiving"
-        tone="text-rsi-success"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
+      <span aria-hidden className="col-start-1" />
+      <div className="col-start-3">
+        <TransferScuLine
+          amount={String(receipt.beforePickup)}
+          suffix="aboard"
+          tone="text-rsi-text-muted"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
+
+      <div className="col-start-1">
+        <TransferScuLine
+          amount={`−${receipt.pickup}`}
+          suffix="loading"
+          tone="text-rsi-danger"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
+      <div className="col-start-3">
+        <TransferScuLine
+          amount={`+${receipt.pickup}`}
+          suffix="receiving"
+          tone="text-rsi-success"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
 
       <span aria-hidden className="col-start-1" />
       <div className="col-start-3 w-fit">
@@ -738,10 +761,12 @@ function PickupTransferBlock({
 
 function DeliveryTransferBlock({
   location,
+  shipName,
   receipt,
   isDone,
 }: {
   location: string;
+  shipName: string;
   receipt: StopOnboardScuReceipt;
   isDone: boolean;
 }) {
@@ -751,25 +776,27 @@ function DeliveryTransferBlock({
     <TransferBlockFrame
       title={`Transfer ${receipt.delivery} SCU to ${location}`}
       isDone={isDone}
-      showTopRule={false}
     >
-      <TransferColumnLabel>Delivery</TransferColumnLabel>
-      <div className="row-span-4 flex items-center self-stretch">
-        <TransferArrow />
-      </div>
-      <TransferColumnLabel>Receiving</TransferColumnLabel>
+      <TransferColumnLabel>Ship</TransferColumnLabel>
+      <span aria-hidden className="col-start-2" />
+      <TransferColumnLabel>Station</TransferColumnLabel>
 
-      <TransferScuLine
-        amount={String(receipt.beforeDelivery)}
-        suffix="aboard"
-        tone="text-rsi-text-muted"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
       <p
         className={[
-          "max-w-[20rem] text-sm font-medium leading-5",
+          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
+          isDone ? mute : "text-rsi-text-muted",
+          strike,
+        ].join(" ")}
+        title={shipName}
+      >
+        {shipName}
+      </p>
+      <div className="mb-2.5 flex items-center self-center">
+        <TransferArrow />
+      </div>
+      <p
+        className={[
+          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -778,24 +805,40 @@ function DeliveryTransferBlock({
         {location}
       </p>
 
-      <TransferScuLine
-        amount={`−${receipt.delivery}`}
-        suffix="delivering"
-        tone="text-rsi-danger"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
-      <TransferScuLine
-        amount={`+${receipt.delivery}`}
-        suffix="receiving"
-        tone="text-rsi-success"
-        strike={strike}
-        mute={mute}
-        isDone={isDone}
-      />
+      <div className="col-start-1">
+        <TransferScuLine
+          amount={String(receipt.beforeDelivery)}
+          suffix="aboard"
+          tone="text-rsi-text-muted"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
+      <span aria-hidden className="col-start-3" />
 
-      <div className="w-fit">
+      <div className="col-start-1">
+        <TransferScuLine
+          amount={`−${receipt.delivery}`}
+          suffix="delivering"
+          tone="text-rsi-danger"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
+      <div className="col-start-3">
+        <TransferScuLine
+          amount={`+${receipt.delivery}`}
+          suffix="receiving"
+          tone="text-rsi-success"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
+
+      <div className="col-start-1 w-fit">
         <div
           aria-hidden
           className={[
@@ -819,11 +862,14 @@ function DeliveryTransferBlock({
 function TotalMeta({
   row,
   location,
+  shipName,
   onboardReceipt,
 }: {
   row: HaulingChecklistRow;
   /** Station for this stop (load source or unload destination). */
   location: string;
+  /** Session ship display name for pickup transfers. */
+  shipName: string;
   /** Planned bay load before/after this stop. */
   onboardReceipt?: StopOnboardScuReceipt | null;
 }) {
@@ -834,10 +880,11 @@ function TotalMeta({
   if (!showPickup && !showDelivering) return null;
 
   return (
-    <div className="mt-2 space-y-0 text-sm">
+    <div className="space-y-0 text-sm">
       {showPickup ? (
         <PickupTransferBlock
           location={location}
+          shipName={shipName}
           receipt={onboardReceipt!}
           isDone={row.isCompleted}
         />
@@ -845,6 +892,7 @@ function TotalMeta({
       {showDelivering ? (
         <DeliveryTransferBlock
           location={location}
+          shipName={shipName}
           receipt={onboardReceipt!}
           isDone={row.isCompleted}
         />
@@ -866,7 +914,7 @@ function PayoutMeta({
 
   return (
     <div
-      className="border-t border-rsi-divider/80 py-5 text-sm"
+      className="py-5 text-sm"
       title={
         completionAuec > 0
           ? `Payout ${formatAuecAmount(completionAuec)}`
@@ -883,8 +931,8 @@ function PayoutMeta({
         ].join(" ")}
       >
         {completingMissionCount === 1
-          ? "Mission reward"
-          : `${completingMissionCount} mission rewards`}
+          ? "Contract reward"
+          : `${completingMissionCount} contract rewards`}
       </p>
       {completionAuec > 0 ? (
         <p
@@ -914,60 +962,102 @@ function PayoutMeta({
   );
 }
 
+function missionScuItemsLabel(mission: SessionMission): string {
+  if (mission.cargoSummary.trim()) return mission.cargoSummary;
+  if (mission.cargo.length === 0) return "—";
+  return mission.cargo
+    .map((line) => `${line.scu} SCU ${line.commodity}`)
+    .join(" · ");
+}
+
 function ExpectedCompletionsMeta({
   missions,
 }: {
   missions: SessionMission[];
 }) {
+  const [detailMissionId, setDetailMissionId] = useState<string | null>(null);
+  const detailMission =
+    detailMissionId == null
+      ? null
+      : (missions.find((mission) => mission.id === detailMissionId) ?? null);
+
+  // No completing contracts: omit the section copy, but keep the same footprint
+  // so "Next stop / Distance" does not jump up.
+  if (missions.length === 0) {
+    return (
+      <div className="invisible py-5 pr-4 text-sm md:pr-8" aria-hidden>
+        <p className="mb-2 w-fit border-b border-transparent pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]">
+          Contracts
+        </p>
+        <p>None</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="border-t border-rsi-divider/80 py-5 text-sm">
-      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Missions completed
-        {missions.length > 0 ? (
-          <span className="ml-1 tabular-nums text-rsi-text-secondary">
-            ({missions.length})
-          </span>
-        ) : null}
+    <div className="py-5 pr-4 text-sm md:pr-8">
+      <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Contracts
       </p>
-      {missions.length === 0 ? (
-        <p className="mt-1.5 text-rsi-text-muted">None</p>
-      ) : (
-        <ul className="mt-2 grid grid-cols-3 gap-1.5">
-          {missions.map((mission) => (
+      <ul className="grid grid-cols-3 gap-1.5">
+        {missions.map((mission) => {
+          const { rank, title } = stripRankFromTitle(mission.title);
+          const scuItems = missionScuItemsLabel(mission);
+          return (
             <li key={mission.id} className="min-w-0">
-              <div
+              <button
+                type="button"
+                title={`View details for ${mission.title}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailMissionId(mission.id);
+                }}
                 className={[
-                  "flex w-full min-w-0 items-start rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-2 py-1",
+                  "flex w-full min-w-0 flex-col items-stretch gap-0.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-2 py-1.5 text-left transition-colors",
+                  "hover:border-rsi-border-strong hover:bg-rsi-bg-deep/60",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
                   mission.isCompleted ? "opacity-70" : "",
                 ].join(" ")}
               >
-                <div className="min-w-0 w-full">
-                  <p
-                    className={[
-                      "truncate text-[0.6rem] font-semibold tracking-wide",
-                      mission.isCompleted
-                        ? "text-rsi-text-muted line-through decoration-rsi-success/40"
-                        : "text-rsi-text",
-                    ].join(" ")}
-                  >
-                    {mission.title}
-                  </p>
-                  {mission.cargoSummary ? (
-                    <p
-                      className={[
-                        "mt-0.5 truncate text-[0.5rem] leading-snug text-rsi-text-secondary",
-                        mission.isCompleted ? "line-through opacity-80" : "",
-                      ].join(" ")}
-                    >
-                      {mission.cargoSummary}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
+                <p
+                  className={[
+                    "truncate font-mono text-[0.5rem] uppercase tracking-[0.14em]",
+                    mission.isCompleted
+                      ? "text-rsi-text-muted line-through"
+                      : "text-rsi-accent",
+                  ].join(" ")}
+                >
+                  {rank ?? "—"}
+                </p>
+                <p
+                  className={[
+                    "truncate text-[0.6rem] font-semibold tracking-wide",
+                    mission.isCompleted
+                      ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                      : "text-rsi-text",
+                  ].join(" ")}
+                >
+                  {title || mission.title}
+                </p>
+                <p
+                  className={[
+                    "truncate text-[0.5rem] leading-snug text-rsi-text-secondary",
+                    mission.isCompleted ? "line-through opacity-80" : "",
+                  ].join(" ")}
+                >
+                  {scuItems}
+                </p>
+              </button>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
+      {detailMission ? (
+        <SessionMissionDetailModal
+          mission={detailMission}
+          onClose={() => setDetailMissionId(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -981,16 +1071,32 @@ function NextDistanceMeta({
   nextLocationName: string | null;
   nextLocationSlug: string | null;
 }) {
-  const starmapDistance =
-    nextLocationSlug != null
-      ? distanceBetweenLocationSlugs(row.locationSlug, nextLocationSlug)
-      : null;
+  const isLastStop = nextLocationSlug == null && nextLocationName == null;
+  if (isLastStop) {
+    return (
+      <div className="py-5 text-sm">
+        <p
+          className={[
+            "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
+            row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-success",
+          ].join(" ")}
+        >
+          Session complete
+        </p>
+      </div>
+    );
+  }
+
+  const starmapDistance = distanceBetweenLocationSlugs(
+    row.locationSlug,
+    nextLocationSlug!,
+  );
   const distance = formatDistanceToNext(
     starmapDistance ?? row.distanceToNext,
   );
 
   return (
-    <div className="border-t border-rsi-divider/80 py-5 text-sm">
+    <div className="py-5 text-sm">
       <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Next stop / Distance
       </p>
@@ -1002,31 +1108,28 @@ function NextDistanceMeta({
             : "text-rsi-text-secondary",
         ].join(" ")}
       >
-        <span className="font-medium tracking-wide">
-          {nextLocationName ?? "—"}
-        </span>
-        {nextLocationName ? (
-          <>
-            <span className="text-rsi-text-muted"> / </span>
-            <span className="font-mono tabular-nums">{distance}</span>
-          </>
-        ) : null}
+        <span className="font-medium tracking-wide">{nextLocationName}</span>
+        <span className="text-rsi-text-muted"> / </span>
+        <span className="font-mono tabular-nums">{distance}</span>
       </p>
     </div>
   );
 }
 
-export function HaulingChecklistTable({
+/** Memoized so parent modal open/close does not rebuild every stop card. */
+export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   rows,
   onToggle,
   focusedStopId = null,
   onFocusStop,
   toolbarStart = null,
+  toolbarEnd = null,
+  shipName = null,
   missions = [],
   sessionId = null,
-  onSelectBoxBreakdown,
   onToggleCargoHandled,
 }: HaulingChecklistTableProps) {
+  const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
@@ -1057,9 +1160,10 @@ export function HaulingChecklistTable({
   }
 
   const toolbar = (
-    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b border-rsi-divider bg-rsi-bg-deep/95 px-3 py-2 backdrop-blur-sm">
+    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b border-rsi-divider bg-rsi-bg-deep/95 px-3 py-2">
       {toolbarStart}
       <div className="ml-auto flex flex-wrap items-center gap-2">
+        {toolbarEnd}
         {hideCompleted && completedCount > 0 ? (
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-secondary">
             {completedCount} hidden
@@ -1087,8 +1191,8 @@ export function HaulingChecklistTable({
 
   const emptyMessage =
     rows.length === 0
-      ? "No missions yet"
-      : "All missions complete — show history to review";
+      ? "No contracts yet"
+      : "All contracts complete — show history to review";
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
   const onboardByStop = estimateOnboardScuByStop(rows);
@@ -1153,7 +1257,7 @@ export function HaulingChecklistTable({
               aria-checked={row.isCompleted}
               aria-current={isFocused ? "step" : undefined}
               className={[
-                "scroll-mt-14 border-b border-rsi-divider/80 px-3 py-3 last:border-b-0",
+                "scroll-mt-14 border-b border-rsi-divider/80 px-3 pt-4.5 pb-3 last:border-b-0",
                 checklistRowToneClass(row.isCompleted, isFocused),
               ].join(" ")}
               onClick={() => onFocusStop?.(row.id)}
@@ -1165,16 +1269,20 @@ export function HaulingChecklistTable({
                   isCompleted={row.isCompleted}
                   isActive={isFocused}
                   onToggle={() => {
-                    if (!row.isCompleted && !hideCompleted) {
+                    const completing = !row.isCompleted;
+                    onToggle(row.id);
+                    // Defer focus/scroll/bay replan so the checkbox paints first.
+                    if (completing && !hideCompleted) {
                       const nextIncomplete = rows
                         .slice(routeIndex + 1)
                         .find((entry) => !entry.isCompleted);
                       if (nextIncomplete) {
-                        pendingScrollToIdRef.current = nextIncomplete.id;
-                        onFocusStop?.(nextIncomplete.id);
+                        startTransition(() => {
+                          pendingScrollToIdRef.current = nextIncomplete.id;
+                          onFocusStop?.(nextIncomplete.id);
+                        });
                       }
                     }
-                    onToggle(row.id);
                   }}
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -1198,13 +1306,21 @@ export function HaulingChecklistTable({
                           onToggleCargoHandled={onToggleCargoHandled}
                         />
                       </div>
-                      <div className="md:hidden">
-                        <TotalMeta
-                          row={row}
-                          location={location}
-                          onboardReceipt={onboardByStop.get(row.id) ?? null}
-                        />
-                      </div>
+                    </div>
+                    <div className="hidden w-full md:flex md:w-1/2 md:shrink-0 md:flex-col">
+                      <StopDeliveryBayPreview row={row} rows={rows} />
+                    </div>
+                  </div>
+                  <div className="md:hidden">
+                    <TotalMeta
+                      row={row}
+                      location={location}
+                      shipName={transferShipName}
+                      onboardReceipt={onboardByStop.get(row.id) ?? null}
+                    />
+                  </div>
+                  <div className="flex flex-col md:flex-row md:items-start md:gap-4">
+                    <div className="min-w-0 flex-1">
                       <ExpectedCompletionsMeta missions={expectedCompletions} />
                       <PayoutMeta
                         row={row}
@@ -1218,10 +1334,10 @@ export function HaulingChecklistTable({
                       />
                     </div>
                     <div className="hidden w-full md:flex md:w-1/2 md:shrink-0 md:flex-col">
-                      <StopDeliveryBayPreview row={row} rows={rows} />
                       <TotalMeta
                         row={row}
                         location={location}
+                        shipName={transferShipName}
                         onboardReceipt={onboardByStop.get(row.id) ?? null}
                       />
                       {row.isCompleted ? (
@@ -1231,16 +1347,17 @@ export function HaulingChecklistTable({
                       ) : null}
                     </div>
                   </div>
-                  <StopRelatedMissions
-                    row={row}
-                    missions={missions}
-                    screenshotRefs={
-                      sessionId
-                        ? screenshotRefsForRow(missions, row, sessionId)
-                        : []
-                    }
-                    onSelectBoxBreakdown={onSelectBoxBreakdown}
-                  />
+                  {sessionId ? (
+                    <div
+                      className="mt-3 flex justify-center pt-1"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <StopMissionScreenshots
+                        refs={screenshotRefsForRow(missions, row, sessionId)}
+                        variant="inline"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </li>
@@ -1249,4 +1366,4 @@ export function HaulingChecklistTable({
       </ul>
     </div>
   );
-}
+});

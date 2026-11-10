@@ -30,11 +30,15 @@
   --rsi-accent-muted: #1a4a6e;
   --rsi-accent-foreground: #06141d;
 
+  /* Chromatic gold (drop-off chrome, accents) */
+  --rsi-gold: #e0a63a;
+  --rsi-gold-muted: #3f3214;
+
   /* Status */
   --rsi-danger: #e25555;
   --rsi-danger-muted: #4a1f24;
-  --rsi-warn: #e0a63a;
-  --rsi-warn-muted: #3f3214;
+  --rsi-warn: var(--rsi-gold);
+  --rsi-warn-muted: var(--rsi-gold-muted);
   --rsi-success: #3dbf8f;
   --rsi-success-muted: #14352c;
 
@@ -72,6 +76,8 @@
 
   --color-rsi-danger: var(--rsi-danger);
   --color-rsi-danger-muted: var(--rsi-danger-muted);
+  --color-rsi-gold: var(--rsi-gold);
+  --color-rsi-gold-muted: var(--rsi-gold-muted);
   --color-rsi-warn: var(--rsi-warn);
   --color-rsi-warn-muted: var(--rsi-warn-muted);
   --color-rsi-success: var(--rsi-success);

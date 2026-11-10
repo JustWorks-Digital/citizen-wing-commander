@@ -21,7 +21,7 @@ export type AddCatalogMissionsToSessionModalProps = {
 type Mode = "existing" | "new";
 
 /**
- * Pick an open hauling session (or create one) and append catalog missions.
+ * Pick an open hauling session (or create one) and append catalog contracts.
  */
 export function AddCatalogMissionsToSessionModal({
   catalogMissionIds,
@@ -87,7 +87,7 @@ export function AddCatalogMissionsToSessionModal({
       onAdded?.(result);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add missions");
+      setError(err instanceof Error ? err.message : "Failed to add contracts");
     } finally {
       setIsSaving(false);
     }
@@ -98,7 +98,7 @@ export function AddCatalogMissionsToSessionModal({
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Add missions to session"
+      aria-label="Add contracts to session"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -110,7 +110,7 @@ export function AddCatalogMissionsToSessionModal({
             Catalog · Session
           </p>
           <h2 className="mt-1 text-base font-semibold tracking-wide text-rsi-text">
-            Add {count} mission{count === 1 ? "" : "s"}
+            Add {count} contract{count === 1 ? "" : "s"}
           </h2>
         </header>
 
@@ -161,7 +161,7 @@ export function AddCatalogMissionsToSessionModal({
                       {session.id === sessions?.activeSessionId
                         ? " (active)"
                         : ""}{" "}
-                      · {session.missionCount} mission
+                      · {session.missionCount} contract
                       {session.missionCount === 1 ? "" : "s"}
                     </option>
                   ))}

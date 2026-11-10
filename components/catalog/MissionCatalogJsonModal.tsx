@@ -54,7 +54,7 @@ export function MissionCatalogJsonModal({
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Mission JSON"
+      aria-label="Contract JSON"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

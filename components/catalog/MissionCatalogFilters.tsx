@@ -211,7 +211,7 @@ export function MissionCatalogFilters({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rsi-divider/70 pt-3">
         <p className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted">
           Showing {resultCount}
-          {resultCount !== totalCount ? ` of ${totalCount}` : ""} mission
+          {resultCount !== totalCount ? ` of ${totalCount}` : ""} contract
           {resultCount === 1 ? "" : "s"}
         </p>
         {hasActive ? (

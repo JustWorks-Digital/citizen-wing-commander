@@ -8,7 +8,6 @@ import { scuBoxSplitsForScu } from "@/lib/missions/catalogMission";
 import {
   boxCountsFromBreakdown,
   enumerateBoxBreakdowns,
-  formatBreakdownLabel,
 } from "@/lib/missions/boxBreakdownOptions";
 import { autoSelectedMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
 import { missionTotalScu } from "@/lib/missions/sessionMissionObjectives";
@@ -103,32 +102,40 @@ export function StopMissionBoxConfigModal({
           {autoSelected ? (
             <div className="mt-3 space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  Auto-selected
+                <p
+                  className={[
+                    "font-mono text-[0.55rem] uppercase tracking-[0.12em]",
+                    isUserCorrected
+                      ? "text-rsi-text-muted"
+                      : "text-rsi-accent",
+                  ].join(" ")}
+                >
+                  {isUserCorrected
+                    ? "Auto-selected (manual override)"
+                    : "Auto-selected"}
                 </p>
                 <CargoBoxCountIcons
                   boxCounts={boxCountsFromBreakdown(autoSelected)}
-                  color="var(--rsi-text-muted)"
+                  color={
+                    isUserCorrected
+                      ? "var(--rsi-text-muted)"
+                      : "var(--rsi-accent)"
+                  }
                   className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.65rem]"
                 />
-                <p className="w-full font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary sm:w-auto">
-                  {formatBreakdownLabel(autoSelected)}
-                </p>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rsi-border/50 pt-1.5">
-                <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent">
-                  {isUserCorrected ? "User-selected" : "Selected"}
-                </p>
-                <CargoBoxCountIcons
-                  boxCounts={boxCountsFromBreakdown(selectedSplits)}
-                  color="var(--rsi-accent)"
-                  className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.65rem]"
-                />
-                <p className="w-full font-mono text-[0.65rem] tabular-nums text-rsi-text sm:w-auto">
-                  {formatBreakdownLabel(selectedSplits)}
-                  {isUserCorrected ? " · corrected" : ""}
-                </p>
-              </div>
+              {isUserCorrected ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rsi-border/50 pt-1.5">
+                  <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent">
+                    User-selected
+                  </p>
+                  <CargoBoxCountIcons
+                    boxCounts={boxCountsFromBreakdown(selectedSplits)}
+                    color="var(--rsi-accent)"
+                    className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.65rem]"
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
 

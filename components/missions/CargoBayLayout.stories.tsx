@@ -11,13 +11,14 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session ship layout as the ship’s bay grid at the active stop, with Top/3D tabs, Front/Rear rails (rear left · front right), Suggested / Cargo type / Mission based packing (plus Prioritized under Cargo type when the ship supports it), and optional inventory beside the title.",
+          "Session ship layout as the ship’s bay grid at the active stop, with Top/3D tabs, Front/Rear rails (rear left · front right), Suggested / Cargo type / Contract based packing (plus Prioritized under Cargo type when the ship supports it), optional inventory beside the title, and a bottom drag handle to resize panel height (persisted per session in localStorage).",
       },
     },
   },
   args: {
     rows: mockSessionChecklist.rows,
     shipSlug: mockSessionChecklist.shipSlugs[0] ?? "c2-hercules",
+    sessionId: mockSessionChecklist.id,
   },
 } satisfies Meta<typeof CargoBayLayout>;
 

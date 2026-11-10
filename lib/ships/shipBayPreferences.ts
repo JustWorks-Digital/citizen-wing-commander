@@ -4,7 +4,7 @@ import type { CargoGridStorageLocation } from "@/lib/ships/cargoGrids";
 
 /**
  * How mission-priority packing places early vs late deliveries in the bay.
- * Used for Cargo type + Prioritized, and automatically for Mission based.
+ * Used for Cargo type + Prioritized, and automatically for Contract based.
  */
 export type MissionPriorityPackBias = "edges-first" | "center-first";
 
@@ -27,7 +27,7 @@ export type ShipBayPreferencePayload = {
   >;
   /**
    * Ship-specific early-vs-late delivery layout bias.
-   * Cargo type + Prioritized, and Mission based (always when set).
+   * Cargo type + Prioritized, and Contract based (always when set).
    * Mk V: early deliveries on bay edges; later deliveries toward center.
    */
   missionPriorityPacking?: MissionPriorityPackingConfig | null;

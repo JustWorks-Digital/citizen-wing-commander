@@ -15,7 +15,7 @@ const meta = {
     },
     size: {
       control: "select",
-      options: ["sm", "md"],
+      options: ["xs", "sm", "md"],
     },
   },
 } satisfies Meta<typeof Badge>;
@@ -28,6 +28,12 @@ export const Default: Story = {};
 export const AllVariants: Story = {
   render: () => (
     <div className="flex flex-wrap gap-2">
+      <Badge variant="accent" size="xs">
+        Pickup
+      </Badge>
+      <Badge variant="success" size="xs">
+        Delivery
+      </Badge>
       <Badge variant="accent" size="sm">
         Pickup
       </Badge>

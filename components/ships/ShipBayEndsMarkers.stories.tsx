@@ -16,6 +16,7 @@ const meta = {
   args: {
     flipped: false,
     slant: "upright",
+    compact: false,
     children: (
       <div className="flex h-24 w-48 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
         Bay
@@ -35,4 +36,8 @@ export const Flipped: Story = {
 
 export const IsoSlant: Story = {
   args: { slant: "iso" },
+};
+
+export const Compact: Story = {
+  args: { compact: true },
 };

@@ -71,3 +71,34 @@ export function distanceBetweenLocationSlugs(
   if (!Number.isFinite(meters)) return null;
   return kmToDistanceToNext(meters / 1_000);
 }
+
+/** Convert a display distance to kilometers for summing. */
+export function distanceToNextToKm(distance: DistanceToNext): number {
+  switch (distance.unit) {
+    case "m":
+      return distance.value / 1_000;
+    case "km":
+      return distance.value;
+    case "Mm":
+      return distance.value * 1_000;
+    case "Gm":
+      return distance.value * 1_000_000;
+    default:
+      return distance.value;
+  }
+}
+
+/** Sum display distances (mixed units) back into a single DistanceToNext. */
+export function sumDistanceToNext(
+  distances: ReadonlyArray<DistanceToNext | null | undefined>,
+): DistanceToNext | null {
+  let totalKm = 0;
+  let sawAny = false;
+  for (const distance of distances) {
+    if (!distance) continue;
+    sawAny = true;
+    totalKm += distanceToNextToKm(distance);
+  }
+  if (!sawAny || !Number.isFinite(totalKm)) return null;
+  return kmToDistanceToNext(totalKm);
+}

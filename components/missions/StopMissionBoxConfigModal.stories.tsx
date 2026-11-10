@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Correct crate mixes for a session mission. Shows auto-selected vs user-selected (`scuBoxSplitsAutoSelected` vs `scuBoxSplits`).",
+          "Correct crate mixes for a session contract. Shows auto-selected vs user-selected (`scuBoxSplitsAutoSelected` vs `scuBoxSplits`).",
       },
     },
   },

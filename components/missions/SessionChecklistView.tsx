@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   activateChecklistSession,
@@ -26,8 +33,6 @@ import {
 } from "@/lib/fixtures";
 import {
   applySessionCompletionTiming,
-  formatSessionDuration,
-  getSessionElapsedMs,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import {
@@ -54,6 +59,8 @@ import {
 import { SessionCatalogMissionsPanel } from "./SessionCatalogMissionsPanel";
 import { SessionMissionsModal } from "./SessionMissionsModal";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
+import { SessionElapsedLabel } from "./SessionElapsedLabel";
+import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 import {
   SessionInventoryStat,
   SessionRouteProgressStats,
@@ -105,6 +112,7 @@ export function SessionChecklistView({
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  const [stopsOpen, setStopsOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
@@ -112,7 +120,6 @@ export function SessionChecklistView({
   const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
   const [shipsLoading, setShipsLoading] = useState(true);
   const [shipsError, setShipsError] = useState<string | null>(null);
-  const [nowMs, setNowMs] = useState<number | null>(null);
   const etagRef = useRef<string | null>(null);
   const savingRef = useRef(false);
   const sessionRef = useRef(session);
@@ -160,10 +167,6 @@ export function SessionChecklistView({
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    setNowMs(Date.now());
   }, []);
 
   useEffect(() => {
@@ -257,14 +260,6 @@ export function SessionChecklistView({
   }, [initial, routeSessionId, router]);
 
   useEffect(() => {
-    if (session.completedAt || nowMs == null) return;
-    const tick = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-    return () => window.clearInterval(tick);
-  }, [session.completedAt, nowMs]);
-
-  useEffect(() => {
     setFocusedStopId(null);
   }, [session.id]);
 
@@ -280,6 +275,11 @@ export function SessionChecklistView({
 
   const selectedShipSlug = session.shipSlugs?.[0] ?? null;
   const shipBySlug = new Map(shipCatalog.map((ship) => [ship.slug, ship]));
+  const selectedShipName =
+    (selectedShipSlug
+      ? shipBySlug.get(selectedShipSlug)?.name ??
+        getShipBySlug(selectedShipSlug)?.name
+      : null) ?? null;
   const totalCapacity =
     session.shipSlugs?.reduce((total, slug) => {
       const fromCatalog = shipBySlug.get(slug)?.cargoScu;
@@ -297,37 +297,35 @@ export function SessionChecklistView({
   /** Remaining bay for more missions vs planned peak load. */
   const availableScu =
     totalCapacity > 0 ? totalCapacity - peakScu : null;
-  const elapsedLabel =
-    nowMs == null
-      ? "—"
-      : formatSessionDuration(getSessionElapsedMs(session, nowMs));
-  const isComplete = Boolean(session.completedAt);
   const totalLegs = session.rows.length;
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
   const startLocation = session.startLocationSlug
     ? getLocationBySlug(session.startLocationSlug)
     : undefined;
 
-  const persistSession = (next: SessionChecklistModel) => {
+  const persistSession = useCallback((next: SessionChecklistModel) => {
     savingRef.current = true;
+    // Optimistic UI first; defer server echo so packing / grid don't re-run twice urgently.
     setSession(next);
     void saveChecklist(next)
       .then((result) => {
         etagRef.current = result.etag;
-        setSession(result.session);
-        setTabs((prev) =>
-          prev.map((tab) =>
-            tab.id === result.session.id
-              ? {
-                  ...tab,
-                  sessionName: result.session.sessionName,
-                  updatedAt: result.session.updatedAt,
-                  missionCount: result.session.missionCount,
-                  rowCount: result.session.rows.length,
-                }
-              : tab,
-          ),
-        );
+        startTransition(() => {
+          setSession(result.session);
+          setTabs((prev) =>
+            prev.map((tab) =>
+              tab.id === result.session.id
+                ? {
+                    ...tab,
+                    sessionName: result.session.sessionName,
+                    updatedAt: result.session.updatedAt,
+                    missionCount: result.session.missionCount,
+                    rowCount: result.session.rows.length,
+                  }
+                : tab,
+            ),
+          );
+        });
         setLoadError(null);
       })
       .catch(() => {
@@ -336,7 +334,114 @@ export function SessionChecklistView({
       .finally(() => {
         savingRef.current = false;
       });
-  };
+  }, []);
+
+  const openMissions = useCallback(() => setMissionsOpen(true), []);
+  const closeMissions = useCallback(() => setMissionsOpen(false), []);
+  const openStops = useCallback(() => setStopsOpen(true), []);
+  const closeStops = useCallback(() => setStopsOpen(false), []);
+
+  const inventoryAside = useMemo(
+    () => (
+      <SessionInventoryStat
+        onboardScu={onboardScu}
+        peakScu={peakScu}
+        missionsTotalScu={missionsTotalScu}
+        totalCapacity={totalCapacity}
+        availableScu={availableScu}
+        isOverCapacity={isOverCapacity}
+      />
+    ),
+    [
+      onboardScu,
+      peakScu,
+      missionsTotalScu,
+      totalCapacity,
+      availableScu,
+      isOverCapacity,
+    ],
+  );
+
+  const routeProgressStats = useMemo(
+    () => (
+      <SessionRouteProgressStats
+        completedLegs={completedLegs}
+        totalLegs={totalLegs}
+        missionsCompleted={session.missionsCompleted ?? 0}
+        missionCount={session.missionCount ?? 0}
+        onboardScu={onboardScu}
+        totalCapacity={totalCapacity}
+        isOverCapacity={isOverCapacity}
+        onMissionsClick={openMissions}
+        onStopsClick={openStops}
+      />
+    ),
+    [
+      completedLegs,
+      totalLegs,
+      session.missionsCompleted,
+      session.missionCount,
+      onboardScu,
+      totalCapacity,
+      isOverCapacity,
+      openMissions,
+      openStops,
+    ],
+  );
+
+  const elapsedToolbar = useMemo(
+    () => (
+      <SessionElapsedLabel
+        session={{
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+        }}
+      />
+    ),
+    [session.startedAt, session.completedAt],
+  );
+
+  const onToggleCargoHandled = useCallback(
+    (rowId: string, cargoIndex: number) => {
+      persistSession(
+        applySessionCompletionTiming({
+          ...sessionRef.current,
+          shipSlugs: sessionRef.current.shipSlugs ?? [],
+          startLocationSlug: sessionRef.current.startLocationSlug ?? null,
+          rows: sessionRef.current.rows.map((row) => {
+            if (row.id !== rowId) return row;
+            return {
+              ...row,
+              cargoDeliveries: row.cargoDeliveries.map((cargo, index) =>
+                index === cargoIndex
+                  ? { ...cargo, isHandled: !cargo.isHandled }
+                  : cargo,
+              ),
+            };
+          }),
+        }),
+      );
+    },
+    [persistSession],
+  );
+
+  const onToggleStop = useCallback(
+    (rowId: string) => {
+      persistSession(
+        applySessionCompletionTiming({
+          ...sessionRef.current,
+          shipSlugs: sessionRef.current.shipSlugs ?? [],
+          startLocationSlug: sessionRef.current.startLocationSlug ?? null,
+          rows: sessionRef.current.rows.map((row) =>
+            row.id === rowId
+              ? { ...row, isCompleted: !row.isCompleted }
+              : row,
+          ),
+        }),
+      );
+    },
+    [persistSession],
+  );
 
   const applyBoxBreakdown = (
     missionId: string,
@@ -498,7 +603,7 @@ export function SessionChecklistView({
               </p>
             )}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 md:justify-end">
             <ShipSelect
               valueSlug={selectedShipSlug}
               options={shipCatalog.map((ship) => ({
@@ -520,20 +625,6 @@ export function SessionChecklistView({
             />
           </div>
         </div>
-        <p className="mt-3 text-sm text-rsi-text-secondary">
-          <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-            Total time
-          </span>
-          <span
-            className={[
-              "mt-1 block font-mono text-lg tabular-nums tracking-wide",
-              isComplete ? "text-rsi-success" : "text-rsi-text",
-            ].join(" ")}
-          >
-            {elapsedLabel}
-            {isComplete ? " · complete" : ""}
-          </span>
-        </p>
         {loadError ? (
           <p className="mt-1 text-sm text-rsi-warn">{loadError}</p>
         ) : null}
@@ -543,71 +634,21 @@ export function SessionChecklistView({
         rows={session.rows}
         shipSlug={selectedShipSlug}
         focusedStopId={resolvedFocusedStopId}
-        headerAside={
-          <SessionInventoryStat
-            onboardScu={onboardScu}
-            peakScu={peakScu}
-            missionsTotalScu={missionsTotalScu}
-            totalCapacity={totalCapacity}
-            availableScu={availableScu}
-            isOverCapacity={isOverCapacity}
-          />
-        }
+        sessionId={session.id}
+        headerAside={inventoryAside}
       />
 
       <HaulingChecklistTable
         rows={session.rows}
         focusedStopId={resolvedFocusedStopId}
         onFocusStop={setFocusedStopId}
+        shipName={selectedShipName}
         missions={session.missions ?? []}
         sessionId={session.id}
-        onSelectBoxBreakdown={applyBoxBreakdown}
-        onToggleCargoHandled={(rowId, cargoIndex) => {
-          persistSession(
-            applySessionCompletionTiming({
-              ...session,
-              shipSlugs: session.shipSlugs ?? [],
-              startLocationSlug: session.startLocationSlug ?? null,
-              rows: session.rows.map((row) => {
-                if (row.id !== rowId) return row;
-                return {
-                  ...row,
-                  cargoDeliveries: row.cargoDeliveries.map((cargo, index) =>
-                    index === cargoIndex
-                      ? { ...cargo, isHandled: !cargo.isHandled }
-                      : cargo,
-                  ),
-                };
-              }),
-            }),
-          );
-        }}
-        toolbarStart={
-          <SessionRouteProgressStats
-            completedLegs={completedLegs}
-            totalLegs={totalLegs}
-            missionsCompleted={session.missionsCompleted ?? 0}
-            missionCount={session.missionCount ?? 0}
-            onboardScu={onboardScu}
-            totalCapacity={totalCapacity}
-            isOverCapacity={isOverCapacity}
-            onMissionsClick={() => setMissionsOpen(true)}
-          />
-        }
-        onToggle={(rowId) => {
-          persistSession(
-            applySessionCompletionTiming({
-              ...session,
-              shipSlugs: session.shipSlugs ?? [],
-              startLocationSlug: session.startLocationSlug ?? null,
-              rows: session.rows.map((row) =>
-                row.id === rowId
-                  ? { ...row, isCompleted: !row.isCompleted }
-                  : row,
-              ),
-            }),
-          );
-        }}
+        onToggleCargoHandled={onToggleCargoHandled}
+        toolbarStart={routeProgressStats}
+        toolbarEnd={elapsedToolbar}
+        onToggle={onToggleStop}
       />
 
       <SessionScreenshotsPanel
@@ -643,10 +684,18 @@ export function SessionChecklistView({
         }}
       />
 
+      <SessionStopsTimelineModal
+        open={stopsOpen}
+        rows={session.rows}
+        startLocationSlug={session.startLocationSlug ?? null}
+        onClose={closeStops}
+      />
+
       <SessionMissionsModal
         open={missionsOpen}
         missions={session.missions ?? []}
-        onClose={() => setMissionsOpen(false)}
+        rows={session.rows}
+        onClose={closeMissions}
         onToggleHidden={(missionId, isHidden) => {
           const result = setMissionHiddenAndRebuildRoute(
             session,

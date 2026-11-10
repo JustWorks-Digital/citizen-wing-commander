@@ -1696,7 +1696,7 @@ export const cargoBayPackModes = [
   },
   {
     id: "by-mission-location",
-    label: "Mission based",
+    label: "Contract based",
     summary:
       "First two delivery locations as exclusive piles (nothing stacked on them); remaining crates grouped by cargo type.",
   },

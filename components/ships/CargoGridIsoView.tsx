@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import {
   cargoGridMaxWidth,
@@ -99,6 +100,8 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
+  /** Outer panel height in px (default `26rem`). */
+  panelHeightPx?: number;
 };
 
 type CubeFaceColors = { top: string; left: string; right: string };
@@ -764,6 +767,7 @@ export function CargoGridIsoView({
   onPeelStackChange,
   hiddenLayers: hiddenLayersProp,
   onToggleLayer,
+  panelHeightPx = 26 * 16,
 }: CargoGridIsoViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(false);
   const peelStack = peelStackProp ?? peelStackInternal;
@@ -1134,14 +1138,27 @@ export function CargoGridIsoView({
   const showToolbar =
     showPeel || mode !== "placement" || Boolean(toolbarBelow);
 
+  const {
+    overflowScrollRef: isoLegendScrollRef,
+    overflowScrollClassName: isoLegendScrollClassName,
+  } = useOverflowScrollY([
+    showLegend,
+    legend.length,
+    showActionKey,
+    showLayers,
+    showLocationKey,
+    panelHeightPx,
+  ]);
+
   return (
     <div
       className={[
-        "relative flex h-[26rem] flex-col overflow-hidden px-3 pt-3 pb-3",
+        "relative flex flex-col overflow-hidden px-3 pt-3 pb-3",
         embedded
           ? "bg-transparent"
           : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
       ].join(" ")}
+      style={{ height: panelHeightPx }}
     >
       {showToolbar ? (
         <div
@@ -1195,8 +1212,10 @@ export function CargoGridIsoView({
 
       {showLegend ? (
         <div
+          ref={isoLegendScrollRef}
           className={[
-            "absolute right-2 z-10 w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+            "absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+            isoLegendScrollClassName,
             legendToggleAbove ? "top-8" : "top-2",
           ].join(" ")}
           aria-label="Cargo color legend"
@@ -1387,7 +1406,7 @@ export function CargoGridIsoView({
               <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
                 Layers
               </p>
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex flex-wrap items-center justify-start gap-1">
                 {layerOptions.map((z) => {
                   const isOn = !hiddenLayers.has(z);
                   const number = layerNumber(z);

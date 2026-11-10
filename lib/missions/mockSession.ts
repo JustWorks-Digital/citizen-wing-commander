@@ -148,17 +148,21 @@ export function applySessionCompletionTiming(
   };
 }
 
-/** Format elapsed ms as `1h 02m 05s` / `12m 05s` / `45s`. */
+/**
+ * Format elapsed ms for session UI.
+ * First minute: seconds only (`45s`). After that: minutes (and hours), no seconds
+ * (`12m`, `1h 02m`).
+ */
 export function formatSessionDuration(elapsedMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
   }
   if (minutes > 0) {
-    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+    return `${minutes}m`;
   }
   return `${seconds}s`;
 }

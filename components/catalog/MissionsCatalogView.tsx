@@ -110,7 +110,7 @@ export function MissionsCatalogView({
       applyAddResult(result);
     } catch (err) {
       setAddError(
-        err instanceof Error ? err.message : "Failed to add missions",
+        err instanceof Error ? err.message : "Failed to add contracts",
       );
     } finally {
       setIsAdding(false);
@@ -155,7 +155,7 @@ export function MissionsCatalogView({
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load missions",
+            err instanceof Error ? err.message : "Failed to load contracts",
           );
         }
       } finally {
@@ -221,7 +221,7 @@ export function MissionsCatalogView({
             Planning
           </p>
           <h2 className="text-xl font-semibold tracking-wide text-rsi-text sm:text-2xl">
-            Missions catalog
+            Contracts catalog
           </h2>
         </div>
       ) : null}
@@ -231,7 +231,7 @@ export function MissionsCatalogView({
       {isLoading ? (
         <MissionCatalogSkeleton />
       ) : missions.length === 0 ? (
-        <p className="text-sm text-rsi-text-muted">No catalog missions yet.</p>
+        <p className="text-sm text-rsi-text-muted">No catalog contracts yet.</p>
       ) : (
         <>
           <MissionCatalogFilters
@@ -274,7 +274,7 @@ export function MissionsCatalogView({
                 </div>
               </div>
               <ul
-                aria-label="Selected missions"
+                aria-label="Selected contracts"
                 className="flex flex-wrap gap-1.5"
               >
                 {checkedMissions.map((mission) => {
@@ -343,7 +343,7 @@ export function MissionsCatalogView({
           ) : null}
           {visible.length === 0 ? (
             <p className="text-sm text-rsi-text-muted">
-              No missions match these filters.
+              No contracts match these filters.
             </p>
           ) : (
             <MissionCatalogTable

@@ -58,7 +58,7 @@ export const InlineBesideLabel: Story = {
     (Story) => (
       <div className="flex items-center gap-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         <Story />
-        <span>Missions (3)</span>
+        <span>Contracts (3)</span>
       </div>
     ),
   ],

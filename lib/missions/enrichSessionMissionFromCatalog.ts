@@ -33,7 +33,7 @@ export function enrichSessionMissionFromCatalog(
   if (!catalog || !isHaulingPayload(catalog.payload)) return mission;
   const payload = catalog.payload;
   const extras = payload.extras ?? {};
-  const fromSplits =
+  const fromScuSplits =
     payload.scuSplits && payload.scuSplits.length > 0
       ? payload.scuSplits.map((split) => ({
           from: locationDisplay(split.fromLocationSlug),
@@ -42,11 +42,34 @@ export function enrichSessionMissionFromCatalog(
           scu: split.scu,
         }))
       : null;
-  const deliverySplits = fromSplits
-    ? fromSplits
-    : Array.isArray(extras.deliverySplits)
-      ? (extras.deliverySplits as SessionMission["deliverySplits"])
-      : mission.deliverySplits;
+  const fromLocationSplits = (() => {
+    if (fromScuSplits) return null;
+    const locSplits =
+      catalog.scuLocationSplits ?? payload.scuLocationSplits ?? null;
+    if (!locSplits) return null;
+    const fromSlug =
+      Object.keys(locSplits.from)[0] ?? payload.fromLocationSlugs[0] ?? "";
+    const commodity =
+      payload.cargo[0]?.commodityName ?? mission.cargo[0]?.commodity ?? "Cargo";
+    const lines: NonNullable<SessionMission["deliverySplits"]> = [];
+    for (const [toSlug, scu] of Object.entries(locSplits.to)) {
+      if (scu <= 0) continue;
+      lines.push({
+        from: locationDisplay(fromSlug),
+        to: locationDisplay(toSlug),
+        commodity,
+        scu,
+      });
+    }
+    return lines.length > 0 ? lines : null;
+  })();
+  const deliverySplits = fromScuSplits
+    ? fromScuSplits
+    : fromLocationSplits
+      ? fromLocationSplits
+      : Array.isArray(extras.deliverySplits)
+        ? (extras.deliverySplits as SessionMission["deliverySplits"])
+        : mission.deliverySplits;
 
   const category =
     normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;

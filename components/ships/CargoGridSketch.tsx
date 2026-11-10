@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
 import {
   cargoGridCargoLength,
   cargoGridMaxWidth,
@@ -27,16 +34,28 @@ import type {
 import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
+import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 import { CargoBoxCountIcons } from "./CargoBoxSizeIcon";
+import { CargoLegendSection } from "./CargoLegendSection";
 import {
   CargoGridIsoView,
   type CargoGridIsoLegendItem,
 } from "./CargoGridIsoView";
 import { ShipBayEndsFrame } from "./ShipBayEndsMarkers";
 
+type LegendSectionKey =
+  | "locations"
+  | "commodities"
+  | "actions"
+  | "scuSizes"
+  | "topLayers"
+  | "isoLayers";
+
 const GRID_ZOOM_MIN = 0.5;
 const GRID_ZOOM_MAX = 2.5;
 const GRID_ZOOM_STEP = 0.25;
+/** Top-view size badge toggles (ascending). */
+const SCU_SIZE_BADGE_OPTIONS = [1, 2, 4, 8] as const satisfies readonly CargoBoxScu[];
 
 function CargoGridZoomControls({
   zoom,
@@ -134,6 +153,8 @@ export type CargoGridSketchProps = {
   hideLegend?: boolean;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
+  /** Outer panel height in px for top / 3D / split views (default `26rem`). */
+  panelHeightPx?: number;
 };
 
 const CARGO_ZONE_FILL = [
@@ -172,6 +193,7 @@ export function CargoGridSketch({
   isoToolbarBelow = null,
   hideLegend: hideLegendProp,
   legendToggleAbove = false,
+  panelHeightPx = 26 * 16,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
@@ -244,6 +266,22 @@ export function CargoGridSketch({
   const [hiddenLocations, setHiddenLocations] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  /** Which crate sizes show a numeric badge on the top-view boxes. */
+  const [scuSizeBadges, setScuSizeBadges] = useState<ReadonlySet<CargoBoxScu>>(
+    () => new Set(),
+  );
+  const [collapsedLegendSections, setCollapsedLegendSections] = useState<
+    ReadonlySet<LegendSectionKey>
+  >(() => new Set());
+
+  const {
+    overflowScrollRef: topLegendScrollRef,
+    overflowScrollClassName: topLegendScrollClassName,
+  } = useOverflowScrollY([collapsedLegendSections, panelHeightPx]);
+  const {
+    overflowScrollRef: splitLegendScrollRef,
+    overflowScrollClassName: splitLegendScrollClassName,
+  } = useOverflowScrollY([collapsedLegendSections, panelHeightPx]);
 
   const locationSlugsKey = locationLegendItems
     .map((item) => item.locationSlug)
@@ -260,30 +298,63 @@ export function CargoGridSketch({
   }, [locationSlugsKey]);
 
   function toggleCommodity(slug: string) {
-    setHiddenCommodities((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
+    startTransition(() => {
+      setHiddenCommodities((prev) => {
+        const next = new Set(prev);
+        if (next.has(slug)) next.delete(slug);
+        else next.add(slug);
+        return next;
+      });
     });
   }
 
   function toggleAction(action: CargoGridBoxAction) {
-    setHiddenActions((prev) => {
-      const next = new Set(prev);
-      if (next.has(action)) next.delete(action);
-      else next.add(action);
-      return next;
+    startTransition(() => {
+      setHiddenActions((prev) => {
+        const next = new Set(prev);
+        if (next.has(action)) next.delete(action);
+        else next.add(action);
+        return next;
+      });
     });
   }
 
   function toggleLocation(slug: string) {
-    setHiddenLocations((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
+    startTransition(() => {
+      setHiddenLocations((prev) => {
+        const next = new Set(prev);
+        if (next.has(slug)) next.delete(slug);
+        else next.add(slug);
+        return next;
+      });
     });
+  }
+
+  function toggleScuSizeBadge(size: CargoBoxScu) {
+    startTransition(() => {
+      setScuSizeBadges((prev) => {
+        const next = new Set(prev);
+        if (next.has(size)) next.delete(size);
+        else next.add(size);
+        return next;
+      });
+    });
+  }
+
+  function toggleLegendSection(key: LegendSectionKey) {
+    // Section chrome only — keep the heavy grid paint non-blocking.
+    startTransition(() => {
+      setCollapsedLegendSections((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    });
+  }
+
+  function isLegendSectionExpanded(key: LegendSectionKey): boolean {
+    return !collapsedLegendSections.has(key);
   }
 
   const zoneLogicalX0 = useMemo(() => {
@@ -367,6 +438,7 @@ export function CargoGridSketch({
       placementTints.length > 0 ||
       placementBoxes.length > 0);
   const useBoxFootprints = placementBoxes.length > 0;
+  const showScuSizeFilters = useBoxFootprints && (showTop || isSplit);
   const topLegend =
     legendItems && legendItems.length > 0 ? legendItems : null;
   const hasPickup = placementTints.some((tint) => tint.action === "pickup");
@@ -375,15 +447,11 @@ export function CargoGridSketch({
   );
   const showLocationKey = locationLegendItems.length > 0;
   const showTopLayers = sketch.heightCells > 0;
-  const isoLayerOptions = useMemo(() => {
-    const occupied = new Set<number>();
-    for (const box of placementBoxes) {
-      for (let offset = 0; offset < box.footprint.dz; offset += 1) {
-        occupied.add(box.origin.z + offset);
-      }
-    }
-    return [...occupied].sort((a, b) => a - b);
-  }, [placementBoxes]);
+  /** All Z layers (match Top legend); empty bays stay toggleable in 3D. */
+  const isoLayerOptions = useMemo(
+    () => Array.from({ length: sketch.heightCells }, (_, layer) => layer),
+    [sketch.heightCells],
+  );
   const showIsoLayers = isoLayerOptions.length > 0;
   const canPeel = useMemo(() => {
     let maxZ = -1;
@@ -394,11 +462,13 @@ export function CargoGridSketch({
   }, [placementBoxes]);
 
   function toggleIsoLayer(z: number) {
-    setHiddenIsoLayers((prev) => {
-      const next = new Set(prev);
-      if (next.has(z)) next.delete(z);
-      else next.add(z);
-      return next;
+    startTransition(() => {
+      setHiddenIsoLayers((prev) => {
+        const next = new Set(prev);
+        if (next.has(z)) next.delete(z);
+        else next.add(z);
+        return next;
+      });
     });
   }
 
@@ -411,7 +481,8 @@ export function CargoGridSketch({
       hasPickup ||
       hasDelivery ||
       showLocationKey ||
-      showTopLayers);
+      showTopLayers ||
+      showScuSizeFilters);
   const showSplitLegend =
     isSplit &&
     !legendHidden &&
@@ -420,7 +491,329 @@ export function CargoGridSketch({
       hasDelivery ||
       showLocationKey ||
       showTopLayers ||
-      showIsoLayers);
+      showIsoLayers ||
+      showScuSizeFilters);
+
+  const scuSizeFilterControls = (
+    <div
+      role="group"
+      aria-label="Show SCU size badges on crates"
+      className="flex flex-wrap items-center gap-1.5"
+    >
+      {SCU_SIZE_BADGE_OPTIONS.map((size) => {
+        const isOn = scuSizeBadges.has(size);
+        return (
+          <label
+            key={size}
+            className={[
+              "inline-flex cursor-pointer items-center gap-1 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.55rem] tabular-nums transition-colors",
+              isOn
+                ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+            ].join(" ")}
+          >
+            <input
+              type="checkbox"
+              checked={isOn}
+              onChange={() => toggleScuSizeBadge(size)}
+              className="size-3 accent-[var(--rsi-accent)]"
+            />
+            {size}
+          </label>
+        );
+      })}
+    </div>
+  );
+
+  const locationLegendList = showLocationKey ? (
+    <ul className="space-y-0.5" aria-label="Delivery locations">
+      {locationLegendItems.map((item) => {
+        const isOn = !hiddenLocations.has(item.locationSlug);
+        return (
+          <li key={item.locationSlug}>
+            <button
+              type="button"
+              aria-pressed={isOn}
+              aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
+              onClick={() => toggleLocation(item.locationSlug)}
+              className={[
+                "flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left",
+                isOn ? "" : "opacity-55",
+              ].join(" ")}
+            >
+              <span
+                className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
+                style={{
+                  borderColor: item.stroke,
+                  backgroundColor: isOn ? item.stroke : "transparent",
+                  color: isOn ? undefined : item.stroke,
+                }}
+                aria-hidden
+              >
+                {item.groupIndex}
+              </span>
+              <span
+                className={[
+                  "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
+                  isOn ? "text-rsi-text" : "text-rsi-text-muted",
+                ].join(" ")}
+              >
+                {item.locationName}
+              </span>
+              <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
+                {item.scu}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
+
+  const commodityLegendList = topLegend ? (
+    <ul className="space-y-0.5">
+      {topLegend.map((item) => {
+        const hex =
+          resolveCommodityColorHex(
+            item.color,
+            item.color2,
+            item.commoditySlug,
+          ) ?? "#54a0f7";
+        const isOn = !hiddenCommodities.has(item.commoditySlug);
+        const hasBoxIcons =
+          item.boxCounts != null && item.boxCounts.length > 0;
+        const boxTotal = hasBoxIcons
+          ? item.boxCounts!.reduce((sum, entry) => sum + entry.count, 0)
+          : null;
+        return (
+          <li key={item.commoditySlug}>
+            <button
+              type="button"
+              aria-pressed={isOn}
+              onClick={() => toggleCommodity(item.commoditySlug)}
+              className={[
+                "flex w-full cursor-pointer items-center gap-1.5 text-left",
+                isOn ? "" : "opacity-55",
+              ].join(" ")}
+            >
+              <span
+                className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
+                style={{ backgroundColor: hex }}
+                aria-hidden
+              />
+              <span
+                className={[
+                  "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
+                  isOn ? "text-rsi-text" : "text-rsi-text-muted",
+                ].join(" ")}
+              >
+                {item.commodityName}
+                {boxTotal != null ? (
+                  <span className="ml-1.5 font-mono text-[0.55rem] text-rsi-text-muted">
+                    ({boxTotal})
+                  </span>
+                ) : null}
+              </span>
+              {hasBoxIcons ? (
+                <CargoBoxCountIcons
+                  boxCounts={item.boxCounts!}
+                  color={hex}
+                  className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
+                />
+              ) : null}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
+
+  const actionLegendControls =
+    hasPickup || hasDelivery ? (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {hasPickup ? (
+          <button
+            type="button"
+            aria-pressed={!hiddenActions.has("pickup")}
+            onClick={() => toggleAction("pickup")}
+            className={[
+              "inline-flex items-center gap-1 text-[0.6rem]",
+              hiddenActions.has("pickup")
+                ? "text-rsi-text-muted opacity-55"
+                : "text-rsi-text-secondary",
+            ].join(" ")}
+          >
+            <span
+              className="size-2 shrink-0 rounded-[2px] border border-solid border-rsi-accent/55 bg-transparent"
+              aria-hidden
+            />
+            Pickup
+          </button>
+        ) : null}
+        {hasDelivery ? (
+          <button
+            type="button"
+            aria-pressed={!hiddenActions.has("delivery")}
+            onClick={() => toggleAction("delivery")}
+            className={[
+              "inline-flex items-center gap-1 text-[0.6rem]",
+              hiddenActions.has("delivery")
+                ? "text-rsi-text-muted opacity-55"
+                : "text-rsi-text-secondary",
+            ].join(" ")}
+          >
+            <span
+              className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/75 bg-transparent"
+              aria-hidden
+            />
+            Delivery
+          </button>
+        ) : null}
+      </div>
+    ) : null;
+
+  function renderCargoLegendBody(options: {
+    includeIsoLayers: boolean;
+    topLayersTitle: string;
+  }) {
+    return (
+      <>
+        {showLocationKey ? (
+          <CargoLegendSection
+            title="Locations"
+            sectionId="locations"
+            isExpanded={isLegendSectionExpanded("locations")}
+            onToggle={() => toggleLegendSection("locations")}
+          >
+            {locationLegendList}
+          </CargoLegendSection>
+        ) : null}
+        {topLegend ? (
+          <CargoLegendSection
+            title="Cargo"
+            sectionId="commodities"
+            isExpanded={isLegendSectionExpanded("commodities")}
+            onToggle={() => toggleLegendSection("commodities")}
+            showBorder={showLocationKey}
+          >
+            {commodityLegendList}
+          </CargoLegendSection>
+        ) : null}
+        {hasPickup || hasDelivery ? (
+          <CargoLegendSection
+            title="Actions"
+            sectionId="actions"
+            isExpanded={isLegendSectionExpanded("actions")}
+            onToggle={() => toggleLegendSection("actions")}
+            showBorder={Boolean(showLocationKey || topLegend)}
+          >
+            {actionLegendControls}
+          </CargoLegendSection>
+        ) : null}
+        {showScuSizeFilters ? (
+          <CargoLegendSection
+            title="SCU sizes"
+            sectionId="scu-sizes"
+            isExpanded={isLegendSectionExpanded("scuSizes")}
+            onToggle={() => toggleLegendSection("scuSizes")}
+            showBorder={Boolean(
+              showLocationKey || topLegend || hasPickup || hasDelivery,
+            )}
+          >
+            {scuSizeFilterControls}
+          </CargoLegendSection>
+        ) : null}
+        {showTopLayers ? (
+          <CargoLegendSection
+            title={options.topLayersTitle}
+            sectionId="top-layers"
+            isExpanded={isLegendSectionExpanded("topLayers")}
+            onToggle={() => toggleLegendSection("topLayers")}
+            showBorder={Boolean(
+              showLocationKey ||
+                topLegend ||
+                hasPickup ||
+                hasDelivery ||
+                showScuSizeFilters,
+            )}
+          >
+            <div
+              role="radiogroup"
+              aria-label={
+                options.includeIsoLayers ? "Top view Z layer" : "Z layer"
+              }
+              className="flex flex-wrap items-center justify-start gap-1"
+            >
+              {Array.from({ length: sketch.heightCells }, (_, layer) => {
+                const isActive = z === layer;
+                return (
+                  <button
+                    key={layer}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    aria-label={`Layer ${layer + 1}`}
+                    onClick={() => setActiveZ(layer)}
+                    className={[
+                      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                      isActive
+                        ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                        : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                    ].join(" ")}
+                  >
+                    {layer + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </CargoLegendSection>
+        ) : null}
+        {options.includeIsoLayers && showIsoLayers ? (
+          <CargoLegendSection
+            title="3D layers"
+            sectionId="iso-layers"
+            isExpanded={isLegendSectionExpanded("isoLayers")}
+            onToggle={() => toggleLegendSection("isoLayers")}
+            showBorder={Boolean(
+              showLocationKey ||
+                topLegend ||
+                hasPickup ||
+                hasDelivery ||
+                showScuSizeFilters ||
+                showTopLayers,
+            )}
+          >
+            <div
+              role="group"
+              aria-label="3D layers"
+              className="flex flex-wrap items-center justify-start gap-1"
+            >
+              {isoLayerOptions.map((layer) => {
+                const isOn = !hiddenIsoLayers.has(layer);
+                return (
+                  <button
+                    key={`iso-${layer}`}
+                    type="button"
+                    aria-pressed={isOn}
+                    aria-label={`3D layer ${layer + 1}`}
+                    onClick={() => toggleIsoLayer(layer)}
+                    className={[
+                      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                      isOn
+                        ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                        : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                    ].join(" ")}
+                  >
+                    {layer + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </CargoLegendSection>
+        ) : null}
+      </>
+    );
+  }
 
   function selectCell(coord: CargoGridCoord) {
     if (!onSelectCoord) return;
@@ -542,11 +935,12 @@ export function CargoGridSketch({
           {showTop ? (
           <div
             className={[
-              "relative flex h-[26rem] flex-col overflow-hidden p-3 pb-10",
+              "relative flex flex-col overflow-hidden p-3 pb-10",
               isSplit
                 ? "min-w-0 flex-1 border-r border-rsi-border"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
             ].join(" ")}
+            style={{ height: panelHeightPx }}
           >
             {tabbed || compact ? (
               <span className="sr-only">Top view</span>
@@ -580,218 +974,18 @@ export function CargoGridSketch({
             </div>
             {showTopLegend ? (
               <div
+                ref={topLegendScrollRef}
                 className={[
-                  "absolute right-2 z-10 w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+                  "absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+                  topLegendScrollClassName,
                   legendToggleAbove ? "top-8" : "top-2",
                 ].join(" ")}
                 aria-label="Cargo color legend"
               >
-                {showLocationKey ? (
-                  <ul className="space-y-0.5" aria-label="Delivery locations">
-                    {locationLegendItems.map((item) => {
-                      const isOn = !hiddenLocations.has(item.locationSlug);
-                      return (
-                        <li key={item.locationSlug}>
-                          <button
-                            type="button"
-                            aria-pressed={isOn}
-                            aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
-                            onClick={() => toggleLocation(item.locationSlug)}
-                            className={[
-                              "flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left",
-                              isOn ? "" : "opacity-55",
-                            ].join(" ")}
-                          >
-                            <span
-                              className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
-                              style={{
-                                borderColor: item.stroke,
-                                backgroundColor: isOn
-                                  ? item.stroke
-                                  : "transparent",
-                                color: isOn ? undefined : item.stroke,
-                              }}
-                              aria-hidden
-                            >
-                              {item.groupIndex}
-                            </span>
-                            <span
-                              className={[
-                                "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                                isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                              ].join(" ")}
-                            >
-                              {item.locationName}
-                            </span>
-                            <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                              {item.scu}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : null}
-                {topLegend ? (
-                  <ul
-                    className={[
-                      "space-y-0.5",
-                      showLocationKey
-                        ? "border-t border-rsi-border/60 pt-1.5"
-                        : "",
-                    ].join(" ")}
-                  >
-                    {topLegend.map((item) => {
-                      const hex =
-                        resolveCommodityColorHex(
-                          item.color,
-                          item.color2,
-                          item.commoditySlug,
-                        ) ?? "#54a0f7";
-                      const isOn = !hiddenCommodities.has(item.commoditySlug);
-                      const hasBoxIcons =
-                        item.boxCounts != null && item.boxCounts.length > 0;
-                      const boxTotal = hasBoxIcons
-                        ? item.boxCounts!.reduce(
-                            (sum, entry) => sum + entry.count,
-                            0,
-                          )
-                        : null;
-                      return (
-                        <li key={item.commoditySlug}>
-                          <button
-                            type="button"
-                            aria-pressed={isOn}
-                            onClick={() => toggleCommodity(item.commoditySlug)}
-                            className={[
-                              "flex w-full cursor-pointer items-center gap-1.5 text-left",
-                              isOn ? "" : "opacity-55",
-                            ].join(" ")}
-                          >
-                            <span
-                              className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
-                              style={{ backgroundColor: hex }}
-                              aria-hidden
-                            />
-                            <span
-                              className={[
-                                "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                                isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                              ].join(" ")}
-                            >
-                              {item.commodityName}
-                              {boxTotal != null ? (
-                                <span className="ml-1.5 font-mono text-[0.55rem] text-rsi-text-muted">
-                                  ({boxTotal})
-                                </span>
-                              ) : null}
-                            </span>
-                            {hasBoxIcons ? (
-                              <CargoBoxCountIcons
-                                boxCounts={item.boxCounts!}
-                                color={hex}
-                                className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
-                              />
-                            ) : null}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : null}
-                {hasPickup || hasDelivery ? (
-                  <div
-                    className={[
-                      "flex flex-wrap items-center gap-x-2 gap-y-1",
-                      topLegend || showLocationKey
-                        ? "border-t border-rsi-border/60 pt-1.5"
-                        : "",
-                    ].join(" ")}
-                  >
-                    {hasPickup ? (
-                      <button
-                        type="button"
-                        aria-pressed={!hiddenActions.has("pickup")}
-                        onClick={() => toggleAction("pickup")}
-                        className={[
-                          "inline-flex items-center gap-1 text-[0.6rem]",
-                          hiddenActions.has("pickup")
-                            ? "text-rsi-text-muted opacity-55"
-                            : "text-rsi-text-secondary",
-                        ].join(" ")}
-                      >
-                        <span
-                          className="size-2 shrink-0 rounded-[2px] border border-solid border-rsi-accent/55 bg-transparent"
-                          aria-hidden
-                        />
-                        Pickup
-                      </button>
-                    ) : null}
-                    {hasDelivery ? (
-                      <button
-                        type="button"
-                        aria-pressed={!hiddenActions.has("delivery")}
-                        onClick={() => toggleAction("delivery")}
-                        className={[
-                          "inline-flex items-center gap-1 text-[0.6rem]",
-                          hiddenActions.has("delivery")
-                            ? "text-rsi-text-muted opacity-55"
-                            : "text-rsi-text-secondary",
-                        ].join(" ")}
-                      >
-                        <span
-                          className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/75 bg-transparent"
-                          aria-hidden
-                        />
-                        Delivery
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-                {showTopLayers ? (
-                  <div
-                    className={[
-                      "flex items-center justify-between gap-2",
-                      topLegend || showLocationKey || hasPickup || hasDelivery
-                        ? "border-t border-rsi-border/60 pt-1.5"
-                        : "",
-                    ].join(" ")}
-                  >
-                    <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
-                      Layers
-                    </p>
-                    <div
-                      role="radiogroup"
-                      aria-label="Z layer"
-                      className="flex flex-wrap items-center justify-end gap-1"
-                    >
-                      {Array.from(
-                        { length: sketch.heightCells },
-                        (_, layer) => {
-                          const isActive = z === layer;
-                          return (
-                            <button
-                              key={layer}
-                              type="button"
-                              role="radio"
-                              aria-checked={isActive}
-                              aria-label={`Layer ${layer + 1}`}
-                              onClick={() => setActiveZ(layer)}
-                              className={[
-                                "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                                isActive
-                                  ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                                  : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
-                              ].join(" ")}
-                            >
-                              {layer + 1}
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
-                ) : null}
+                {renderCargoLegendBody({
+                  includeIsoLayers: false,
+                  topLayersTitle: "Layers",
+                })}
               </div>
             ) : null}
             <div className="min-h-0 flex-1 overflow-auto">
@@ -805,7 +999,7 @@ export function CargoGridSketch({
               role="img"
               aria-label={`${sketch.shipName} top-view cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
-              <ShipBayEndsFrame>
+              <ShipBayEndsFrame compact={isSplit}>
               <div className="flex items-center">
               {(() => {
                 let displayBayNumber = 0;
@@ -1052,28 +1246,43 @@ export function CargoGridSketch({
                         box.locationGroupIndex != null
                           ? `Loc ${box.locationGroupIndex} · `
                           : "";
+                      const boxWidthPx = box.footprint.dx * viewCellPx;
+                      const boxHeightPx = box.footprint.dy * viewCellPx;
+                      // Tall 1-cell-wide crates (vertical 2 SCU): stack the label
+                      // so "QUART" is not clipped to "QUA".
+                      const isTallNarrow =
+                        box.footprint.dx === 1 && box.footprint.dy >= 2;
+                      const maxAbbrevChars =
+                        box.size <= 1 ||
+                        (box.footprint.dx === 1 && box.footprint.dy === 1)
+                          ? 3
+                          : 5;
                       const abbrev = abbreviateCommodityName(
                         box.commodityName,
-                        box.size <= 1 ||
-                          (box.footprint.dx === 1 && box.footprint.dy === 1)
-                          ? 3
-                          : 5,
+                        maxAbbrevChars,
                       );
+                      const fitAlong = isTallNarrow ? boxHeightPx : boxWidthPx;
                       const abbrevPx = Math.max(
-                        7,
-                        Math.min(11, Math.round(viewCellPx * 0.42)),
+                        6,
+                        Math.min(
+                          11,
+                          Math.round(viewCellPx * 0.42),
+                          Math.floor(
+                            (fitAlong - 2) / Math.max(1, abbrev.length * 0.62),
+                          ),
+                        ),
                       );
                       return (
                         <div
                           key={box.id}
                           title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}`}
                           aria-hidden
-                          className="pointer-events-none absolute z-[5] box-border flex items-center justify-center rounded-[2px]"
+                          className="pointer-events-none absolute z-[5] box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5"
                           style={{
                             left,
                             top,
-                            width: box.footprint.dx * viewCellPx,
-                            height: box.footprint.dy * viewCellPx,
+                            width: boxWidthPx,
+                            height: boxHeightPx,
                             backgroundColor: hex,
                             opacity: 0.92,
                             ...borderStyle,
@@ -1093,16 +1302,33 @@ export function CargoGridSketch({
                               {box.locationGroupIndex}
                             </span>
                           ) : null}
+                          {scuSizeBadges.has(8) && box.footprint.dz >= 2 ? (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-[3px] rounded-[1px] border border-rsi-bg-deep/55"
+                            />
+                          ) : null}
                           <span
-                            className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.06em] text-rsi-bg-deep"
+                            className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
                             style={{
                               fontSize: abbrevPx,
+                              writingMode: isTallNarrow
+                                ? "vertical-rl"
+                                : undefined,
                               textShadow:
                                 "0 0 2px color-mix(in srgb, white 55%, transparent)",
                             }}
                           >
                             {abbrev}
                           </span>
+                          {scuSizeBadges.has(box.size as CargoBoxScu) ? (
+                            <span
+                              className="pointer-events-none absolute right-0.5 bottom-0.5 inline-flex min-w-[0.85rem] items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 px-0.5 font-mono text-[0.5rem] font-bold tabular-nums leading-none text-rsi-text"
+                              title={`${box.size} SCU`}
+                            >
+                              {box.size}
+                            </span>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -1149,268 +1375,25 @@ export function CargoGridSketch({
                 onPeelStackChange={setPeelStack}
                 hiddenLayers={isSplit ? hiddenIsoLayers : undefined}
                 onToggleLayer={isSplit ? toggleIsoLayer : undefined}
+                panelHeightPx={panelHeightPx}
               />
             </div>
           ) : null}
 
           {showSplitLegend ? (
             <div
+              ref={splitLegendScrollRef}
               className={[
                 "flex w-[16rem] shrink-0 flex-col space-y-1.5 border-l border-rsi-border bg-rsi-bg-deep/95 px-2 py-1.5",
-                legendToggleAbove ? "pt-8" : "",
+                splitLegendScrollClassName,
               ].join(" ")}
+              style={{ maxHeight: panelHeightPx }}
               aria-label="Cargo color legend"
             >
-              {showLocationKey ? (
-                <ul className="space-y-0.5" aria-label="Delivery locations">
-                  {locationLegendItems.map((item) => {
-                    const isOn = !hiddenLocations.has(item.locationSlug);
-                    return (
-                      <li key={item.locationSlug}>
-                        <button
-                          type="button"
-                          aria-pressed={isOn}
-                          aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
-                          onClick={() => toggleLocation(item.locationSlug)}
-                          className={[
-                            "flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left",
-                            isOn ? "" : "opacity-55",
-                          ].join(" ")}
-                        >
-                          <span
-                            className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
-                            style={{
-                              borderColor: item.stroke,
-                              backgroundColor: isOn
-                                ? item.stroke
-                                : "transparent",
-                              color: isOn ? undefined : item.stroke,
-                            }}
-                            aria-hidden
-                          >
-                            {item.groupIndex}
-                          </span>
-                          <span
-                            className={[
-                              "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                              isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                            ].join(" ")}
-                          >
-                            {item.locationName}
-                          </span>
-                          <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                            {item.scu}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-              {topLegend ? (
-                <ul
-                  className={[
-                    "space-y-0.5",
-                    showLocationKey
-                      ? "border-t border-rsi-border/60 pt-1.5"
-                      : "",
-                  ].join(" ")}
-                >
-                  {topLegend.map((item) => {
-                    const hex =
-                      resolveCommodityColorHex(
-                        item.color,
-                        item.color2,
-                        item.commoditySlug,
-                      ) ?? "#54a0f7";
-                    const isOn = !hiddenCommodities.has(item.commoditySlug);
-                    const hasBoxIcons =
-                      item.boxCounts != null && item.boxCounts.length > 0;
-                    const boxTotal = hasBoxIcons
-                      ? item.boxCounts!.reduce(
-                          (sum, entry) => sum + entry.count,
-                          0,
-                        )
-                      : null;
-                    return (
-                      <li key={item.commoditySlug}>
-                        <button
-                          type="button"
-                          aria-pressed={isOn}
-                          onClick={() => toggleCommodity(item.commoditySlug)}
-                          className={[
-                            "flex w-full cursor-pointer items-center gap-1.5 text-left",
-                            isOn ? "" : "opacity-55",
-                          ].join(" ")}
-                        >
-                          <span
-                            className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
-                            style={{ backgroundColor: hex }}
-                            aria-hidden
-                          />
-                          <span
-                            className={[
-                              "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                              isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                            ].join(" ")}
-                          >
-                            {item.commodityName}
-                            {boxTotal != null ? (
-                              <span className="ml-1.5 font-mono text-[0.55rem] text-rsi-text-muted">
-                                ({boxTotal})
-                              </span>
-                            ) : null}
-                          </span>
-                          {hasBoxIcons ? (
-                            <CargoBoxCountIcons
-                              boxCounts={item.boxCounts!}
-                              color={hex}
-                              className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
-                            />
-                          ) : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-              {hasPickup || hasDelivery ? (
-                <div
-                  className={[
-                    "flex flex-wrap items-center gap-x-2 gap-y-1",
-                    topLegend || showLocationKey
-                      ? "border-t border-rsi-border/60 pt-1.5"
-                      : "",
-                  ].join(" ")}
-                >
-                  {hasPickup ? (
-                    <button
-                      type="button"
-                      aria-pressed={!hiddenActions.has("pickup")}
-                      onClick={() => toggleAction("pickup")}
-                      className={[
-                        "inline-flex items-center gap-1 text-[0.6rem]",
-                        hiddenActions.has("pickup")
-                          ? "text-rsi-text-muted opacity-55"
-                          : "text-rsi-text-secondary",
-                      ].join(" ")}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-[2px] border border-solid border-rsi-accent/55 bg-transparent"
-                        aria-hidden
-                      />
-                      Pickup
-                    </button>
-                  ) : null}
-                  {hasDelivery ? (
-                    <button
-                      type="button"
-                      aria-pressed={!hiddenActions.has("delivery")}
-                      onClick={() => toggleAction("delivery")}
-                      className={[
-                        "inline-flex items-center gap-1 text-[0.6rem]",
-                        hiddenActions.has("delivery")
-                          ? "text-rsi-text-muted opacity-55"
-                          : "text-rsi-text-secondary",
-                      ].join(" ")}
-                    >
-                      <span
-                        className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/75 bg-transparent"
-                        aria-hidden
-                      />
-                      Delivery
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              {showTopLayers ? (
-                <div
-                  className={[
-                    "flex items-center justify-between gap-2",
-                    topLegend ||
-                    showLocationKey ||
-                    hasPickup ||
-                    hasDelivery
-                      ? "border-t border-rsi-border/60 pt-1.5"
-                      : "",
-                  ].join(" ")}
-                >
-                  <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
-                    Top
-                  </p>
-                  <div
-                    role="radiogroup"
-                    aria-label="Top view Z layer"
-                    className="flex flex-wrap items-center justify-end gap-1"
-                  >
-                    {Array.from({ length: sketch.heightCells }, (_, layer) => {
-                      const isActive = z === layer;
-                      return (
-                        <button
-                          key={`split-top-${layer}`}
-                          type="button"
-                          role="radio"
-                          aria-checked={isActive}
-                          aria-label={`Top layer ${layer + 1}`}
-                          onClick={() => setActiveZ(layer)}
-                          className={[
-                            "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                            isActive
-                              ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
-                          ].join(" ")}
-                        >
-                          {layer + 1}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-              {showIsoLayers ? (
-                <div
-                  className={[
-                    "flex items-center justify-between gap-2",
-                    showTopLayers ||
-                    topLegend ||
-                    showLocationKey ||
-                    hasPickup ||
-                    hasDelivery
-                      ? "border-t border-rsi-border/60 pt-1.5"
-                      : "",
-                  ].join(" ")}
-                >
-                  <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
-                    3D
-                  </p>
-                  <div
-                    role="group"
-                    aria-label="3D view layers"
-                    className="flex flex-wrap items-center justify-end gap-1"
-                  >
-                    {isoLayerOptions.map((layer) => {
-                      const isOn = !hiddenIsoLayers.has(layer);
-                      return (
-                        <button
-                          key={`split-iso-${layer}`}
-                          type="button"
-                          aria-pressed={isOn}
-                          aria-label={`3D layer ${layer + 1}`}
-                          onClick={() => toggleIsoLayer(layer)}
-                          className={[
-                            "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                            isOn
-                              ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
-                          ].join(" ")}
-                        >
-                          {layer + 1}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+              {renderCargoLegendBody({
+                includeIsoLayers: true,
+                topLayersTitle: "Top layers",
+              })}
             </div>
           ) : null}
         </div>

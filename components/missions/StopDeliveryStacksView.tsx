@@ -268,23 +268,33 @@ export function StopDeliveryStacksView({
     return focusPickupHangarPile(plan, activePileSlug) ?? plan;
   }, [plan, activePileSlug]);
 
-  const { lengthCells, widthCells, heightCells, stackLabels, pileLabels } =
-    displayPlan;
-  const showPeel = heightCells > 1 && !hidePeel;
-  const viewHeight = visualHz(heightCells, peelStack);
+  const { lengthCells, widthCells, stackLabels, pileLabels } = displayPlan;
+  // Frame height from the full hangar plan so pile switches keep a stable graph height.
+  const frameHeightCells = showPileNav
+    ? Math.max(1, plan.heightCells)
+    : Math.max(1, displayPlan.heightCells);
+  const frameLengthCells = showPileNav
+    ? Math.max(
+        1,
+        ...allPileLabels.map((pile) => pile.widthCells),
+        lengthCells,
+      )
+    : lengthCells;
+  const showPeel = frameHeightCells > 1 && !hidePeel;
+  const viewHeight = visualHz(frameHeightCells, peelStack);
   const stackWidthCells = 2;
   const hasPileLabels = Boolean(pileLabels && pileLabels.length > 0);
 
   const baseBoundsWidth = useMemo(
     () =>
       stackViewBounds(
-        lengthCells,
+        frameLengthCells,
         widthCells,
         viewHeight,
         cellPx,
         hasPileLabels,
       ).width,
-    [lengthCells, widthCells, viewHeight, cellPx, hasPileLabels],
+    [frameLengthCells, widthCells, viewHeight, cellPx, hasPileLabels],
   );
 
   const fitZoom = useMemo(() => {
@@ -295,7 +305,7 @@ export function StopDeliveryStacksView({
 
   useEffect(() => {
     userZoomedRef.current = false;
-  }, [pileRouteKey, lengthCells, widthCells, heightCells, peelStack]);
+  }, [pileRouteKey, frameLengthCells, widthCells, frameHeightCells, peelStack]);
 
   useEffect(() => {
     if (!userZoomedRef.current) setZoom(fitZoom);
@@ -306,13 +316,13 @@ export function StopDeliveryStacksView({
   const bounds = useMemo(
     () =>
       stackViewBounds(
-        lengthCells,
+        frameLengthCells,
         widthCells,
         viewHeight,
         renderCellPx,
         hasPileLabels,
       ),
-    [lengthCells, widthCells, viewHeight, renderCellPx, hasPileLabels],
+    [frameLengthCells, widthCells, viewHeight, renderCellPx, hasPileLabels],
   );
 
   const floorTiles = useMemo(() => {
@@ -425,11 +435,11 @@ export function StopDeliveryStacksView({
                             {item.isSplitMission ? (
                               <span
                                 className="inline-flex shrink-0 text-rsi-warn"
-                                title="Same cargo type from separate missions"
+                                title="Same cargo type from separate contracts"
                               >
                                 <SplitMissionIcon className="size-3" />
                                 <span className="sr-only">
-                                  Same cargo type from separate missions
+                                  Same cargo type from separate contracts
                                 </span>
                               </span>
                             ) : null}
@@ -566,7 +576,7 @@ export function StopDeliveryStacksView({
               const isPickup = (box.action ?? displayPlan.action) === "pickup";
               const actionStroke = isPickup
                 ? "color-mix(in srgb, var(--rsi-accent) 32%, var(--rsi-border-strong))"
-                : "color-mix(in srgb, var(--rsi-success) 38%, var(--rsi-border-strong))";
+                : "color-mix(in srgb, var(--rsi-gold) 42%, var(--rsi-border-strong))";
               const actionDash = isPickup ? undefined : "2.5 2";
               return (
                 <g key={box.id} opacity={dimmed ? 0.28 : 1}>
@@ -574,8 +584,8 @@ export function StopDeliveryStacksView({
                     {box.deliveryLocationName
                       ? `${box.deliveryLocationName} pile`
                       : isPickup
-                        ? "Pickup"
-                        : "Delivery"}{" "}
+                        ? "Collect"
+                        : "Drop off"}{" "}
                     · {box.commodityName} · {box.size} SCU
                   </title>
                   <polygon points={faces.west} fill={colors.west} />
@@ -651,8 +661,8 @@ export function StopDeliveryStacksView({
               );
               const scuTitle =
                 displayPlan.action === "pickup"
-                  ? `${label.scu} SCU pickup · ${label.commodityName}`
-                  : `${label.scu} SCU delivery · ${label.commodityName}`;
+                  ? `${label.scu} SCU collect · ${label.commodityName}`
+                  : `${label.scu} SCU drop off · ${label.commodityName}`;
               const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
               const scuSize = Math.max(9, Math.round(renderCellPx * 0.65));
               const padX = renderCellPx * 0.45;

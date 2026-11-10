@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 export type BadgeVariant = "neutral" | "accent" | "success" | "warn";
-export type BadgeSize = "sm" | "md";
+export type BadgeSize = "xs" | "sm" | "md";
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   variant?: BadgeVariant;
@@ -21,6 +21,7 @@ const variantClasses: Record<BadgeVariant, string> = {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
+  xs: "px-1 py-0 text-[0.45rem] leading-tight tracking-[0.1em]",
   sm: "px-1 py-px text-[0.5rem] tracking-[0.12em]",
   md: "px-2 py-0.5 text-[0.65rem] tracking-[0.18em]",
 };

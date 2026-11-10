@@ -561,10 +561,8 @@ export function focusPickupHangarPile(
   return {
     ...plan,
     lengthCells: Math.max(1, pile.widthCells),
-    heightCells: Math.max(
-      1,
-      ...boxes.map((box) => box.origin.z + box.footprint.dz),
-    ),
+    // Keep full-plan height so switching piles does not resize the pad graph.
+    heightCells: plan.heightCells,
     boxes,
     tints,
     stackLabels,

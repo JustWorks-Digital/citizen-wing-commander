@@ -67,14 +67,16 @@ export function missionHasDeliveryOnRow(
     return true;
   }
 
-  const rowUsesMissionIds = deliveries.some((cargo) => Boolean(cargo.missionId));
-  if (rowUsesMissionIds) return false;
+  // Commodity fallback only for untagged lines — one tagged crate must not
+  // block matching the rest of the stop's cargo to other contracts.
+  const untagged = deliveries.filter((cargo) => !cargo.missionId);
+  if (untagged.length === 0) return false;
 
   if (!missionDeliversAt(mission, row.locationSlug)) return false;
 
   const commodities = missionCommoditySlugs(mission);
   if (commodities.size === 0) return true;
-  return deliveries.some((cargo) => commodities.has(cargo.commoditySlug));
+  return untagged.some((cargo) => commodities.has(cargo.commoditySlug));
 }
 
 /**

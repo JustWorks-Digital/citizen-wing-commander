@@ -44,6 +44,7 @@ const tokens = [
     hex: "#1A4A6E",
     group: "Accent",
   },
+  { name: "--rsi-gold", swatch: "bg-rsi-gold", hex: "#E0A63A", group: "Accent" },
   { name: "--rsi-danger", swatch: "bg-rsi-danger", hex: "#E25555", group: "Status" },
   { name: "--rsi-warn", swatch: "bg-rsi-warn", hex: "#E0A63A", group: "Status" },
   { name: "--rsi-success", swatch: "bg-rsi-success", hex: "#3DBF8F", group: "Status" },

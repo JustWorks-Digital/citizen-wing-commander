@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Missions / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. Completed stops get an angled COMPLETED stamp under the delivery grid. Pickup → Receiving / Delivery → Receiving transfer blocks sit under the pad graph (right column on desktop). Missions completed then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },

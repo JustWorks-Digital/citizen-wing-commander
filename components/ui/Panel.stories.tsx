@@ -24,7 +24,7 @@ export const Default: Story = {};
 export const WithActions: Story = {
   args: {
     eyebrow: "Ops",
-    title: "Mission board",
+    title: "Contract board",
     children: (
       <div className="space-y-4">
         <p className="text-sm leading-relaxed">

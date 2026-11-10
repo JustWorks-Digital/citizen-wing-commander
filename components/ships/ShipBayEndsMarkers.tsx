@@ -39,6 +39,11 @@ export type ShipBayEndsFrameProps = {
    * 3D floor. `upright`: vertical side rails for the top view.
    */
   slant?: "upright" | "iso";
+  /**
+   * Tighter rails (split view) so Front/Rear sit closer to the grid and
+   * are less likely to clip in a narrow pane.
+   */
+  compact?: boolean;
   className?: string;
   children: ReactNode;
 };
@@ -50,20 +55,28 @@ export type ShipBayEndsFrameProps = {
 export function ShipBayEndsFrame({
   flipped = false,
   slant = "upright",
+  compact = false,
   className,
   children,
 }: ShipBayEndsFrameProps) {
   const left = flipped ? "front" : "rear";
   const right = flipped ? "rear" : "front";
   const iso = slant === "iso";
+  const railWidth = compact ? "w-8" : "w-11";
+  const gap = compact ? "gap-2" : "gap-4";
 
   return (
     <div
-      className={["flex items-center justify-center gap-4", className]
+      className={["flex items-center justify-center", gap, className]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
+      <div
+        className={[
+          "flex shrink-0 items-center justify-center self-stretch",
+          railWidth,
+        ].join(" ")}
+      >
         <EndLabel
           end={left}
           className={
@@ -82,7 +95,12 @@ export function ShipBayEndsFrame({
         />
       </div>
       <div className="min-w-0 shrink">{children}</div>
-      <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
+      <div
+        className={[
+          "flex shrink-0 items-center justify-center self-stretch",
+          railWidth,
+        ].join(" ")}
+      >
         <EndLabel
           end={right}
           className={

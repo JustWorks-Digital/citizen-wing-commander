@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
   planPickupHangarStacks,
@@ -55,7 +55,7 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
  * When both exist: delivery first, pickup below.
  * Pickup can toggle Cargo (by commodity) vs Piles (by delivery location).
  */
-export function StopDeliveryBayPreview({
+export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   row,
   rows,
   className,
@@ -97,10 +97,10 @@ export function StopDeliveryBayPreview({
       onClick={(event) => event.stopPropagation()}
     >
       {deliveryPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-success/40 bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-success/30 px-2.5 py-1.5">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-success">
-              Delivery
+        <section className="min-w-0 rounded-rsi border border-rsi-gold/40 bg-rsi-bg-deep/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-gold/30 px-2.5 py-1.5">
+            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
+              Drop off
             </p>
             {showDeliveryPeel ? (
               <PadPeelButton
@@ -123,7 +123,7 @@ export function StopDeliveryBayPreview({
         <section className="min-w-0 rounded-rsi border border-rsi-accent/40 bg-rsi-bg-deep/30">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-accent/30 px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-              Pickup
+              Collect
             </p>
             {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -136,7 +136,7 @@ export function StopDeliveryBayPreview({
                 {showPickupModes ? (
                   <div
                     role="tablist"
-                    aria-label="Pickup pad grouping"
+                    aria-label="Collect pad grouping"
                     className="inline-flex rounded-rsi border border-rsi-accent/35 bg-rsi-bg-deep/70 p-0.5"
                   >
                     {(
@@ -181,4 +181,4 @@ export function StopDeliveryBayPreview({
       ) : null}
     </div>
   );
-}
+});

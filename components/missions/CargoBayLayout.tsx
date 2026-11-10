@@ -1,11 +1,25 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import {
   CargoGridSketch,
   type CargoGridViewTab,
 } from "@/components/ships/CargoGridSketch";
+import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import {
+  MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
+  MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
+} from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import {
   cargoBayPackModes,
   defaultCargoBayPackMode,
@@ -25,6 +39,8 @@ export type CargoBayLayoutProps = {
   shipSlug?: string | null;
   /** Checklist stop to preview (completed or not). Defaults to next incomplete. */
   focusedStopId?: string | null;
+  /** Session UUID — scopes browser-local layout height prefs. */
+  sessionId?: string | null;
   /** Optional session stats — right of the Ship layout title. */
   headerAside?: ReactNode;
   className?: string;
@@ -32,11 +48,13 @@ export type CargoBayLayoutProps = {
 
 /**
  * Session cargo layout: ship bay grid at the focused stop (top / 3D / split).
+ * Memoized so modal open/close on the parent does not rebuild the grid.
  */
-export function CargoBayLayout({
+export const CargoBayLayout = memo(function CargoBayLayout({
   rows,
   shipSlug = null,
   focusedStopId = null,
+  sessionId = null,
   headerAside = null,
   className,
 }: CargoBayLayoutProps) {
@@ -50,6 +68,14 @@ export function CargoBayLayout({
     defaultCargoBayPackMode,
   );
   const [prioritized, setPrioritized] = useState(false);
+  const { heightPx, setHeightPx, resetHeightPx } =
+    useSessionCargoBayLayoutHeight(sessionId);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragRef = useRef<{
+    pointerId: number;
+    startY: number;
+    startHeight: number;
+  } | null>(null);
 
   const shipBayPrefs = useMemo(
     () => getShipBayPreferenceFixture(shipSlug),
@@ -101,11 +127,64 @@ export function CargoBayLayout({
   }, [plan, rows, activeRow]);
   const showLocationOutlines = packMode === "by-mission-location";
   const showViewTabs = Boolean(sketch && plan && plan.boxes.length > 0);
+  const showGrid = Boolean(sketch && plan && plan.boxes.length > 0);
+
+  const onResizePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      dragRef.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startHeight: heightPx,
+      };
+      setIsResizing(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [heightPx],
+  );
+
+  const onResizePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const delta = event.clientY - drag.startY;
+      setHeightPx(drag.startHeight + delta, { persist: false });
+    },
+    [setHeightPx],
+  );
+
+  const endResize = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const finalHeight = drag.startHeight + (event.clientY - drag.startY);
+      dragRef.current = null;
+      setIsResizing(false);
+      setHeightPx(finalHeight);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [setHeightPx],
+  );
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const previous = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previous;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [isResizing]);
 
   return (
     <div
       className={[
-        "min-w-0 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 p-4 shadow-rsi-panel",
+        "min-w-0 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 px-4 pt-4 shadow-rsi-panel",
+        showGrid ? "pb-0" : "pb-4",
         className,
       ]
         .filter(Boolean)
@@ -131,7 +210,7 @@ export function CargoBayLayout({
         <p className="py-6 text-center text-sm text-rsi-text-muted">
           Select a ship with a known cargo grid to see bay placement.
         </p>
-      ) : plan && plan.boxes.length > 0 ? (
+      ) : showGrid ? (
         <div className="relative">
           {showViewTabs ? (
             <>
@@ -181,7 +260,11 @@ export function CargoBayLayout({
                 aria-label={legendHidden ? "Show legend" : "Hide legend"}
                 onClick={() => setLegendHidden((value) => !value)}
                 className={[
-                  "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                  "pointer-events-auto absolute top-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                  // Keep clear of the split side legend (no extra legend top pad).
+                  viewTab === "split" && !legendHidden
+                    ? "right-[17rem]"
+                    : "right-2",
                   !legendHidden
                     ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
                     : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
@@ -200,8 +283,9 @@ export function CargoBayLayout({
             inlineTopLegend={viewTab === "top" || viewTab === "split"}
             hideLegend={legendHidden}
             legendToggleAbove
+            panelHeightPx={heightPx}
             placementTints={placementTints}
-            placementBoxes={plan.boxes}
+            placementBoxes={plan!.boxes}
             legendItems={legendItems}
             locationLegendItems={locationLegendItems}
             showLocationOutlines={showLocationOutlines}
@@ -270,6 +354,48 @@ export function CargoBayLayout({
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
+          <div className="-mx-4 mt-2 border-t border-rsi-border/50">
+            <button
+              type="button"
+              role="slider"
+              aria-label="Ship layout height"
+              aria-orientation="vertical"
+              aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
+              aria-valuemax={MAX_CARGO_BAY_LAYOUT_HEIGHT_PX}
+              aria-valuenow={heightPx}
+              title="Drag to resize · double-click to reset"
+              onPointerDown={onResizePointerDown}
+              onPointerMove={onResizePointerMove}
+              onPointerUp={endResize}
+              onPointerCancel={endResize}
+              onDoubleClick={resetHeightPx}
+              onKeyDown={(event) => {
+                const step = event.shiftKey ? 48 : 16;
+                if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  setHeightPx(heightPx + step);
+                } else if (
+                  event.key === "ArrowDown" ||
+                  event.key === "ArrowLeft"
+                ) {
+                  event.preventDefault();
+                  setHeightPx(heightPx - step);
+                } else if (event.key === "Home") {
+                  event.preventDefault();
+                  setHeightPx(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX);
+                } else if (event.key === "End") {
+                  event.preventDefault();
+                  setHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
+                }
+              }}
+              className="group flex h-5 w-full cursor-ns-resize items-center justify-center hover:bg-rsi-bg-deep/40"
+            >
+              <span
+                aria-hidden
+                className="h-0.5 w-10 rounded-full bg-rsi-border-strong/80 group-hover:bg-rsi-accent"
+              />
+            </button>
+          </div>
         </div>
       ) : (
         <p className="py-6 text-center text-sm text-rsi-text-muted">
@@ -282,4 +408,4 @@ export function CargoBayLayout({
       )}
     </div>
   );
-}
+});

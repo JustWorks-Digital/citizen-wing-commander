@@ -45,7 +45,7 @@ export function MissionCatalogDetail({
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Mission details"
+      aria-label="Contract details"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

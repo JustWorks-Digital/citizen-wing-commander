@@ -61,14 +61,14 @@ const interactiveCellClass = [
 ].join(" ");
 
 export type SessionSourceStatProps = {
-  /** Opens the missions catalog for this session. */
+  /** Opens the contracts catalog for this session. */
   onMissionsClick?: () => void;
   /** Opens session screenshots / source intake. */
   onClick?: () => void;
   className?: string;
 };
 
-/** Header actions: Missions catalog + Source screenshots. */
+/** Header actions: Contracts catalog + Source screenshots. */
 export function SessionSourceStat({
   onMissionsClick,
   onClick,
@@ -89,7 +89,7 @@ export function SessionSourceStat({
         ].join(" ")}
       >
         <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
-          Missions List
+          Contracts List
         </span>
       </button>
       <button
@@ -119,10 +119,12 @@ export type SessionRouteProgressStatsProps = {
   totalCapacity: number;
   isOverCapacity?: boolean;
   onMissionsClick?: () => void;
+  /** Opens the route stops timeline modal. */
+  onStopsClick?: () => void;
   className?: string;
 };
 
-/** Missions + Stops + Cargo telemetry for the checklist toolbar. */
+/** Contracts + Stops + Ship's capacity telemetry for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -132,10 +134,19 @@ export function SessionRouteProgressStats({
   totalCapacity,
   isOverCapacity = false,
   onMissionsClick,
+  onStopsClick,
   className,
 }: SessionRouteProgressStatsProps) {
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
+  const stopsBody = (
+    <>
+      <StatLabel>{stopsLabel}</StatLabel>
+      <StatValue>
+        <Fraction current={completedLegs} total={totalLegs} />
+      </StatValue>
+    </>
+  );
 
   return (
     <div
@@ -148,19 +159,24 @@ export function SessionRouteProgressStats({
         onClick={onMissionsClick}
         className={interactiveCellClass}
       >
-        <StatLabel>Missions</StatLabel>
+        <StatLabel>Contracts</StatLabel>
         <StatValue>
           <Fraction current={missionsCompleted} total={missionCount} />
         </StatValue>
       </button>
+      {onStopsClick ? (
+        <button
+          type="button"
+          onClick={onStopsClick}
+          className={interactiveCellClass}
+        >
+          {stopsBody}
+        </button>
+      ) : (
+        <div className={cellClass}>{stopsBody}</div>
+      )}
       <div className={cellClass}>
-        <StatLabel>{stopsLabel}</StatLabel>
-        <StatValue>
-          <Fraction current={completedLegs} total={totalLegs} />
-        </StatValue>
-      </div>
-      <div className={cellClass}>
-        <StatLabel>Cargo</StatLabel>
+        <StatLabel>Ship&apos;s capacity</StatLabel>
         <StatValue>
           <Fraction
             current={onboardScu}
@@ -178,7 +194,7 @@ export type SessionInventoryStatProps = {
   onboardScu: number;
   /** Highest SCU aboard if the full route is flown as planned. */
   peakScu: number;
-  /** Sum of cargo SCU across agreed missions. */
+  /** Sum of cargo SCU across agreed contracts. */
   missionsTotalScu: number;
   totalCapacity: number;
   /**
@@ -209,7 +225,7 @@ function InventoryLine({
   );
 }
 
-/** Inventory telemetry for the cargo-layout header (missions total + bay load). */
+/** Inventory telemetry for the cargo-layout header (contracts total + bay load). */
 export function SessionInventoryStat({
   onboardScu,
   peakScu,
@@ -234,11 +250,11 @@ export function SessionInventoryStat({
       <div
         className={stripClass}
         role="group"
-        aria-label={`Missions total ${missionsTotalScu} SCU`}
+        aria-label={`Contracts total ${missionsTotalScu} SCU`}
       >
         <div className="flex w-fit flex-col items-end justify-center gap-1 px-2.5 py-1.5 text-right">
           <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
-            Missions total
+            Contracts total
           </p>
           <p className="font-mono text-sm leading-none tabular-nums tracking-wide text-rsi-text">
             {missionsTotalScu}

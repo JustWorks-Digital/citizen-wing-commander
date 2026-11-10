@@ -218,7 +218,7 @@ export function MissionCatalogTable({
                     if (el) el.indeterminate = someVisibleChecked && !allVisibleChecked;
                   }}
                   onChange={toggleAllVisible}
-                  aria-label="Select all visible missions"
+                  aria-label="Select all visible contracts"
                   className="size-3.5 accent-[var(--rsi-accent)]"
                 />
               </th>
@@ -288,7 +288,7 @@ export function MissionCatalogTable({
                 colSpan={COLUMNS.length + (canCheck ? 1 : 0)}
                 className={`${tdClass} py-8 text-center text-rsi-text-muted`}
               >
-                No missions to show.
+                No contracts to show.
               </td>
             </tr>
           ) : (
@@ -327,7 +327,7 @@ export function MissionCatalogTable({
                       <button
                         type="button"
                         title={isCopied ? "Copied" : `Copy ${mission.id}`}
-                        aria-label={`Copy mission ID ${mission.id}`}
+                        aria-label={`Copy contract ID ${mission.id}`}
                         onClick={() => void copyMissionId(mission.id)}
                         className={[
                           "rounded-rsi text-left font-mono text-[0.65rem] tabular-nums transition-colors",
