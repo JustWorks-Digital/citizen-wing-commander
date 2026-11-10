@@ -30,6 +30,46 @@ export function estimateOnboardScu(rows: HaulingChecklistRow[]): number {
   return applyCargoToOnboard(0, rows, { stopAfterIncomplete: true }).onboard;
 }
 
+export type StopOnboardScuReceipt = {
+  /** Onboard after this stop’s pickups, before unload. */
+  beforeDelivery: number;
+  /** Onboard after this stop’s unload. */
+  after: number;
+  pickup: number;
+  delivery: number;
+};
+
+/**
+ * Planned onboard SCU by stop (full route order).
+ * Pickups apply before deliveries at each stop for a clear unload receipt.
+ */
+export function estimateOnboardScuByStop(
+  rows: HaulingChecklistRow[],
+): Map<string, StopOnboardScuReceipt> {
+  let current = 0;
+  const byStop = new Map<string, StopOnboardScuReceipt>();
+  for (const row of rows) {
+    let pickup = 0;
+    let delivery = 0;
+    const fallback = row.legKind === "both" ? null : row.legKind;
+    for (const cargo of row.cargoDeliveries) {
+      const role = cargo.role ?? fallback;
+      if (role === "pickup") pickup += cargo.scu;
+      else if (role === "delivery") delivery += cargo.scu;
+    }
+    current += pickup;
+    const beforeDelivery = current;
+    current = Math.max(0, current - delivery);
+    byStop.set(row.id, {
+      beforeDelivery,
+      after: current,
+      pickup,
+      delivery,
+    });
+  }
+  return byStop;
+}
+
 /**
  * Highest SCU aboard if the full route is flown as planned
  * (peak after each pickup/delivery in order).

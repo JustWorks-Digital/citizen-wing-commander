@@ -97,6 +97,10 @@ export type CargoLineDisplay = {
   commoditySlug: string | null;
   color: string | null;
   color2: string | null;
+  /** Index into the stop’s `cargoDeliveries` (for shared handled toggles). */
+  sourceIndex: number | null;
+  /** Shared: crew marked this brick picked up / delivered. */
+  isHandled: boolean;
 };
 
 /** Structured cargo lines for colored UI rendering. */
@@ -105,6 +109,7 @@ export function describeCargoDeliveries(
     commoditySlug: string;
     scu: number;
     role?: "pickup" | "delivery";
+    isHandled?: boolean;
   }[],
   fallbackRole?: "pickup" | "delivery" | null,
 ): CargoLineDisplay[] {
@@ -118,10 +123,12 @@ export function describeCargoDeliveries(
         commoditySlug: null,
         color: null,
         color2: null,
+        sourceIndex: null,
+        isHandled: false,
       },
     ];
   }
-  return deliveries.map(({ commoditySlug, scu, role }) => {
+  return deliveries.map(({ commoditySlug, scu, role, isHandled }, index) => {
     const commodity = getCommodityBySlug(commoditySlug);
     const commodityName = commodity?.name ?? commoditySlug;
     const amount = `${scu} ${commodityName}`;
@@ -140,6 +147,8 @@ export function describeCargoDeliveries(
       commoditySlug,
       color: commodity?.color ?? null,
       color2: commodity?.color2 ?? null,
+      sourceIndex: index,
+      isHandled: Boolean(isHandled),
     };
   });
 }

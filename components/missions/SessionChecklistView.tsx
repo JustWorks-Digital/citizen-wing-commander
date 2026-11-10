@@ -562,6 +562,26 @@ export function SessionChecklistView({
         missions={session.missions ?? []}
         sessionId={session.id}
         onSelectBoxBreakdown={applyBoxBreakdown}
+        onToggleCargoHandled={(rowId, cargoIndex) => {
+          persistSession(
+            applySessionCompletionTiming({
+              ...session,
+              shipSlugs: session.shipSlugs ?? [],
+              startLocationSlug: session.startLocationSlug ?? null,
+              rows: session.rows.map((row) => {
+                if (row.id !== rowId) return row;
+                return {
+                  ...row,
+                  cargoDeliveries: row.cargoDeliveries.map((cargo, index) =>
+                    index === cargoIndex
+                      ? { ...cargo, isHandled: !cargo.isHandled }
+                      : cargo,
+                  ),
+                };
+              }),
+            }),
+          );
+        }}
         toolbarStart={
           <SessionRouteProgressStats
             completedLegs={completedLegs}

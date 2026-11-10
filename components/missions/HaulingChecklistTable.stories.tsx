@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right. Commodity tiles under Pickup/Delivery: click to fade + check (picked up / delivered). Completing a stop scrolls the next one to the top unless Hide completed is on. Each stop lists Total aUEC beside Total SCU when missions complete there, plus Completions and Next / Distance from CitizenHQ XYZ when available.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Deliveries / Missions / Hide history toolbar. Completed stops get an angled COMPLETED stamp under the delivery grid. Delivery stops show a Receipt (aboard − delivering → SCU left). Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },

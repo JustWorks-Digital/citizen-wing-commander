@@ -6,7 +6,6 @@ import {
   describeCargoDeliveries,
   getCommodityIconSrc,
   getLocationBySlug,
-  sumCargoScuByRole,
 } from "@/lib/fixtures";
 import {
   commodityBadgeBackground,
@@ -25,6 +24,10 @@ import {
   type LegKind,
 } from "@/lib/missions/mockSession";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
+import {
+  estimateOnboardScuByStop,
+  type StopOnboardScuReceipt,
+} from "@/lib/missions/cargoInventory";
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
@@ -50,6 +53,8 @@ export type HaulingChecklistTableProps = {
     missionId: string,
     breakdown: ScuBoxSplits,
   ) => void;
+  /** Toggle shared pickup/delivery brick handled state (persisted). */
+  onToggleCargoHandled?: (rowId: string, cargoIndex: number) => void;
 };
 
 /** Default focus: first incomplete stop, else last stop. */
@@ -77,6 +82,50 @@ function checklistRowToneClass(
     return "cursor-pointer bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)] hover:bg-rsi-success-muted/55";
   }
   return "cursor-pointer hover:bg-rsi-surface-raised/35";
+}
+
+function CompletedStamp() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none inline-flex rotate-[-22deg] select-none"
+    >
+      <svg
+        viewBox="0 0 120 120"
+        className="size-[7.5rem] text-rsi-success"
+        role="img"
+      >
+        <circle
+          cx="60"
+          cy="60"
+          r="54"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          opacity="0.75"
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r="46"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeDasharray="3 2.5"
+          opacity="0.55"
+        />
+        <path
+          d="M36 64 L52 78 L86 44"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.7"
+        />
+      </svg>
+    </span>
+  );
 }
 
 function CopyIcon({ className }: { className?: string }) {
@@ -237,23 +286,13 @@ function CargoTileHandledMark({
 function CargoGroups({
   row,
   cargoLines,
+  onToggleCargoHandled,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
+  onToggleCargoHandled?: (rowId: string, cargoIndex: number) => void;
 }) {
   const groups = groupCargoLines(cargoLines);
-  const [clearedTileIds, setClearedTileIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-
-  function toggleClearedTile(tileId: string) {
-    setClearedTileIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(tileId)) next.delete(tileId);
-      else next.add(tileId);
-      return next;
-    });
-  }
 
   return (
     <div className="flex flex-col gap-5 text-sm md:gap-2">
@@ -312,8 +351,10 @@ function CargoGroups({
             ) : null}
             <div className="grid max-w-[15.5rem] grid-cols-4 gap-1.5">
               {group.items.map((line, index) => {
-                const tileId = `${row.id}-${group.role ?? "none"}-${line.commoditySlug}-${line.scu}-${index}`;
-                const cleared = clearedTileIds.has(tileId);
+                const tileId = `${row.id}-${group.role ?? "none"}-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`;
+                const cleared = line.isHandled;
+                const canToggle =
+                  Boolean(onToggleCargoHandled) && line.sourceIndex != null;
                 const cargoHex = resolveCommodityColorHex(
                   line.color,
                   line.color2,
@@ -344,13 +385,16 @@ function CargoGroups({
                     }
                     aria-label={fullLabel}
                     aria-pressed={cleared}
+                    disabled={!canToggle}
                     onClick={(event) => {
                       event.stopPropagation();
-                      toggleClearedTile(tileId);
+                      if (line.sourceIndex == null) return;
+                      onToggleCargoHandled?.(row.id, line.sourceIndex);
                     }}
                     className={[
                       "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
-                      "cursor-pointer transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                      "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                      canToggle ? "cursor-pointer" : "cursor-default",
                       doneClass,
                       cleared ? "opacity-40" : "",
                     ].join(" ")}
@@ -475,111 +519,66 @@ function LocationHeader({
   );
 }
 
-function ScuTotalDisplay({
-  row,
-  pickup,
-  delivery,
-  total,
-  align = "end",
-}: {
-  row: HaulingChecklistRow;
-  pickup: number;
-  delivery: number;
-  total: number;
-  /** Mobile meta row: start; desktop table column: end. */
-  align?: "start" | "end";
-}) {
-  const showBreakdown = row.legKind === "both" && (pickup > 0 || delivery > 0);
-  const done = row.isCompleted
-    ? "line-through opacity-70 decoration-rsi-success/40"
-    : "";
-  const crossAlign = align === "start" ? "items-start" : "items-end";
-  const totalAlign = align === "start" ? "self-start" : "self-end";
-
-  return (
-    <div
-      className={[
-        "inline-flex min-w-[2.75rem] flex-col font-mono tabular-nums",
-        crossAlign,
-      ].join(" ")}
-    >
-      {showBreakdown ? (
-        <>
-          <div
-            className={[
-              "flex flex-col gap-1 text-xs leading-tight",
-              crossAlign,
-            ].join(" ")}
-          >
-            {pickup > 0 ? (
-              <span
-                className={["text-rsi-accent", done].join(" ")}
-                title={`Pickup ${pickup} SCU`}
-              >
-                {pickup}
-                <span className="sr-only"> pickup</span>
-              </span>
-            ) : null}
-            {delivery > 0 ? (
-              <span
-                className={["text-rsi-success", done].join(" ")}
-                title={`Delivery ${delivery} SCU`}
-              >
-                {delivery}
-                <span className="sr-only"> delivery</span>
-              </span>
-            ) : null}
-          </div>
-          <div
-            aria-hidden
-            className="my-1.5 w-full min-w-[2.75rem] border-t border-rsi-border-strong"
-          />
-        </>
-      ) : null}
-      <span
-        className={[
-          "text-sm",
-          totalAlign,
-          row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-text",
-        ].join(" ")}
-      >
-        {total}
-        <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
-          SCU
-        </span>
-      </span>
-    </div>
-  );
-}
-
 function TotalMeta({
   row,
-  scu,
   completionAuec,
+  onboardReceipt,
 }: {
   row: HaulingChecklistRow;
-  scu: { pickup: number; delivery: number; total: number };
   /** Sum of rewards for missions expected to complete at this stop. */
   completionAuec: number;
+  /** Planned bay load before/after this stop (for delivery receipt). */
+  onboardReceipt?: StopOnboardScuReceipt | null;
 }) {
   const showAuec = completionAuec > 0;
+  const showDelivering =
+    onboardReceipt != null && onboardReceipt.delivery > 0;
+  const done = row.isCompleted
+    ? "text-rsi-text-muted line-through"
+    : "text-rsi-text";
+
+  if (!showDelivering && !showAuec) return null;
+
   return (
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
       <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
-        <div>
-          <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-            Total SCU
-          </p>
-          <div className="mt-0.5">
-            <ScuTotalDisplay
-              row={row}
-              pickup={scu.pickup}
-              delivery={scu.delivery}
-              total={scu.total}
-              align="start"
-            />
+        {showDelivering ? (
+          <div>
+            <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+              Receipt
+            </p>
+            <div
+              className={[
+                "mt-0.5 font-mono text-sm tabular-nums tracking-wide",
+                done,
+              ].join(" ")}
+              title={`Onboard ${onboardReceipt.beforeDelivery} SCU → delivering ${onboardReceipt.delivery} SCU → ${onboardReceipt.after} SCU remaining`}
+            >
+              <p className="text-rsi-text-muted no-underline">
+                {onboardReceipt.beforeDelivery}
+                <span className="ml-1 text-[0.65rem] font-normal tracking-wide">
+                  aboard
+                </span>
+              </p>
+              <p className="text-rsi-success">
+                −{onboardReceipt.delivery}
+                <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+                  delivering
+                </span>
+              </p>
+              <div
+                aria-hidden
+                className="my-1 w-full min-w-[3.5rem] border-t border-rsi-border-strong"
+              />
+              <p>
+                {onboardReceipt.after}
+                <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+                  SCU left
+                </span>
+              </p>
+            </div>
           </div>
-        </div>
+        ) : null}
         {showAuec ? (
           <div>
             <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
@@ -713,6 +712,7 @@ export function HaulingChecklistTable({
   missions = [],
   sessionId = null,
   onSelectBoxBreakdown,
+  onToggleCargoHandled,
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -744,7 +744,7 @@ export function HaulingChecklistTable({
   }
 
   const toolbar = (
-    <div className="flex flex-wrap items-center gap-2 border-b border-rsi-divider bg-rsi-bg-deep/40 px-3 py-2">
+    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b border-rsi-divider bg-rsi-bg-deep/95 px-3 py-2 backdrop-blur-sm">
       {toolbarStart}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {hideCompleted && completedCount > 0 ? (
@@ -766,7 +766,7 @@ export function HaulingChecklistTable({
               : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
           ].join(" ")}
         >
-          {hideCompleted ? "Show completed" : "Hide completed"}
+          {hideCompleted ? "Show history" : "Hide history"}
         </button>
       </div>
     </div>
@@ -775,9 +775,10 @@ export function HaulingChecklistTable({
   const emptyMessage =
     rows.length === 0
       ? "No missions yet"
-      : "All missions complete — show completed to review";
+      : "All missions complete — show history to review";
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
+  const onboardByStop = estimateOnboardScuByStop(rows);
   const activeRowId =
     focusedStopId && rows.some((row) => row.id === focusedStopId)
       ? focusedStopId
@@ -809,10 +810,6 @@ export function HaulingChecklistTable({
             row.cargoDeliveries,
             cargoFallbackRole,
           );
-          const scu = sumCargoScuByRole(
-            row.cargoDeliveries,
-            row.legKind === "both" ? null : row.legKind,
-          );
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
           const isFocused = row.id === activeRowId;
@@ -836,7 +833,7 @@ export function HaulingChecklistTable({
               aria-checked={row.isCompleted}
               aria-current={isFocused ? "step" : undefined}
               className={[
-                "border-b border-rsi-divider/80 px-3 py-3 last:border-b-0",
+                "scroll-mt-14 border-b border-rsi-divider/80 px-3 py-3 last:border-b-0",
                 checklistRowToneClass(row.isCompleted, isFocused),
               ].join(" ")}
               onClick={() => onFocusStop?.(row.id)}
@@ -861,7 +858,7 @@ export function HaulingChecklistTable({
                   }}
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
                     <div className="min-w-0 flex-1">
                       <LocationHeader
                         row={row}
@@ -875,12 +872,16 @@ export function HaulingChecklistTable({
                         }}
                       />
                       <div className="mt-5">
-                        <CargoGroups row={row} cargoLines={cargoLines} />
+                        <CargoGroups
+                          row={row}
+                          cargoLines={cargoLines}
+                          onToggleCargoHandled={onToggleCargoHandled}
+                        />
                       </div>
                       <TotalMeta
                         row={row}
-                        scu={scu}
                         completionAuec={completionAuec}
+                        onboardReceipt={onboardByStop.get(row.id) ?? null}
                       />
                       <ExpectedCompletionsMeta missions={expectedCompletions} />
                       <NextDistanceMeta
@@ -889,10 +890,14 @@ export function HaulingChecklistTable({
                         nextLocationSlug={nextLocationSlug}
                       />
                     </div>
-                    <StopDeliveryBayPreview
-                      row={row}
-                      className="hidden w-full md:block md:w-1/2 md:shrink-0 md:self-start"
-                    />
+                    <div className="hidden w-full md:flex md:w-1/2 md:shrink-0 md:flex-col">
+                      <StopDeliveryBayPreview row={row} />
+                      {row.isCompleted ? (
+                        <div className="flex flex-1 items-center justify-center">
+                          <CompletedStamp />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   <StopRelatedMissions
                     row={row}

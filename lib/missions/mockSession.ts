@@ -46,6 +46,11 @@ export type CargoDelivery = {
   boxSizes?: Array<1 | 2 | 4 | 8>;
   /** Session mission id this cargo line came from (when known). */
   missionId?: string;
+  /**
+   * Crew marked this pickup/delivery brick handled (shared session state).
+   * Toggled from the stop cargo tiles; synced to all viewers.
+   */
+  isHandled?: boolean;
 };
 
 /** Stop role for the location badge. */
