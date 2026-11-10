@@ -40,7 +40,15 @@ const plan = planStopCargoStacks(splitMissionRow, "delivery")!;
 const meta = {
   title: "Missions/StopDeliveryStacksView",
   component: StopDeliveryStacksView,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Flat pickup/delivery crate stacks with Peel, Breakdown, and zoom (− / % / +) under Breakdown.",
+      },
+    },
+  },
   args: { plan },
 } satisfies Meta<typeof StopDeliveryStacksView>;
 

@@ -10,6 +10,12 @@ const meta = {
   component: CargoGridIsoView,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Isometric bay view. Legend-toggled cargo types are omitted from the graph.",
+      },
+    },
   },
   args: {
     sketch: c2HerculesCargoGridSketch,

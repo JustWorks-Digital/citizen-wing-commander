@@ -4,6 +4,7 @@ import {
   type SessionChecklistModel,
   type SessionMission,
 } from "@/lib/missions/mockSession";
+import { restampAllMissionBoxSizes } from "@/lib/missions/rebuildSessionRoute";
 
 export type SessionTabSummary = {
   id: string;
@@ -66,51 +67,54 @@ export function normalizeSessionChecklist(
       ? idCandidate
       : createSessionId();
 
-  return applySessionCompletionTiming({
-    id,
-    sessionName: raw.sessionName?.trim() || "New session",
-    shipSlugs: Array.isArray(raw.shipSlugs) ? raw.shipSlugs : [],
-    startLocationSlug:
-      typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()
-        ? raw.startLocationSlug.trim()
-        : null,
-    missionCount: Math.max(
-      0,
-      Math.trunc(
-        typeof raw.missionCount === "number" && Number.isFinite(raw.missionCount)
-          ? raw.missionCount
-          : 0,
-      ),
-    ),
-    missionsCompleted: (() => {
-      const total = Math.max(
+  return restampAllMissionBoxSizes(
+    applySessionCompletionTiming({
+      id,
+      sessionName: raw.sessionName?.trim() || "New session",
+      shipSlugs: Array.isArray(raw.shipSlugs) ? raw.shipSlugs : [],
+      startLocationSlug:
+        typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()
+          ? raw.startLocationSlug.trim()
+          : null,
+      missionCount: Math.max(
         0,
         Math.trunc(
           typeof raw.missionCount === "number" && Number.isFinite(raw.missionCount)
             ? raw.missionCount
             : 0,
         ),
-      );
-      const done = Math.max(
-        0,
-        Math.trunc(
-          typeof raw.missionsCompleted === "number" &&
-            Number.isFinite(raw.missionsCompleted)
-            ? raw.missionsCompleted
-            : 0,
-        ),
-      );
-      return Math.min(done, total);
-    })(),
-    missions: Array.isArray(raw.missions)
-      ? (raw.missions as SessionMission[])
-      : [],
-    startedAt,
-    completedAt:
-      typeof raw.completedAt === "string" ? raw.completedAt : null,
-    updatedAt,
-    rows: Array.isArray(raw.rows) ? raw.rows : [],
-  });
+      ),
+      missionsCompleted: (() => {
+        const total = Math.max(
+          0,
+          Math.trunc(
+            typeof raw.missionCount === "number" &&
+              Number.isFinite(raw.missionCount)
+              ? raw.missionCount
+              : 0,
+          ),
+        );
+        const done = Math.max(
+          0,
+          Math.trunc(
+            typeof raw.missionsCompleted === "number" &&
+              Number.isFinite(raw.missionsCompleted)
+              ? raw.missionsCompleted
+              : 0,
+          ),
+        );
+        return Math.min(done, total);
+      })(),
+      missions: Array.isArray(raw.missions)
+        ? (raw.missions as SessionMission[])
+        : [],
+      startedAt,
+      completedAt:
+        typeof raw.completedAt === "string" ? raw.completedAt : null,
+      updatedAt,
+      rows: Array.isArray(raw.rows) ? raw.rows : [],
+    }),
+  );
 }
 
 export function summarizeSessionChecklist(

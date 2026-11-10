@@ -3,7 +3,10 @@ import {
   resolveCommoditySlug,
   resolveIncomingLeg,
 } from "@/lib/sessions/resolveRefs";
-import { assignBoxSizesFromBreakdown } from "@/lib/missions/boxBreakdownOptions";
+import {
+  assignBoxSizesFromBreakdown,
+  partitionBoxSizesAcrossScuAmounts,
+} from "@/lib/missions/boxBreakdownOptions";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   intakeContractFromSessionMission,
@@ -12,9 +15,21 @@ import {
 import type {
   CargoDelivery,
   HaulingChecklistRow,
+  LegKind,
   SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
+import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
+
+function resolveCargoRole(
+  legKind: LegKind,
+  role: CargoDelivery["role"],
+): "pickup" | "delivery" | null {
+  if (role === "pickup" || role === "delivery") return role;
+  if (legKind === "pickup") return "pickup";
+  if (legKind === "delivery") return "delivery";
+  return null;
+}
 
 /** Still counted in N/M (unless hidden). */
 function countedMissions(missions: SessionMission[]): SessionMission[] {
@@ -161,21 +176,31 @@ export function removeMissionAndRebuildRoute(
 
 /**
  * Stamp selected crate sizes onto route cargo lines that match this mission.
- * Clears prior sizes for this missionId first, then assigns from the breakdown.
+ * Pickup lines get the full mix; delivery lines get the same crates partitioned
+ * across unload amounts (so per-stop pads match the bay / mission override).
  */
 function stampMissionBoxSizesOntoRows(
   rows: HaulingChecklistRow[],
   mission: SessionMission,
 ): HaulingChecklistRow[] {
   const breakdown = mission.scuBoxSplits;
-  const cleared = rows.map((row) => ({
+  const missionCommoditySlugs = new Set(
+    mission.cargo.map(
+      (line) =>
+        resolveCommoditySlug(line.commodity) ??
+        line.commodity.trim().toLowerCase(),
+    ),
+  );
+
+  const cleared: HaulingChecklistRow[] = rows.map((row) => ({
     ...row,
     cargoDeliveries: row.cargoDeliveries.map((cargo) => {
-      if (cargo.missionId === mission.id) {
-        const { boxSizes: _removed, ...rest } = cargo;
-        return rest;
-      }
-      return cargo;
+      const belongs =
+        cargo.missionId === mission.id ||
+        (!cargo.missionId && missionCommoditySlugs.has(cargo.commoditySlug));
+      if (!belongs) return cargo;
+      const { boxSizes: _removed, ...rest } = cargo;
+      return rest as CargoDelivery;
     }),
   }));
 
@@ -191,33 +216,104 @@ function stampMissionBoxSizesOntoRows(
     breakdown,
   );
 
-  const pending = assignments.map((entry) => ({
-    ...entry,
-    used: false,
+  const nextRows: HaulingChecklistRow[] = cleared.map((row) => ({
+    ...row,
+    cargoDeliveries: row.cargoDeliveries.map((cargo) => ({ ...cargo })),
   }));
 
-  const matchCargo = (cargo: CargoDelivery): CargoDelivery => {
-    if (cargo.missionId && cargo.missionId !== mission.id) return cargo;
-    const hit = pending.find(
-      (entry) =>
-        !entry.used &&
-        entry.commoditySlug === cargo.commoditySlug &&
-        entry.scu === cargo.scu &&
-        entry.boxSizes.length > 0,
-    );
-    if (!hit) return cargo;
-    hit.used = true;
-    return {
-      ...cargo,
-      missionId: mission.id,
-      boxSizes: [...hit.boxSizes],
-    };
+  const cargoBelongs = (cargo: CargoDelivery, commoditySlug: string) => {
+    if (cargo.commoditySlug !== commoditySlug) return false;
+    if (cargo.missionId) return cargo.missionId === mission.id;
+    return true;
   };
 
-  return cleared.map((row) => ({
-    ...row,
-    cargoDeliveries: row.cargoDeliveries.map(matchCargo),
-  }));
+  for (const assignment of assignments) {
+    if (assignment.boxSizes.length === 0) continue;
+
+    type Hit = {
+      rowIndex: number;
+      cargoIndex: number;
+      scu: number;
+      role: "pickup" | "delivery";
+    };
+    const pickups: Hit[] = [];
+    const deliveries: Hit[] = [];
+
+    for (const [rowIndex, row] of nextRows.entries()) {
+      for (const [cargoIndex, cargo] of row.cargoDeliveries.entries()) {
+        if (!cargoBelongs(cargo, assignment.commoditySlug)) continue;
+        const role = resolveCargoRole(row.legKind, cargo.role);
+        if (role !== "pickup" && role !== "delivery") continue;
+        const hit = {
+          rowIndex,
+          cargoIndex,
+          scu: cargo.scu,
+          role,
+        };
+        if (role === "pickup") pickups.push(hit);
+        else deliveries.push(hit);
+      }
+    }
+
+    const stamp = (
+      hit: Hit,
+      boxSizes: CargoBoxScu[],
+    ) => {
+      const cargo = nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex]!;
+      nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex] = {
+        ...cargo,
+        missionId: mission.id,
+        boxSizes: [...boxSizes],
+      };
+    };
+
+    if (pickups.length === 1 && pickups[0]!.scu === assignment.scu) {
+      stamp(pickups[0]!, assignment.boxSizes);
+    } else if (pickups.length > 0) {
+      const taken = partitionBoxSizesAcrossScuAmounts(
+        assignment.boxSizes,
+        pickups.map((entry) => entry.scu),
+      );
+      if (taken) {
+        for (const [index, pickup] of pickups.entries()) {
+          stamp(pickup, taken[index] ?? []);
+        }
+      }
+    }
+
+    let remainingScu = assignment.scu;
+    const deliveryHits: Hit[] = [];
+    for (const hit of deliveries) {
+      if (remainingScu <= 0) break;
+      if (hit.scu <= 0) continue;
+      deliveryHits.push(hit);
+      remainingScu -= hit.scu;
+    }
+    if (deliveryHits.length === 0) continue;
+
+    const partitioned = partitionBoxSizesAcrossScuAmounts(
+      assignment.boxSizes,
+      deliveryHits.map((hit) => hit.scu),
+    );
+    if (!partitioned) continue;
+    for (const [index, hit] of deliveryHits.entries()) {
+      stamp(hit, partitioned[index] ?? []);
+    }
+  }
+
+  return nextRows;
+}
+
+/** Re-apply every mission's scuBoxSplits onto route cargo (pickup + deliveries). */
+export function restampAllMissionBoxSizes(
+  session: SessionChecklistModel,
+): SessionChecklistModel {
+  let rows = session.rows;
+  for (const mission of session.missions ?? []) {
+    if (!mission.scuBoxSplits) continue;
+    rows = stampMissionBoxSizesOntoRows(rows, mission);
+  }
+  return { ...session, rows };
 }
 
 /** Persist a crate-mix choice and restamp bay packing sizes onto the route. */

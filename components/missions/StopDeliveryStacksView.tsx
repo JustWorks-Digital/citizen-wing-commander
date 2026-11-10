@@ -16,9 +16,16 @@ export type StopDeliveryStacksViewProps = {
 
 type Point = { x: number; y: number };
 const FALLBACK_HEX = "#54a0f7";
+const ZOOM_MIN = 0.75;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.25;
 
 const FLOOR_TOP =
   "color-mix(in srgb, var(--rsi-surface) 70%, var(--rsi-bg-deep))";
+
+function clampZoom(value: number): number {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 100) / 100));
+}
 
 /** Shallow oblique: march along X, light depth from Y, Z rises. */
 function project(lx: number, wy: number, hz: number, size: number): Point {
@@ -164,6 +171,7 @@ export function StopDeliveryStacksView({
 }: StopDeliveryStacksViewProps) {
   const [legendCollapsed, setLegendCollapsed] = useState(true);
   const [peelStack, setPeelStack] = useState(true);
+  const [zoom, setZoom] = useState(1);
   const [hiddenCommodities, setHiddenCommodities] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -172,18 +180,19 @@ export function StopDeliveryStacksView({
   const showPeel = heightCells > 1;
   const viewHeight = visualHz(heightCells, peelStack);
   const stackWidthCells = 2;
-  const labelPad = cellPx * 2.75;
+  const renderCellPx = cellPx * zoom;
+  const labelPad = renderCellPx * 2.75;
 
   const bounds = useMemo(() => {
     const corners = [
-      project(0, 0, 0, cellPx),
-      project(lengthCells, 0, 0, cellPx),
-      project(0, widthCells, 0, cellPx),
-      project(lengthCells, widthCells, 0, cellPx),
-      project(0, 0, viewHeight, cellPx),
-      project(lengthCells, 0, viewHeight, cellPx),
-      project(0, widthCells, viewHeight, cellPx),
-      project(lengthCells, widthCells, viewHeight, cellPx),
+      project(0, 0, 0, renderCellPx),
+      project(lengthCells, 0, 0, renderCellPx),
+      project(0, widthCells, 0, renderCellPx),
+      project(lengthCells, widthCells, 0, renderCellPx),
+      project(0, 0, viewHeight, renderCellPx),
+      project(lengthCells, 0, viewHeight, renderCellPx),
+      project(0, widthCells, viewHeight, renderCellPx),
+      project(lengthCells, widthCells, viewHeight, renderCellPx),
     ];
     let minX = Infinity;
     let maxX = -Infinity;
@@ -195,15 +204,15 @@ export function StopDeliveryStacksView({
       minY = Math.min(minY, point.y);
       maxY = Math.max(maxY, point.y);
     }
-    const padX = cellPx;
-    const padY = cellPx * 0.55;
+    const padX = renderCellPx;
+    const padY = renderCellPx * 0.55;
     return {
       minX: minX - padX,
       minY: minY - padY,
       width: maxX - minX + padX * 2,
       height: maxY - minY + padY * 2 + labelPad,
     };
-  }, [cellPx, lengthCells, widthCells, viewHeight, labelPad]);
+  }, [renderCellPx, lengthCells, widthCells, viewHeight, labelPad]);
 
   const floorTiles = useMemo(() => {
     const tiles: { key: string; lx: number; wy: number }[] = [];
@@ -241,7 +250,7 @@ export function StopDeliveryStacksView({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2 px-2.5 pt-1.5">
+      <div className="flex shrink-0 flex-nowrap items-start justify-between gap-2 px-2.5 pt-1.5">
         <div className="flex min-w-0 items-center gap-2">
           <span className="sr-only">Delivery cargo stacks</span>
           {showPeel ? (
@@ -260,22 +269,74 @@ export function StopDeliveryStacksView({
             </button>
           ) : null}
         </div>
-        <button
-          type="button"
-          aria-expanded={!legendCollapsed}
-          aria-controls="stop-delivery-stacks-breakdown"
-          title={legendCollapsed ? "Show breakdown" : "Hide breakdown"}
-          onClick={() => setLegendCollapsed((value) => !value)}
-          className={[
-            "inline-flex h-auto shrink-0 items-center gap-1 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] transition-colors",
-            legendCollapsed
-              ? "border-rsi-border/80 bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-accent/40 hover:text-rsi-accent"
-              : "border-rsi-accent/40 bg-rsi-accent-muted/30 text-rsi-accent",
-          ].join(" ")}
-        >
-          <span aria-hidden>{legendCollapsed ? "‹" : "›"}</span>
-          Breakdown
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <button
+            type="button"
+            aria-expanded={!legendCollapsed}
+            aria-controls="stop-delivery-stacks-breakdown"
+            title={legendCollapsed ? "Show breakdown" : "Hide breakdown"}
+            onClick={() => setLegendCollapsed((value) => !value)}
+            className={[
+              "inline-flex h-auto items-center gap-1 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] transition-colors",
+              legendCollapsed
+                ? "border-rsi-border/80 bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-accent/40 hover:text-rsi-accent"
+                : "border-rsi-accent/40 bg-rsi-accent-muted/30 text-rsi-accent",
+            ].join(" ")}
+          >
+            <span aria-hidden>{legendCollapsed ? "‹" : "›"}</span>
+            Breakdown
+          </button>
+          <div
+            className="inline-flex overflow-hidden rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95"
+            role="group"
+            aria-label="Cargo stack zoom"
+          >
+            <button
+              type="button"
+              aria-label="Zoom out"
+              title="Zoom out"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
+              className={[
+                "inline-flex size-6 items-center justify-center border-r border-rsi-border/80 font-mono text-[0.7rem]",
+                "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
+                "disabled:cursor-default disabled:opacity-40",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              aria-label="Reset zoom"
+              title="Reset zoom"
+              onClick={() => setZoom(1)}
+              className={[
+                "inline-flex min-w-[2.5rem] items-center justify-center border-r border-rsi-border/80 px-1",
+                "font-mono text-[0.5rem] tabular-nums tracking-[0.08em] text-rsi-text-muted",
+                "transition-colors hover:text-rsi-accent",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              aria-label="Zoom in"
+              title="Zoom in"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
+              className={[
+                "inline-flex size-6 items-center justify-center font-mono text-[0.7rem]",
+                "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
+                "disabled:cursor-default disabled:opacity-40",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="relative min-w-0 overflow-x-auto px-2.5 pb-2.5 pt-1">
@@ -357,7 +418,7 @@ export function StopDeliveryStacksView({
             {floorTiles.map((tile) => (
               <polygon
                 key={tile.key}
-                points={floorFace(tile.lx, tile.wy, cellPx)}
+                points={floorFace(tile.lx, tile.wy, renderCellPx)}
                 fill={FLOOR_TOP}
                 stroke="var(--rsi-border)"
                 strokeWidth={0.4}
@@ -378,7 +439,7 @@ export function StopDeliveryStacksView({
                 box.origin.y,
                 visualHz(box.origin.z, peelStack),
                 box.footprint,
-                cellPx,
+                renderCellPx,
               );
               const isPickup = (box.action ?? plan.action) === "pickup";
               const actionStroke = isPickup
@@ -426,24 +487,31 @@ export function StopDeliveryStacksView({
                 label.x + stackWidthCells / 2,
                 widthCells / 2,
                 0,
-                cellPx,
+                renderCellPx,
               );
               const scuTitle =
                 plan.action === "pickup"
                   ? `${label.scu} SCU pickup · ${label.commodityName}`
                   : `${label.scu} SCU delivery · ${label.commodityName}`;
-              const abbrevSize = Math.max(8, Math.round(cellPx * 0.55));
-              const scuSize = Math.max(9, Math.round(cellPx * 0.65));
-              const padX = cellPx * 0.45;
-              const padTop = cellPx * 0.42;
-              const padBottom = cellPx * 0.22;
-              const boxW = Math.max(cellPx * 2.1, padX * 2 + abbrevSize * 2.6);
+              const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
+              const scuSize = Math.max(9, Math.round(renderCellPx * 0.65));
+              const padX = renderCellPx * 0.45;
+              const padTop = renderCellPx * 0.42;
+              const padBottom = renderCellPx * 0.22;
+              const boxW = Math.max(
+                renderCellPx * 2.1,
+                padX * 2 + abbrevSize * 2.6,
+              );
               const boxH =
-                padTop + padBottom + abbrevSize + scuSize + cellPx * 0.35;
+                padTop +
+                padBottom +
+                abbrevSize +
+                scuSize +
+                renderCellPx * 0.35;
               const boxX = foot.x - boxW / 2;
-              const boxY = foot.y + cellPx * 0.85;
+              const boxY = foot.y + renderCellPx * 0.85;
               const abbrevY = boxY + padTop;
-              const scuY = abbrevY + abbrevSize + cellPx * 0.2;
+              const scuY = abbrevY + abbrevSize + renderCellPx * 0.2;
               return (
                 <g key={`label-${label.id}`} opacity={dimmed ? 0.35 : 1}>
                   <title>{scuTitle}</title>

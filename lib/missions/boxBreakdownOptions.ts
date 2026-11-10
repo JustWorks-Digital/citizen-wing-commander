@@ -196,3 +196,28 @@ export function assignBoxSizesFromBreakdown(
   }
   return out;
 }
+
+/**
+ * Partition mission crate sizes across delivery SCU chunks (route order).
+ * Largest-first into the first chunk that still has room. Null if exact
+ * fill is impossible (caller should fall back to greedy per chunk).
+ */
+export function partitionBoxSizesAcrossScuAmounts(
+  boxSizes: CargoBoxScu[],
+  amounts: number[],
+): CargoBoxScu[][] | null {
+  if (boxSizes.length === 0 || amounts.length === 0) return null;
+  const ordered = [...boxSizes].sort((a, b) => b - a);
+  const alloc = amounts.map((scu) => ({
+    remaining: Math.max(0, Math.floor(scu)),
+    sizes: [] as CargoBoxScu[],
+  }));
+  for (const box of ordered) {
+    const hit = alloc.find((entry) => entry.remaining >= box);
+    if (!hit) return null;
+    hit.sizes.push(box);
+    hit.remaining -= box;
+  }
+  if (alloc.some((entry) => entry.remaining !== 0)) return null;
+  return alloc.map((entry) => entry.sizes);
+}

@@ -10,6 +10,12 @@ const meta = {
   component: CargoGridSketch,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Ship bay top / 3D views. Legend toggles hide inactive cargo types completely (not dim).",
+      },
+    },
   },
   args: {
     sketch: c2HerculesCargoGridSketch,

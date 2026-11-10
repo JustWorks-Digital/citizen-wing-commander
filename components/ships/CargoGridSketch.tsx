@@ -111,7 +111,7 @@ export type CargoGridSketchProps = {
    * Filter toggles still work when false (Suggested / Cargo type).
    */
   showLocationOutlines?: boolean;
-  /** When set, other commodities start dimmed so this one stands out. */
+  /** When set, other commodities start hidden so this one stands out. */
   focusCommoditySlug?: string | null;
   /** Hide sketch chrome when embedded in a placement modal. */
   compact?: boolean;
@@ -291,25 +291,34 @@ export function CargoGridSketch({
   );
 
   const z = Math.min(Math.max(activeZ, 0), sketch.heightCells - 1);
-  const boxesVisibleForLocations = useMemo(() => {
-    if (locationLegendItems.length === 0) return placementBoxes;
-    return placementBoxes.filter(
-      (box) =>
+  const visiblePlacementBoxes = useMemo(() => {
+    return placementBoxes.filter((box) => {
+      if (hiddenCommodities.has(box.commoditySlug)) return false;
+      if (box.action != null && hiddenActions.has(box.action)) return false;
+      if (locationLegendItems.length === 0) return true;
+      return (
         box.deliveryLocationSlug != null &&
-        !hiddenLocations.has(box.deliveryLocationSlug),
-    );
-  }, [placementBoxes, hiddenLocations, locationLegendItems.length]);
+        !hiddenLocations.has(box.deliveryLocationSlug)
+      );
+    });
+  }, [
+    placementBoxes,
+    hiddenCommodities,
+    hiddenActions,
+    hiddenLocations,
+    locationLegendItems.length,
+  ]);
 
   const locationOutlines = useMemo(
     () =>
       showLocationOutlines
-        ? locationGroupBoxOutlines(boxesVisibleForLocations)
+        ? locationGroupBoxOutlines(visiblePlacementBoxes)
         : new Map(),
-    [boxesVisibleForLocations, showLocationOutlines],
+    [visiblePlacementBoxes, showLocationOutlines],
   );
   const locationLabelBoxIds = useMemo(() => {
     const best = new Map<string, { boxId: string; size: number }>();
-    for (const box of placementBoxes) {
+    for (const box of visiblePlacementBoxes) {
       const outline = locationOutlines.get(box.id);
       if (!outline) continue;
       const current = best.get(outline.componentId);
@@ -318,7 +327,7 @@ export function CargoGridSketch({
       }
     }
     return new Set([...best.values()].map((entry) => entry.boxId));
-  }, [placementBoxes, locationOutlines]);
+  }, [visiblePlacementBoxes, locationOutlines]);
   const tintByKey = new Map(
     placementTints.map((tint) => [cargoGridCoordKey(tint.coord), tint]),
   );
@@ -450,7 +459,7 @@ export function CargoGridSketch({
               onSelectCoord={onSelectCoord}
               highlightedCoords={highlightedCoords}
               placementTints={placementTints}
-              placementBoxes={boxesVisibleForLocations}
+              placementBoxes={visiblePlacementBoxes}
               legendItems={legendItems}
               locationLegendItems={locationLegendItems}
               showLocationOutlines={showLocationOutlines}
@@ -700,7 +709,7 @@ export function CargoGridSketch({
                 }
 
                 const boxesOnLayer = useBoxFootprints
-                  ? boxesVisibleForLocations.filter(
+                  ? visiblePlacementBoxes.filter(
                       (box) =>
                         box.origin.z <= z &&
                         z < box.origin.z + box.footprint.dz &&
@@ -760,9 +769,18 @@ export function CargoGridSketch({
                         y: cell.y,
                         z,
                       });
-                      const tint = useBoxFootprints
+                      const rawTint = useBoxFootprints
                         ? null
                         : tintByKey.get(coordKey);
+                      const tint =
+                        rawTint &&
+                        !hiddenCommodities.has(rawTint.commoditySlug) &&
+                        !(
+                          rawTint.action != null &&
+                          hiddenActions.has(rawTint.action)
+                        )
+                          ? rawTint
+                          : null;
                       const tintHex = tint
                         ? resolveCommodityColorHex(
                             tint.color,
@@ -819,13 +837,7 @@ export function CargoGridSketch({
                             tintHex && isHighlightExact
                               ? {
                                   backgroundColor: tintHex,
-                                  opacity:
-                                    tint &&
-                                    (hiddenCommodities.has(tint.commoditySlug) ||
-                                      (tint.action != null &&
-                                        hiddenActions.has(tint.action)))
-                                      ? 0.2
-                                      : 1,
+                                  opacity: 1,
                                   ...(tint?.action === "delivery"
                                     ? {
                                         outline:
@@ -837,15 +849,7 @@ export function CargoGridSketch({
                               : tintHex && isHighlightColumn
                                 ? {
                                     backgroundColor: `color-mix(in srgb, ${tintHex} 35%, transparent)`,
-                                    opacity:
-                                      tint &&
-                                      (hiddenCommodities.has(
-                                        tint.commoditySlug,
-                                      ) ||
-                                        (tint.action != null &&
-                                          hiddenActions.has(tint.action)))
-                                        ? 0.2
-                                        : 1,
+                                    opacity: 1,
                                   }
                                 : undefined
                           }
@@ -864,9 +868,6 @@ export function CargoGridSketch({
                           box.color2,
                           box.commoditySlug,
                         ) ?? "#54a0f7";
-                      const dimmed =
-                        hiddenCommodities.has(box.commoditySlug) ||
-                        (box.action != null && hiddenActions.has(box.action));
                       const left =
                         (zone.lengthCells -
                           (box.origin.x - zoneX0) -
@@ -925,13 +926,12 @@ export function CargoGridSketch({
                             width: box.footprint.dx * viewCellPx,
                             height: box.footprint.dy * viewCellPx,
                             backgroundColor: hex,
-                            opacity: dimmed ? 0.2 : 0.92,
+                            opacity: 0.92,
                             ...borderStyle,
                           }}
                         >
                           {groupStroke != null &&
                           box.locationGroupIndex != null &&
-                          !dimmed &&
                           locationLabelBoxIds.has(box.id) ? (
                             <span
                               className="inline-flex size-4 items-center justify-center rounded-full font-mono text-[0.6rem] font-bold tabular-nums leading-none"

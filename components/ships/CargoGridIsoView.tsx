@@ -61,13 +61,13 @@ export type CargoGridIsoViewProps = {
    * Location filter toggles still work when false.
    */
   showLocationOutlines?: boolean;
-  /** Delivery locations currently dimmed via legend toggles. */
+  /** Delivery locations hidden via legend toggles. */
   hiddenLocations?: ReadonlySet<string>;
   onToggleLocation?: (locationSlug: string) => void;
-  /** Commodities currently dimmed via legend toggles. */
+  /** Commodities hidden via legend toggles (omit from the graph). */
   hiddenCommodities?: ReadonlySet<string>;
   onToggleCommodity?: (commoditySlug: string) => void;
-  /** Pickup / delivery actions currently dimmed via legend toggles. */
+  /** Pickup / delivery actions hidden via legend toggles. */
   hiddenActions?: ReadonlySet<CargoGridBoxAction>;
   onToggleAction?: (action: CargoGridBoxAction) => void;
   /**
@@ -1252,6 +1252,21 @@ export function CargoGridIsoView({
         {cubes.map((cube) => {
           const isFloor = cube.kind === "floor";
           const isPlaceholder = cube.kind === "placeholder";
+          const tint = tintByKey.get(cargoGridCoordKey(cube.coord));
+          const commoditySlug =
+            cube.commoditySlug ?? tint?.commoditySlug ?? null;
+          const commodityName =
+            cube.commodityName ?? tint?.commodityName ?? null;
+          const action =
+            cube.kind === "cargo" ? (cube.action ?? tint?.action) : undefined;
+          if (
+            !isFloor &&
+            ((commoditySlug != null &&
+              hiddenCommodities.has(commoditySlug)) ||
+              (action != null && hiddenActions.has(action)))
+          ) {
+            return null;
+          }
           const drawHz = isFloor ? 0 : visualHz(cube.hz, peelStack);
           const faces = isFloor
             ? floorFaces(
@@ -1282,15 +1297,6 @@ export function CargoGridIsoView({
             cube.kind === "cargo" &&
             selectedCoord != null &&
             sameCargoGridCoord(selectedCoord, cube.coord);
-          const tint = tintByKey.get(cargoGridCoordKey(cube.coord));
-          const commoditySlug =
-            cube.commoditySlug ?? tint?.commoditySlug ?? null;
-          const commodityName =
-            cube.commodityName ?? tint?.commodityName ?? null;
-          const commodityDimmed =
-            !isFloor &&
-            commoditySlug != null &&
-            hiddenCommodities.has(commoditySlug);
           const commodityHex = resolveCommodityColorHex(
             cube.color ?? tint?.color ?? null,
             cube.color2 ?? tint?.color2 ?? null,
@@ -1314,10 +1320,6 @@ export function CargoGridIsoView({
                       : (ZONE_FACE[zoneColorIndex.get(cube.zoneId) ?? 0] ??
                         ZONE_FACE[0]);
           const canSelect = Boolean(onSelectCoord) && cube.kind === "cargo";
-          const action =
-            cube.kind === "cargo" ? (cube.action ?? tint?.action) : undefined;
-          const actionDimmed =
-            !isFloor && action != null && hiddenActions.has(action);
           const outline: LocationGroupBoxOutline | undefined = cube.boxId
             ? locationOutlines.get(cube.boxId)
             : undefined;
@@ -1428,7 +1430,7 @@ export function CargoGridIsoView({
               ) : (
                 <g
                   opacity={
-                    layerDimmed || commodityDimmed || actionDimmed
+                    layerDimmed
                       ? LAYER_OFF_OPACITY
                       : isPlaceholder
                         ? 0.45
