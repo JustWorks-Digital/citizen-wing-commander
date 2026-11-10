@@ -7,7 +7,10 @@ import {
   assignBoxSizesFromBreakdown,
   partitionBoxSizesAcrossScuAmounts,
 } from "@/lib/missions/boxBreakdownOptions";
-import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import {
+  scuBoxSplitsForScu,
+  type ScuBoxSplits,
+} from "@/lib/missions/catalogMission";
 import {
   intakeContractFromSessionMission,
   type SessionMission,
@@ -120,7 +123,7 @@ function rebuildRowsFromMissions(
 
   let nextRows = rows;
   for (const mission of missions) {
-    if (!mission.scuBoxSplits) continue;
+    if (!effectiveMissionScuBoxSplits(mission)) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
 
@@ -175,6 +178,28 @@ export function removeMissionAndRebuildRoute(
 }
 
 /**
+ * Explicit override, else greedy mix capped by mission max container size
+ * (matches the box-type picker's DEFAULT).
+ */
+export function effectiveMissionScuBoxSplits(
+  mission: SessionMission,
+): ScuBoxSplits | null {
+  if (mission.scuBoxSplits) return mission.scuBoxSplits;
+  if (
+    typeof mission.maxContainerScu !== "number" ||
+    mission.maxContainerScu <= 0
+  ) {
+    return null;
+  }
+  const scuTotal = mission.cargo.reduce(
+    (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
+    0,
+  );
+  if (scuTotal <= 0) return null;
+  return scuBoxSplitsForScu(scuTotal, mission.maxContainerScu);
+}
+
+/**
  * Stamp selected crate sizes onto route cargo lines that match this mission.
  * Pickup lines get the full mix; delivery lines get the same crates partitioned
  * across unload amounts (so per-stop pads match the bay / mission override).
@@ -183,7 +208,7 @@ function stampMissionBoxSizesOntoRows(
   rows: HaulingChecklistRow[],
   mission: SessionMission,
 ): HaulingChecklistRow[] {
-  const breakdown = mission.scuBoxSplits;
+  const breakdown = effectiveMissionScuBoxSplits(mission);
   const missionCommoditySlugs = new Set(
     mission.cargo.map(
       (line) =>
@@ -304,16 +329,21 @@ function stampMissionBoxSizesOntoRows(
   return nextRows;
 }
 
-/** Re-apply every mission's scuBoxSplits onto route cargo (pickup + deliveries). */
+/** Re-apply every mission's crate mix onto route cargo (pickup + deliveries). */
 export function restampAllMissionBoxSizes(
   session: SessionChecklistModel,
 ): SessionChecklistModel {
+  const missions = (session.missions ?? []).map((mission) => {
+    if (mission.scuBoxSplits) return mission;
+    const derived = effectiveMissionScuBoxSplits(mission);
+    return derived ? { ...mission, scuBoxSplits: derived } : mission;
+  });
   let rows = session.rows;
-  for (const mission of session.missions ?? []) {
-    if (!mission.scuBoxSplits) continue;
+  for (const mission of missions) {
+    if (!effectiveMissionScuBoxSplits(mission)) continue;
     rows = stampMissionBoxSizesOntoRows(rows, mission);
   }
-  return { ...session, rows };
+  return { ...session, missions, rows };
 }
 
 /** Persist a crate-mix choice and restamp bay packing sizes onto the route. */
