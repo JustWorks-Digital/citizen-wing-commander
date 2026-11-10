@@ -519,84 +519,180 @@ function LocationHeader({
   );
 }
 
+function TransferArrow() {
+  return (
+    <span
+      aria-hidden
+      className="flex shrink-0 self-center px-5 text-rsi-text-muted sm:px-7"
+    >
+      <svg
+        viewBox="0 0 48 24"
+        className="h-4 w-8"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2 12 H38"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <path
+          d="M30 4 L42 12 L30 20"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function TotalMeta({
   row,
-  completionAuec,
+  location,
   onboardReceipt,
 }: {
   row: HaulingChecklistRow;
-  /** Sum of rewards for missions expected to complete at this stop. */
-  completionAuec: number;
+  /** Station receiving this unload (current stop). */
+  location: string;
   /** Planned bay load before/after this stop (for delivery receipt). */
   onboardReceipt?: StopOnboardScuReceipt | null;
 }) {
-  const showAuec = completionAuec > 0;
   const showDelivering =
     onboardReceipt != null && onboardReceipt.delivery > 0;
   const done = row.isCompleted
     ? "text-rsi-text-muted line-through"
     : "text-rsi-text";
 
-  if (!showDelivering && !showAuec) return null;
+  if (!showDelivering) return null;
 
   return (
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
-      <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
-        {showDelivering ? (
-          <div>
-            <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-              Receipt
+      <div
+        className="flex flex-wrap items-start gap-x-2 gap-y-4 sm:gap-x-4"
+        title={`Transfer ${onboardReceipt!.delivery} SCU to ${location}`}
+      >
+        <div className="min-w-[7.5rem]">
+          <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+            Delivery
+          </p>
+          <div
+            className={[
+              "mt-0.5 font-mono text-sm tabular-nums tracking-wide",
+              done,
+            ].join(" ")}
+          >
+            <p className="text-rsi-text-muted no-underline">
+              {onboardReceipt!.beforeDelivery}
+              <span className="ml-1 text-[0.65rem] font-normal tracking-wide">
+                aboard
+              </span>
+            </p>
+            <p className="text-rsi-danger">
+              −{onboardReceipt!.delivery}
+              <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+                delivering
+              </span>
             </p>
             <div
-              className={[
-                "mt-0.5 font-mono text-sm tabular-nums tracking-wide",
-                done,
-              ].join(" ")}
-              title={`Onboard ${onboardReceipt.beforeDelivery} SCU → delivering ${onboardReceipt.delivery} SCU → ${onboardReceipt.after} SCU remaining`}
-            >
-              <p className="text-rsi-text-muted no-underline">
-                {onboardReceipt.beforeDelivery}
-                <span className="ml-1 text-[0.65rem] font-normal tracking-wide">
-                  aboard
-                </span>
-              </p>
-              <p className="text-rsi-success">
-                −{onboardReceipt.delivery}
-                <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
-                  delivering
-                </span>
-              </p>
-              <div
-                aria-hidden
-                className="my-1 w-full min-w-[3.5rem] border-t border-rsi-border-strong"
-              />
-              <p>
-                {onboardReceipt.after}
-                <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
-                  SCU left
-                </span>
-              </p>
-            </div>
-          </div>
-        ) : null}
-        {showAuec ? (
-          <div>
-            <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-              Total aUEC
-            </p>
-            <p
-              className={[
-                "mt-0.5 font-mono text-sm tabular-nums tracking-wide",
-                row.isCompleted
-                  ? "text-rsi-text-muted line-through"
-                  : "text-rsi-text",
-              ].join(" ")}
-            >
-              {formatAuecAmount(completionAuec)}
+              aria-hidden
+              className="my-1 w-full min-w-[3.5rem] border-t border-rsi-border-strong"
+            />
+            <p>
+              {onboardReceipt!.after}
+              <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+                SCU left
+              </span>
             </p>
           </div>
-        ) : null}
+        </div>
+        <TransferArrow />
+        <div className="min-w-[14rem] max-w-[20rem] flex-1">
+          <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+            Receiving
+          </p>
+          <p
+            className={[
+              "text-sm font-medium leading-snug text-rsi-text-muted",
+              row.isCompleted ? "line-through" : "",
+            ].join(" ")}
+            title={location}
+          >
+            {location}
+          </p>
+          <p
+            className={[
+              "mt-1 font-mono text-sm tabular-nums tracking-wide",
+              row.isCompleted
+                ? "text-rsi-text-muted line-through"
+                : "text-rsi-success",
+            ].join(" ")}
+          >
+            +{onboardReceipt!.delivery}
+            <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+              taking aboard
+            </span>
+          </p>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function PayoutMeta({
+  row,
+  completionAuec,
+  completingMissionCount,
+}: {
+  row: HaulingChecklistRow;
+  completionAuec: number;
+  completingMissionCount: number;
+}) {
+  if (completingMissionCount <= 0) return null;
+
+  return (
+    <div
+      className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm"
+      title={
+        completionAuec > 0
+          ? `Payout ${formatAuecAmount(completionAuec)}`
+          : "aUEC not available"
+      }
+    >
+      <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Payout
+      </p>
+      <p
+        className={[
+          "text-sm font-medium leading-snug text-rsi-text-muted",
+          row.isCompleted ? "line-through" : "",
+        ].join(" ")}
+      >
+        {completingMissionCount === 1
+          ? "Mission reward"
+          : `${completingMissionCount} mission rewards`}
+      </p>
+      {completionAuec > 0 ? (
+        <p
+          className={[
+            "mt-1 font-mono text-sm tabular-nums tracking-wide",
+            row.isCompleted
+              ? "text-rsi-text-muted line-through"
+              : "text-rsi-success",
+          ].join(" ")}
+        >
+          +{formatAuecAmount(completionAuec)}
+          <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+            paid
+          </span>
+        </p>
+      ) : (
+        <p className="mt-1 font-mono text-sm tabular-nums tracking-wide text-rsi-warn">
+          aUEC not available
+        </p>
+      )}
     </div>
   );
 }
@@ -818,10 +914,17 @@ export function HaulingChecklistTable({
             rows,
             row.id,
           );
-          const completionAuec = expectedCompletions.reduce(
-            (sum, mission) => sum + Math.max(0, mission.rewardAuec || 0),
-            0,
-          );
+          const completionAuec = expectedCompletions.reduce((sum, mission) => {
+            if (mission.rewardAuec > 0) return sum + mission.rewardAuec;
+            const fromDisplay = mission.rewardDisplay?.match(
+              /([\d,]+)\s*aUEC/i,
+            );
+            if (fromDisplay?.[1]) {
+              const parsed = Number(fromDisplay[1].replace(/,/g, ""));
+              if (Number.isFinite(parsed) && parsed > 0) return sum + parsed;
+            }
+            return sum;
+          }, 0);
 
           return (
             <li
@@ -880,10 +983,15 @@ export function HaulingChecklistTable({
                       </div>
                       <TotalMeta
                         row={row}
-                        completionAuec={completionAuec}
+                        location={location}
                         onboardReceipt={onboardByStop.get(row.id) ?? null}
                       />
                       <ExpectedCompletionsMeta missions={expectedCompletions} />
+                      <PayoutMeta
+                        row={row}
+                        completionAuec={completionAuec}
+                        completingMissionCount={expectedCompletions.length}
+                      />
                       <NextDistanceMeta
                         row={row}
                         nextLocationName={nextLocationName}

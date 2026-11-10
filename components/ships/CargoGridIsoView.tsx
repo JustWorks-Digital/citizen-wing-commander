@@ -1238,7 +1238,7 @@ export function CargoGridIsoView({
                     >
                       {item.commodityName}
                       {boxTotal != null ? (
-                        <span className="-ml-1 font-mono text-[0.55rem] text-rsi-text-muted">
+                        <span className="ml-1.5 font-mono text-[0.55rem] text-rsi-text-muted">
                           ({boxTotal})
                         </span>
                       ) : null}
@@ -1247,7 +1247,7 @@ export function CargoGridIsoView({
                       <CargoBoxCountIcons
                         boxCounts={item.boxCounts!}
                         color={hex}
-                        className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
+                        className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
                       />
                     ) : null}
                   </span>

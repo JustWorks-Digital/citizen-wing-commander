@@ -229,7 +229,7 @@ export function abbreviateCommodityName(name: string): string {
   if (words.length === 0) return "?";
   if (words.length === 1) {
     const word = words[0]!;
-    return word.slice(0, Math.min(4, word.length)).toUpperCase();
+    return word.slice(0, Math.min(5, word.length)).toUpperCase();
   }
   return words
     .slice(0, 4)
