@@ -5,7 +5,6 @@ import {
   CargoGridSketch,
   type CargoGridViewTab,
 } from "@/components/ships/CargoGridSketch";
-import { getLocationBySlug } from "@/lib/fixtures";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
   cargoBayPackModes,
@@ -26,13 +25,13 @@ export type CargoBayLayoutProps = {
   shipSlug?: string | null;
   /** Checklist stop to preview (completed or not). Defaults to next incomplete. */
   focusedStopId?: string | null;
-  /** Optional session stats — right of the Cargo layout title. */
+  /** Optional session stats — right of the Ship layout title. */
   headerAside?: ReactNode;
   className?: string;
 };
 
 /**
- * Session cargo layout: ship bay grid at the focused stop (top / 3D tabs).
+ * Session cargo layout: ship bay grid at the focused stop (top / 3D / split).
  */
 export function CargoBayLayout({
   rows,
@@ -46,6 +45,7 @@ export function CargoBayLayout({
     [shipSlug],
   );
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
+  const [legendHidden, setLegendHidden] = useState(false);
   const [packMode, setPackMode] = useState<CargoBayPackMode>(
     defaultCargoBayPackMode,
   );
@@ -100,11 +100,6 @@ export function CargoBayLayout({
     });
   }, [plan, rows, activeRow]);
   const showLocationOutlines = packMode === "by-mission-location";
-
-  const locationLabel = activeRow
-    ? (getLocationBySlug(activeRow.locationSlug)?.name ??
-      activeRow.locationSlug)
-    : null;
   const showViewTabs = Boolean(sketch && plan && plan.boxes.length > 0);
 
   return (
@@ -120,59 +115,16 @@ export function CargoBayLayout({
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-              Cargo layout
+              Ship layout
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
-            ) : null}
-            {locationLabel ? (
-              <p
-                className={[
-                  "text-sm text-rsi-text-muted",
-                  sketch ? "mt-0.5" : "mt-1",
-                ].join(" ")}
-              >
-                {locationLabel}
-              </p>
             ) : null}
           </div>
           {headerAside ? (
             <div className="ml-auto min-w-0 shrink">{headerAside}</div>
           ) : null}
         </div>
-        {showViewTabs ? (
-          <div
-            role="tablist"
-            aria-label="Cargo grid projection"
-            className="mt-3 inline-flex w-fit shrink-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 p-0.5"
-          >
-            {(
-              [
-                { id: "top", label: "Top view" },
-                { id: "iso", label: "3D view" },
-              ] as const
-            ).map((tab) => {
-              const selected = viewTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setViewTab(tab.id)}
-                  className={[
-                    "rounded-[calc(var(--radius-rsi)-2px)] px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
-                    selected
-                      ? "bg-rsi-accent-muted/50 text-rsi-accent"
-                      : "text-rsi-text-muted hover:text-rsi-text",
-                  ].join(" ")}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
       </div>
 
       {!sketch ? (
@@ -181,13 +133,73 @@ export function CargoBayLayout({
         </p>
       ) : plan && plan.boxes.length > 0 ? (
         <div className="relative">
+          {showViewTabs ? (
+            <>
+              <div
+                className={[
+                  "pointer-events-none absolute top-2 z-20 flex justify-center",
+                  legendHidden ? "right-14 left-10" : "right-[16.75rem] left-10",
+                ].join(" ")}
+              >
+                <div
+                  role="tablist"
+                  aria-label="Cargo grid projection"
+                  className="pointer-events-auto inline-flex w-fit rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 p-0.5 shadow-rsi-panel"
+                >
+                  {(
+                    [
+                      { id: "top", label: "Top" },
+                      { id: "iso", label: "3D" },
+                      { id: "split", label: "Split" },
+                    ] as const
+                  ).map((tab) => {
+                    const selected = viewTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        aria-label={`${tab.label} view`}
+                        onClick={() => setViewTab(tab.id)}
+                        className={[
+                          "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                          selected
+                            ? "bg-rsi-accent-muted/50 text-rsi-accent"
+                            : "text-rsi-text-muted hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-pressed={!legendHidden}
+                aria-label={legendHidden ? "Show legend" : "Hide legend"}
+                onClick={() => setLegendHidden((value) => !value)}
+                className={[
+                  "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                  !legendHidden
+                    ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                    : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                ].join(" ")}
+              >
+                Legend
+              </button>
+            </>
+          ) : null}
           <CargoGridSketch
             sketch={sketch}
             cellPx={14}
             isoCellPx={16}
             compact
             views={viewTab}
-            inlineTopLegend={viewTab === "top"}
+            inlineTopLegend={viewTab === "top" || viewTab === "split"}
+            hideLegend={legendHidden}
+            legendToggleAbove
             placementTints={placementTints}
             placementBoxes={plan.boxes}
             legendItems={legendItems}

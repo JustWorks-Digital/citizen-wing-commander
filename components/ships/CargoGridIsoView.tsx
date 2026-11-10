@@ -76,13 +76,29 @@ export type CargoGridIsoViewProps = {
   mode?: "full" | "placement";
   /** Extra toolbar controls (e.g. zoom) shown in the bottom-right corner. */
   toolbarExtra?: ReactNode;
-  /** Controls stacked under Peel (e.g. cargo grouping). */
+  /** Controls stacked above Peel (e.g. cargo grouping). */
   toolbarBelow?: ReactNode;
   /**
    * Bottom-left Up / Down / Left / Right facing pad.
    * On for cargo-layout 3D; off for other embeds if needed.
    */
   showFacingPad?: boolean;
+  /**
+   * Drop the outer border / rounded frame when nested in a shared split container.
+   */
+  embedded?: boolean;
+  /** Hide the built-in legend (e.g. shared split legend lives outside). */
+  hideLegend?: boolean;
+  /** Leave room under a top-right Legend toggle hosted by the parent. */
+  legendToggleAbove?: boolean;
+  /** Hide Peel (e.g. host Peel on the split top panel). */
+  hidePeel?: boolean;
+  /** Controlled peel; falls back to internal state when omitted. */
+  peelStack?: boolean;
+  onPeelStackChange?: (value: boolean) => void;
+  /** Controlled 3D layer visibility; falls back to internal state when omitted. */
+  hiddenLayers?: ReadonlySet<number>;
+  onToggleLayer?: (z: number) => void;
 };
 
 type CubeFaceColors = { top: string; left: string; right: string };
@@ -342,8 +358,8 @@ function bayEndLabelAnchors(
   };
 
   // Clear of stacked crates — aft needs more room than the open fore tip.
-  const frontPos = outward(frontMid, cellPx * 1.15);
-  const rearPos = outward(rearMid, cellPx * 2.1);
+  const frontPos = outward(frontMid, cellPx * 2.0);
+  const rearPos = outward(rearMid, cellPx * 3.2);
 
   return {
     front: {
@@ -494,11 +510,12 @@ function buildCubes(
         const placeholderKeys = new Set<string>();
         for (const box of placementBoxes) {
           const { origin, footprint } = box;
+          // Whole footprint must sit in this bay (not just the origin cell).
           if (
             origin.x < zoneX0 ||
-            origin.x >= zoneX1 ||
+            origin.x + footprint.dx > zoneX1 ||
             origin.y < zoneY0 ||
-            origin.y >= zoneY1
+            origin.y + footprint.dy > zoneY1
           ) {
             continue;
           }
@@ -581,20 +598,18 @@ function buildCubes(
     cube.lx = totalLength - cube.lx - cube.footprint.dx;
   }
 
-  // Floor → placeholders → cargo; within each, far → near (high lx/wy first
-  // under the classic SE camera). Use the far corner of the footprint so
-  // wide crates depth-sort against neighboring 1 SCU boxes correctly.
-  const depthKey = (cube: IsoCube) =>
-    cube.lx +
-    cube.footprint.dx +
-    cube.wy +
-    cube.footprint.dy +
-    cube.hz +
-    cube.footprint.dz;
+  // Floor → placeholders → cargo; within each, low Z first then far → near.
+  // Height before XY so lower tops cannot cover crates stacked above them.
+  const depthKeyXY = (cube: IsoCube) =>
+    cube.lx + cube.footprint.dx + cube.wy + cube.footprint.dy;
   cubes.sort((a, b) => {
     const kindDelta = kindSortRank(a.kind) - kindSortRank(b.kind);
     if (kindDelta !== 0) return kindDelta;
-    return depthKey(b) - depthKey(a);
+    const hzDelta = a.hz - b.hz;
+    if (hzDelta !== 0) return hzDelta;
+    const xyDelta = depthKeyXY(a) - depthKeyXY(b);
+    if (xyDelta !== 0) return xyDelta;
+    return a.footprint.dz - b.footprint.dz;
   });
 
   return cubes;
@@ -717,8 +732,8 @@ function visualHz(hz: number, peelStack: boolean): number {
   return hz + hz * PEEL_GAP;
 }
 
-/** Dimmed (layer toggled off) but still visible. */
-const LAYER_OFF_OPACITY = 0.2;
+/** Inactive layers stay in the scene (no reflow) but are fully invisible. */
+const LAYER_OFF_OPACITY = 0;
 
 export function CargoGridIsoView({
   sketch,
@@ -741,14 +756,31 @@ export function CargoGridIsoView({
   toolbarExtra = null,
   toolbarBelow = null,
   showFacingPad = true,
+  embedded = false,
+  hideLegend = false,
+  legendToggleAbove = false,
+  hidePeel = false,
+  peelStack: peelStackProp,
+  onPeelStackChange,
+  hiddenLayers: hiddenLayersProp,
+  onToggleLayer,
 }: CargoGridIsoViewProps) {
-  const [peelStack, setPeelStack] = useState(false);
+  const [peelStackInternal, setPeelStackInternal] = useState(false);
+  const peelStack = peelStackProp ?? peelStackInternal;
   const [facing, setFacing] = useState<CargoGridIsoFacing>(
     defaultCargoGridIsoFacing,
   );
-  const [hiddenLayers, setHiddenLayers] = useState<ReadonlySet<number>>(
-    () => new Set(),
-  );
+  const [hiddenLayersInternal, setHiddenLayersInternal] = useState<
+    ReadonlySet<number>
+  >(() => new Set());
+  const hiddenLayers = hiddenLayersProp ?? hiddenLayersInternal;
+
+  function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
+    const next =
+      typeof value === "function" ? value(peelStack) : value;
+    if (onPeelStackChange) onPeelStackChange(next);
+    else setPeelStackInternal(next);
+  }
 
   const tintByKey = useMemo(() => {
     const map = new Map<string, CargoGridPlacementTint>();
@@ -833,7 +865,9 @@ export function CargoGridIsoView({
         });
       }
     }
-    const depthKey = (cube: IsoCube, hz: number) => {
+    // Horizontal far→near only (far corner after yaw). Height is ordered
+    // separately so a nearer lower crate cannot paint over a farther upper one.
+    const depthKeyXY = (cube: IsoCube) => {
       const spun = yawPoint(
         cube.lx + cube.footprint.dx,
         cube.wy + cube.footprint.dy,
@@ -841,15 +875,18 @@ export function CargoGridIsoView({
         yawCenterY,
         projectStyle.yawRad,
       );
-      return spun.x + spun.y + hz + cube.footprint.dz;
+      return spun.x + spun.y;
     };
-    // Classic SE: low lx/wy is far (draw first). Compass remap + fine yaw first.
+    // Painter: kind → stack height (low first) → horizontal depth → taller top.
+    // Height-before-XY stops deck tops from covering crates stacked above them.
     const sorted = [...built].sort((a, b) => {
       const kindDelta = kindSortRank(a.kind) - kindSortRank(b.kind);
       if (kindDelta !== 0) return kindDelta;
-      const aHz = visualHz(a.hz, peelStack);
-      const bHz = visualHz(b.hz, peelStack);
-      return depthKey(a, aHz) - depthKey(b, bHz);
+      const hzDelta = a.hz - b.hz;
+      if (hzDelta !== 0) return hzDelta;
+      const xyDelta = depthKeyXY(a) - depthKeyXY(b);
+      if (xyDelta !== 0) return xyDelta;
+      return a.footprint.dz - b.footprint.dz;
     });
     return {
       cubes: sorted,
@@ -862,7 +899,6 @@ export function CargoGridIsoView({
     sketch,
     mode,
     highlightKeys,
-    peelStack,
     placementBoxes,
     facing,
     totalLength,
@@ -919,7 +955,11 @@ export function CargoGridIsoView({
   }
 
   function toggleLayer(z: number) {
-    setHiddenLayers((prev) => {
+    if (onToggleLayer) {
+      onToggleLayer(z);
+      return;
+    }
+    setHiddenLayersInternal((prev) => {
       const next = new Set(prev);
       if (next.has(z)) next.delete(z);
       else next.add(z);
@@ -1078,7 +1118,8 @@ export function CargoGridIsoView({
     return map;
   }, [sketch.zones]);
 
-  const showPeel = mode === "placement" && maxPlacedZ > 0;
+  const canPeel = mode === "placement" && maxPlacedZ > 0;
+  const showPeel = canPeel && !hidePeel;
   const showLayers = layerOptions.length > 0;
   const hasPickup = placementTints.some((tint) => tint.action === "pickup");
   const hasDelivery = placementTints.some(
@@ -1087,40 +1128,51 @@ export function CargoGridIsoView({
   const showActionKey = hasPickup || hasDelivery;
   const showLocationKey = locationLegendItems.length > 0;
   const showLegend =
-    legend.length > 0 || showActionKey || showLayers || showLocationKey;
+    !hideLegend &&
+    (legend.length > 0 || showActionKey || showLayers || showLocationKey);
 
   const showToolbar =
     showPeel || mode !== "placement" || Boolean(toolbarBelow);
 
   return (
-    <div className="relative flex h-[26rem] flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-3 pt-1.5 pb-3">
+    <div
+      className={[
+        "relative flex h-[26rem] flex-col overflow-hidden px-3 pt-3 pb-3",
+        embedded
+          ? "bg-transparent"
+          : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
+      ].join(" ")}
+    >
       {showToolbar ? (
-        <div className="mb-1 flex shrink-0 flex-col items-start gap-1.5 pr-[14rem]">
-          <div className="flex flex-wrap items-center gap-2">
-            {mode === "placement" ? (
-              <span className="sr-only">3D cargo grid</span>
-            ) : (
-              <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                Height {height}
-              </p>
-            )}
-            {showPeel ? (
-              <button
-                type="button"
-                aria-pressed={peelStack}
-                onClick={() => setPeelStack((value) => !value)}
-                className={[
-                  "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-                  peelStack
-                    ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                    : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                ].join(" ")}
-              >
-                Peel
-              </button>
-            ) : null}
-          </div>
+        <div
+          className={[
+            "mb-1 flex shrink-0 flex-col items-start gap-1.5",
+            showLegend ? "pr-[17.5rem]" : "",
+          ].join(" ")}
+        >
+          {mode === "placement" ? (
+            <span className="sr-only">3D cargo grid</span>
+          ) : (
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+              Height {height}
+            </p>
+          )}
           {toolbarBelow}
+          {showPeel ? (
+            <button
+              type="button"
+              aria-pressed={peelStack}
+              onClick={() => setPeelStack((value) => !value)}
+              className={[
+                "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                peelStack
+                  ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                  : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+              ].join(" ")}
+            >
+              Peel
+            </button>
+          ) : null}
         </div>
       ) : (
         <span className="sr-only">3D cargo grid</span>
@@ -1134,11 +1186,19 @@ export function CargoGridIsoView({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex min-h-full min-w-full items-center justify-center">
+        <div
+          className={[
+            "flex min-h-full min-w-full items-center justify-center",
+            showLegend ? "pr-[17.5rem]" : "",
+          ].join(" ")}
+        >
 
       {showLegend ? (
         <div
-          className="absolute top-2 right-2 z-10 w-[13rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
+          className={[
+            "absolute right-2 z-10 w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+            legendToggleAbove ? "top-8" : "top-2",
+          ].join(" ")}
           aria-label="Cargo color legend"
         >
           {showLocationKey ? (

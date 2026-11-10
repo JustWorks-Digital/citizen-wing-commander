@@ -21,17 +21,23 @@ sources:
     purpose:
       - locations
       - starmap
+      - location-images
     label: Star Citizen Wiki starmap locations
     url: https://api.star-citizen.wiki/api/locations
     docs_url: https://api.star-citizen.wiki/locations
     used_by:
       - scripts/fetch-sc-fixtures.mjs
+      - scripts/fetch-location-images.mjs
       - lib/fixtures/locations.json
+      - lib/fixtures/locationImages.json
+      - public/icons/locations/
     notes: >
       Paginated JSON API of in-game starmap locations (name, slug, type, system,
-      parent). Primary source for location name fixtures.
+      parent). Primary source for location name fixtures. Rows include images[]
+      (starcitizen.tools thumbnails) when available — fetch-location-images
+      downloads those into public/icons/locations and maps slug → file.
     added: "2026-11-07"
-    last_verified: "2026-11-07"
+    last_verified: "2026-11-10"
 
   - id: uex-commodities
     status: accepted

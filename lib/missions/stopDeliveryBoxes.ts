@@ -6,11 +6,13 @@ import {
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
 import type { CargoGridCoord } from "@/lib/ships/cargoGridCoords";
-import type {
-  CargoBoxCountBySize,
-  CargoGridBoxAction,
-  CargoGridPlacementTint,
-  PlacedCargoBox,
+import {
+  locationGroupStroke,
+  pickupHangarPileSegments,
+  type CargoBoxCountBySize,
+  type CargoGridBoxAction,
+  type CargoGridPlacementTint,
+  type PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
 
 export type StopCargoBoxGroup = {
@@ -33,6 +35,8 @@ export type StopDeliveryBoxGroup = StopCargoBoxGroup;
 
 /** Empty cells between mission/commodity stacks on the reference pad. */
 const STACK_GAP_CELLS = 2;
+/** Extra empty cells between delivery-location hangar piles. */
+const PILE_GAP_CELLS = 4;
 /** Pack each stack into a 2-wide column (fits 8 / 4 SCU crates). */
 const STACK_WIDTH_CELLS = 2;
 
@@ -199,6 +203,22 @@ export type StopCargoStackLabel = {
   heightCells: number;
 };
 
+export type StopCargoPileLabel = {
+  id: string;
+  locationSlug: string;
+  locationName: string;
+  /** Short label for the pile header. */
+  abbrev: string;
+  /** Pile origin X on the pad. */
+  x: number;
+  /** Width of the pile (all commodity stacks + gaps). */
+  widthCells: number;
+  locationGroupIndex: number;
+  /** Outline stroke matching mission-based bay location colors. */
+  stroke: string | null;
+  scu: number;
+};
+
 export type StopCargoStacksPlan = {
   action: CargoGridBoxAction;
   lengthCells: number;
@@ -207,6 +227,8 @@ export type StopCargoStacksPlan = {
   boxes: PlacedCargoBox[];
   tints: CargoGridPlacementTint[];
   stackLabels: StopCargoStackLabel[];
+  /** When set, stacks are grouped into delivery-location hangar piles. */
+  pileLabels?: StopCargoPileLabel[];
   legendItems: Array<{
     id: string;
     commoditySlug: string;
@@ -216,11 +238,21 @@ export type StopCargoStacksPlan = {
     scu: number;
     boxCounts: CargoBoxCountBySize[];
     isSplitMission: boolean;
+    locationSlug?: string;
+    locationName?: string;
   }>;
 };
 
-/** Abbreviate a commodity name for stack footers (e.g. Medical Supplies → MS). */
-export function abbreviateCommodityName(name: string): string {
+/**
+ * Abbreviate a commodity name for stack footers / cell overlays
+ * (e.g. Medical Supplies → MS, Quartz → QUART).
+ * Pass `maxChars: 3` for 1 SCU cells so the label fits.
+ */
+export function abbreviateCommodityName(
+  name: string,
+  maxChars = 5,
+): string {
+  const limit = Math.max(1, Math.floor(maxChars));
   const words = name
     .trim()
     .split(/[\s/_-]+/)
@@ -229,12 +261,13 @@ export function abbreviateCommodityName(name: string): string {
   if (words.length === 0) return "?";
   if (words.length === 1) {
     const word = words[0]!;
-    return word.slice(0, Math.min(5, word.length)).toUpperCase();
+    return word.slice(0, Math.min(limit, word.length)).toUpperCase();
   }
   return words
-    .slice(0, 4)
+    .slice(0, limit)
     .map((word) => word[0]!.toUpperCase())
-    .join("");
+    .join("")
+    .slice(0, limit);
 }
 
 /** @deprecated Use StopCargoStacksPlan */
@@ -342,4 +375,205 @@ export function planStopDeliveryStacks(
   row: HaulingChecklistRow,
 ): StopCargoStacksPlan | null {
   return planStopCargoStacks(row, "delivery");
+}
+
+/**
+ * Pickup pad view: crates grouped into hangar piles by delivery location
+ * (mission-based packing companion). Needs the full route for destination splits.
+ */
+export function planPickupHangarStacks(
+  rows: HaulingChecklistRow[],
+  rowId: string,
+): StopCargoStacksPlan | null {
+  const segments = pickupHangarPileSegments(rows, rowId);
+  if (segments.length === 0) return null;
+
+  const byLocation = new Map<string, typeof segments>();
+  for (const segment of segments) {
+    const list = byLocation.get(segment.locationSlug) ?? [];
+    list.push(segment);
+    byLocation.set(segment.locationSlug, list);
+  }
+
+  const boxes: PlacedCargoBox[] = [];
+  const stackLabels: StopCargoStackLabel[] = [];
+  const pileLabels: StopCargoPileLabel[] = [];
+  const legendItems: StopCargoStacksPlan["legendItems"] = [];
+  let cursorX = 0;
+  let maxY = STACK_WIDTH_CELLS;
+  let maxZ = 1;
+  let boxIndex = 0;
+
+  const locationOrder = [...byLocation.keys()];
+  for (let pileIndex = 0; pileIndex < locationOrder.length; pileIndex += 1) {
+    const locationSlug = locationOrder[pileIndex]!;
+    const pileSegments = byLocation.get(locationSlug)!;
+    const pileStartX = cursorX;
+    let pileScu = 0;
+    const first = pileSegments[0]!;
+
+    for (const segment of pileSegments) {
+      const sizes = [...segment.sizes].sort((a, b) => b - a);
+      let z = 0;
+      for (const size of sizes) {
+        const footprint = flatFootprint(size);
+        const origin: CargoGridCoord = { x: cursorX, y: 0, z };
+        boxes.push({
+          id: `pile-${locationSlug}-${segment.commoditySlug}-box-${boxIndex}`,
+          size,
+          origin,
+          footprint,
+          commoditySlug: segment.commoditySlug,
+          commodityName: segment.commodityName,
+          color: segment.color,
+          color2: segment.color2,
+          cells: cellsForBox(origin, footprint),
+          action: "pickup",
+          deliveryLocationSlug: segment.locationSlug,
+          deliveryLocationName: segment.locationName,
+          locationGroupIndex: segment.locationGroupIndex,
+        });
+        boxIndex += 1;
+        z += footprint.dz;
+        maxY = Math.max(maxY, footprint.dy);
+        maxZ = Math.max(maxZ, z);
+      }
+
+      const stackId = `pile-${locationSlug}-${segment.commoditySlug}-${segment.missionId ?? "_"}`;
+      stackLabels.push({
+        id: stackId,
+        x: cursorX,
+        commoditySlug: segment.commoditySlug,
+        commodityName: segment.commodityName,
+        abbrev: abbreviateCommodityName(segment.commodityName),
+        scu: segment.scu,
+        heightCells: Math.max(1, z),
+      });
+      legendItems.push({
+        id: stackId,
+        commoditySlug: segment.commoditySlug,
+        commodityName: segment.commodityName,
+        color: segment.color,
+        color2: segment.color2,
+        scu: segment.scu,
+        boxCounts: tallyBoxSizes(segment.sizes),
+        isSplitMission: false,
+        locationSlug: segment.locationSlug,
+        locationName: segment.locationName,
+      });
+      pileScu += segment.scu;
+      cursorX += STACK_WIDTH_CELLS + STACK_GAP_CELLS;
+    }
+
+    const pileWidth = Math.max(
+      STACK_WIDTH_CELLS,
+      cursorX - STACK_GAP_CELLS - pileStartX,
+    );
+    pileLabels.push({
+      id: `pile-${locationSlug}`,
+      locationSlug,
+      locationName: first.locationName,
+      abbrev: abbreviateCommodityName(first.locationName),
+      x: pileStartX,
+      widthCells: pileWidth,
+      locationGroupIndex: first.locationGroupIndex,
+      stroke: locationGroupStroke(first.locationGroupIndex),
+      scu: pileScu,
+    });
+
+    if (pileIndex < locationOrder.length - 1) {
+      cursorX += PILE_GAP_CELLS - STACK_GAP_CELLS;
+    }
+  }
+
+  const lengthCells = Math.max(1, cursorX - STACK_GAP_CELLS);
+  const tints: CargoGridPlacementTint[] = boxes.flatMap((box) =>
+    box.cells.map((coord) => ({
+      coord,
+      commoditySlug: box.commoditySlug,
+      commodityName: box.commodityName,
+      color: box.color,
+      color2: box.color2,
+      action: box.action,
+    })),
+  );
+
+  return {
+    action: "pickup",
+    lengthCells,
+    widthCells: maxY,
+    heightCells: Math.max(1, maxZ),
+    boxes,
+    tints,
+    stackLabels,
+    pileLabels,
+    legendItems,
+  };
+}
+
+/**
+ * Narrow a hangar-piles plan to one delivery location, remapped to x=0
+ * so the pad can show a single pile at a time.
+ */
+export function focusPickupHangarPile(
+  plan: StopCargoStacksPlan,
+  locationSlug: string,
+): StopCargoStacksPlan | null {
+  const pile = plan.pileLabels?.find(
+    (entry) => entry.locationSlug === locationSlug,
+  );
+  if (!pile) return null;
+
+  const offsetX = pile.x;
+  const boxes = plan.boxes
+    .filter((box) => box.deliveryLocationSlug === locationSlug)
+    .map((box) => ({
+      ...box,
+      origin: { ...box.origin, x: box.origin.x - offsetX },
+      cells: box.cells.map((cell) => ({ ...cell, x: cell.x - offsetX })),
+    }));
+  if (boxes.length === 0) return null;
+
+  const stackLabels = plan.stackLabels
+    .filter((label) =>
+      plan.legendItems.some(
+        (item) =>
+          item.id === label.id && item.locationSlug === locationSlug,
+      ),
+    )
+    .map((label) => ({ ...label, x: label.x - offsetX }));
+
+  const legendItems = plan.legendItems.filter(
+    (item) => item.locationSlug === locationSlug,
+  );
+
+  const tints: CargoGridPlacementTint[] = boxes.flatMap((box) =>
+    box.cells.map((coord) => ({
+      coord,
+      commoditySlug: box.commoditySlug,
+      commodityName: box.commodityName,
+      color: box.color,
+      color2: box.color2,
+      action: box.action,
+    })),
+  );
+
+  return {
+    ...plan,
+    lengthCells: Math.max(1, pile.widthCells),
+    heightCells: Math.max(
+      1,
+      ...boxes.map((box) => box.origin.z + box.footprint.dz),
+    ),
+    boxes,
+    tints,
+    stackLabels,
+    pileLabels: [
+      {
+        ...pile,
+        x: 0,
+      },
+    ],
+    legendItems,
+  };
 }

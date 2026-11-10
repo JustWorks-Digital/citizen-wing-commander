@@ -31,6 +31,8 @@ export function estimateOnboardScu(rows: HaulingChecklistRow[]): number {
 }
 
 export type StopOnboardScuReceipt = {
+  /** Onboard before this stop’s pickups. */
+  beforePickup: number;
   /** Onboard after this stop’s pickups, before unload. */
   beforeDelivery: number;
   /** Onboard after this stop’s unload. */
@@ -41,7 +43,7 @@ export type StopOnboardScuReceipt = {
 
 /**
  * Planned onboard SCU by stop (full route order).
- * Pickups apply before deliveries at each stop for a clear unload receipt.
+ * Pickups apply before deliveries at each stop for clear load/unload receipts.
  */
 export function estimateOnboardScuByStop(
   rows: HaulingChecklistRow[],
@@ -57,10 +59,12 @@ export function estimateOnboardScuByStop(
       if (role === "pickup") pickup += cargo.scu;
       else if (role === "delivery") delivery += cargo.scu;
     }
+    const beforePickup = current;
     current += pickup;
     const beforeDelivery = current;
     current = Math.max(0, current - delivery);
     byStop.set(row.id, {
+      beforePickup,
       beforeDelivery,
       after: current,
       pickup,

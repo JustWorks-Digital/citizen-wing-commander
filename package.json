@@ -23,7 +23,8 @@
     "fixtures:fetch-commodity-icons": "node scripts/fetch-commodity-icons.mjs",
     "fixtures:fetch-commodity-crate-colors": "node scripts/fetch-commodity-crate-colors.mjs",
     "fixtures:fetch-starmap": "node scripts/fetch-starmap.mjs",
-    "fixtures:fetch-location-positions": "node scripts/fetch-location-positions.mjs"
+    "fixtures:fetch-location-positions": "node scripts/fetch-location-positions.mjs",
+    "fixtures:fetch-location-images": "node scripts/fetch-location-images.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

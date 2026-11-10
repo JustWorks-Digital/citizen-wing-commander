@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Missions List/Source (session header), Deliveries/Missions (checklist toolbar), Inventory (cargo layout).",
+          "Split session telemetry: Missions List/Source (session header), Missions/Stops/Cargo (checklist toolbar), Inventory (ship layout).",
       },
     },
   },
@@ -32,6 +32,8 @@ export const RouteProgress: Story = {
       totalLegs={3}
       missionsCompleted={0}
       missionCount={2}
+      onboardScu={24}
+      totalCapacity={96}
     />
   ),
 };
@@ -70,6 +72,8 @@ export const AllPieces: Story = {
         totalLegs={3}
         missionsCompleted={0}
         missionCount={2}
+        onboardScu={24}
+        totalCapacity={96}
       />
       <SessionInventoryStat
         onboardScu={24}

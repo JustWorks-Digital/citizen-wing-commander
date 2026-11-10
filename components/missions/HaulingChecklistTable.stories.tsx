@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Deliveries / Missions / Hide history toolbar. Completed stops get an angled COMPLETED stamp under the delivery grid. Delivery stops show Delivery → Receiving cargo transfer; Completions list finishing missions, then Payout under that. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Missions / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. Completed stops get an angled COMPLETED stamp under the delivery grid. Pickup → Receiving / Delivery → Receiving transfer blocks sit under the pad graph (right column on desktop). Missions completed then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },

@@ -113,20 +113,29 @@ export type SessionRouteProgressStatsProps = {
   totalLegs: number;
   missionsCompleted: number;
   missionCount: number;
+  /** SCU currently aboard (completed stops). */
+  onboardScu: number;
+  /** Ship cargo bay capacity in SCU. */
+  totalCapacity: number;
+  isOverCapacity?: boolean;
   onMissionsClick?: () => void;
   className?: string;
 };
 
-/** Deliveries + Missions telemetry for the checklist toolbar. */
+/** Missions + Stops + Cargo telemetry for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
   missionsCompleted,
   missionCount,
+  onboardScu,
+  totalCapacity,
+  isOverCapacity = false,
   onMissionsClick,
   className,
 }: SessionRouteProgressStatsProps) {
-  const deliveryLabel = totalLegs === 1 ? "Delivery" : "Deliveries";
+  const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
+  const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
 
   return (
     <div
@@ -134,12 +143,6 @@ export function SessionRouteProgressStats({
       role="group"
       aria-label="Route progress"
     >
-      <div className={cellClass}>
-        <StatLabel>{deliveryLabel}</StatLabel>
-        <StatValue>
-          <Fraction current={completedLegs} total={totalLegs} />
-        </StatValue>
-      </div>
       <button
         type="button"
         onClick={onMissionsClick}
@@ -150,6 +153,22 @@ export function SessionRouteProgressStats({
           <Fraction current={missionsCompleted} total={missionCount} />
         </StatValue>
       </button>
+      <div className={cellClass}>
+        <StatLabel>{stopsLabel}</StatLabel>
+        <StatValue>
+          <Fraction current={completedLegs} total={totalLegs} />
+        </StatValue>
+      </div>
+      <div className={cellClass}>
+        <StatLabel>Cargo</StatLabel>
+        <StatValue>
+          <Fraction
+            current={onboardScu}
+            total={capacityLabel}
+            currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
+          />
+        </StatValue>
+      </div>
     </div>
   );
 }

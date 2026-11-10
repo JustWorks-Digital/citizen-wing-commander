@@ -59,11 +59,11 @@ export function ShipBayEndsFrame({
 
   return (
     <div
-      className={["flex items-center justify-center gap-1.5", className]
+      className={["flex items-center justify-center gap-4", className]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex w-8 shrink-0 items-center justify-center self-stretch">
+      <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
         <EndLabel
           end={left}
           className={
@@ -82,7 +82,7 @@ export function ShipBayEndsFrame({
         />
       </div>
       <div className="min-w-0 shrink">{children}</div>
-      <div className="flex w-8 shrink-0 items-center justify-center self-stretch">
+      <div className="flex w-11 shrink-0 items-center justify-center self-stretch">
         <EndLabel
           end={right}
           className={

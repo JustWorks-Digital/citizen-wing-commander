@@ -53,6 +53,7 @@ export function getCommodityBySlug(
 }
 
 export { getCommodityIconSrc } from "@/lib/fixtures/commodityIcons";
+export { getLocationImageSrc } from "@/lib/fixtures/locationImages";
 
 export function listShips(): FixtureShip[] {
   return ships.items;

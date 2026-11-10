@@ -28,7 +28,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Contracts start collapsed; use Expand all / Collapse all or the chevron per card. */
+/** Contracts start collapsed; use Expand (toggles to Collapse) or the chevron per card. */
 export const BlockList: Story = {};
 
 export const Empty: Story = {

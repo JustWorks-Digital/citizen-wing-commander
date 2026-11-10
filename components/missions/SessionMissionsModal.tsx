@@ -200,7 +200,15 @@ export function SessionMissionsModal({
 
   const displayMissions = useMemo(() => enriched, [enriched]);
 
-  const expandAll = () => {
+  const allExpanded =
+    displayMissions.length > 0 &&
+    displayMissions.every((mission) => expandedIds[mission.id]);
+
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      setExpandedIds({});
+      return;
+    }
     const next: Record<string, boolean> = {};
     for (const mission of displayMissions) {
       next[mission.id] = true;
@@ -208,14 +216,10 @@ export function SessionMissionsModal({
     setExpandedIds(next);
   };
 
-  const collapseAll = () => {
-    setExpandedIds({});
-  };
-
   if (!open) return null;
 
   const bulkToggleClass = [
-    "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-2.5 py-1.5",
+    "shrink-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-2.5 py-1.5",
     "font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary",
     "transition-colors hover:border-rsi-accent/50 hover:text-rsi-accent",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
@@ -237,29 +241,19 @@ export function SessionMissionsModal({
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Missions
           </p>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 gap-y-2">
-            <h2 className="min-w-0 flex-1 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
-              Session contracts
-            </h2>
-            {displayMissions.length > 0 ? (
-              <div className="flex shrink-0 gap-1.5">
-                <button
-                  type="button"
-                  className={bulkToggleClass}
-                  onClick={expandAll}
-                >
-                  Expand all
-                </button>
-                <button
-                  type="button"
-                  className={bulkToggleClass}
-                  onClick={collapseAll}
-                >
-                  Collapse all
-                </button>
-              </div>
-            ) : null}
-          </div>
+          <h2 className="mt-0.5 min-w-0 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
+            Session contracts
+          </h2>
+          {displayMissions.length > 0 ? (
+            <button
+              type="button"
+              className={`${bulkToggleClass} mt-2`}
+              aria-pressed={allExpanded}
+              onClick={toggleExpandAll}
+            >
+              {allExpanded ? "Collapse" : "Expand"}
+            </button>
+          ) : null}
         </header>
 
         <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">

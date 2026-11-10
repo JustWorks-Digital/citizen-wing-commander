@@ -44,10 +44,94 @@ const bothRow: HaulingChecklistRow = {
   ],
 };
 
+/** Multi-stop route so Pickup → Piles can attribute crates by delivery location. */
+const hangarPileRows: HaulingChecklistRow[] = [
+  {
+    id: "pile-pickup",
+    legKind: "pickup",
+    locationSlug: "everus-harbor",
+    shipStorageLocation: "front",
+    distanceToNext: { value: 1, unit: "Mm" },
+    isCompleted: false,
+    cargoDeliveries: [
+      {
+        commoditySlug: "quartz",
+        scu: 14,
+        role: "pickup",
+        missionId: "mission-quartz",
+        boxSizes: [8, 4, 2],
+      },
+      {
+        commoditySlug: "stims",
+        scu: 10,
+        role: "pickup",
+        missionId: "mission-stims",
+        boxSizes: [8, 2],
+      },
+    ],
+  },
+  {
+    id: "pile-cassillo",
+    legKind: "delivery",
+    locationSlug: "hdpc-cassillo",
+    shipStorageLocation: "front",
+    distanceToNext: { value: 1, unit: "Mm" },
+    isCompleted: false,
+    cargoDeliveries: [
+      {
+        commoditySlug: "quartz",
+        scu: 6,
+        role: "delivery",
+        missionId: "mission-quartz",
+        boxSizes: [4, 2],
+      },
+      {
+        commoditySlug: "stims",
+        scu: 4,
+        role: "delivery",
+        missionId: "mission-stims",
+        boxSizes: [2, 2],
+      },
+    ],
+  },
+  {
+    id: "pile-lorville",
+    legKind: "delivery",
+    locationSlug: "lorville",
+    shipStorageLocation: "front",
+    distanceToNext: null,
+    isCompleted: false,
+    cargoDeliveries: [
+      {
+        commoditySlug: "quartz",
+        scu: 8,
+        role: "delivery",
+        missionId: "mission-quartz",
+        boxSizes: [8],
+      },
+      {
+        commoditySlug: "stims",
+        scu: 6,
+        role: "delivery",
+        missionId: "mission-stims",
+        boxSizes: [4, 2],
+      },
+    ],
+  },
+];
+
 const meta = {
   title: "Missions/StopDeliveryBayPreview",
   component: StopDeliveryBayPreview,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Flat pad stacks for stop cargo. Pickup stops with a route can switch Cargo (by commodity) ↔ Piles (hangar piles by delivery location).",
+      },
+    },
+  },
   args: {
     row: deliveryRow,
   },
@@ -64,4 +148,11 @@ export const PickupOnly: Story = {
 
 export const PickupAndDelivery: Story = {
   args: { row: bothRow },
+};
+
+export const PickupHangarPiles: Story = {
+  args: {
+    row: hangarPileRows[0],
+    rows: hangarPileRows,
+  },
 };

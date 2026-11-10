@@ -588,6 +588,9 @@ export function SessionChecklistView({
             totalLegs={totalLegs}
             missionsCompleted={session.missionsCompleted ?? 0}
             missionCount={session.missionCount ?? 0}
+            onboardScu={onboardScu}
+            totalCapacity={totalCapacity}
+            isOverCapacity={isOverCapacity}
             onMissionsClick={() => setMissionsOpen(true)}
           />
         }

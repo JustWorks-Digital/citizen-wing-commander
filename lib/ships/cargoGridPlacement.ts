@@ -219,8 +219,10 @@ type FindSlotCluster = {
   regionKey?: string;
   occupiedRegions?: ReadonlyMap<string, string>;
   /**
-   * When true, prefer stacking onto the same region (mixed cargo types OK)
-   * instead of forcing each new cargo type onto empty deck.
+   * When true, keep delivery-location piles easy to access: grow on the deck
+   * beside the pile (with a gap from other piles when possible) before stacking
+   * onto a different location. Same-location cargo types may still share a
+   * stack once the deck is full.
    */
   preferRegionStacking?: boolean;
   /**
@@ -228,6 +230,16 @@ type FindSlotCluster = {
    * (side-by-side or stacked) so mission groups stay one contiguous blob.
    */
   requireRegionContiguity?: boolean;
+  /**
+   * Never sit on a different region's crates (keeps priority mission piles
+   * clear of foreign cargo on top).
+   */
+  forbidForeignRegionSupport?: boolean;
+  /**
+   * Mission-based priority piles: pull toward one length-wise bay end
+   * (not the middle). `"high-x"` ≈ rear/ramp side of the zone.
+   */
+  preferBayEnd?: "low-x" | "high-x";
   /** 0 = earliest delivery; higher = later. */
   missionRank?: number;
   missionRankMax?: number;
@@ -391,6 +403,33 @@ function supportRegionCount(
   return same;
 }
 
+/**
+ * Contact with a *different* delivery-location pile — used to keep a 1-cell
+ * visual gap between groups (especially on narrow “churro” bays).
+ */
+function foreignRegionContact(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  regionKey: string | undefined,
+  occupiedRegions: ReadonlyMap<string, string> | undefined,
+): { side: number; support: number } {
+  if (!occupiedRegions || occupiedRegions.size === 0) {
+    return { side: 0, support: 0 };
+  }
+  let side = 0;
+  let support = 0;
+  for (const cell of cellsForBox(origin, footprint)) {
+    for (const neighbor of neighborCoords(cell)) {
+      const other = occupiedRegions.get(cargoGridCoordKey(neighbor));
+      if (other == null) continue;
+      if (regionKey != null && other === regionKey) continue;
+      if (neighbor.z === cell.z) side += 1;
+      else if (neighbor.z < cell.z) support += 1;
+    }
+  }
+  return { side, support };
+}
+
 /** Manhattan distance from footprint center to bay center (XY). */
 function edgeDistanceFromBayCenter(
   origin: CargoGridCoord,
@@ -402,6 +441,55 @@ function edgeDistanceFromBayCenter(
   const fx = origin.x + (footprint.dx - 1) / 2;
   const fy = origin.y + (footprint.dy - 1) / 2;
   return Math.abs(fx - bayCx) + Math.abs(fy - bayCy);
+}
+
+/** Signed offset along bay length from center (positive = high-X / rear side). */
+function lengthOffsetFromBayCenter(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  bounds: ZoneBounds,
+): number {
+  const bayCx = (bounds.xStart + bounds.xEnd - 1) / 2;
+  const fx = origin.x + (footprint.dx - 1) / 2;
+  return fx - bayCx;
+}
+
+/**
+ * Outer length band for priority mission piles (not the whole half-bay).
+ * Keeps mid-bay deck free for remaining cargo-type packs.
+ */
+function preferredBayEndDepth(bounds: ZoneBounds): number {
+  const bayLength = bounds.xEnd - bounds.xStart;
+  // Outer ~20% each end (min 2 cells) so mid-bay keeps most of the deck.
+  return Math.max(2, Math.round(bayLength * 0.2));
+}
+
+function isOnPreferredBayEnd(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  bounds: ZoneBounds,
+  preferBayEnd: "low-x" | "high-x",
+): boolean {
+  const fx = origin.x + (footprint.dx - 1) / 2;
+  const depth = preferredBayEndDepth(bounds);
+  if (preferBayEnd === "high-x") {
+    return fx >= bounds.xEnd - depth;
+  }
+  return fx < bounds.xStart + depth;
+}
+
+/** Strong pull toward a chosen bay end for mission priority piles. */
+function bayEndScore(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  bounds: ZoneBounds,
+  preferBayEnd: "low-x" | "high-x" | undefined,
+): number {
+  if (!preferBayEnd) return 0;
+  const offset = lengthOffsetFromBayCenter(origin, footprint, bounds);
+  const towardPreferred = preferBayEnd === "high-x" ? offset : -offset;
+  // Prefer the chosen half strongly; mild extra for being farther from center.
+  return towardPreferred * 48 + Math.max(0, towardPreferred) * 12;
 }
 
 /**
@@ -494,10 +582,15 @@ function findSlot(
     sameSupport: number;
     otherSupport: number;
     regionSupport: number;
+    foreignSide: number;
+    foreignSupport: number;
     identicalSizeStack: boolean;
   };
   const preferRegionStacking = Boolean(cluster?.preferRegionStacking);
   const requireRegionContiguity = Boolean(cluster?.requireRegionContiguity);
+  const forbidForeignRegionSupport = Boolean(
+    cluster?.forbidForeignRegionSupport,
+  );
   const candidates: Candidate[] = [];
   forEachPlacementOrigin(order, (origin) => {
     if (!fits(bounds, origin, footprint, occupied)) return;
@@ -520,6 +613,13 @@ function findSlot(
       cluster?.regionKey,
       cluster?.occupiedRegions,
     );
+    const foreign = foreignRegionContact(
+      origin,
+      footprint,
+      cluster?.regionKey,
+      cluster?.occupiedRegions,
+    );
+    if (forbidForeignRegionSupport && foreign.support > 0) return;
     const identicalSizeStack =
       cluster != null &&
       isIdenticalSizeStack(
@@ -534,9 +634,8 @@ function findSlot(
       regionSupport > 0 ||
       regionPull.horizontal > 0 ||
       regionPull.vertical > 0;
-    // Identical SCU towers first (8 on 8, 4 on 4), then own-type contact.
-    // Mission-based: reward stacking onto the same delivery-location pile even
-    // when the cargo type differs (load one type, then the next on top).
+    // Prefer deck growth; soft gap from other location piles (don't starve
+    // later missions of deck — that pushed whole piles into the air).
     const offRegionOther = preferRegionStacking
       ? Math.max(0, supportCounts.other - regionSupport)
       : supportCounts.other;
@@ -545,13 +644,17 @@ function findSlot(
       (identicalSizeStack ? 80 : 0) +
       affinity.horizontal * 20 +
       affinity.vertical * 12 +
-      regionPull.horizontal * (preferRegionStacking ? 18 : 8) +
-      regionPull.vertical * (preferRegionStacking ? 14 : 4) +
-      (origin.z === 0 ? 8 : 0) +
+      regionPull.horizontal * (preferRegionStacking ? 24 : 8) +
+      regionPull.vertical * (preferRegionStacking ? 8 : 4) +
+      (origin.z === 0 ? (preferRegionStacking ? 36 : 8) : 0) +
       supportCounts.same * 24 +
-      (preferRegionStacking ? regionSupport * 36 : 0) +
-      (touchesRegion && preferRegionStacking ? 40 : 0) -
-      offRegionOther * 40 +
+      (preferRegionStacking ? regionSupport * 12 : 0) +
+      (touchesRegion && preferRegionStacking && origin.z === 0 ? 40 : 0) +
+      (touchesRegion && preferRegionStacking && origin.z > 0 ? 8 : 0) -
+      offRegionOther * 40 -
+      foreign.side * (preferRegionStacking ? 18 : 12) -
+      foreign.support * (preferRegionStacking ? 48 : 20) +
+      bayEndScore(origin, footprint, bounds, cluster?.preferBayEnd) +
       missionPriorityScore(origin, footprint, bounds, cluster);
     candidates.push({
       origin,
@@ -562,6 +665,8 @@ function findSlot(
       sameSupport: supportCounts.same,
       otherSupport: supportCounts.other,
       regionSupport,
+      foreignSide: foreign.side,
+      foreignSupport: foreign.support,
       identicalSizeStack,
     });
   });
@@ -575,75 +680,145 @@ function findSlot(
     cluster.occupiedRegions != null &&
     [...cluster.occupiedRegions.values()].includes(cluster.regionKey);
 
+  // Same-cluster side contacts count too — priority mission piles use the
+  // location as both clusterKey and regionKey, so regionPull skips them.
   const touchesRegionPool = (c: Candidate) =>
+    c.regionSupport > 0 ||
+    c.regionPull.horizontal > 0 ||
+    c.regionPull.vertical > 0 ||
+    c.affinity.horizontal > 0 ||
+    c.affinity.vertical > 0 ||
+    c.sameSupport > 0;
+  const spaced = (c: Candidate) =>
+    c.foreignSide === 0 && c.foreignSupport === 0;
+  const besideOwnOnDeck = (c: Candidate) =>
+    c.onDeck &&
+    (c.regionPull.horizontal > 0 || c.affinity.horizontal > 0);
+  const onOwnGroup = (c: Candidate) =>
+    c.affinity.horizontal > 0 ||
+    c.affinity.vertical > 0 ||
+    c.sameSupport > 0 ||
     c.regionSupport > 0 ||
     c.regionPull.horizontal > 0 ||
     c.regionPull.vertical > 0;
 
+  /** Prefer first non-empty filter list (mission ease-of-access order). */
+  function pickPool(
+    ...groups: Candidate[][]
+  ): Candidate[] {
+    for (const group of groups) {
+      if (group.length > 0) return group;
+    }
+    return [];
+  }
+
+  const onDeckCandidates = candidates.filter((c) => c.onDeck);
+  const lowestElevatedZ = candidates.reduce(
+    (min, c) => (c.onDeck ? min : Math.min(min, c.origin.z)),
+    Number.POSITIVE_INFINITY,
+  );
+  const lowestElevated = Number.isFinite(lowestElevatedZ)
+    ? candidates.filter((c) => !c.onDeck && c.origin.z === lowestElevatedZ)
+    : [];
+
   let pool = candidates;
 
   // Mission groups must stay contiguous: once a location pile exists, every
-  // new crate for that location must touch it (side or stack).
+  // new crate for that location must touch it (side or stack). With a preferred
+  // bay end, fill that half (deck then stack up) before spilling mid-bay so
+  // later cargo-type packs still have deck room.
   if (requireRegionContiguity && hasRegion) {
     const touching = candidates.filter(touchesRegionPool);
-    if (touching.length > 0) {
-      const stackedOnRegion = touching.filter((c) => c.regionSupport > 0);
-      const besideRegion = touching.filter(
-        (c) => c.regionPull.horizontal > 0 || c.regionPull.vertical > 0,
-      );
-      if (hasCluster) {
-        const identicalStacks = touching.filter(
-          (c) => c.identicalSizeStack && c.otherSupport === 0,
-        );
-        const onOwn = touching.filter(
-          (c) =>
-            c.affinity.horizontal > 0 ||
-            c.affinity.vertical > 0 ||
-            c.sameSupport > 0,
-        );
-        if (identicalStacks.length > 0) pool = identicalStacks;
-        else if (onOwn.length > 0) pool = onOwn;
-        else if (stackedOnRegion.length > 0) pool = stackedOnRegion;
-        else pool = besideRegion.length > 0 ? besideRegion : touching;
-      } else if (stackedOnRegion.length > 0) {
-        pool = stackedOnRegion;
-      } else {
-        pool = besideRegion.length > 0 ? besideRegion : touching;
-      }
+    if (touching.length === 0) return null;
 
-      let bestTouch: Candidate | null = null;
-      for (const candidate of pool) {
-        if (!bestTouch || candidate.score > bestTouch.score) bestTouch = candidate;
-      }
-      return bestTouch?.origin ?? null;
+    const preferBayEnd = cluster?.preferBayEnd;
+    const onPreferredEnd =
+      preferBayEnd != null
+        ? (c: Candidate) =>
+            isOnPreferredBayEnd(c.origin, footprint, bounds, preferBayEnd)
+        : null;
+    const preferred = (list: Candidate[]) =>
+      onPreferredEnd != null ? list.filter((c) => onPreferredEnd(c)) : list;
+
+    const deckBeside = touching.filter((c) => besideOwnOnDeck(c));
+    const deckSpaced = deckBeside.filter((c) => spaced(c));
+    const identicalOwn = touching.filter(
+      (c) => c.identicalSizeStack && c.foreignSupport === 0,
+    );
+    const stackOwnCluster = touching.filter(
+      (c) =>
+        (c.identicalSizeStack || c.sameSupport > 0 || c.affinity.vertical > 0) &&
+        c.foreignSupport === 0,
+    );
+    const stackOwnRegion = touching.filter(
+      (c) => c.regionSupport > 0 && c.foreignSupport === 0,
+    );
+    const ownGroup = touching.filter(onOwnGroup);
+
+    pool = pickPool(
+      preferred(deckBeside),
+      preferred(deckSpaced),
+      preferred(identicalOwn),
+      preferred(stackOwnCluster),
+      preferred(stackOwnRegion),
+      preferred(ownGroup),
+      deckBeside,
+      deckSpaced,
+      identicalOwn,
+      stackOwnCluster,
+      stackOwnRegion,
+      ownGroup,
+      touching,
+    );
+
+    let bestTouch: Candidate | null = null;
+    for (const candidate of pool) {
+      if (!bestTouch || candidate.score > bestTouch.score) bestTouch = candidate;
     }
-    // No touching slot — refuse disconnected placement for this footprint.
-    return null;
+    return bestTouch?.origin ?? null;
   }
 
-  // New cargo-type pile.
+  // New cargo-type / new location pile.
   if (cluster != null && !hasCluster) {
+    const preferBayEnd = cluster.preferBayEnd;
+    const onPreferredEnd = preferBayEnd
+      ? (c: Candidate) =>
+          isOnPreferredBayEnd(c.origin, footprint, bounds, preferBayEnd)
+      : null;
     if (preferRegionStacking && hasRegion) {
-      // Next cargo type: stack onto the existing location pile when possible.
-      const stackedOnRegion = candidates.filter((c) => c.regionSupport > 0);
-      const besideRegion = candidates.filter(touchesRegionPool);
-      if (stackedOnRegion.length > 0) pool = stackedOnRegion;
-      else if (besideRegion.length > 0) pool = besideRegion;
-      else {
-        const onDeck = candidates.filter((c) => c.onDeck);
-        if (onDeck.length > 0) pool = onDeck;
-      }
-    } else {
-      // Start on the deck so large crates form the base. Prefer beside the
-      // same delivery-location region when set.
-      const besideRegion = candidates.filter(
-        (c) =>
-          c.onDeck &&
-          (c.regionPull.horizontal > 0 || c.regionPull.vertical > 0),
+      // Same location, new commodity: grow on the deck beside the pile first;
+      // only then stack onto that location's crates.
+      const deckBeside = candidates.filter((c) => besideOwnOnDeck(c));
+      const deckSpaced = deckBeside.filter((c) => spaced(c));
+      const stackOwnRegion = candidates.filter(
+        (c) => c.regionSupport > 0 && c.foreignSupport === 0,
       );
-      const onDeck = candidates.filter((c) => c.onDeck);
-      if (besideRegion.length > 0) pool = besideRegion;
-      else if (onDeck.length > 0) pool = onDeck;
+      const touching = candidates.filter(touchesRegionPool);
+      pool = pickPool(
+        deckBeside,
+        deckSpaced,
+        onDeckCandidates,
+        stackOwnRegion,
+        touching,
+        lowestElevated,
+      );
+    } else {
+      // Always seed on the deck when any deck cell is free — never start a
+      // new location pile floating on someone else's crates. Priority mission
+      // piles seed on their preferred front/rear half when possible.
+      const preferredDeck =
+        onPreferredEnd != null
+          ? onDeckCandidates.filter((c) => onPreferredEnd(c))
+          : [];
+      const spacedPreferred = preferredDeck.filter((c) => spaced(c));
+      const spacedDeck = onDeckCandidates.filter((c) => spaced(c));
+      pool = pickPool(
+        spacedPreferred,
+        preferredDeck,
+        onDeckCandidates,
+        spacedDeck,
+        lowestElevated,
+      );
     }
   }
 
@@ -677,7 +852,21 @@ function findSlot(
     // Prioritized unload: grow height on the existing type pile before
     // spreading a new deck column (early stops should sit on top of later).
     const preferUnloadStack = Boolean(cluster?.missionPriorityBias);
-    if (identicalStacks.length > 0) {
+    if (preferRegionStacking) {
+      // Deck beside own group first; gap is a soft score preference only.
+      pool = pickPool(
+        candidates.filter((c) => besideOwnOnDeck(c)),
+        sideBySide,
+        identicalStacks,
+        stackedOnOwn,
+        ownDeckOrSide,
+        onDeckCandidates,
+        sideOrOwnStack,
+        onOwn,
+        candidates.filter(touchesRegionPool),
+        lowestElevated,
+      );
+    } else if (identicalStacks.length > 0) {
       pool = identicalStacks;
     } else if (preferUnloadStack && stackedOnOwn.length > 0) {
       pool = stackedOnOwn;
@@ -692,9 +881,6 @@ function findSlot(
       pool = sideOrOwnStack;
     } else if (onOwn.length > 0) {
       pool = onOwn;
-    } else if (preferRegionStacking && hasRegion) {
-      const touching = candidates.filter(touchesRegionPool);
-      if (touching.length > 0) pool = touching;
     }
   } else if (hasRegion && !preferRegionStacking) {
     // New cargo type inside an existing location blob: stay beside it.
@@ -703,6 +889,8 @@ function findSlot(
     );
     if (besideRegion.length > 0) pool = besideRegion;
   }
+
+  if (pool.length === 0) pool = candidates;
 
   let best: Candidate | null = null;
   for (const candidate of pool) {
@@ -730,6 +918,8 @@ export type CargoPlacementItem = {
    * Soft region (delivery location). Keeps mixed commodities for one stop nearby.
    */
   regionKey?: string;
+  /** Prefer this length-wise bay end when seeding/growing the pile. */
+  preferBayEnd?: "low-x" | "high-x";
   deliveryLocationSlug?: string;
   deliveryLocationName?: string;
   /** 1-based delivery-order index for outlines / labels. */
@@ -775,14 +965,18 @@ export type PlaceCargoInZoneOptions = {
    */
   missionPriorityBias?: MissionPriorityPackBias | null;
   /**
-   * Mission-based: allow / prefer stacking the next cargo type onto an
-   * existing delivery-location pile.
+   * Mission-based: prefer growing a delivery-location pile on the deck /
+   * on itself before spreading elsewhere.
    */
   preferRegionStacking?: boolean;
   /**
    * Mission-based: once a location pile exists, new crates must touch it.
    */
   requireRegionContiguity?: boolean;
+  /**
+   * Never stack onto a different region's crates (priority mission piles).
+   */
+  forbidForeignRegionSupport?: boolean;
 };
 
 function sizesForSegment(segment: CargoPlacementSegment): CargoBoxScu[] {
@@ -985,6 +1179,8 @@ export function placeCargoItemsInZone(
           occupiedRegions,
           preferRegionStacking: options.preferRegionStacking,
           requireRegionContiguity: options.requireRegionContiguity,
+          forbidForeignRegionSupport: options.forbidForeignRegionSupport,
+          preferBayEnd: item.preferBayEnd,
           missionRank: item.missionRank,
           missionRankMax,
           missionPriorityBias: missionPriorityBias ?? undefined,
@@ -1502,7 +1698,7 @@ export const cargoBayPackModes = [
     id: "by-mission-location",
     label: "Mission based",
     summary:
-      "Load one cargo type at a time into contiguous delivery-location piles; later types stack on those piles.",
+      "First two delivery locations as exclusive piles (nothing stacked on them); remaining crates grouped by cargo type.",
   },
 ] as const;
 
@@ -1515,6 +1711,37 @@ const storageBayOrder: CargoGridStorageLocation[] = [
   "middle",
   "rear",
 ];
+
+/**
+ * Ships like the Centaurus map front/rear labels onto one physical hold.
+ * Merge those item lists so we pack the bay once (otherwise the second pass
+ * stacks on a full deck and crates look like they float off the grid).
+ */
+function mergeItemsByResolvedBay(
+  sketch: ShipCargoGridSketch,
+  itemsByStorage: Map<CargoGridStorageLocation, CargoPlacementItem[]>,
+): Array<{ storage: CargoGridStorageLocation; items: CargoPlacementItem[] }> {
+  const merged: Array<{
+    storage: CargoGridStorageLocation;
+    items: CargoPlacementItem[];
+    key: string;
+  }> = [];
+  for (const storage of storageBayOrder) {
+    const items = itemsByStorage.get(storage);
+    if (!items || items.length === 0) continue;
+    const bounds = zoneBoundsForStorage(sketch, storage);
+    const key = bounds
+      ? `${bounds.xStart}:${bounds.xEnd}:${bounds.yStart}:${bounds.yEnd}:${bounds.zEnd}`
+      : `missing:${storage}`;
+    const existing = merged.find((entry) => entry.key === key);
+    if (existing) {
+      existing.items.push(...items);
+      continue;
+    }
+    merged.push({ storage, items: [...items], key });
+  }
+  return merged.map(({ storage, items }) => ({ storage, items }));
+}
 
 /**
  * Earliest delivery stop rank per cargo key (mission+commodity or commodity).
@@ -1661,6 +1888,82 @@ export function deliveryLocationScuSplitsForCargo(
   }
   const pool = buildDeliveryScuPool(rows, rowIndex);
   return takeDeliveryLocationScuSplits(pool, cargo, cargo.scu);
+}
+
+/** One commodity slice inside a hangar pile for a delivery location. */
+export type PickupHangarPileSegment = {
+  locationSlug: string;
+  locationName: string;
+  locationGroupIndex: number;
+  commoditySlug: string;
+  commodityName: string;
+  color: string | null;
+  color2: string | null;
+  missionId: string | null;
+  scu: number;
+  sizes: CargoBoxScu[];
+};
+
+/**
+ * Attribute this stop’s pickup crates to upcoming delivery locations
+ * (shared pool — same rules as mission-based bay packing).
+ * Used by the pickup pad “Piles” view.
+ */
+export function pickupHangarPileSegments(
+  rows: HaulingChecklistRow[],
+  rowId: string,
+): PickupHangarPileSegment[] {
+  const rowIndex = rows.findIndex((row) => row.id === rowId);
+  if (rowIndex < 0) return [];
+  const row = rows[rowIndex]!;
+  const { pickups } = splitRowCargo(row);
+  if (pickups.length === 0) return [];
+
+  const locationOrder = upcomingDeliveryLocationSlugs(rows, rowId);
+  const locationGroups = locationGroupIndexMap(locationOrder);
+  const pool = buildDeliveryScuPool(rows, rowIndex);
+  const merged = new Map<string, PickupHangarPileSegment>();
+
+  for (const { cargo } of pickups) {
+    if (cargo.scu <= 0) continue;
+    const segment = segmentFromCargo(cargo);
+    const splits = takeDeliveryLocationScuSplits(pool, cargo, cargo.scu);
+    if (splits.length === 0) continue;
+    const byLocation = sizesByDeliveryLocation(segment, splits);
+    for (const slice of byLocation) {
+      if (!slice.locationSlug || slice.sizes.length === 0) continue;
+      const scu = slice.sizes.reduce((sum, size) => sum + size, 0);
+      if (scu <= 0) continue;
+      const key = `${slice.locationSlug}::${segment.commoditySlug}::${cargo.missionId ?? "_"}`;
+      const existing = merged.get(key);
+      if (existing) {
+        existing.scu += scu;
+        existing.sizes.push(...slice.sizes);
+        continue;
+      }
+      merged.set(key, {
+        locationSlug: slice.locationSlug,
+        locationName:
+          getLocationBySlug(slice.locationSlug)?.name ?? slice.locationSlug,
+        locationGroupIndex: locationGroups.get(slice.locationSlug) ?? 0,
+        commoditySlug: segment.commoditySlug,
+        commodityName: segment.commodityName,
+        color: segment.color,
+        color2: segment.color2,
+        missionId: cargo.missionId ?? null,
+        scu,
+        sizes: [...slice.sizes],
+      });
+    }
+  }
+
+  return [...merged.values()].sort((a, b) => {
+    const loc =
+      (a.locationGroupIndex || 99) - (b.locationGroupIndex || 99) ||
+      a.locationSlug.localeCompare(b.locationSlug);
+    if (loc !== 0) return loc;
+    return b.scu - a.scu || a.commodityName.localeCompare(b.commodityName);
+  });
 }
 
 /**
@@ -1935,9 +2238,10 @@ export function planOccupancyByCargoTypeAtStop(
   const boxes: PlacedCargoBox[] = [];
   const unplaced: CargoGridPlacementPlan["unplaced"] = [];
 
-  for (const storage of storageBayOrder) {
-    const items = itemsByStorage.get(storage);
-    if (!items || items.length === 0) continue;
+  for (const { storage, items } of mergeItemsByResolvedBay(
+    sketch,
+    itemsByStorage,
+  )) {
     const placed = placeCargoItemsInZone(sketch, storage, items, {
       occupied,
       occupiedClusters,
@@ -1958,11 +2262,14 @@ export function planOccupancyByCargoTypeAtStop(
   };
 }
 
+/** First N upcoming delivery locations get exclusive accessible piles. */
+const MISSION_PRIORITY_LOCATION_COUNT = 2;
+
 /**
- * Pack remaining route deliveries as mission-location piles, loaded one cargo
- * type at a time: place each type into location piles (edge bias), then stack
- * the next type onto those piles. Early stops toward bay edges when the ship
- * bias says so.
+ * Pack remaining route deliveries for easy unload:
+ * 1) First delivery location — one tight pile, nothing else on top
+ * 2) Second location — same
+ * 3) Everything else — group by cargo type (not location)
  */
 export function planOccupancyByMissionLocationAtStop(
   sketch: ShipCargoGridSketch,
@@ -1973,10 +2280,6 @@ export function planOccupancyByMissionLocationAtStop(
   if (from < 0) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
-
-  const shipPrefs = getShipBayPreferenceFixture(sketch.shipSlug);
-  const missionPriorityBias =
-    shipPrefs.missionPriorityPacking?.bias ?? null;
 
   const locationOrder: string[] = [];
   const itemsByStorage = new Map<
@@ -1995,6 +2298,13 @@ export function planOccupancyByMissionLocationAtStop(
     const locationGroupIndex = missionRank + 1;
     const locationName =
       getLocationBySlug(stop.locationSlug)?.name ?? stop.locationSlug;
+    const isPriorityLocation = missionRank < MISSION_PRIORITY_LOCATION_COUNT;
+    // First two missions sit on opposite ends (rear vs front), never mid-bay.
+    const preferBayEnd: "low-x" | "high-x" | undefined = isPriorityLocation
+      ? missionRank === 0
+        ? "high-x"
+        : "low-x"
+      : undefined;
 
     for (const { cargo, storage } of deliveries) {
       const segment = segmentFromCargo(cargo);
@@ -2008,11 +2318,15 @@ export function planOccupancyByMissionLocationAtStop(
           color2: segment.color2,
           action: "delivery",
           missionRank,
-          // Hard cluster = cargo type within a location; region = location pile
-          // so the next cargo type can stack onto the same mission group.
-          clusterKey: `${stop.locationSlug}::${segment.commoditySlug}`,
-          clusterLabel: `${segment.commodityName} · ${locationName}`,
-          regionKey: stop.locationSlug,
+          // Priority locations: whole stop is one pile. Rest: cargo type only.
+          clusterKey: isPriorityLocation
+            ? stop.locationSlug
+            : segment.commoditySlug,
+          clusterLabel: isPriorityLocation
+            ? locationName
+            : segment.commodityName,
+          regionKey: isPriorityLocation ? stop.locationSlug : undefined,
+          preferBayEnd,
           deliveryLocationSlug: stop.locationSlug,
           deliveryLocationName: locationName,
           locationGroupIndex,
@@ -2028,23 +2342,61 @@ export function planOccupancyByMissionLocationAtStop(
   const boxes: PlacedCargoBox[] = [];
   const unplaced: CargoGridPlacementPlan["unplaced"] = [];
 
-  for (const storage of storageBayOrder) {
-    const items = itemsByStorage.get(storage);
-    if (!items || items.length === 0) continue;
-    const placed = placeCargoItemsInZone(sketch, storage, items, {
-      occupied,
-      occupiedClusters,
-      occupiedRegions,
-      clusterByKey: true,
-      clusterOrder: "cargo-then-location",
-      preferRegionStacking: true,
-      requireRegionContiguity: true,
-      missionPriorityBias,
-    });
+  const appendPlaced = (placed: CargoGridPlacementPlan) => {
     boxes.push(...placed.boxes);
     unplaced.push(...placed.unplaced);
     for (const box of placed.boxes) {
       occupied.push(...box.cells);
+    }
+  };
+
+  for (const { storage, items } of mergeItemsByResolvedBay(
+    sketch,
+    itemsByStorage,
+  )) {
+    const priorityByRank: CargoPlacementItem[][] = Array.from(
+      { length: MISSION_PRIORITY_LOCATION_COUNT },
+      () => [],
+    );
+    const restItems: CargoPlacementItem[] = [];
+    for (const item of items) {
+      const rank = item.missionRank ?? Number.POSITIVE_INFINITY;
+      if (rank < MISSION_PRIORITY_LOCATION_COUNT) {
+        priorityByRank[rank]!.push(item);
+      } else {
+        restItems.push(item);
+      }
+    }
+
+    for (const priorityItems of priorityByRank) {
+      if (priorityItems.length === 0) continue;
+      appendPlaced(
+        placeCargoItemsInZone(sketch, storage, priorityItems, {
+          occupied,
+          occupiedClusters,
+          occupiedRegions,
+          clusterByKey: true,
+          preferRegionStacking: true,
+          requireRegionContiguity: true,
+          forbidForeignRegionSupport: true,
+          // End bias comes from preferBayEnd on each item, not rank/max.
+          missionPriorityBias: null,
+        }),
+      );
+    }
+
+    if (restItems.length > 0) {
+      appendPlaced(
+        placeCargoItemsInZone(sketch, storage, restItems, {
+          occupied,
+          occupiedClusters,
+          occupiedRegions,
+          clusterByKey: true,
+          forbidForeignRegionSupport: true,
+          // Fill leftover (typically mid-bay) by cargo type.
+          missionPriorityBias: null,
+        }),
+      );
     }
   }
 

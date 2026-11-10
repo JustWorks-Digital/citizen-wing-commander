@@ -1,24 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
-import type { StopCargoStacksPlan } from "@/lib/missions/stopDeliveryBoxes";
+import {
+  focusPickupHangarPile,
+  type StopCargoStacksPlan,
+} from "@/lib/missions/stopDeliveryBoxes";
 
 export type StopDeliveryStacksViewProps = {
   plan: StopCargoStacksPlan;
   /** Cell size in px for the flat oblique projection. */
   cellPx?: number;
   className?: string;
+  /** Controlled peel; defaults to on when omitted. */
+  peelStack?: boolean;
+  onPeelStackChange?: (value: boolean) => void;
+  /** Hide the built-in Peel control (e.g. host it next to Cargo / Piles). */
+  hidePeel?: boolean;
 };
 
 type Point = { x: number; y: number };
 const FALLBACK_HEX = "#54a0f7";
-const ZOOM_MIN = 0.75;
+const ZOOM_MIN = 0.35;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
+/** Horizontal padding on the scroll viewport (`px-2.5` × 2). */
+const VIEWPORT_PAD_X = 20;
 
 const FLOOR_TOP =
   "color-mix(in srgb, var(--rsi-surface) 70%, var(--rsi-bg-deep))";
@@ -148,6 +158,45 @@ function visualHz(hz: number, peelStack: boolean): number {
   return hz + hz * PEEL_GAP;
 }
 
+function stackViewBounds(
+  lengthCells: number,
+  widthCells: number,
+  viewHeight: number,
+  cellSize: number,
+  hasPileLabels: boolean,
+): { minX: number; minY: number; width: number; height: number } {
+  const pileHeaderPad = hasPileLabels ? cellSize * 2.1 : 0;
+  const labelPad = cellSize * 2.75 + pileHeaderPad;
+  const corners = [
+    project(0, 0, 0, cellSize),
+    project(lengthCells, 0, 0, cellSize),
+    project(0, widthCells, 0, cellSize),
+    project(lengthCells, widthCells, 0, cellSize),
+    project(0, 0, viewHeight, cellSize),
+    project(lengthCells, 0, viewHeight, cellSize),
+    project(0, widthCells, viewHeight, cellSize),
+    project(lengthCells, widthCells, viewHeight, cellSize),
+  ];
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const point of corners) {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  }
+  const padX = cellSize;
+  const padY = cellSize * 0.55;
+  return {
+    minX: minX - padX,
+    minY: minY - padY,
+    width: maxX - minX + padX * 2,
+    height: maxY - minY + padY * 2 + labelPad,
+  };
+}
+
 function sortKey(box: PlacedCargoBox, peelStack: boolean): number {
   const { origin, footprint } = box;
   const hz = visualHz(origin.z, peelStack);
@@ -168,51 +217,103 @@ export function StopDeliveryStacksView({
   plan,
   cellPx = 14,
   className,
+  peelStack: peelStackProp,
+  onPeelStackChange,
+  hidePeel = false,
 }: StopDeliveryStacksViewProps) {
   const [legendCollapsed, setLegendCollapsed] = useState(true);
-  const [peelStack, setPeelStack] = useState(true);
+  const [peelStackInternal, setPeelStackInternal] = useState(true);
+  const peelStack = peelStackProp ?? peelStackInternal;
   const [zoom, setZoom] = useState(1);
+
+  function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
+    const next = typeof value === "function" ? value(peelStack) : value;
+    if (onPeelStackChange) onPeelStackChange(next);
+    else setPeelStackInternal(next);
+  }
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [pileIndex, setPileIndex] = useState(0);
   const [hiddenCommodities, setHiddenCommodities] = useState<
     ReadonlySet<string>
   >(() => new Set());
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const userZoomedRef = useRef(false);
 
-  const { lengthCells, widthCells, heightCells, stackLabels } = plan;
-  const showPeel = heightCells > 1;
+  const allPileLabels = plan.pileLabels ?? [];
+  const showPileNav = allPileLabels.length > 0;
+  const pileRouteKey = allPileLabels.map((pile) => pile.locationSlug).join("|");
+
+  useEffect(() => {
+    setPileIndex(0);
+  }, [pileRouteKey]);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const update = () => setViewportWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const safePileIndex = showPileNav
+    ? Math.min(Math.max(0, pileIndex), allPileLabels.length - 1)
+    : 0;
+  const activePile = showPileNav ? (allPileLabels[safePileIndex] ?? null) : null;
+  const activePileSlug = activePile?.locationSlug ?? null;
+
+  const displayPlan = useMemo(() => {
+    if (!activePileSlug) return plan;
+    return focusPickupHangarPile(plan, activePileSlug) ?? plan;
+  }, [plan, activePileSlug]);
+
+  const { lengthCells, widthCells, heightCells, stackLabels, pileLabels } =
+    displayPlan;
+  const showPeel = heightCells > 1 && !hidePeel;
   const viewHeight = visualHz(heightCells, peelStack);
   const stackWidthCells = 2;
-  const renderCellPx = cellPx * zoom;
-  const labelPad = renderCellPx * 2.75;
+  const hasPileLabels = Boolean(pileLabels && pileLabels.length > 0);
 
-  const bounds = useMemo(() => {
-    const corners = [
-      project(0, 0, 0, renderCellPx),
-      project(lengthCells, 0, 0, renderCellPx),
-      project(0, widthCells, 0, renderCellPx),
-      project(lengthCells, widthCells, 0, renderCellPx),
-      project(0, 0, viewHeight, renderCellPx),
-      project(lengthCells, 0, viewHeight, renderCellPx),
-      project(0, widthCells, viewHeight, renderCellPx),
-      project(lengthCells, widthCells, viewHeight, renderCellPx),
-    ];
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const point of corners) {
-      minX = Math.min(minX, point.x);
-      maxX = Math.max(maxX, point.x);
-      minY = Math.min(minY, point.y);
-      maxY = Math.max(maxY, point.y);
-    }
-    const padX = renderCellPx;
-    const padY = renderCellPx * 0.55;
-    return {
-      minX: minX - padX,
-      minY: minY - padY,
-      width: maxX - minX + padX * 2,
-      height: maxY - minY + padY * 2 + labelPad,
-    };
-  }, [renderCellPx, lengthCells, widthCells, viewHeight, labelPad]);
+  const baseBoundsWidth = useMemo(
+    () =>
+      stackViewBounds(
+        lengthCells,
+        widthCells,
+        viewHeight,
+        cellPx,
+        hasPileLabels,
+      ).width,
+    [lengthCells, widthCells, viewHeight, cellPx, hasPileLabels],
+  );
+
+  const fitZoom = useMemo(() => {
+    const available = Math.max(0, viewportWidth - VIEWPORT_PAD_X);
+    if (available <= 0 || baseBoundsWidth <= 0) return 1;
+    return clampZoom(available / baseBoundsWidth);
+  }, [viewportWidth, baseBoundsWidth]);
+
+  useEffect(() => {
+    userZoomedRef.current = false;
+  }, [pileRouteKey, lengthCells, widthCells, heightCells, peelStack]);
+
+  useEffect(() => {
+    if (!userZoomedRef.current) setZoom(fitZoom);
+  }, [fitZoom]);
+
+  const renderCellPx = cellPx * zoom;
+
+  const bounds = useMemo(
+    () =>
+      stackViewBounds(
+        lengthCells,
+        widthCells,
+        viewHeight,
+        renderCellPx,
+        hasPileLabels,
+      ),
+    [lengthCells, widthCells, viewHeight, renderCellPx, hasPileLabels],
+  );
 
   const floorTiles = useMemo(() => {
     const tiles: { key: string; lx: number; wy: number }[] = [];
@@ -226,11 +327,14 @@ export function StopDeliveryStacksView({
 
   const boxes = useMemo(
     () =>
-      [...plan.boxes].sort(
+      [...displayPlan.boxes].sort(
         (a, b) => sortKey(a, peelStack) - sortKey(b, peelStack),
       ),
-    [plan.boxes, peelStack],
+    [displayPlan.boxes, peelStack],
   );
+
+  const canGoPrev = showPileNav && safePileIndex > 0;
+  const canGoNext = showPileNav && safePileIndex < allPileLabels.length - 1;
 
   function toggleCommodity(slug: string) {
     setHiddenCommodities((prev) => {
@@ -250,16 +354,106 @@ export function StopDeliveryStacksView({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex shrink-0 flex-nowrap items-start justify-between gap-2 px-2.5 pt-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="sr-only">Delivery cargo stacks</span>
+      <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2 px-2.5 pt-1.5">
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="sr-only">
+            {pileLabels && pileLabels.length > 0
+              ? "Hangar piles by delivery location"
+              : "Delivery cargo stacks"}
+          </span>
+          <div className="relative z-10 shrink-0">
+            <button
+              type="button"
+              aria-expanded={!legendCollapsed}
+              aria-controls="stop-delivery-stacks-breakdown"
+              title={legendCollapsed ? "Show breakdown" : "Hide breakdown"}
+              onClick={() => setLegendCollapsed((value) => !value)}
+              className={[
+                "inline-flex items-center gap-1 rounded-rsi border px-1.5 py-1.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] transition-colors",
+                legendCollapsed
+                  ? "border-rsi-border/80 bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-accent/40 hover:text-rsi-accent"
+                  : "border-rsi-accent/40 bg-rsi-accent-muted/30 text-rsi-accent",
+              ].join(" ")}
+            >
+              <span aria-hidden>{legendCollapsed ? "‹" : "›"}</span>
+              Breakdown
+            </button>
+            {!legendCollapsed ? (
+              <aside
+                id="stop-delivery-stacks-breakdown"
+                aria-label="Cargo breakdown"
+                className="absolute top-0 left-full z-10 ml-1.5 w-[12.5rem] rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
+              >
+                <ul className="space-y-0.5">
+                  {displayPlan.legendItems.map((item) => {
+                    const hex =
+                      resolveCommodityColorHex(
+                        item.color,
+                        item.color2,
+                        item.commoditySlug,
+                      ) ?? FALLBACK_HEX;
+                    const isOn = !hiddenCommodities.has(item.commoditySlug);
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          aria-pressed={isOn}
+                          onClick={() => toggleCommodity(item.commoditySlug)}
+                          className="flex w-full cursor-pointer text-left"
+                        >
+                          <span
+                            className={[
+                              "flex min-w-0 flex-1 items-center gap-1.5",
+                              isOn ? "" : "opacity-55",
+                            ].join(" ")}
+                          >
+                            <span
+                              className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
+                              style={{ backgroundColor: hex }}
+                              aria-hidden
+                            />
+                            <span
+                              className={[
+                                "min-w-0 flex-1 truncate text-left text-[0.7rem] leading-none",
+                                isOn ? "text-rsi-text" : "text-rsi-text-muted",
+                              ].join(" ")}
+                            >
+                              {item.locationName
+                                ? `${item.commodityName} · ${item.locationName}`
+                                : item.commodityName}
+                            </span>
+                            {item.isSplitMission ? (
+                              <span
+                                className="inline-flex shrink-0 text-rsi-warn"
+                                title="Same cargo type from separate missions"
+                              >
+                                <SplitMissionIcon className="size-3" />
+                                <span className="sr-only">
+                                  Same cargo type from separate missions
+                                </span>
+                              </span>
+                            ) : null}
+                            <CargoBoxCountIcons
+                              boxCounts={item.boxCounts}
+                              color={hex}
+                              className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
+                            />
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </aside>
+            ) : null}
+          </div>
           {showPeel ? (
             <button
               type="button"
               aria-pressed={peelStack}
               onClick={() => setPeelStack((value) => !value)}
               className={[
-                "rounded-rsi border px-2 py-1 font-mono text-[0.6rem] uppercase tracking-[0.14em] transition-colors",
+                "rounded-rsi border px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
                 peelStack
                   ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
                   : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
@@ -269,143 +463,71 @@ export function StopDeliveryStacksView({
             </button>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div
+          className="inline-flex shrink-0 overflow-hidden rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95"
+          role="group"
+          aria-label="Cargo stack zoom"
+        >
           <button
             type="button"
-            aria-expanded={!legendCollapsed}
-            aria-controls="stop-delivery-stacks-breakdown"
-            title={legendCollapsed ? "Show breakdown" : "Hide breakdown"}
-            onClick={() => setLegendCollapsed((value) => !value)}
+            aria-label="Zoom out"
+            title="Zoom out"
+            disabled={zoom <= ZOOM_MIN}
+            onClick={() => {
+              userZoomedRef.current = true;
+              setZoom((value) => clampZoom(value - ZOOM_STEP));
+            }}
             className={[
-              "inline-flex h-auto items-center gap-1 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] transition-colors",
-              legendCollapsed
-                ? "border-rsi-border/80 bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-accent/40 hover:text-rsi-accent"
-                : "border-rsi-accent/40 bg-rsi-accent-muted/30 text-rsi-accent",
+              "inline-flex size-6 items-center justify-center border-r border-rsi-border/80 font-mono text-[0.7rem]",
+              "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
+              "disabled:cursor-default disabled:opacity-40",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             ].join(" ")}
           >
-            <span aria-hidden>{legendCollapsed ? "‹" : "›"}</span>
-            Breakdown
+            −
           </button>
-          <div
-            className="inline-flex overflow-hidden rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95"
-            role="group"
-            aria-label="Cargo stack zoom"
+          <button
+            type="button"
+            aria-label="Fit zoom"
+            title="Fit to width"
+            onClick={() => {
+              userZoomedRef.current = false;
+              setZoom(fitZoom);
+            }}
+            className={[
+              "inline-flex min-w-[2.5rem] items-center justify-center border-r border-rsi-border/80 px-1",
+              "font-mono text-[0.5rem] tabular-nums tracking-[0.08em] text-rsi-text-muted",
+              "transition-colors hover:text-rsi-accent",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            ].join(" ")}
           >
-            <button
-              type="button"
-              aria-label="Zoom out"
-              title="Zoom out"
-              disabled={zoom <= ZOOM_MIN}
-              onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
-              className={[
-                "inline-flex size-6 items-center justify-center border-r border-rsi-border/80 font-mono text-[0.7rem]",
-                "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
-                "disabled:cursor-default disabled:opacity-40",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-              ].join(" ")}
-            >
-              −
-            </button>
-            <button
-              type="button"
-              aria-label="Reset zoom"
-              title="Reset zoom"
-              onClick={() => setZoom(1)}
-              className={[
-                "inline-flex min-w-[2.5rem] items-center justify-center border-r border-rsi-border/80 px-1",
-                "font-mono text-[0.5rem] tabular-nums tracking-[0.08em] text-rsi-text-muted",
-                "transition-colors hover:text-rsi-accent",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-              ].join(" ")}
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <button
-              type="button"
-              aria-label="Zoom in"
-              title="Zoom in"
-              disabled={zoom >= ZOOM_MAX}
-              onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
-              className={[
-                "inline-flex size-6 items-center justify-center font-mono text-[0.7rem]",
-                "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
-                "disabled:cursor-default disabled:opacity-40",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-              ].join(" ")}
-            >
-              +
-            </button>
-          </div>
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            disabled={zoom >= ZOOM_MAX}
+            onClick={() => {
+              userZoomedRef.current = true;
+              setZoom((value) => clampZoom(value + ZOOM_STEP));
+            }}
+            className={[
+              "inline-flex size-6 items-center justify-center font-mono text-[0.7rem]",
+              "text-rsi-text-secondary transition-colors hover:text-rsi-accent",
+              "disabled:cursor-default disabled:opacity-40",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            ].join(" ")}
+          >
+            +
+          </button>
         </div>
       </div>
 
-      <div className="relative min-w-0 overflow-x-auto px-2.5 pb-2.5 pt-1">
-        {!legendCollapsed ? (
-          <aside
-            id="stop-delivery-stacks-breakdown"
-            aria-label="Cargo breakdown"
-            className="absolute top-1 right-2.5 z-10 w-[12.5rem] rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
-          >
-            <ul className="space-y-0.5">
-              {plan.legendItems.map((item) => {
-                const hex =
-                  resolveCommodityColorHex(
-                    item.color,
-                    item.color2,
-                    item.commoditySlug,
-                  ) ?? FALLBACK_HEX;
-                const isOn = !hiddenCommodities.has(item.commoditySlug);
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      aria-pressed={isOn}
-                      onClick={() => toggleCommodity(item.commoditySlug)}
-                      className="flex w-full cursor-pointer text-left"
-                    >
-                      <span
-                        className={[
-                          "flex min-w-0 flex-1 items-center gap-1.5",
-                          isOn ? "" : "opacity-55",
-                        ].join(" ")}
-                      >
-                        <span
-                          className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
-                          style={{ backgroundColor: hex }}
-                          aria-hidden
-                        />
-                        <span
-                          className={[
-                            "min-w-0 flex-1 truncate text-left text-[0.7rem] leading-none",
-                            isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                          ].join(" ")}
-                        >
-                          {item.commodityName}
-                        </span>
-                        {item.isSplitMission ? (
-                          <span
-                            className="inline-flex shrink-0 text-rsi-warn"
-                            title="Same cargo type from separate missions"
-                          >
-                            <SplitMissionIcon className="size-3" />
-                            <span className="sr-only">
-                              Same cargo type from separate missions
-                            </span>
-                          </span>
-                        ) : null}
-                        <CargoBoxCountIcons
-                          boxCounts={item.boxCounts}
-                          color={hex}
-                          className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
-                        />
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
-        ) : null}
+      <div
+        ref={viewportRef}
+        className="relative min-w-0 overflow-x-auto px-2.5 pb-2.5 pt-1"
+      >
         <div className="flex w-max min-w-full items-start justify-center">
           <svg
             role="img"
@@ -441,7 +563,7 @@ export function StopDeliveryStacksView({
                 box.footprint,
                 renderCellPx,
               );
-              const isPickup = (box.action ?? plan.action) === "pickup";
+              const isPickup = (box.action ?? displayPlan.action) === "pickup";
               const actionStroke = isPickup
                 ? "color-mix(in srgb, var(--rsi-accent) 32%, var(--rsi-border-strong))"
                 : "color-mix(in srgb, var(--rsi-success) 38%, var(--rsi-border-strong))";
@@ -449,8 +571,12 @@ export function StopDeliveryStacksView({
               return (
                 <g key={box.id} opacity={dimmed ? 0.28 : 1}>
                   <title>
-                    {isPickup ? "Pickup" : "Delivery"} · {box.commodityName} ·{" "}
-                    {box.size} SCU
+                    {box.deliveryLocationName
+                      ? `${box.deliveryLocationName} pile`
+                      : isPickup
+                        ? "Pickup"
+                        : "Delivery"}{" "}
+                    · {box.commodityName} · {box.size} SCU
                   </title>
                   <polygon points={faces.west} fill={colors.west} />
                   <polygon points={faces.south} fill={colors.south} />
@@ -481,6 +607,40 @@ export function StopDeliveryStacksView({
                 </g>
               );
             })}
+            {pileLabels?.map((pile) => {
+              const left = project(pile.x, widthCells / 2, viewHeight, renderCellPx);
+              const right = project(
+                pile.x + pile.widthCells,
+                widthCells / 2,
+                viewHeight,
+                renderCellPx,
+              );
+              const midX = (left.x + right.x) / 2;
+              const topY = Math.min(left.y, right.y) - renderCellPx * 1.55;
+              const fontSize = Math.max(8, Math.round(renderCellPx * 0.55));
+              return (
+                <g key={`pile-${pile.id}`}>
+                  <title>
+                    {pile.locationName} pile · {pile.scu} SCU
+                  </title>
+                  <text
+                    x={midX}
+                    y={topY}
+                    textAnchor="middle"
+                    dominantBaseline="auto"
+                    fill="var(--rsi-text-secondary)"
+                    style={{
+                      fontFamily: "var(--font-mono, ui-monospace, monospace)",
+                      fontSize,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {pile.abbrev} · {pile.scu}
+                  </text>
+                </g>
+              );
+            })}
             {stackLabels.map((label) => {
               const dimmed = hiddenCommodities.has(label.commoditySlug);
               const foot = project(
@@ -490,7 +650,7 @@ export function StopDeliveryStacksView({
                 renderCellPx,
               );
               const scuTitle =
-                plan.action === "pickup"
+                displayPlan.action === "pickup"
                   ? `${label.scu} SCU pickup · ${label.commodityName}`
                   : `${label.scu} SCU delivery · ${label.commodityName}`;
               const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
@@ -561,6 +721,60 @@ export function StopDeliveryStacksView({
           </svg>
         </div>
       </div>
+      {showPileNav && activePile ? (
+        <div
+          className="flex shrink-0 items-center gap-2 border-t border-rsi-border/80 px-2.5 py-2"
+          role="navigation"
+          aria-label="Hangar pile"
+        >
+          <button
+            type="button"
+            aria-label="Previous pile"
+            title="Previous pile"
+            disabled={!canGoPrev}
+            onClick={() => setPileIndex((value) => Math.max(0, value - 1))}
+            className={[
+              "inline-flex size-7 shrink-0 items-center justify-center rounded-rsi border font-mono text-sm transition-colors",
+              canGoPrev
+                ? "border-rsi-border bg-rsi-bg-deep/80 text-rsi-text-secondary hover:border-rsi-accent/45 hover:text-rsi-accent"
+                : "cursor-default border-rsi-border/50 bg-rsi-bg-deep/40 text-rsi-text-muted opacity-40",
+            ].join(" ")}
+          >
+            ‹
+          </button>
+          <div className="min-w-0 flex-1 text-center">
+            <p
+              className="truncate text-sm font-medium leading-snug text-rsi-text"
+              title={`${activePile.locationName} pile`}
+            >
+              {activePile.locationName}
+            </p>
+            <p className="mt-0.5 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+              Pile {safePileIndex + 1}/{allPileLabels.length}
+              <span className="ml-1.5 tabular-nums">{activePile.scu} SCU</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Next pile"
+            title="Next pile"
+            disabled={!canGoNext}
+            onClick={() =>
+              setPileIndex((value) =>
+                Math.min(allPileLabels.length - 1, value + 1),
+              )
+            }
+            className={[
+              "inline-flex size-7 shrink-0 items-center justify-center rounded-rsi border font-mono text-sm transition-colors",
+              canGoNext
+                ? "border-rsi-border bg-rsi-bg-deep/80 text-rsi-text-secondary hover:border-rsi-accent/45 hover:text-rsi-accent"
+                : "cursor-default border-rsi-border/50 bg-rsi-bg-deep/40 text-rsi-text-muted opacity-40",
+            ].join(" ")}
+          >
+            ›
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
