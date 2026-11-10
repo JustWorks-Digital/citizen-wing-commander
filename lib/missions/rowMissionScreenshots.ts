@@ -11,11 +11,41 @@ export type RowMissionScreenshotRef = {
   /** Mission title(s) this shot belongs to. */
   missionTitles: string[];
   /**
+   * Lightbox bottom caption(s): mission title + SCU splits for verification.
+   * Joined with blank lines when multiple missions share a shot.
+   */
+  captions: string[];
+  /**
    * Image URL for `<batchId>/<filename>` under the screenshot store.
    * Null when the logical path cannot be resolved to an API URL.
    */
   url: string | null;
 };
+
+/** Compact per-stop / cargo SCU lines for session mission screenshot captions. */
+export function sessionMissionScuSplitsCaption(mission: SessionMission): string {
+  if (mission.deliverySplits && mission.deliverySplits.length > 0) {
+    return mission.deliverySplits
+      .map((split) => {
+        const cargo = `${split.scu} SCU ${split.commodity}`;
+        if (split.from === split.to) return `${cargo} · ${split.to}`;
+        return `${cargo} · ${split.from} → ${split.to}`;
+      })
+      .join("\n");
+  }
+  if (mission.cargo.length > 0) {
+    return mission.cargo
+      .map((line) => `${line.scu} SCU ${line.commodity}`)
+      .join(" · ");
+  }
+  return mission.cargoSummary?.trim() || "";
+}
+
+/** Mission title + SCU splits for source screenshot captions. */
+export function sessionMissionSourceCaption(mission: SessionMission): string {
+  const splits = sessionMissionScuSplitsCaption(mission);
+  return splits ? `${mission.title}\n${splits}` : mission.title;
+}
 
 function locationMatchesRow(
   locationNameOrSlug: string,
@@ -139,10 +169,14 @@ export function screenshotRefsForRow(
     for (const logicalPath of mission.screenshots) {
       const trimmed = logicalPath.trim();
       if (!trimmed) continue;
+      const caption = sessionMissionSourceCaption(mission);
       const existing = byPath.get(trimmed);
       if (existing) {
         if (!existing.missionTitles.includes(mission.title)) {
           existing.missionTitles.push(mission.title);
+        }
+        if (!existing.captions.includes(caption)) {
+          existing.captions.push(caption);
         }
         continue;
       }
@@ -152,6 +186,7 @@ export function screenshotRefsForRow(
         filename,
         label: labelFromFilename(filename),
         missionTitles: [mission.title],
+        captions: [caption],
         url: screenshotUrlForSession(trimmed, sessionId),
       });
     }

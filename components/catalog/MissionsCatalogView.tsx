@@ -23,6 +23,7 @@ import {
   catalogCargoIdentitySummary,
   catalogPayload,
   catalogRewardLabel,
+  catalogSourceScreenshotCaption,
 } from "@/lib/missions/catalogMissionDisplay";
 import { auecFromRewards } from "@/lib/missions/catalogMission";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
@@ -207,7 +208,8 @@ export function MissionsCatalogView({
     setLightbox({
       src: url,
       alt: filename,
-      title: `${mission.title} · ${filename}`,
+      title: filename,
+      caption: catalogSourceScreenshotCaption(mission),
     });
   };
 
@@ -379,6 +381,7 @@ export function MissionsCatalogView({
           src={lightbox.src}
           alt={lightbox.alt}
           title={lightbox.title}
+          caption={lightbox.caption}
           onClose={() => setLightbox(null)}
         />
       ) : null}

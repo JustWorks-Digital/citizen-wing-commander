@@ -5,6 +5,7 @@ import {
 import {
   buildHaulingCatalogMissionPayload,
   catalogMissionFingerprint,
+  catalogMissionVariantFamilyKey,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import {
@@ -57,11 +58,13 @@ export async function backfillCatalogRanks(): Promise<{
         rank,
       });
       const fingerprint = catalogMissionFingerprint(nextPayload);
+      const variantFamilyKey = catalogMissionVariantFamilyKey(nextPayload);
 
       const unchanged =
         nextPayload.title === mission.title &&
         (nextPayload.rank ?? null) === (mission.rank ?? null) &&
         fingerprint === mission.fingerprint &&
+        variantFamilyKey === mission.variantFamilyKey &&
         nextPayload.title === mission.payload.title &&
         (nextPayload.rank ?? null) === (mission.payload.rank ?? null);
 
@@ -77,6 +80,7 @@ export async function backfillCatalogRanks(): Promise<{
           rank: nextPayload.rank ?? null,
           payload: nextPayload,
           fingerprint,
+          variantFamilyKey,
         });
       } catch (error) {
         // Fingerprint collision after stripping rank — keep existing fingerprint.
@@ -88,6 +92,7 @@ export async function backfillCatalogRanks(): Promise<{
           rank: nextPayload.rank ?? null,
           payload: nextPayload,
           fingerprint: mission.fingerprint,
+          variantFamilyKey,
         });
       }
       updated += 1;

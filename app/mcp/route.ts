@@ -5,6 +5,7 @@ import {
   toolApplyHaulingContractsIntake,
   toolClearHaulingScreenshots,
   toolCreateHaulingSession,
+  toolBackfillCatalogMissionVariants,
   toolCreateMission,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
@@ -599,7 +600,7 @@ const handler = createMcpHandler(
       {
         title: "Create mission",
         description:
-          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), screenshot path, scuMaxContainerSize. Upserts by fingerprint.",
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), screenshot path, scuMaxContainerSize, category, variantOf. Same SCU upserts by fingerprint (aUEC-only diffs update the same row). Different SCU creates a linked variant (auto family match or variantOf).",
         inputSchema: z.object({
           type: z
             .enum(["hauling"])
@@ -708,12 +709,32 @@ const handler = createMcpHandler(
             .describe(
               "Hauling: screenshot-style Primary Objectives bullets (plain text). Derived from scuSplits when omitted.",
             ),
+          category: z
+            .enum([
+              "Hauling - Local",
+              "Hauling - Planetary",
+              "Hauling - Stellar",
+              "Hauling - Interstellar",
+              "Local",
+              "Planetary",
+              "Stellar",
+              "Interstellar",
+            ])
+            .optional()
+            .describe(
+              "MobiGlas Category (Local / Planetary / Stellar / Interstellar).",
+            ),
           scuMaxContainerSize: z
             .number()
             .int()
             .positive()
             .optional()
             .describe("Largest allowed crate size in SCU"),
+          variantOf: uuidString
+            .optional()
+            .describe(
+              "Catalog mission id to join as an SCU variant (same contract, different totals/screenshots).",
+            ),
           latestScreenshotPath: z
             .string()
             .optional()
@@ -723,6 +744,18 @@ const handler = createMcpHandler(
         annotations: { destructiveHint: false },
       },
       async (input) => toolCreateMission(input),
+    );
+
+    server.registerTool(
+      "backfill_catalog_mission_variants",
+      {
+        title: "Backfill catalog mission variants",
+        description:
+          "Use this after deploying variant groups to recompute family keys and merge existing SCU-variant catalog rows that share title/rank/contractor/offer/route/commodities.",
+        inputSchema: z.object({}),
+        annotations: { destructiveHint: false },
+      },
+      async () => toolBackfillCatalogMissionVariants(),
     );
 
     server.registerTool(

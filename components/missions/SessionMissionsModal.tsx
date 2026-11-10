@@ -11,6 +11,7 @@ import {
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { MissionBoxBreakdownPicker } from "./MissionBoxBreakdownPicker";
 
@@ -199,7 +200,26 @@ export function SessionMissionsModal({
 
   const displayMissions = useMemo(() => enriched, [enriched]);
 
+  const expandAll = () => {
+    const next: Record<string, boolean> = {};
+    for (const mission of displayMissions) {
+      next[mission.id] = true;
+    }
+    setExpandedIds(next);
+  };
+
+  const collapseAll = () => {
+    setExpandedIds({});
+  };
+
   if (!open) return null;
+
+  const bulkToggleClass = [
+    "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-2.5 py-1.5",
+    "font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary",
+    "transition-colors hover:border-rsi-accent/50 hover:text-rsi-accent",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+  ].join(" ");
 
   return (
     <div
@@ -217,9 +237,29 @@ export function SessionMissionsModal({
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Missions
           </p>
-          <h2 className="truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
-            Session contracts
-          </h2>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 gap-y-2">
+            <h2 className="min-w-0 flex-1 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
+              Session contracts
+            </h2>
+            {displayMissions.length > 0 ? (
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  className={bulkToggleClass}
+                  onClick={expandAll}
+                >
+                  Expand all
+                </button>
+                <button
+                  type="button"
+                  className={bulkToggleClass}
+                  onClick={collapseAll}
+                >
+                  Collapse all
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
 
         <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
@@ -368,9 +408,14 @@ export function SessionMissionsModal({
                             </span>
                           ) : null}
                         </p>
-                        {mission.contractor ? (
+                        {mission.mobiglas.category || mission.contractor ? (
                           <p className="mt-1 text-xs text-rsi-text-secondary">
-                            {mission.contractor}
+                            {[
+                              haulingCategoryShortLabel(mission.mobiglas.category),
+                              mission.contractor || null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </p>
                         ) : null}
                       </div>

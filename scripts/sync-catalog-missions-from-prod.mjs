@@ -121,7 +121,7 @@ try {
     const routeFlags = routeFlagsFromMission(mission, payload);
     await sql`
       INSERT INTO catalog_missions (
-        id, type, fingerprint, title, rank, contractor_slug, rewards,
+        id, type, fingerprint, variant_group_id, variant_family_key, title, rank, contractor_slug, rewards,
         offer_location_slug, offer_star_system_slug, scu_total, scu_max_container_size, scu_box_splits,
         scu_location_splits, is_direct, is_one_pickup, is_one_delivery,
         payload, latest_screenshot_path, mission_run_count, mission_total_duration_ms,
@@ -130,6 +130,8 @@ try {
         ${mission.id}::uuid,
         ${mission.type ?? "hauling"},
         ${fingerprint},
+        ${(mission.variantGroupId ?? mission.id)}::uuid,
+        ${mission.variantFamilyKey ?? fingerprint},
         ${mission.title},
         ${mission.rank ?? payload.rank ?? null},
         ${mission.contractorSlug ?? payload.contractorSlug ?? null},
@@ -193,6 +195,11 @@ try {
       ON CONFLICT (fingerprint) DO UPDATE SET
         title = EXCLUDED.title,
         rank = EXCLUDED.rank,
+        variant_group_id = COALESCE(
+          catalog_missions.variant_group_id,
+          EXCLUDED.variant_group_id
+        ),
+        variant_family_key = EXCLUDED.variant_family_key,
         contractor_slug = EXCLUDED.contractor_slug,
         rewards = EXCLUDED.rewards,
         offer_location_slug = EXCLUDED.offer_location_slug,

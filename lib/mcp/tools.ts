@@ -2,8 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   addCatalogMissionNote,
+  backfillCatalogMissionVariants,
   getCatalogMission,
   listCatalogMissionNotes,
+  listCatalogMissionVariants,
   listCatalogMissions,
   recordCatalogMissionRun,
   upsertCatalogMission,
@@ -25,7 +27,9 @@ import {
   objectivesFromScuSplits,
   type CatalogMissionReward,
   type CatalogMissionScuSplit,
+  type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { renameAllCatalogMissionScreenshots } from "@/lib/missions/renameCatalogScreenshot";
 import { normalizeStarSystemSlug } from "@/lib/missions/starSystem";
@@ -748,12 +752,28 @@ export async function toolClearHaulingScreenshots(batchId?: string) {
   });
 }
 
-function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>>) {
+function presentCatalogMissionVariantSummary(
+  row: NonNullable<Awaited<ReturnType<typeof getCatalogMission>>>,
+) {
+  return {
+    id: row.id,
+    scuTotal: row.scuTotal,
+    rewards: row.rewards,
+    latestScreenshotPath: row.latestScreenshotPath,
+    lastObservedAt: row.lastObservedAt,
+  };
+}
+
+function presentCatalogMission(
+  row: Awaited<ReturnType<typeof getCatalogMission>>,
+) {
   if (!row) return null;
   return {
     id: row.id,
     type: row.type,
     fingerprint: row.fingerprint,
+    variantGroupId: row.variantGroupId,
+    variantFamilyKey: row.variantFamilyKey,
     title: row.title,
     rank: row.rank,
     contractorSlug: row.contractorSlug,
@@ -774,6 +794,8 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
     scuMaxContainerSize: row.scuMaxContainerSize,
     scuBoxSplits: row.scuBoxSplits,
     scuLocationSplits: row.scuLocationSplits,
+    category:
+      (row.payload as HaulingCatalogMissionPayload | null)?.category ?? null,
     latestScreenshotPath: row.latestScreenshotPath,
     missionRunCount: row.missionRunCount,
     missionTotalDurationMs: row.missionTotalDurationMs,
@@ -782,6 +804,16 @@ function presentCatalogMission(row: Awaited<ReturnType<typeof getCatalogMission>
     payload: row.payload,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+async function presentCatalogMissionWithVariants(
+  row: NonNullable<Awaited<ReturnType<typeof getCatalogMission>>>,
+) {
+  const variants = await listCatalogMissionVariants(row.variantGroupId);
+  return {
+    ...presentCatalogMission(row),
+    variants: variants.map(presentCatalogMissionVariantSummary),
   };
 }
 
@@ -833,6 +865,13 @@ export async function toolCreateMission(input: {
    * When omitted and scuSplits are present, derived automatically.
    */
   objectives?: string[];
+  /** MobiGlas Category: Local / Planetary / Stellar / Interstellar (or full "Hauling - …"). */
+  category?: string;
+  /**
+   * Join this catalog mission’s variant group when SCU totals differ.
+   * Same SCU (+ route/commodities) still upserts by fingerprint; aUEC-only diffs stay one row.
+   */
+  variantOf?: string;
   scuMaxContainerSize?: number;
   latestScreenshotPath?: string;
   extras?: Record<string, unknown>;
@@ -960,9 +999,11 @@ export async function toolCreateMission(input: {
 
     const row = await upsertCatalogMission({
       type: "hauling",
+      variantOfMissionId: input.variantOf,
       payload: {
         title: input.title,
         rank: normalizeMissionRank(input.rank) ?? undefined,
+        category: normalizeHaulingCategory(input.category),
         contractorSlug,
         rewards: normalizeCatalogRewards(input.rewards, input.rewardAuec),
         offerLocationSlug,
@@ -983,12 +1024,31 @@ export async function toolCreateMission(input: {
     return textResult({
       ok: true,
       message: `Saved ${row.type} mission ${row.id} (${row.title}).`,
-      mission: presentCatalogMission(row),
+      mission: await presentCatalogMissionWithVariants(row),
     });
   } catch (error) {
     return textResult({
       error:
         error instanceof Error ? error.message : "Failed to create mission",
+    });
+  }
+}
+
+/** Recompute family keys and merge SCU-variant groups for existing catalog rows. */
+export async function toolBackfillCatalogMissionVariants() {
+  try {
+    const result = await backfillCatalogMissionVariants();
+    return textResult({
+      ok: true,
+      message: `Updated ${result.updatedFamilyKeys} family key(s); merged ${result.mergedGroups} variant group(s).`,
+      ...result,
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to backfill catalog mission variants",
     });
   }
 }
@@ -1034,7 +1094,7 @@ export async function toolGetMission(missionId: string) {
     const notes = await listCatalogMissionNotes(missionId);
     return textResult({
       ok: true,
-      mission: presentCatalogMission(row),
+      mission: await presentCatalogMissionWithVariants(row),
       notes,
     });
   } catch (error) {

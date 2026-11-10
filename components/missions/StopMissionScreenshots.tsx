@@ -40,10 +40,13 @@ export function StopMissionScreenshots({
       .map((ref) => ({
         src: ref.url,
         alt: ref.filename,
-        title:
-          ref.missionTitles.length > 0
-            ? `${ref.missionTitles.join(", ")} · ${ref.filename}`
-            : ref.filename,
+        title: ref.filename,
+        caption:
+          ref.captions.length > 0
+            ? ref.captions.join("\n\n")
+            : ref.missionTitles.length > 0
+              ? ref.missionTitles.join(", ")
+              : undefined,
       }));
   }, [refs]);
 
@@ -107,6 +110,7 @@ export function StopMissionScreenshots({
           src={galleryItems[galleryIndex]?.src ?? galleryItems[0]!.src}
           alt={galleryItems[galleryIndex]?.alt}
           title={galleryItems[galleryIndex]?.title}
+          caption={galleryItems[galleryIndex]?.caption}
           items={galleryItems}
           index={galleryIndex}
           onIndexChange={setGalleryIndex}

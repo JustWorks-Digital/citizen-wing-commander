@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import {
+  normalizeHaulingCategory,
+  type HaulingCategory,
+} from "@/lib/missions/haulingCategory";
+import {
   normalizeMissionRank,
   stripRankFromTitle,
   type MissionRank,
@@ -114,6 +118,10 @@ export type HaulingCatalogMissionPayload = {
    * Extracted from titles like "Junior Rank - …"; value has no “Rank” suffix.
    */
   rank?: MissionRank | null;
+  /**
+   * MobiGlas Category line: Hauling - Local | Planetary | Stellar | Interstellar.
+   */
+  category?: HaulingCategory | null;
   /** Largest allowed crate size in SCU (from contract text). */
   scuMaxContainerSize?: number | null;
   /** Crate-size counts for the contract total (1/2/4/8 SCU). */
@@ -347,34 +355,88 @@ export function objectivesFromScuSplits(
   });
 }
 
-/** Stable dedupe key for upserting the same observed contract. */
-export function catalogMissionFingerprint(
-  input: Pick<
-    HaulingCatalogMissionPayload,
-    | "title"
-    | "rank"
-    | "contractorSlug"
-    | "offerLocationSlug"
-    | "fromLocationSlugs"
-    | "toLocationSlugs"
-    | "cargo"
-  >,
-): string {
+type CatalogMissionIdentityInput = Pick<
+  HaulingCatalogMissionPayload,
+  | "title"
+  | "rank"
+  | "contractorSlug"
+  | "offerLocationSlug"
+  | "fromLocationSlugs"
+  | "toLocationSlugs"
+  | "cargo"
+>;
+
+function catalogMissionRouteIdentityParts(input: CatalogMissionIdentityInput): {
+  titleKey: string;
+  rankKey: string;
+  contractorKey: string;
+  offerKey: string;
+  fromKey: string;
+  toKey: string;
+} {
   const stripped = stripRankFromTitle(input.title);
   const rank = normalizeMissionRank(input.rank) ?? stripped.rank ?? "";
-  const titleKey = stripped.title.trim().toLowerCase();
+  return {
+    titleKey: stripped.title.trim().toLowerCase(),
+    rankKey: String(rank).toLowerCase(),
+    contractorKey: (input.contractorSlug ?? "").trim().toLowerCase(),
+    offerKey: (input.offerLocationSlug ?? "").trim().toLowerCase(),
+    fromKey: [...input.fromLocationSlugs]
+      .map((s) => s.toLowerCase())
+      .sort()
+      .join("|"),
+    toKey: [...input.toLocationSlugs]
+      .map((s) => s.toLowerCase())
+      .sort()
+      .join("|"),
+  };
+}
+
+/**
+ * Stable dedupe key for the same observed contract *including* SCU amounts.
+ * Reward aUEC is intentionally omitted — payout-only diffs update the same row.
+ */
+export function catalogMissionFingerprint(
+  input: CatalogMissionIdentityInput,
+): string {
+  const parts = catalogMissionRouteIdentityParts(input);
   const cargoKey = [...input.cargo]
     .map((line) => `${line.commoditySlug}:${line.scu}`)
     .sort()
     .join(",");
   const raw = [
-    titleKey,
-    String(rank).toLowerCase(),
-    (input.contractorSlug ?? "").trim().toLowerCase(),
-    (input.offerLocationSlug ?? "").trim().toLowerCase(),
-    [...input.fromLocationSlugs].map((s) => s.toLowerCase()).sort().join("|"),
-    [...input.toLocationSlugs].map((s) => s.toLowerCase()).sort().join("|"),
+    parts.titleKey,
+    parts.rankKey,
+    parts.contractorKey,
+    parts.offerKey,
+    parts.fromKey,
+    parts.toKey,
     cargoKey,
+  ].join("::");
+  return createHash("sha256").update(raw).digest("hex");
+}
+
+/**
+ * Family key for SCU variants of the same contract (commodities + route, no SCU).
+ * Rows that share this key share a `variantGroupId` but keep separate fingerprints.
+ */
+export function catalogMissionVariantFamilyKey(
+  input: CatalogMissionIdentityInput,
+): string {
+  const parts = catalogMissionRouteIdentityParts(input);
+  const commodityKey = [
+    ...new Set(input.cargo.map((line) => line.commoditySlug.toLowerCase())),
+  ]
+    .sort()
+    .join(",");
+  const raw = [
+    parts.titleKey,
+    parts.rankKey,
+    parts.contractorKey,
+    parts.offerKey,
+    parts.fromKey,
+    parts.toKey,
+    commodityKey,
   ].join("::");
   return createHash("sha256").update(raw).digest("hex");
 }
@@ -421,6 +483,7 @@ export function buildHaulingCatalogMissionPayload(
     version: 1,
     title: fromTitle.title,
     rank,
+    category: normalizeHaulingCategory(partial.category),
     contractorSlug: partial.contractorSlug ?? null,
     rewards: normalizeCatalogRewards(partial.rewards, partial.rewardAuec),
     offerLocationSlug: partial.offerLocationSlug ?? null,

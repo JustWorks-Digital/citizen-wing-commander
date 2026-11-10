@@ -341,8 +341,18 @@ export const catalogMissions = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     type: missionTypeEnum("type").notNull().default("hauling"),
-    /** sha256 of normalized title/contractorSlug/offer/from/to/cargo */
+    /** sha256 of normalized title/contractorSlug/offer/from/to/cargo(+SCU) */
     fingerprint: text("fingerprint").notNull(),
+    /**
+     * Shared across SCU variants of the same contract (separate rows/screenshots).
+     * Reward-only diffs stay on one fingerprint; SCU diffs get new rows in this group.
+     */
+    variantGroupId: uuid("variant_group_id").notNull(),
+    /**
+     * sha256 of title/rank/contractor/offer/from/to/commodity slugs (no SCU, no reward).
+     * Used to attach a new SCU observation to an existing variant group.
+     */
+    variantFamilyKey: text("variant_family_key").notNull(),
     title: text("title").notNull(),
     /**
      * Hauling career rank (Trainee…Master), without the word “Rank” in the value.
@@ -410,6 +420,8 @@ export const catalogMissions = pgTable(
   },
   (table) => [
     uniqueIndex("catalog_missions_fingerprint_uidx").on(table.fingerprint),
+    index("catalog_missions_variant_group_idx").on(table.variantGroupId),
+    index("catalog_missions_variant_family_idx").on(table.variantFamilyKey),
     index("catalog_missions_offer_location_idx").on(table.offerLocationSlug),
     index("catalog_missions_offer_star_system_idx").on(
       table.offerStarSystemSlug,

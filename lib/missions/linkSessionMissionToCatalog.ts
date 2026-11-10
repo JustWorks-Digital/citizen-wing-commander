@@ -1,4 +1,5 @@
 import { upsertCatalogMission } from "@/db/queries/catalogMissions";
+import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import {
   resolveCommoditySlug,
   resolveContractorSlug,
@@ -50,6 +51,7 @@ export async function linkSessionMissionToCatalog(
     type: "hauling",
     payload: {
       title: mission.title,
+      category: normalizeHaulingCategory(mission.mobiglas.category),
       contractorSlug: resolveContractorSlug(mission.contractor),
       rewards:
         mission.rewardAuec > 0

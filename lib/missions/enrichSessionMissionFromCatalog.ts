@@ -4,6 +4,7 @@ import {
   formatAuecAmount,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -47,6 +48,9 @@ export function enrichSessionMissionFromCatalog(
       ? (extras.deliverySplits as SessionMission["deliverySplits"])
       : mission.deliverySplits;
 
+  const category =
+    normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;
+
   return {
     ...mission,
     catalogMissionId: catalog.id,
@@ -78,5 +82,10 @@ export function enrichSessionMissionFromCatalog(
     screenshots: payload.latestScreenshotPath
       ? [payload.latestScreenshotPath]
       : mission.screenshots,
+    mobiglas: {
+      ...mission.mobiglas,
+      category,
+      title: catalog.title || mission.mobiglas.title || mission.title,
+    },
   };
 }

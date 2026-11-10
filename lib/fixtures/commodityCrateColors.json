@@ -1805,12 +1805,12 @@
     },
     {
       "slug": "stims",
-      "colorHex": "#8c3736",
-      "colorHex2": "#8c4d57",
+      "colorHex": "#ffffff",
+      "colorHex2": "#d7dde3",
       "image": "crates/neondrug.png",
       "sourceUrl": "https://media.starcitizen.tools/9/91/Neondrug.png?t61lx",
       "sharedWith": [],
-      "colorSource": "kind-crate-image"
+      "colorSource": "manual"
     },
     {
       "slug": "stone-bug-shell",

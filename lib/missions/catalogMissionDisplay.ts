@@ -89,3 +89,34 @@ export function catalogCargoSummary(mission: CatalogMission): string {
   const lines = catalogCargoLines(mission);
   return lines.length > 0 ? lines.join(" · ") : "—";
 }
+
+/** Compact per-stop SCU lines for screenshot lightbox verification. */
+export function catalogScuSplitsCaption(mission: CatalogMission): string {
+  const payload = catalogPayload(mission);
+  const splits = payload?.scuSplits;
+  if (splits && splits.length > 0) {
+    return splits
+      .map((split) => {
+        const from = locationDisplayName(split.fromLocationSlug);
+        const to = locationDisplayName(split.toLocationSlug);
+        const cargo = `${split.scu} SCU ${split.commodityName}`;
+        if (split.kind === "collect") return `${cargo} · ${from}`;
+        if (from === to) return `${cargo} · ${to}`;
+        return `${cargo} · ${from} → ${to}`;
+      })
+      .join("\n");
+  }
+  const cargo = payload?.cargo ?? [];
+  if (cargo.length > 0) {
+    return cargo
+      .map((line) => `${line.scu} SCU ${line.commodityName}`)
+      .join(" · ");
+  }
+  return mission.scuTotal > 0 ? `${mission.scuTotal} SCU` : "";
+}
+
+/** Mission title + SCU splits for source screenshot captions. */
+export function catalogSourceScreenshotCaption(mission: CatalogMission): string {
+  const splits = catalogScuSplitsCaption(mission);
+  return splits ? `${mission.title}\n${splits}` : mission.title;
+}

@@ -11,6 +11,7 @@ import {
   locationDisplayName,
 } from "@/lib/missions/catalogMissionDisplay";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
 
 export type MissionCatalogDetailProps = {
   mission: CatalogMission;
@@ -68,6 +69,13 @@ export function MissionCatalogDetail({
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
           <dl className="space-y-2">
             <MetaRow label="Reward" value={catalogRewardLabel(mission)} />
+            <MetaRow
+              label="Category"
+              value={
+                haulingCategoryShortLabel(catalogPayload(mission)?.category) ??
+                "—"
+              }
+            />
             <MetaRow
               label="Offer at"
               value={locationDisplayName(mission.offerLocationSlug)}

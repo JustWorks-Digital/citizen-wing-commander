@@ -14,8 +14,9 @@ function haulingPayload(
 function withRouteFlags(
   row: Omit<
     CatalogMission,
-    "isDirect" | "isOnePickup" | "isOneDelivery"
-  >,
+    "isDirect" | "isOnePickup" | "isOneDelivery" | "variantGroupId" | "variantFamilyKey"
+  > &
+    Partial<Pick<CatalogMission, "variantGroupId" | "variantFamilyKey">>,
 ): CatalogMission {
   const flags = catalogRouteFlagsFromLocationSplits(
     row.scuLocationSplits ?? row.payload.scuLocationSplits,
@@ -24,7 +25,12 @@ function withRouteFlags(
       toSlugs: row.payload.toLocationSlugs,
     },
   );
-  return { ...row, ...flags };
+  return {
+    ...row,
+    ...flags,
+    variantGroupId: row.variantGroupId ?? row.id,
+    variantFamilyKey: row.variantFamilyKey ?? row.fingerprint,
+  };
 }
 
 const now = new Date("2026-11-08T18:00:00.000Z");

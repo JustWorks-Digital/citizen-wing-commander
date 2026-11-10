@@ -89,7 +89,7 @@ export function SessionSourceStat({
         ].join(" ")}
       >
         <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
-          Missions
+          Missions List
         </span>
       </button>
       <button

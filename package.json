@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "db:sync-ships": "node scripts/sync-ships.mjs",
     "db:sync-catalog-missions": "node scripts/sync-catalog-missions-from-prod.mjs",
+    "db:backfill-catalog-variants": "node scripts/backfill-catalog-mission-variants.mjs",
     "fixtures:fetch": "node scripts/fetch-sc-fixtures.mjs",
     "fixtures:fetch-commodity-icons": "node scripts/fetch-commodity-icons.mjs",
     "fixtures:fetch-commodity-crate-colors": "node scripts/fetch-commodity-crate-colors.mjs",

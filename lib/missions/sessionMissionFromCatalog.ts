@@ -4,6 +4,7 @@ import {
   formatAuecAmount,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -64,6 +65,8 @@ export function sessionMissionFromCatalog(
     : catalog.latestScreenshotPath
       ? [catalog.latestScreenshotPath]
       : [];
+  const category =
+    normalizeHaulingCategory(payload.category) ?? "Hauling - Planetary";
 
   return {
     id: catalog.id,
@@ -84,7 +87,7 @@ export function sessionMissionFromCatalog(
     screenshots,
     mobiglas: {
       tab: "Accepted",
-      category: "Hauling - Planetary",
+      category,
       title: catalog.title || payload.title,
       contractor,
       rewardAuec,

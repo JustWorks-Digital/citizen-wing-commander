@@ -18,6 +18,9 @@ const galleryRefs = [
     filename: "lorville-a.png",
     label: "lorville-a",
     missionTitles: ["Member Rank — Corundum"],
+    captions: [
+      "Member Rank — Corundum\n12 SCU Corundum · Everus Harbor → Lorville",
+    ],
     url: "/images/outdoor-freight-elevators/port-tressler.jpg",
   },
   {
@@ -25,6 +28,9 @@ const galleryRefs = [
     filename: "lorville-b.png",
     label: "lorville-b",
     missionTitles: ["Member Rank — Quartz"],
+    captions: [
+      "Member Rank — Quartz\n8 SCU Quartz · Everus Harbor → Lorville",
+    ],
     url: "/images/outdoor-freight-elevators/port-tressler.jpg",
   },
   {
@@ -32,6 +38,7 @@ const galleryRefs = [
     filename: "lorville-c.png",
     label: "lorville-c",
     missionTitles: ["Member Rank — Tin"],
+    captions: ["Member Rank — Tin\n16 SCU Tin · Everus Harbor → Lorville"],
     url: "/images/outdoor-freight-elevators/port-tressler.jpg",
   },
 ];
@@ -65,6 +72,7 @@ export const TextOnlyPaths: Story = {
         filename: "lorville-stims.png",
         label: "lorville-stims",
         missionTitles: ["Junior Rank — Stims"],
+        captions: ["Junior Rank — Stims\n24 SCU Stims · Lorville → Orinth"],
         url: null,
       },
       {
@@ -72,6 +80,9 @@ export const TextOnlyPaths: Story = {
         filename: "everus-quartz.png",
         label: "everus-quartz",
         missionTitles: ["Direct Medium Cargo Haul"],
+        captions: [
+          "Direct Medium Cargo Haul\n32 SCU Quartz · Everus Harbor → Port Tressler",
+        ],
         url: null,
       },
     ],

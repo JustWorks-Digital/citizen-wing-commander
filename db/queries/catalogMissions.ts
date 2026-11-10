@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   catalogMissionNotes,
@@ -11,6 +12,7 @@ import {
 import {
   buildHaulingCatalogMissionPayload,
   catalogMissionFingerprint,
+  catalogMissionVariantFamilyKey,
   normalizeScuBoxSplits,
   type CatalogMissionNoteSentiment,
   type HaulingCatalogMissionPayload,
@@ -21,6 +23,11 @@ import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRoute
 export type UpsertHaulingCatalogMissionInput = {
   /** Accepts builder input (including legacy rewardAuec → rewards). */
   payload: Parameters<typeof buildHaulingCatalogMissionPayload>[0];
+  /**
+   * Explicitly join this catalog mission’s variant group (SCU variants).
+   * When omitted, family key matching still links new SCU observations.
+   */
+  variantOfMissionId?: string | null;
 };
 
 /** Create/update a catalog mission. Currently implements `hauling`. */
@@ -33,20 +40,25 @@ export async function upsertCatalogMission(
 
   let payload = buildHaulingCatalogMissionPayload(input.payload);
   const fingerprint = catalogMissionFingerprint(payload);
+  const variantFamilyKey = catalogMissionVariantFamilyKey(payload);
   const db = getDb();
 
-  // Preserve scuSplits / scuLocationSplits / objectives when an upsert omits them.
+  const [existingByFingerprint] = await db
+    .select()
+    .from(catalogMissions)
+    .where(eq(catalogMissions.fingerprint, fingerprint))
+    .limit(1);
+
+  // Preserve splits / objectives / category when an upsert omits them.
   if (
-    payload.scuSplits === undefined ||
-    payload.scuLocationSplits === undefined ||
-    payload.objectives === undefined
+    existingByFingerprint &&
+    (payload.scuSplits === undefined ||
+      payload.scuLocationSplits === undefined ||
+      payload.objectives === undefined ||
+      !payload.category)
   ) {
-    const [existing] = await db
-      .select()
-      .from(catalogMissions)
-      .where(eq(catalogMissions.fingerprint, fingerprint))
-      .limit(1);
-    const existingPayload = existing?.payload as HaulingCatalogMissionPayload | null;
+    const existingPayload =
+      existingByFingerprint.payload as HaulingCatalogMissionPayload | null;
     if (existingPayload) {
       payload = buildHaulingCatalogMissionPayload({
         ...payload,
@@ -54,8 +66,43 @@ export async function upsertCatalogMission(
         scuLocationSplits:
           payload.scuLocationSplits ?? existingPayload.scuLocationSplits,
         objectives: payload.objectives ?? existingPayload.objectives,
+        category: payload.category ?? existingPayload.category,
       });
     }
+  }
+
+  let variantGroupId = existingByFingerprint?.variantGroupId ?? null;
+
+  if (!variantGroupId && input.variantOfMissionId?.trim()) {
+    const [sibling] = await db
+      .select({
+        variantGroupId: catalogMissions.variantGroupId,
+      })
+      .from(catalogMissions)
+      .where(eq(catalogMissions.id, input.variantOfMissionId.trim()))
+      .limit(1);
+    if (!sibling) {
+      throw new Error(
+        `variantOf mission not found: ${input.variantOfMissionId}`,
+      );
+    }
+    variantGroupId = sibling.variantGroupId;
+  }
+
+  if (!variantGroupId) {
+    const [familyMatch] = await db
+      .select({
+        variantGroupId: catalogMissions.variantGroupId,
+      })
+      .from(catalogMissions)
+      .where(eq(catalogMissions.variantFamilyKey, variantFamilyKey))
+      .orderBy(asc(catalogMissions.createdAt))
+      .limit(1);
+    variantGroupId = familyMatch?.variantGroupId ?? null;
+  }
+
+  if (!variantGroupId) {
+    variantGroupId = randomUUID();
   }
 
   const routeFlags = catalogRouteFlagsFromLocationSplits(
@@ -81,6 +128,7 @@ export async function upsertCatalogMission(
     isDirect: routeFlags.isDirect,
     isOnePickup: routeFlags.isOnePickup,
     isOneDelivery: routeFlags.isOneDelivery,
+    variantFamilyKey,
     payload,
     lastObservedAt: new Date(),
     updatedAt: new Date(),
@@ -94,6 +142,8 @@ export async function upsertCatalogMission(
     .values({
       type: "hauling",
       fingerprint,
+      variantGroupId,
+      variantFamilyKey,
       title: payload.title,
       rank: payload.rank ?? null,
       contractorSlug: payload.contractorSlug ?? null,
@@ -122,6 +172,69 @@ export async function upsertCatalogMission(
     throw new Error("Failed to upsert catalog mission");
   }
   return row;
+}
+
+/** Sibling SCU variants that share a variant group (includes the seed row). */
+export async function listCatalogMissionVariants(
+  variantGroupId: string,
+): Promise<CatalogMission[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(catalogMissions)
+    .where(eq(catalogMissions.variantGroupId, variantGroupId))
+    .orderBy(asc(catalogMissions.scuTotal), asc(catalogMissions.createdAt));
+}
+
+/**
+ * Backfill family keys and merge existing SCU-variant rows into shared groups.
+ * Safe to re-run. New installs get correct values from upsert alone.
+ */
+export async function backfillCatalogMissionVariants(): Promise<{
+  updatedFamilyKeys: number;
+  mergedGroups: number;
+}> {
+  const db = getDb();
+  const rows = await db.select().from(catalogMissions);
+  let updatedFamilyKeys = 0;
+  const byFamily = new Map<string, CatalogMission[]>();
+
+  for (const row of rows) {
+    const payload = row.payload as HaulingCatalogMissionPayload;
+    const familyKey = catalogMissionVariantFamilyKey(payload);
+    if (row.variantFamilyKey !== familyKey) {
+      await db
+        .update(catalogMissions)
+        .set({ variantFamilyKey: familyKey, updatedAt: new Date() })
+        .where(eq(catalogMissions.id, row.id));
+      updatedFamilyKeys += 1;
+    }
+    const list = byFamily.get(familyKey) ?? [];
+    list.push({ ...row, variantFamilyKey: familyKey });
+    byFamily.set(familyKey, list);
+  }
+
+  let mergedGroups = 0;
+  for (const siblings of byFamily.values()) {
+    if (siblings.length < 2) continue;
+    const groupId = siblings
+      .map((row) => row.variantGroupId)
+      .sort()[0]!;
+    const needsMerge = siblings.some((row) => row.variantGroupId !== groupId);
+    if (!needsMerge) continue;
+    await db
+      .update(catalogMissions)
+      .set({ variantGroupId: groupId, updatedAt: new Date() })
+      .where(
+        inArray(
+          catalogMissions.id,
+          siblings.map((row) => row.id),
+        ),
+      );
+    mergedGroups += 1;
+  }
+
+  return { updatedFamilyKeys, mergedGroups };
 }
 
 export async function getCatalogMission(
@@ -180,6 +293,7 @@ export async function updateCatalogMissionRankFields(input: {
   rank: HaulingCatalogMissionPayload["rank"];
   payload: HaulingCatalogMissionPayload;
   fingerprint: string;
+  variantFamilyKey?: string;
 }): Promise<CatalogMission> {
   const db = getDb();
   const [row] = await db
@@ -188,6 +302,9 @@ export async function updateCatalogMissionRankFields(input: {
       title: input.title,
       rank: input.rank ?? null,
       fingerprint: input.fingerprint,
+      ...(input.variantFamilyKey
+        ? { variantFamilyKey: input.variantFamilyKey }
+        : {}),
       payload: input.payload,
       updatedAt: new Date(),
     })

@@ -120,6 +120,13 @@
       "when": 1794201000000,
       "tag": "0016_catalog_offer_star_system",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794201600000,
+      "tag": "0017_catalog_mission_variants",
+      "breakpoints": true
     }
   ]
 }

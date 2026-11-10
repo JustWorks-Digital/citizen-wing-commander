@@ -30,6 +30,9 @@ export const WithInlineSource: Story = {
         filename: "everus-pickup.png",
         label: "everus-pickup",
         missionTitles: ["Member Rank — Corundum"],
+        captions: [
+          "Member Rank — Corundum\n12 SCU Corundum · Everus Harbor → Lorville",
+        ],
         url: "/images/outdoor-freight-elevators/port-tressler.jpg",
       },
     ],

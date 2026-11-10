@@ -19,7 +19,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     src: "/images/outdoor-freight-elevators/port-tressler.jpg",
-    title: "Port Tressler",
+    title: "port-tressler.jpg",
+    caption: "Port Tressler\n24 SCU Medical Supplies · Everus Harbor → Port Tressler",
     alt: "Outdoor freight elevator at Port Tressler",
     onClose: () => {},
   },
@@ -57,17 +58,22 @@ export const Gallery: Story = {
     const items = [
       {
         src: "/images/outdoor-freight-elevators/port-tressler.jpg",
-        title: "Contract 1 · Corundum",
+        title: "contract-1.png",
+        caption:
+          "Member Rank — Corundum\n12 SCU Corundum · Everus Harbor → Lorville",
         alt: "Contract 1",
       },
       {
         src: "/images/outdoor-freight-elevators/port-tressler.jpg",
-        title: "Contract 2 · Quartz",
+        title: "contract-2.png",
+        caption:
+          "Member Rank — Quartz\n8 SCU Quartz · Everus Harbor → Lorville",
         alt: "Contract 2",
       },
       {
         src: "/images/outdoor-freight-elevators/port-tressler.jpg",
-        title: "Contract 3 · Tin",
+        title: "contract-3.png",
+        caption: "Member Rank — Tin\n16 SCU Tin · Everus Harbor → Lorville",
         alt: "Contract 3",
       },
     ];
@@ -82,6 +88,7 @@ export const Gallery: Story = {
           <ImageLightbox
             src={items[index]!.src}
             title={items[index]!.title}
+            caption={items[index]!.caption}
             alt={items[index]!.alt}
             items={items}
             index={index}

@@ -8,12 +8,16 @@ export type ImageLightboxItem = {
   src: string;
   alt?: string;
   title?: string;
+  /** Bottom caption (e.g. mission name under a source screenshot). */
+  caption?: string;
 };
 
 export type ImageLightboxProps = {
   src: string;
   alt?: string;
   title?: string;
+  /** Bottom caption when not using `items`, or fallback for the active item. */
+  caption?: string;
   onClose: () => void;
   /**
    * Optional gallery of related images (e.g. all contract shots for a stop).
@@ -116,18 +120,20 @@ export function ImageLightbox({
   src,
   alt = "",
   title,
+  caption,
   onClose,
   items,
   index = 0,
   onIndexChange,
 }: ImageLightboxProps) {
   const gallery =
-    items && items.length > 0 ? items : [{ src, alt, title }];
+    items && items.length > 0 ? items : [{ src, alt, title, caption }];
   const safeIndex = Math.min(Math.max(0, index), gallery.length - 1);
-  const current = gallery[safeIndex] ?? { src, alt, title };
+  const current = gallery[safeIndex] ?? { src, alt, title, caption };
   const hasGallery = gallery.length > 1 && Boolean(onIndexChange);
   const [zoom, setZoom] = useState(1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomCaption = current.caption || caption;
 
   useEffect(() => {
     setZoom(1);
@@ -268,6 +274,13 @@ export function ImageLightbox({
           </>
         ) : null}
       </div>
+      {bottomCaption ? (
+        <div className="shrink-0 border-t border-rsi-border bg-rsi-bg-deep/80 px-4 py-3">
+          <p className="whitespace-pre-line text-center text-sm font-medium tracking-wide text-rsi-text">
+            {bottomCaption}
+          </p>
+        </div>
+      ) : null}
     </div>,
     document.body,
   );
