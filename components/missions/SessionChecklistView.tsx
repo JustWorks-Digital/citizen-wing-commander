@@ -59,6 +59,8 @@ import {
   SessionRouteProgressStats,
   SessionSourceStat,
 } from "./SessionStatsStrip";
+import { CreateSessionModal } from "./CreateSessionModal";
+import { SessionNameField } from "./SessionNameField";
 import { SessionTabs } from "./SessionTabs";
 
 export type SessionChecklistViewProps = {
@@ -101,6 +103,7 @@ export function SessionChecklistView({
     initial?.id ?? routeSessionId ?? null,
   );
   const [tabsBusy, setTabsBusy] = useState(false);
+  const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
@@ -373,11 +376,14 @@ export function SessionChecklistView({
     }
   };
 
-  const addSession = async () => {
+  const addSession = async (sessionName: string) => {
     if (initial) return;
     setTabsBusy(true);
     try {
-      const next = await createChecklistSession({ sessionName: "New session" });
+      const next = await createChecklistSession({
+        sessionName: sessionName.trim() || "New session",
+      });
+      setCreateSessionOpen(false);
       router.push(appPaths.session(next.id));
       setLoadError(null);
     } catch (error) {
@@ -387,6 +393,17 @@ export function SessionChecklistView({
     } finally {
       setTabsBusy(false);
     }
+  };
+
+  const renameSession = (sessionName: string) => {
+    const next = sessionName.trim();
+    if (!next || next === session.sessionName) return;
+    persistSession(
+      applySessionCompletionTiming({
+        ...session,
+        sessionName: next,
+      }),
+    );
   };
 
   const closeSession = async (sessionId: string) => {
@@ -418,7 +435,8 @@ export function SessionChecklistView({
           void selectSession(id);
         }}
         onCreate={() => {
-          void addSession();
+          if (initial) return;
+          setCreateSessionOpen(true);
         }}
         onClose={(id) => {
           void closeSession(id);
@@ -426,15 +444,26 @@ export function SessionChecklistView({
         isBusy={tabsBusy}
       />
 
+      <CreateSessionModal
+        open={createSessionOpen}
+        isBusy={tabsBusy}
+        onClose={() => setCreateSessionOpen(false)}
+        onCreate={(name) => {
+          void addSession(name);
+        }}
+      />
+
       <div className="min-w-0">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
           Session
         </p>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold tracking-wide break-words text-rsi-text sm:text-xl">
-              {session.sessionName}
-            </h2>
+          <div className="min-w-0 flex-1">
+            <SessionNameField
+              name={session.sessionName}
+              disabled={Boolean(initial) || tabsBusy}
+              onRename={renameSession}
+            />
             <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
               ID {session.id}
             </p>

@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right. Commodity lines render as square abbrev tiles (icon + SCU + code); each stop lists mission completions under Total SCU and Next / Distance from CitizenHQ XYZ when available.",
+          "Stacked stop cards (same on mobile and desktop). Desktop adds a per-stop delivery crate summary with a 3D bay reference on the right. Commodity lines render as square abbrev tiles (icon + SCU + code); each stop lists Total aUEC beside Total SCU when missions complete there, plus Completions and Next / Distance from CitizenHQ XYZ when available.",
       },
     },
   },

@@ -14,7 +14,10 @@ import {
   commodityBadgeForeground,
   resolveCommodityColorHex,
 } from "@/lib/fixtures/commodityColors";
-import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import {
+  formatAuecAmount,
+  type ScuBoxSplits,
+} from "@/lib/missions/catalogMission";
 import { missionsExpectedToCompleteAtStop } from "@/lib/missions/expectedCompletions";
 import {
   formatDistanceToNext,
@@ -488,23 +491,48 @@ function ScuTotalDisplay({
 function TotalMeta({
   row,
   scu,
+  completionAuec,
 }: {
   row: HaulingChecklistRow;
   scu: { pickup: number; delivery: number; total: number };
+  /** Sum of rewards for missions expected to complete at this stop. */
+  completionAuec: number;
 }) {
+  const showAuec = completionAuec > 0;
   return (
     <div className="mt-3 border-t border-rsi-divider/80 pt-3 text-sm">
-      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Total SCU
-      </p>
-      <div className="mt-0.5">
-        <ScuTotalDisplay
-          row={row}
-          pickup={scu.pickup}
-          delivery={scu.delivery}
-          total={scu.total}
-          align="start"
-        />
+      <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
+        <div>
+          <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+            Total SCU
+          </p>
+          <div className="mt-0.5">
+            <ScuTotalDisplay
+              row={row}
+              pickup={scu.pickup}
+              delivery={scu.delivery}
+              total={scu.total}
+              align="start"
+            />
+          </div>
+        </div>
+        {showAuec ? (
+          <div>
+            <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+              Total aUEC
+            </p>
+            <p
+              className={[
+                "mt-0.5 font-mono text-sm tabular-nums tracking-wide",
+                row.isCompleted
+                  ? "text-rsi-text-muted line-through"
+                  : "text-rsi-text",
+              ].join(" ")}
+            >
+              {formatAuecAmount(completionAuec)}
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -714,6 +742,15 @@ export function HaulingChecklistTable({
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
           const isFocused = row.id === activeRowId;
+          const expectedCompletions = missionsExpectedToCompleteAtStop(
+            missions,
+            rows,
+            row.id,
+          );
+          const completionAuec = expectedCompletions.reduce(
+            (sum, mission) => sum + Math.max(0, mission.rewardAuec || 0),
+            0,
+          );
 
           return (
             <li
@@ -751,14 +788,12 @@ export function HaulingChecklistTable({
                       <div className="mt-5">
                         <CargoGroups row={row} cargoLines={cargoLines} />
                       </div>
-                      <TotalMeta row={row} scu={scu} />
-                      <ExpectedCompletionsMeta
-                        missions={missionsExpectedToCompleteAtStop(
-                          missions,
-                          rows,
-                          row.id,
-                        )}
+                      <TotalMeta
+                        row={row}
+                        scu={scu}
+                        completionAuec={completionAuec}
                       />
+                      <ExpectedCompletionsMeta missions={expectedCompletions} />
                       <NextDistanceMeta
                         row={row}
                         nextLocationName={nextLocationName}
