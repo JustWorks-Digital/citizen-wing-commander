@@ -34,6 +34,8 @@ export type MissionBoxBreakdownPickerProps = {
   totalScu: number;
   maxContainerScu?: number | null;
   selected?: ScuBoxSplits | null;
+  /** Captured greedy/capped default for comparison with `selected`. */
+  autoSelected?: ScuBoxSplits | null;
   onSelect: (breakdown: ScuBoxSplits) => void;
   disabled?: boolean;
 };
@@ -46,6 +48,7 @@ export function MissionBoxBreakdownPicker({
   totalScu,
   maxContainerScu = null,
   selected = null,
+  autoSelected = null,
   onSelect,
   disabled = false,
 }: MissionBoxBreakdownPickerProps) {
@@ -58,10 +61,17 @@ export function MissionBoxBreakdownPicker({
     [totalScu, maxContainerScu],
   );
 
+  const autoId = useMemo(() => {
+    if (autoSelected) return breakdownId(autoSelected);
+    return breakdownId(scuBoxSplitsForScu(totalScu, maxContainerScu));
+  }, [autoSelected, totalScu, maxContainerScu]);
+
   const selectedId = useMemo(() => {
     if (selected) return breakdownId(selected);
-    return breakdownId(scuBoxSplitsForScu(totalScu, maxContainerScu));
-  }, [selected, totalScu, maxContainerScu]);
+    return autoId;
+  }, [selected, autoId]);
+
+  const isUserCorrected = selectedId !== autoId;
 
   const selectedOption =
     options.find((option) => option.id === selectedId) ?? options[0] ?? null;
@@ -122,7 +132,8 @@ export function MissionBoxBreakdownPicker({
           />
           <span className="shrink-0 font-mono text-[0.6rem] tabular-nums text-rsi-text-muted">
             {selectedOption.boxCount} boxes
-            {selectedOption.isDefault ? " (default)" : ""}
+            {selectedOption.id === autoId ? " (auto)" : ""}
+            {isUserCorrected ? " · corrected" : ""}
           </span>
         </span>
         <ChevronDownIcon open={open} />
@@ -172,7 +183,7 @@ export function MissionBoxBreakdownPicker({
                   />
                   <span className="shrink-0 font-mono text-[0.6rem] tabular-nums text-rsi-text-muted">
                     {option.boxCount} boxes
-                    {option.isDefault ? " (default)" : ""}
+                    {option.id === autoId ? " (auto)" : ""}
                   </span>
                 </button>
               </li>

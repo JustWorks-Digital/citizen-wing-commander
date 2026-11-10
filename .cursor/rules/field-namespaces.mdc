@@ -39,6 +39,7 @@ Catalog hauling (current):
 | `scuLocationSplits` (`{ from: {slug:scu}, to: {slug:scu} }`) | flat location maps without `scu` prefix |
 | `scuMaxContainerSize` | `maxContainerScu` |
 | `scuBoxSplits` (`scuOne` / `scuTwo` / `scuFour` / `scuEight`) | `boxBreakdown`, `size1`, `oneScu` |
+| `scuBoxSplitsAutoSelected` (greedy/capped default before user correction) | `autoBoxSplits`, `originalBoxSplits`, `defaultBreakdown` |
 | `missionRunCount` / `missionTotalDurationMs` / `missionAvgDurationMs` | `runCount`, `totalDurationMs`, `avgDurationMs` |
 | `contractorSlug` (FK to `contractors`) | free-text `contractor` on catalog rows |
 | `rank` (Trainee…Master; no “Rank” suffix) | `repLevel`, `Junior Rank` as a stored value |

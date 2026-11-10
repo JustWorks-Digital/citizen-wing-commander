@@ -5,7 +5,12 @@ import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import { scuBoxSplitsForScu } from "@/lib/missions/catalogMission";
-import { enumerateBoxBreakdowns } from "@/lib/missions/boxBreakdownOptions";
+import {
+  boxCountsFromBreakdown,
+  enumerateBoxBreakdowns,
+  formatBreakdownLabel,
+} from "@/lib/missions/boxBreakdownOptions";
+import { autoSelectedMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
 import { missionTotalScu } from "@/lib/missions/sessionMissionObjectives";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -41,10 +46,24 @@ export function StopMissionBoxConfigModal({
     [totalScu, mission.maxContainerScu],
   );
 
-  const selectedId = useMemo(() => {
-    if (mission.scuBoxSplits) return breakdownId(mission.scuBoxSplits);
-    return breakdownId(scuBoxSplitsForScu(totalScu, mission.maxContainerScu));
-  }, [mission.scuBoxSplits, totalScu, mission.maxContainerScu]);
+  const autoSelected = useMemo(
+    () =>
+      mission.scuBoxSplitsAutoSelected ??
+      autoSelectedMissionScuBoxSplits(mission),
+    [mission],
+  );
+
+  const selectedSplits = useMemo(
+    () =>
+      mission.scuBoxSplits ??
+      autoSelected ??
+      scuBoxSplitsForScu(totalScu, mission.maxContainerScu),
+    [mission.scuBoxSplits, autoSelected, totalScu, mission.maxContainerScu],
+  );
+
+  const selectedId = breakdownId(selectedSplits);
+  const autoId = autoSelected ? breakdownId(autoSelected) : null;
+  const isUserCorrected = Boolean(autoId && selectedId !== autoId);
 
   return (
     <div
@@ -81,6 +100,38 @@ export function StopMissionBoxConfigModal({
             Tap the crate mix that matches the contract.
           </p>
 
+          {autoSelected ? (
+            <div className="mt-3 space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  Auto-selected
+                </p>
+                <CargoBoxCountIcons
+                  boxCounts={boxCountsFromBreakdown(autoSelected)}
+                  color="var(--rsi-text-muted)"
+                  className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.65rem]"
+                />
+                <p className="w-full font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary sm:w-auto">
+                  {formatBreakdownLabel(autoSelected)}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rsi-border/50 pt-1.5">
+                <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent">
+                  {isUserCorrected ? "User-selected" : "Selected"}
+                </p>
+                <CargoBoxCountIcons
+                  boxCounts={boxCountsFromBreakdown(selectedSplits)}
+                  color="var(--rsi-accent)"
+                  className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.65rem]"
+                />
+                <p className="w-full font-mono text-[0.65rem] tabular-nums text-rsi-text sm:w-auto">
+                  {formatBreakdownLabel(selectedSplits)}
+                  {isUserCorrected ? " · corrected" : ""}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {options.length === 0 || totalScu <= 0 ? (
             <p className="mt-4 text-sm text-rsi-text-muted">
               No box options for this cargo total.
@@ -89,6 +140,7 @@ export function StopMissionBoxConfigModal({
             <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {options.map((option) => {
                 const isSelected = option.id === selectedId;
+                const isAuto = autoId != null && option.id === autoId;
                 return (
                   <li key={option.id}>
                     <button
@@ -123,7 +175,8 @@ export function StopMissionBoxConfigModal({
                       />
                       <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
                         {option.boxCount} boxes
-                        {option.isDefault ? " (default)" : ""}
+                        {isAuto ? " (auto)" : ""}
+                        {isSelected && isUserCorrected ? " · selected" : ""}
                       </p>
                     </button>
                   </li>

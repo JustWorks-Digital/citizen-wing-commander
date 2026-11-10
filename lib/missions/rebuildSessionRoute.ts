@@ -81,8 +81,9 @@ function rebuildRowsFromMissions(
   session: SessionChecklistModel,
   missions: SessionMission[],
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
-  const counted = countedMissions(missions);
-  const active = routeMissions(missions);
+  const nextMissions = missions.map(withMissionBoxSplitDefaults);
+  const counted = countedMissions(nextMissions);
+  const active = routeMissions(nextMissions);
   const missionCount = counted.length;
   const missionsCompleted = counted.filter((m) => m.isCompleted).length;
 
@@ -91,7 +92,7 @@ function rebuildRowsFromMissions(
       ok: true,
       session: applySessionCompletionTiming({
         ...session,
-        missions,
+        missions: nextMissions,
         missionCount,
         missionsCompleted,
         rows: [],
@@ -122,7 +123,7 @@ function rebuildRowsFromMissions(
   }
 
   let nextRows = rows;
-  for (const mission of missions) {
+  for (const mission of nextMissions) {
     if (!effectiveMissionScuBoxSplits(mission)) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
@@ -131,7 +132,7 @@ function rebuildRowsFromMissions(
     ok: true,
     session: applySessionCompletionTiming({
       ...session,
-      missions,
+      missions: nextMissions,
       missionCount,
       missionsCompleted,
       rows: nextRows,
@@ -177,19 +178,21 @@ export function removeMissionAndRebuildRoute(
   return rebuildRowsFromMissions(session, missions);
 }
 
-/**
- * Explicit override, else greedy mix capped by mission max container size
- * (matches the box-type picker's DEFAULT).
- */
-export function effectiveMissionScuBoxSplits(
+/** Capped greedy default for a mission (picker DEFAULT / auto-selected). */
+export function autoSelectedMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {
-  if (mission.scuBoxSplits) return mission.scuBoxSplits;
   if (
     typeof mission.maxContainerScu !== "number" ||
     mission.maxContainerScu <= 0
   ) {
-    return null;
+    // Still allow uncapped greedy when total SCU is known.
+    const scuTotal = mission.cargo.reduce(
+      (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
+      0,
+    );
+    if (scuTotal <= 0) return null;
+    return scuBoxSplitsForScu(scuTotal, null);
   }
   const scuTotal = mission.cargo.reduce(
     (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
@@ -197,6 +200,33 @@ export function effectiveMissionScuBoxSplits(
   );
   if (scuTotal <= 0) return null;
   return scuBoxSplitsForScu(scuTotal, mission.maxContainerScu);
+}
+
+/**
+ * Explicit override, else auto-selected / greedy mix capped by max container
+ * (matches the box-type picker's DEFAULT).
+ */
+export function effectiveMissionScuBoxSplits(
+  mission: SessionMission,
+): ScuBoxSplits | null {
+  if (mission.scuBoxSplits) return mission.scuBoxSplits;
+  return (
+    mission.scuBoxSplitsAutoSelected ?? autoSelectedMissionScuBoxSplits(mission)
+  );
+}
+
+/** Ensure auto-selected is captured; fill selected from auto when missing. */
+export function withMissionBoxSplitDefaults(
+  mission: SessionMission,
+): SessionMission {
+  const auto =
+    mission.scuBoxSplitsAutoSelected ?? autoSelectedMissionScuBoxSplits(mission);
+  if (!auto) return mission;
+  return {
+    ...mission,
+    scuBoxSplitsAutoSelected: auto,
+    scuBoxSplits: mission.scuBoxSplits ?? auto,
+  };
 }
 
 /**
@@ -333,11 +363,7 @@ function stampMissionBoxSizesOntoRows(
 export function restampAllMissionBoxSizes(
   session: SessionChecklistModel,
 ): SessionChecklistModel {
-  const missions = (session.missions ?? []).map((mission) => {
-    if (mission.scuBoxSplits) return mission;
-    const derived = effectiveMissionScuBoxSplits(mission);
-    return derived ? { ...mission, scuBoxSplits: derived } : mission;
-  });
+  const missions = (session.missions ?? []).map(withMissionBoxSplitDefaults);
   let rows = session.rows;
   for (const mission of missions) {
     if (!effectiveMissionScuBoxSplits(mission)) continue;
@@ -352,9 +378,11 @@ export function setMissionScuBoxSplits(
   missionId: string,
   scuBoxSplits: ScuBoxSplits,
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
-  const missions = (session.missions ?? []).map((mission) =>
-    mission.id === missionId ? { ...mission, scuBoxSplits } : mission,
-  );
+  const missions = (session.missions ?? []).map((mission) => {
+    if (mission.id !== missionId) return mission;
+    const withAuto = withMissionBoxSplitDefaults(mission);
+    return { ...withAuto, scuBoxSplits };
+  });
   const mission = missions.find((entry) => entry.id === missionId);
   if (!mission) {
     return { ok: false, error: `Unknown mission: ${missionId}` };

@@ -7,6 +7,12 @@ const meta = {
   component: SessionMissionsModal,
   parameters: {
     layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Session contracts list with box-type picker (auto-selected vs corrected).",
+      },
+    },
   },
   args: {
     open: true,

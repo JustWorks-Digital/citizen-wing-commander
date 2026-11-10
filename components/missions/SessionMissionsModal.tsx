@@ -429,6 +429,9 @@ export function SessionMissionsModal({
                           totalScu={totalScu}
                           maxContainerScu={mission.maxContainerScu}
                           selected={mission.scuBoxSplits ?? null}
+                          autoSelected={
+                            mission.scuBoxSplitsAutoSelected ?? null
+                          }
                           disabled={isCompleted}
                           onSelect={(breakdown) =>
                             onSelectBoxBreakdown(mission.id, breakdown)

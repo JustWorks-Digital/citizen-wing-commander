@@ -40,6 +40,11 @@ export type SessionMission = {
    * Drives 2D/3D bay packing when stamped onto route cargo lines.
    */
   scuBoxSplits?: ScuBoxSplits;
+  /**
+   * Auto / greedy default mix (capped by `maxContainerScu`) captured before
+   * any user correction. Kept so we can compare against `scuBoxSplits`.
+   */
+  scuBoxSplitsAutoSelected?: ScuBoxSplits;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
   cargoSummary: string;
   isCompleted: boolean;
