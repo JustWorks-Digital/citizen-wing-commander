@@ -312,7 +312,7 @@ function CargoGroups({
             ) : null}
             <div className="grid max-w-[15.5rem] grid-cols-4 gap-1.5">
               {group.items.map((line, index) => {
-                const tileId = `${row.id}-${group.role ?? "none"}-${line.missionId ?? "x"}-${line.commoditySlug}-${line.scu}-${index}`;
+                const tileId = `${row.id}-${group.role ?? "none"}-${line.commoditySlug}-${line.scu}-${index}`;
                 const cleared = clearedTileIds.has(tileId);
                 const cargoHex = resolveCommodityColorHex(
                   line.color,
@@ -848,7 +848,7 @@ export function HaulingChecklistTable({
                   isCompleted={row.isCompleted}
                   isActive={isFocused}
                   onToggle={() => {
-                    if (!row.isCompleted) {
+                    if (!row.isCompleted && !hideCompleted) {
                       const nextIncomplete = rows
                         .slice(routeIndex + 1)
                         .find((entry) => !entry.isCompleted);
