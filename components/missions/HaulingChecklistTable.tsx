@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import {
   describeCargoDeliveries,
@@ -201,6 +201,39 @@ function DoneCheckbox({
   );
 }
 
+function CargoTileHandledMark({
+  isPickup,
+}: {
+  isPickup: boolean;
+}) {
+  const stroke = isPickup ? "var(--rsi-accent)" : "var(--rsi-success)";
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+    >
+      <svg viewBox="0 0 20 20" className="size-5 drop-shadow-sm">
+        <circle
+          cx="10"
+          cy="10"
+          r="8.25"
+          fill="var(--rsi-bg-deep)"
+          stroke={stroke}
+          strokeWidth="1.5"
+        />
+        <path
+          d="M6.2 10.1 L8.7 12.5 L13.8 7.4"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function CargoGroups({
   row,
   cargoLines,
@@ -209,6 +242,18 @@ function CargoGroups({
   cargoLines: CargoLine[];
 }) {
   const groups = groupCargoLines(cargoLines);
+  const [clearedTileIds, setClearedTileIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  function toggleClearedTile(tileId: string) {
+    setClearedTileIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(tileId)) next.delete(tileId);
+      else next.add(tileId);
+      return next;
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5 text-sm md:gap-2">
@@ -228,6 +273,8 @@ function CargoGroups({
           prevRole != null &&
           group.role != null &&
           prevRole !== group.role;
+        const isPickup = group.role === "pickup";
+        const handledVerb = isPickup ? "picked up" : "delivered";
 
         if (group.items.length === 1 && group.items[0]?.scu == null) {
           return (
@@ -265,6 +312,8 @@ function CargoGroups({
             ) : null}
             <div className="grid max-w-[15.5rem] grid-cols-4 gap-1.5">
               {group.items.map((line, index) => {
+                const tileId = `${row.id}-${group.role ?? "none"}-${line.missionId ?? "x"}-${line.commoditySlug}-${line.scu}-${index}`;
+                const cleared = clearedTileIds.has(tileId);
                 const cargoHex = resolveCommodityColorHex(
                   line.color,
                   line.color2,
@@ -285,13 +334,25 @@ function CargoGroups({
                   ? commodityBadgeForeground(cargoHex)
                   : "var(--rsi-text-secondary)";
                 return (
-                  <span
-                    key={`${row.id}-cargo-${group.role}-${index}`}
-                    title={fullLabel}
+                  <button
+                    key={tileId}
+                    type="button"
+                    title={
+                      cleared
+                        ? `${fullLabel} · marked ${handledVerb}`
+                        : `${fullLabel} · click to mark ${handledVerb}`
+                    }
                     aria-label={fullLabel}
+                    aria-pressed={cleared}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleClearedTile(tileId);
+                    }}
                     className={[
-                      "inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
+                      "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
+                      "cursor-pointer transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
                       doneClass,
+                      cleared ? "opacity-40" : "",
                     ].join(" ")}
                     style={{
                       backgroundColor: tileBg,
@@ -319,7 +380,10 @@ function CargoGroups({
                     <span className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90">
                       {abbrev}
                     </span>
-                  </span>
+                    {cleared ? (
+                      <CargoTileHandledMark isPickup={isPickup} />
+                    ) : null}
+                  </button>
                 );
               })}
             </div>
@@ -330,7 +394,7 @@ function CargoGroups({
   );
 }
 
-const LOCATION_TITLE_MAX_CHARS = 28;
+const LOCATION_TITLE_MAX_CHARS = 48;
 
 function LocationHeader({
   row,
@@ -652,10 +716,20 @@ export function HaulingChecklistTable({
 }: HaulingChecklistTableProps) {
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const rowElsRef = useRef(new Map<string, HTMLLIElement>());
+  const pendingScrollToIdRef = useRef<string | null>(null);
   const completedCount = rows.filter((row) => row.isCompleted).length;
   const visibleRows = hideCompleted
     ? rows.filter((row) => !row.isCompleted)
     : rows;
+
+  useEffect(() => {
+    const targetId = pendingScrollToIdRef.current;
+    if (!targetId) return;
+    pendingScrollToIdRef.current = null;
+    const el = rowElsRef.current.get(targetId);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [rows, visibleRows]);
 
   async function copyStarmapName(rowId: string, name: string) {
     try {
@@ -755,6 +829,10 @@ export function HaulingChecklistTable({
           return (
             <li
               key={row.id}
+              ref={(node) => {
+                if (node) rowElsRef.current.set(row.id, node);
+                else rowElsRef.current.delete(row.id);
+              }}
               aria-checked={row.isCompleted}
               aria-current={isFocused ? "step" : undefined}
               className={[
@@ -769,7 +847,18 @@ export function HaulingChecklistTable({
                   step={step}
                   isCompleted={row.isCompleted}
                   isActive={isFocused}
-                  onToggle={() => onToggle(row.id)}
+                  onToggle={() => {
+                    if (!row.isCompleted) {
+                      const nextIncomplete = rows
+                        .slice(routeIndex + 1)
+                        .find((entry) => !entry.isCompleted);
+                      if (nextIncomplete) {
+                        pendingScrollToIdRef.current = nextIncomplete.id;
+                        onFocusStop?.(nextIncomplete.id);
+                      }
+                    }
+                    onToggle(row.id);
+                  }}
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:gap-4">

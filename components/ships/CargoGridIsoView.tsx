@@ -27,7 +27,6 @@ import {
 } from "@/lib/ships/locationGroupOutline";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
-
 export type CargoGridIsoLegendItem = {
   commoditySlug: string;
   commodityName: string;
@@ -263,6 +262,99 @@ function viewExtents(
   width: number,
 ): { viewLength: number; viewWidth: number } {
   return { viewLength: length, viewWidth: width };
+}
+
+/** Same length/width flip as `orientCube` for a point (no footprint). */
+function orientBayPoint(
+  lx: number,
+  wy: number,
+  facing: CargoGridIsoFacing,
+  length: number,
+  width: number,
+): { lx: number; wy: number } {
+  if (facing === "right" || facing === "up") {
+    return { lx: length - lx, wy: width - wy };
+  }
+  return { lx, wy };
+}
+
+function readableIsoLabelAngle(deg: number): number {
+  let a = deg;
+  while (a > 90) a -= 180;
+  while (a < -90) a += 180;
+  return a;
+}
+
+/**
+ * Front / Rear sit just outside the bay end edges, text parallel to that
+ * edge (matches the floor line). Bay space is post-`buildCubes` mirror:
+ * lx=0 rear, lx=L front.
+ */
+function bayEndLabelAnchors(
+  facing: CargoGridIsoFacing,
+  viewLength: number,
+  viewWidth: number,
+  cellPx: number,
+  cx: number,
+  cy: number,
+  style: IsoProjectStyle,
+): {
+  front: { x: number; y: number; angle: number };
+  rear: { x: number; y: number; angle: number };
+} {
+  const map = (lx: number, wy: number) => {
+    const o = orientBayPoint(lx, wy, facing, viewLength, viewWidth);
+    return project(o.lx, o.wy, 0, cellPx, cx, cy, style);
+  };
+  const rearA = map(0, 0);
+  const rearB = map(0, viewWidth);
+  const frontA = map(viewLength, 0);
+  const frontB = map(viewLength, viewWidth);
+  const rearMid = {
+    x: (rearA.x + rearB.x) / 2,
+    y: (rearA.y + rearB.y) / 2,
+  };
+  const frontMid = {
+    x: (frontA.x + frontB.x) / 2,
+    y: (frontA.y + frontB.y) / 2,
+  };
+  const center = map(viewLength / 2, viewWidth / 2);
+
+  const edgeAngle = (
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+  ) =>
+    readableIsoLabelAngle(
+      (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI,
+    );
+
+  const outward = (
+    mid: { x: number; y: number },
+    distance: number,
+  ): { x: number; y: number } => {
+    const dx = mid.x - center.x;
+    const dy = mid.y - center.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return {
+      x: mid.x + (dx / len) * distance,
+      y: mid.y + (dy / len) * distance,
+    };
+  };
+
+  // Clear of stacked crates — aft needs more room than the open fore tip.
+  const frontPos = outward(frontMid, cellPx * 1.15);
+  const rearPos = outward(rearMid, cellPx * 2.1);
+
+  return {
+    front: {
+      ...frontPos,
+      angle: edgeAngle(frontA, frontB),
+    },
+    rear: {
+      ...rearPos,
+      angle: edgeAngle(rearA, rearB),
+    },
+  };
 }
 
 function boxFaces(
@@ -928,26 +1020,42 @@ export function CargoGridIsoView({
         projectStyle,
       ),
     ];
+    const labels = bayEndLabelAnchors(
+      facing,
+      viewLength,
+      viewWidth,
+      cellPx,
+      yawCenterX,
+      yawCenterY,
+      projectStyle,
+    );
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
-    for (const point of corners) {
+    for (const point of [
+      ...corners,
+      { x: labels.front.x, y: labels.front.y },
+      { x: labels.rear.x, y: labels.rear.y },
+    ]) {
       minX = Math.min(minX, point.x);
       maxX = Math.max(maxX, point.x);
       minY = Math.min(minY, point.y);
       maxY = Math.max(maxY, point.y);
     }
-    const padX = cellPx;
-    const padY = cellPx * 0.55;
+    // Extra room for rotated FRONT / REAR glyphs outside the hull.
+    const padX = cellPx * 2.2;
+    const padY = cellPx * 1.35;
     return {
       minX: minX - padX,
       minY: minY - padY,
       width: maxX - minX + padX * 2,
       height: maxY - minY + padY * 2,
+      labels,
     };
   }, [
     cellPx,
+    facing,
     viewHeight,
     viewLength,
     viewWidth,
@@ -955,6 +1063,8 @@ export function CargoGridIsoView({
     yawCenterY,
     projectStyle,
   ]);
+
+  const endLabels = bounds.labels;
 
   const zoneColorIndex = useMemo(() => {
     const map = new Map<string, number>();
@@ -1105,6 +1215,9 @@ export function CargoGridIsoView({
                 const canToggle = Boolean(onToggleCommodity);
                 const hasBoxIcons =
                   item.boxCounts != null && item.boxCounts.length > 0;
+                const boxTotal = hasBoxIcons
+                  ? item.boxCounts!.reduce((sum, entry) => sum + entry.count, 0)
+                  : null;
                 const row = (
                   <span
                     className={[
@@ -1124,6 +1237,11 @@ export function CargoGridIsoView({
                       ].join(" ")}
                     >
                       {item.commodityName}
+                      {boxTotal != null ? (
+                        <span className="-ml-1 font-mono text-[0.55rem] text-rsi-text-muted">
+                          ({boxTotal})
+                        </span>
+                      ) : null}
                     </span>
                     {hasBoxIcons ? (
                       <CargoBoxCountIcons
@@ -1131,10 +1249,6 @@ export function CargoGridIsoView({
                         color={hex}
                         className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
                       />
-                    ) : item.scu != null ? (
-                      <span className="ml-auto shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                        {item.scu}
-                      </span>
                     ) : null}
                   </span>
                 );
@@ -1243,7 +1357,7 @@ export function CargoGridIsoView({
 
       <svg
         role="img"
-        aria-label={`${sketch.shipName} isometric cargo grid, ${cubes.length} cubes`}
+        aria-label={`${sketch.shipName} isometric cargo grid, ${cubes.length} cubes. Rear left, front right by default.`}
         viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`}
         width={bounds.width}
         height={bounds.height}
@@ -1604,6 +1718,31 @@ export function CargoGridIsoView({
             );
           })}
         </g>
+        {(
+          [
+            ["FRONT", endLabels.front],
+            ["REAR", endLabels.rear],
+          ] as const
+        ).map(([label, anchor]) => (
+          <text
+            key={label}
+            x={anchor.x}
+            y={anchor.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="var(--rsi-text-secondary)"
+            stroke="var(--rsi-bg-deep)"
+            strokeWidth={3}
+            paintOrder="stroke"
+            fontSize={Math.max(8, cellPx * 0.48)}
+            fontFamily="var(--font-mono, ui-monospace, monospace)"
+            letterSpacing="0.16em"
+            transform={`rotate(${anchor.angle} ${anchor.x} ${anchor.y})`}
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            {label}
+          </text>
+        ))}
       </svg>
         </div>
       </div>

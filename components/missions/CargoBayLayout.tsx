@@ -181,13 +181,6 @@ export function CargoBayLayout({
         </p>
       ) : plan && plan.boxes.length > 0 ? (
         <div className="relative">
-          <div
-            className="pointer-events-none mb-1.5 flex items-center justify-between px-1 font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
-            aria-hidden
-          >
-            <span title="Ramp / aft">Back</span>
-            <span title="Nose / fore">Front</span>
-          </div>
           <CargoGridSketch
             sketch={sketch}
             cellPx={14}

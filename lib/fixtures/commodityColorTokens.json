@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "id": "commodity-color-tokens",
+  "description": "Explicit UI display colors for cargo types (overrides crate-image / palette defaults). Not wired into commodityColors.ts yet — keep in sync by hand until the loader lands.",
+  "updated": "2026-11-10",
+  "tokens": [
+    {
+      "slug": "corundum",
+      "colorHex": "#8ec8f8",
+      "note": "light blue"
+    },
+    {
+      "slug": "quartz",
+      "colorHex": "#1f4e8c",
+      "note": "dark blue"
+    },
+    {
+      "slug": "aluminum",
+      "colorHex": "#6e7680",
+      "note": "gray, lighter than titanium"
+    },
+    {
+      "slug": "aluminum-ore",
+      "colorHex": "#5a626c",
+      "note": "aluminum ore, darker gray"
+    },
+    {
+      "slug": "titanium",
+      "colorHex": "#4a5058",
+      "note": "dark gray"
+    },
+    {
+      "slug": "titanium-ore",
+      "colorHex": "#383e46",
+      "note": "titanium ore, darker gray"
+    },
+    {
+      "slug": "tin",
+      "colorHex": "#8b949e",
+      "note": "neutral mid gray"
+    },
+    {
+      "slug": "tin-ore",
+      "colorHex": "#6f7882",
+      "note": "tin ore"
+    },
+    {
+      "slug": "waste",
+      "colorHex": "#9a7a62",
+      "note": "rust brown mixed with gray"
+    },
+    {
+      "slug": "tungsten",
+      "colorHex": "#9a6a6a",
+      "note": "grayer red"
+    },
+    {
+      "slug": "tungsten-ore",
+      "colorHex": "#7e5555",
+      "note": "tungsten ore"
+    },
+    {
+      "slug": "carbon",
+      "colorHex": "#7a9280",
+      "note": "gray-green"
+    },
+    {
+      "slug": "silicon",
+      "colorHex": "#2f6b48",
+      "note": "deeper green"
+    },
+    {
+      "slug": "silicone-raw",
+      "colorHex": "#25563a",
+      "note": "silicon raw, deeper green"
+    },
+    {
+      "slug": "stims",
+      "colorHex": "#f3f6f9",
+      "note": "white"
+    }
+  ]
+}

@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Isometric bay view. Legend-toggled cargo types are omitted from the graph.",
+          "Isometric bay view with Front/Rear outside the bay end edges, text parallel to those edges. Commodity legend shows box count in parentheses after the name.",
       },
     },
   },

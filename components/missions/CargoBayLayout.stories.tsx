@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session cargo layout as the ship’s bay grid at the active stop, with Top/3D tabs, Suggested / Cargo type / Mission based packing (plus Prioritized under Cargo type when the ship supports it), and optional inventory beside the title.",
+          "Session cargo layout as the ship’s bay grid at the active stop, with Top/3D tabs, Front/Rear rails (rear left · front right), Suggested / Cargo type / Mission based packing (plus Prioritized under Cargo type when the ship supports it), and optional inventory beside the title.",
       },
     },
   },

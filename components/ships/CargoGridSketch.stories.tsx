@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Ship bay top / 3D views. Legend toggles hide inactive cargo types completely (not dim).",
+          "Ship bay top / 3D views with Front/Rear rails (rear left, front right). Legend toggles hide inactive cargo types completely.",
       },
     },
   },

@@ -31,6 +31,7 @@ import {
   CargoGridIsoView,
   type CargoGridIsoLegendItem,
 } from "./CargoGridIsoView";
+import { ShipBayEndsFrame } from "./ShipBayEndsMarkers";
 
 const GRID_ZOOM_MIN = 0.5;
 const GRID_ZOOM_MAX = 2.5;
@@ -579,6 +580,12 @@ export function CargoGridSketch({
                       const isOn = !hiddenCommodities.has(item.commoditySlug);
                       const hasBoxIcons =
                         item.boxCounts != null && item.boxCounts.length > 0;
+                      const boxTotal = hasBoxIcons
+                        ? item.boxCounts!.reduce(
+                            (sum, entry) => sum + entry.count,
+                            0,
+                          )
+                        : null;
                       return (
                         <li key={item.commoditySlug}>
                           <button
@@ -602,6 +609,11 @@ export function CargoGridSketch({
                               ].join(" ")}
                             >
                               {item.commodityName}
+                              {boxTotal != null ? (
+                                <span className="-ml-1 font-mono text-[0.55rem] text-rsi-text-muted">
+                                  ({boxTotal})
+                                </span>
+                              ) : null}
                             </span>
                             {hasBoxIcons ? (
                               <CargoBoxCountIcons
@@ -609,10 +621,6 @@ export function CargoGridSketch({
                                 color={hex}
                                 className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
                               />
-                            ) : item.scu != null ? (
-                              <span className="ml-auto shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                                {item.scu}
-                              </span>
                             ) : null}
                           </button>
                         </li>
@@ -680,8 +688,10 @@ export function CargoGridSketch({
                   : "",
               ].join(" ")}
               role="img"
-              aria-label={`${sketch.shipName} top-view cargo grid, ${totalScu} SCU`}
+              aria-label={`${sketch.shipName} top-view cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
+              <ShipBayEndsFrame>
+              <div className="flex items-center">
               {topViewZones.map((zone) => {
                 const zoneWidth = cargoGridZoneWidth(sketch, zone);
                 const yOffset = Math.floor((maxWidth - zoneWidth) / 2);
@@ -955,6 +965,8 @@ export function CargoGridSketch({
                   </div>
                 );
               })}
+              </div>
+              </ShipBayEndsFrame>
             </div>
             </div>
           </div>
