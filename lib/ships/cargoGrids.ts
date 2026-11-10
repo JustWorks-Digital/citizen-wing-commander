@@ -20,7 +20,7 @@ export type CargoGridZone = {
   lengthCells: number;
   /**
    * Width (port ↔ starboard). Defaults to sketch `widthCells` when omitted.
-   * C2 back bay is narrower than the front bay.
+   * Narrower zones are centered in Y within max width (C2 front bay is 6; back is 8).
    */
   widthCells?: number;
   /**

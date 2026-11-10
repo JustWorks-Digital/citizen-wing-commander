@@ -657,7 +657,7 @@ function IsoFacingPad({
 }) {
   const buttonClass = (id: CargoGridIsoFacing) =>
     [
-      "inline-flex size-7 items-center justify-center rounded-[4px] border font-mono text-[0.7rem] transition-colors",
+      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] leading-none transition-colors",
       facing === id
         ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
         : "border-rsi-border bg-rsi-bg-deep/80 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
@@ -667,9 +667,9 @@ function IsoFacingPad({
     <div
       role="group"
       aria-label="Bay view direction"
-      className="pointer-events-auto absolute bottom-2 left-2 z-20 grid grid-cols-3 gap-0.5"
+      className="pointer-events-auto absolute bottom-2 left-2 z-20 grid grid-cols-3 gap-px"
     >
-      <span className="size-7" aria-hidden />
+      <span className="size-5" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "up"}
@@ -680,7 +680,7 @@ function IsoFacingPad({
       >
         ↑
       </button>
-      <span className="size-7" aria-hidden />
+      <span className="size-5" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "left"}
@@ -699,7 +699,7 @@ function IsoFacingPad({
         onClick={() => onFacingChange("home")}
         className={buttonClass("home")}
       >
-        <DefaultFacingIcon className="size-3.5" />
+        <DefaultFacingIcon className="size-2.5" />
       </button>
       <button
         type="button"
@@ -711,7 +711,7 @@ function IsoFacingPad({
       >
         →
       </button>
-      <span className="size-7" aria-hidden />
+      <span className="size-5" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "down"}
@@ -722,7 +722,7 @@ function IsoFacingPad({
       >
         ↓
       </button>
-      <span className="size-7" aria-hidden />
+      <span className="size-5" aria-hidden />
     </div>
   );
 }
@@ -1161,12 +1161,7 @@ export function CargoGridIsoView({
       style={{ height: panelHeightPx }}
     >
       {showToolbar ? (
-        <div
-          className={[
-            "mb-1 flex shrink-0 flex-col items-start gap-1.5",
-            showLegend ? "pr-[17.5rem]" : "",
-          ].join(" ")}
-        >
+        <div className="mb-1 flex shrink-0 flex-col items-start gap-1.5">
           {mode === "placement" ? (
             <span className="sr-only">3D cargo grid</span>
           ) : (
@@ -1203,12 +1198,7 @@ export function CargoGridIsoView({
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto">
-        <div
-          className={[
-            "flex min-h-full min-w-full items-center justify-center",
-            showLegend ? "pr-[17.5rem]" : "",
-          ].join(" ")}
-        >
+        <div className="flex min-h-full min-w-full items-center justify-center">
 
       {showLegend ? (
         <div

@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session ship layout as the ship’s bay grid at the active stop, with Top/3D tabs, Front/Rear rails (rear left · front right), Suggested / Cargo type / Contract based packing (plus Prioritized under Cargo type when the ship supports it), optional inventory beside the title, and a bottom drag handle to resize panel height (persisted per session in localStorage).",
+          "Session ship layout as the ship’s bay grid at the active stop, with 2D/Split/3D tabs, left Sorting panel (Suggested / Cargo type / Contract based), right Legend, Front/Rear rails, optional inventory beside the title, and a bottom drag handle to resize panel height (persisted per session in localStorage).",
       },
     },
   },

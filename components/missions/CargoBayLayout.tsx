@@ -64,6 +64,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   );
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
   const [legendHidden, setLegendHidden] = useState(false);
+  const [sortingHidden, setSortingHidden] = useState(false);
   const [packMode, setPackMode] = useState<CargoBayPackMode>(
     defaultCargoBayPackMode,
   );
@@ -214,12 +215,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="relative">
           {showViewTabs ? (
             <>
-              <div
-                className={[
-                  "pointer-events-none absolute top-2 z-20 flex justify-center",
-                  legendHidden ? "right-14 left-10" : "right-[16.75rem] left-10",
-                ].join(" ")}
-              >
+              <div className="pointer-events-none absolute top-2 right-14 left-14 z-20 flex justify-center">
                 <div
                   role="tablist"
                   aria-label="Cargo grid projection"
@@ -227,9 +223,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 >
                   {(
                     [
-                      { id: "top", label: "Top" },
-                      { id: "iso", label: "3D" },
+                      { id: "top", label: "2D" },
                       { id: "split", label: "Split" },
+                      { id: "iso", label: "3D" },
                     ] as const
                   ).map((tab) => {
                     const selected = viewTab === tab.id;
@@ -256,15 +252,25 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               </div>
               <button
                 type="button"
+                aria-pressed={!sortingHidden}
+                aria-label={sortingHidden ? "Show sorting" : "Hide sorting"}
+                onClick={() => setSortingHidden((value) => !value)}
+                className={[
+                  "pointer-events-auto absolute top-2 left-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                  !sortingHidden
+                    ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                    : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                ].join(" ")}
+              >
+                Sorting
+              </button>
+              <button
+                type="button"
                 aria-pressed={!legendHidden}
                 aria-label={legendHidden ? "Show legend" : "Hide legend"}
                 onClick={() => setLegendHidden((value) => !value)}
                 className={[
-                  "pointer-events-auto absolute top-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
-                  // Keep clear of the split side legend (no extra legend top pad).
-                  viewTab === "split" && !legendHidden
-                    ? "right-[17rem]"
-                    : "right-2",
+                  "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
                   !legendHidden
                     ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
                     : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
@@ -272,6 +278,79 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               >
                 Legend
               </button>
+              {!sortingHidden ? (
+                <div
+                  role="region"
+                  aria-label="Cargo sorting"
+                  className="pointer-events-auto absolute top-8 left-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
+                >
+                  <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                    Pack mode
+                  </p>
+                  <div
+                    role="group"
+                    aria-label="Cargo grouping"
+                    className="flex flex-col gap-1"
+                  >
+                    {cargoBayPackModes.map((mode) => {
+                      const selected = packMode === mode.id;
+                      const showPrioritizedUnder =
+                        mode.id === "by-cargo-type" && supportsPrioritized;
+                      return (
+                        <div key={mode.id} className="min-w-0">
+                          <button
+                            type="button"
+                            aria-pressed={selected}
+                            title={mode.summary}
+                            onClick={() => setPackMode(mode.id)}
+                            className={[
+                              "flex w-full flex-col items-start gap-0.5 rounded-rsi border px-2 py-1.5 text-left transition-colors",
+                              selected
+                                ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
+                                : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                            ].join(" ")}
+                          >
+                            <span className="font-mono text-[0.55rem] uppercase tracking-[0.14em]">
+                              {mode.label}
+                            </span>
+                            <span className="text-[0.65rem] leading-snug text-rsi-text-muted">
+                              {mode.summary}
+                            </span>
+                          </button>
+                          {showPrioritizedUnder ? (
+                            <button
+                              type="button"
+                              aria-pressed={
+                                showPrioritizedToggle && prioritized
+                              }
+                              title={
+                                shipBayPrefs.missionPriorityPacking?.bias ===
+                                "edges-first"
+                                  ? "Early deliveries toward bay edges; later deliveries toward the center."
+                                  : "Order cargo by upcoming delivery stops."
+                              }
+                              onClick={() => {
+                                setPackMode("by-cargo-type");
+                                setPrioritized((value) =>
+                                  packMode === "by-cargo-type" ? !value : true,
+                                );
+                              }}
+                              className={[
+                                "mt-1 w-full rounded-rsi border px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                                showPrioritizedToggle && prioritized
+                                  ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                                  : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
+                              ].join(" ")}
+                            >
+                              Prioritized
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </>
           ) : null}
           <CargoGridSketch
@@ -289,66 +368,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             legendItems={legendItems}
             locationLegendItems={locationLegendItems}
             showLocationOutlines={showLocationOutlines}
-            isoToolbarBelow={
-              <div
-                role="group"
-                aria-label="Cargo grouping"
-                className="inline-flex w-fit max-w-full items-start gap-0.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 p-0.5"
-              >
-                {cargoBayPackModes.map((mode) => {
-                  const selected = packMode === mode.id;
-                  const showPrioritizedUnder =
-                    mode.id === "by-cargo-type" && supportsPrioritized;
-                  return (
-                    <div
-                      key={mode.id}
-                      className="flex min-w-0 flex-col items-stretch"
-                    >
-                      <button
-                        type="button"
-                        aria-pressed={selected}
-                        title={mode.summary}
-                        onClick={() => setPackMode(mode.id)}
-                        className={[
-                          "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-                          selected
-                            ? "bg-rsi-accent-muted/50 text-rsi-accent"
-                            : "text-rsi-text-muted hover:text-rsi-text",
-                        ].join(" ")}
-                      >
-                        {mode.label}
-                      </button>
-                      {showPrioritizedUnder ? (
-                        <button
-                          type="button"
-                          aria-pressed={showPrioritizedToggle && prioritized}
-                          title={
-                            shipBayPrefs.missionPriorityPacking?.bias ===
-                            "edges-first"
-                              ? "Early deliveries toward bay edges; later deliveries toward the center."
-                              : "Order cargo by upcoming delivery stops."
-                          }
-                          onClick={() => {
-                            setPackMode("by-cargo-type");
-                            setPrioritized((value) =>
-                              packMode === "by-cargo-type" ? !value : true,
-                            );
-                          }}
-                          className={[
-                            "mt-0.5 w-full rounded-[calc(var(--radius-rsi)-2px)] border px-1 py-px font-mono text-[0.4rem] uppercase leading-tight tracking-[0.1em] transition-colors",
-                            showPrioritizedToggle && prioritized
-                              ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                              : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
-                          ].join(" ")}
-                        >
-                          Prioritized
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            }
           />
           <p className="sr-only">
             Ship orientation: back (ramp) on the left, front (nose) on the

@@ -220,7 +220,7 @@ function DoneCheckbox({
         onToggle();
       }}
       className={[
-        "group inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors sm:size-8",
+        "group inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isCompleted
           ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
@@ -252,6 +252,44 @@ function DoneCheckbox({
           </span>
         </>
       )}
+    </button>
+  );
+}
+
+/** Touch-friendly stop complete control for narrow layouts. */
+function DoneStopButton({
+  location,
+  step,
+  isCompleted,
+  onToggle,
+}: {
+  location: string;
+  step: number;
+  isCompleted: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isCompleted}
+      aria-label={
+        isCompleted
+          ? `Stop ${step}, mark incomplete: ${location}`
+          : `Stop ${step}, mark complete: ${location}`
+      }
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      className={[
+        "inline-flex min-h-10 w-auto min-w-[8.5rem] items-center justify-center rounded-rsi border px-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+        isCompleted
+          ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
+          : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary active:border-rsi-accent/50 active:text-rsi-accent",
+      ].join(" ")}
+    >
+      {isCompleted ? "Complete" : "Mark complete"}
     </button>
   );
 }
@@ -500,7 +538,7 @@ function LocationHeader({
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className={[
-              "whitespace-nowrap text-left text-lg font-semibold tracking-wide sm:text-xl",
+              "min-w-0 truncate text-left text-lg font-semibold tracking-wide sm:text-xl",
               row.isCompleted
                 ? "text-rsi-text-muted line-through decoration-rsi-success/60"
                 : "text-rsi-text",
@@ -520,7 +558,9 @@ function LocationHeader({
               onCopy();
             }}
             className={[
-              "inline-flex size-5 shrink-0 items-center justify-center rounded-rsi border transition-colors",
+              // Slight drop so the icon sits on the title’s optical center
+              // without changing title metrics (keeps title ↔ image alignment).
+              "inline-flex size-5 shrink-0 translate-y-0.5 items-center justify-center rounded-rsi border transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
               isCopied
                 ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
@@ -554,7 +594,7 @@ function TransferArrow() {
   return (
     <span
       aria-hidden
-      className="flex shrink-0 self-center px-5 text-rsi-text-muted sm:px-7"
+      className="flex shrink-0 self-center px-3 text-rsi-text-muted sm:px-7"
     >
       <svg
         viewBox="0 0 30 20"
@@ -611,7 +651,7 @@ function TransferBlockFrame({
   return (
     <div
       className={[
-        "mx-auto grid w-fit grid-cols-[auto_auto_auto] items-start gap-x-2 py-5 sm:gap-x-4",
+        "mr-auto grid w-fit grid-cols-[auto_auto_auto] items-start gap-x-2 py-5 sm:gap-x-4",
         isDone ? "text-rsi-text-muted" : "",
       ].join(" ")}
       title={title}
@@ -981,11 +1021,14 @@ function ExpectedCompletionsMeta({
       ? null
       : (missions.find((mission) => mission.id === detailMissionId) ?? null);
 
-  // No completing contracts: omit the section copy, but keep the same footprint
-  // so "Next stop / Distance" does not jump up.
+  // Desktop: keep an invisible footprint so Next stop does not jump.
+  // Mobile: collapse — vertical space matters more than column alignment.
   if (missions.length === 0) {
     return (
-      <div className="invisible py-5 pr-4 text-sm md:pr-8" aria-hidden>
+      <div
+        className="invisible hidden py-5 pr-4 text-sm md:block md:pr-8"
+        aria-hidden
+      >
         <p className="mb-2 w-fit border-b border-transparent pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]">
           Contracts
         </p>
@@ -999,7 +1042,7 @@ function ExpectedCompletionsMeta({
       <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Contracts
       </p>
-      <ul className="grid grid-cols-3 gap-1.5">
+      <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
         {missions.map((mission) => {
           const { rank, title } = stripRankFromTitle(mission.title);
           const scuItems = missionScuItemsLabel(mission);
@@ -1247,6 +1290,23 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             return sum;
           }, 0);
 
+          const toggleStopDone = () => {
+            const completing = !row.isCompleted;
+            onToggle(row.id);
+            // Defer focus/scroll/bay replan so the checkbox paints first.
+            if (completing && !hideCompleted) {
+              const nextIncomplete = rows
+                .slice(routeIndex + 1)
+                .find((entry) => !entry.isCompleted);
+              if (nextIncomplete) {
+                startTransition(() => {
+                  pendingScrollToIdRef.current = nextIncomplete.id;
+                  onFocusStop?.(nextIncomplete.id);
+                });
+              }
+            }
+          };
+
           return (
             <li
               key={row.id}
@@ -1263,28 +1323,16 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               onClick={() => onFocusStop?.(row.id)}
             >
               <div className="flex gap-3">
-                <DoneCheckbox
-                  location={location}
-                  step={step}
-                  isCompleted={row.isCompleted}
-                  isActive={isFocused}
-                  onToggle={() => {
-                    const completing = !row.isCompleted;
-                    onToggle(row.id);
-                    // Defer focus/scroll/bay replan so the checkbox paints first.
-                    if (completing && !hideCompleted) {
-                      const nextIncomplete = rows
-                        .slice(routeIndex + 1)
-                        .find((entry) => !entry.isCompleted);
-                      if (nextIncomplete) {
-                        startTransition(() => {
-                          pendingScrollToIdRef.current = nextIncomplete.id;
-                          onFocusStop?.(nextIncomplete.id);
-                        });
-                      }
-                    }
-                  }}
-                />
+                {/* Desktop: side column aligned to the thumbnail, gutter below. */}
+                <div className="hidden h-14 shrink-0 items-center self-start md:flex">
+                  <DoneCheckbox
+                    location={location}
+                    step={step}
+                    isCompleted={row.isCompleted}
+                    isActive={isFocused}
+                    onToggle={toggleStopDone}
+                  />
+                </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
                     <div className="min-w-0 flex-1">
@@ -1307,7 +1355,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         />
                       </div>
                     </div>
-                    <div className="hidden w-full md:flex md:w-1/2 md:shrink-0 md:flex-col">
+                    <div className="w-full min-w-0 md:w-1/2 md:shrink-0 md:self-start">
                       <StopDeliveryBayPreview row={row} rows={rows} />
                     </div>
                   </div>
@@ -1327,6 +1375,14 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         completionAuec={completionAuec}
                         completingMissionCount={expectedCompletions.length}
                       />
+                      <div className="flex justify-start py-3 md:hidden">
+                        <DoneStopButton
+                          location={location}
+                          step={step}
+                          isCompleted={row.isCompleted}
+                          onToggle={toggleStopDone}
+                        />
+                      </div>
                       <NextDistanceMeta
                         row={row}
                         nextLocationName={nextLocationName}
@@ -1349,7 +1405,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   </div>
                   {sessionId ? (
                     <div
-                      className="mt-3 flex justify-center pt-1"
+                      className="mt-3 flex justify-start pt-1"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <StopMissionScreenshots

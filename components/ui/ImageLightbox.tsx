@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 
 export type ImageLightboxItem = {
   src: string;
@@ -63,11 +64,13 @@ function ZoomControls({
   onZoomIn,
   onZoomOut,
   onReset,
+  onZoomChange,
 }: {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onZoomChange: (zoom: number) => void;
 }) {
   const buttonClass = [
     "inline-flex size-8 items-center justify-center border-0 font-mono text-[0.75rem]",
@@ -92,15 +95,16 @@ function ZoomControls({
       >
         −
       </button>
-      <button
-        type="button"
-        aria-label="Reset zoom"
-        title="Reset zoom"
+      <EditableZoomPercent
+        zoom={zoom}
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        onChange={onZoomChange}
         onClick={onReset}
+        title="Reset zoom · double-click to set"
+        aria-label="Reset zoom"
         className={`${buttonClass} min-w-[3rem] border-r border-rsi-border px-1.5 text-[0.6rem] tabular-nums`}
-      >
-        {Math.round(zoom * 100)}%
-      </button>
+      />
       <button
         type="button"
         aria-label="Zoom in"
@@ -213,6 +217,7 @@ export function ImageLightbox({
           onZoomIn={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
           onZoomOut={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
           onReset={() => setZoom(1)}
+          onZoomChange={setZoom}
         />
         {hasGallery ? (
           <p className="shrink-0 font-mono text-[0.65rem] tabular-nums tracking-[0.14em] text-rsi-text-secondary">

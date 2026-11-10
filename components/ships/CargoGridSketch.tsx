@@ -42,6 +42,7 @@ import {
   type CargoGridIsoLegendItem,
 } from "./CargoGridIsoView";
 import { ShipBayEndsFrame } from "./ShipBayEndsMarkers";
+import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 
 type LegendSectionKey =
   | "locations"
@@ -62,11 +63,15 @@ function CargoGridZoomControls({
   onZoomIn,
   onZoomOut,
   onReset,
+  onZoomChange,
+  ariaLabel = "Grid zoom",
 }: {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onZoomChange: (zoom: number) => void;
+  ariaLabel?: string;
 }) {
   const buttonClass =
     "inline-flex size-7 items-center justify-center border border-rsi-border bg-rsi-bg-deep/70 font-mono text-[0.7rem] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text disabled:cursor-default disabled:opacity-40";
@@ -74,7 +79,7 @@ function CargoGridZoomControls({
     <div
       className="inline-flex overflow-hidden rounded-rsi border border-rsi-border"
       role="group"
-      aria-label="Grid zoom"
+      aria-label={ariaLabel}
     >
       <button
         type="button"
@@ -85,15 +90,16 @@ function CargoGridZoomControls({
       >
         −
       </button>
-      <button
-        type="button"
-        aria-label="Reset zoom"
-        title="Reset zoom"
+      <EditableZoomPercent
+        zoom={zoom}
+        min={GRID_ZOOM_MIN}
+        max={GRID_ZOOM_MAX}
+        onChange={onZoomChange}
         onClick={onReset}
+        title="Reset zoom · double-click to set"
+        aria-label="Reset zoom"
         className={`${buttonClass} min-w-[2.75rem] border-0 border-r border-rsi-border px-1.5 text-[0.6rem] tabular-nums`}
-      >
-        {Math.round(zoom * 100)}%
-      </button>
+      />
       <button
         type="button"
         aria-label="Zoom in"
@@ -138,8 +144,8 @@ export type CargoGridSketchProps = {
   compact?: boolean;
   /**
    * Which projections to render.
-   * `"both"` shows Top / 3D / Split tabs. `"split"` stacks top above 3D.
-   * Session overview uses `"top"`.
+   * `"both"` shows 2D / 3D / Split tabs. `"split"` stacks 2D above 3D.
+   * Session overview uses `"top"` (2D).
    */
   views?: "both" | CargoGridViewTab;
   /**
@@ -171,8 +177,8 @@ function zoneFillClass(zone: CargoGridZone, cargoIndex: number): string {
 }
 
 /**
- * Cargo-grid sketch: top (overhead) and/or 3D isometric stacked cubes.
- * With `views="both"`, switch via Top / 3D / Split tabs.
+ * Cargo-grid sketch: 2D (overhead) and/or 3D isometric stacked cubes.
+ * With `views="both"`, switch via 2D / 3D / Split tabs.
  */
 export function CargoGridSketch({
   sketch,
@@ -197,7 +203,9 @@ export function CargoGridSketch({
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
-  const [zoom, setZoom] = useState(1);
+  /** Independent zooms so split view can scale 2D and 3D separately. */
+  const [topZoom, setTopZoom] = useState(1);
+  const [isoZoom, setIsoZoom] = useState(1);
   const [legendHiddenLocal, setLegendHiddenLocal] = useState(false);
   const legendHidden = hideLegendProp ?? legendHiddenLocal;
   const isSplit =
@@ -218,31 +226,37 @@ export function CargoGridSketch({
   const { top: topScale, iso: isoScale } = getCargoGridViewScale(
     sketch.shipSlug,
   );
-  const viewCellPx = Math.max(4, Math.round(cellPx * topScale * zoom));
-  const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * isoScale * zoom));
+  const viewCellPx = Math.max(4, Math.round(cellPx * topScale * topZoom));
+  const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * isoScale * isoZoom));
 
-  function zoomIn() {
-    setZoom((value) =>
-      Math.min(GRID_ZOOM_MAX, Math.round((value + GRID_ZOOM_STEP) * 100) / 100),
+  function clampGridZoom(value: number): number {
+    return Math.min(
+      GRID_ZOOM_MAX,
+      Math.max(GRID_ZOOM_MIN, Math.round(value * 100) / 100),
     );
   }
-  function zoomOut() {
-    setZoom((value) =>
-      Math.max(GRID_ZOOM_MIN, Math.round((value - GRID_ZOOM_STEP) * 100) / 100),
+
+  function makeZoomControls(
+    zoom: number,
+    setZoom: (next: number | ((value: number) => number)) => void,
+    ariaLabel: string,
+  ): ReactNode {
+    return (
+      <CargoGridZoomControls
+        zoom={zoom}
+        onZoomIn={() => setZoom((value) => clampGridZoom(value + GRID_ZOOM_STEP))}
+        onZoomOut={() =>
+          setZoom((value) => clampGridZoom(value - GRID_ZOOM_STEP))
+        }
+        onReset={() => setZoom(1)}
+        onZoomChange={(next) => setZoom(clampGridZoom(next))}
+        ariaLabel={ariaLabel}
+      />
     );
   }
-  function resetZoom() {
-    setZoom(1);
-  }
 
-  const zoomControls: ReactNode = (
-    <CargoGridZoomControls
-      zoom={zoom}
-      onZoomIn={zoomIn}
-      onZoomOut={zoomOut}
-      onReset={resetZoom}
-    />
-  );
+  const topZoomControls = makeZoomControls(topZoom, setTopZoom, "2D grid zoom");
+  const isoZoomControls = makeZoomControls(isoZoom, setIsoZoom, "3D grid zoom");
   const commoditySlugs = useMemo(() => {
     if (legendItems && legendItems.length > 0) {
       return legendItems.map((item) => item.commoditySlug);
@@ -740,7 +754,7 @@ export function CargoGridSketch({
             <div
               role="radiogroup"
               aria-label={
-                options.includeIsoLayers ? "Top view Z layer" : "Z layer"
+                options.includeIsoLayers ? "2D view Z layer" : "Z layer"
               }
               className="flex flex-wrap items-center justify-start gap-1"
             >
@@ -879,9 +893,9 @@ export function CargoGridSketch({
           >
             {(
               [
-                { id: "top", label: "Top" },
-                { id: "iso", label: "3D" },
+                { id: "top", label: "2D" },
                 { id: "split", label: "Split" },
+                { id: "iso", label: "3D" },
               ] as const
             ).map((tab) => {
               const selected = viewTab === tab.id;
@@ -926,7 +940,7 @@ export function CargoGridSketch({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div
           className={[
-            "flex min-w-0 flex-1",
+            "relative flex min-w-0 flex-1",
             isSplit
               ? "flex-row overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50"
               : "flex-col gap-4",
@@ -943,10 +957,10 @@ export function CargoGridSketch({
             style={{ height: panelHeightPx }}
           >
             {tabbed || compact ? (
-              <span className="sr-only">Top view</span>
+              <span className="sr-only">2D view</span>
             ) : (
               <p className="mb-2 shrink-0 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                Top view
+                2D view
               </p>
             )}
             {isoToolbarBelow ? (
@@ -970,7 +984,7 @@ export function CargoGridSketch({
               </div>
             ) : null}
             <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
-              {zoomControls}
+              {topZoomControls}
             </div>
             {showTopLegend ? (
               <div
@@ -984,20 +998,15 @@ export function CargoGridSketch({
               >
                 {renderCargoLegendBody({
                   includeIsoLayers: false,
-                  topLayersTitle: "Layers",
+                  topLayersTitle: "2D layers",
                 })}
               </div>
             ) : null}
             <div className="min-h-0 flex-1 overflow-auto">
             <div
-              className={[
-                "flex min-h-full min-w-full items-center justify-center",
-                showTopLegend
-                  ? "max-md:pt-14 md:pr-[17rem]"
-                  : "",
-              ].join(" ")}
+              className="flex min-h-full min-w-full items-center justify-center"
               role="img"
-              aria-label={`${sketch.shipName} top-view cargo grid, ${totalScu} SCU. Rear left, front right.`}
+              aria-label={`${sketch.shipName} 2D cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
               <ShipBayEndsFrame compact={isSplit}>
               <div className="flex items-center">
@@ -1048,22 +1057,33 @@ export function CargoGridSketch({
                   return (
                     <div
                       key={zone.id}
-                      title="Grid break"
-                      aria-label={`${zone.label} grid break`}
-                      className={[
-                        "relative flex items-center justify-center border-2 bg-rsi-bg-deep/40",
-                        fillClass,
-                      ].join(" ")}
-                      style={{
-                        width: zone.lengthCells * viewCellPx,
-                        height: zoneWidth * viewCellPx,
-                      }}
+                      className="flex flex-col items-center gap-1.5"
                     >
-                      <span className="pointer-events-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                        <span className="rounded-sm bg-rsi-bg-deep/75 px-1.5 py-0.5">
-                          {zone.label}
-                        </span>
+                      {/* Match Bay N label height so the gap sits on the same rows as cargo grids. */}
+                      <span
+                        className="pointer-events-none invisible shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]"
+                        aria-hidden
+                      >
+                        Bay 0
                       </span>
+                      <div
+                        title="Grid break"
+                        aria-label={`${zone.label} grid break`}
+                        className={[
+                          "relative flex items-center justify-center border-2 bg-rsi-bg-deep/40",
+                          fillClass,
+                        ].join(" ")}
+                        style={{
+                          width: zone.lengthCells * viewCellPx,
+                          height: zoneWidth * viewCellPx,
+                        }}
+                      >
+                        <span className="pointer-events-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                          <span className="rounded-sm bg-rsi-bg-deep/75 px-1.5 py-0.5">
+                            {zone.label}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   );
                 }
@@ -1364,7 +1384,7 @@ export function CargoGridSketch({
                 hiddenActions={hiddenActions}
                 onToggleAction={toggleAction}
                 mode={isPlacementView ? "placement" : "full"}
-                toolbarExtra={zoomControls}
+                toolbarExtra={isoZoomControls}
                 toolbarBelow={isSplit ? null : isoToolbarBelow}
                 showFacingPad={isPlacementView}
                 embedded={isSplit}
@@ -1384,15 +1404,15 @@ export function CargoGridSketch({
             <div
               ref={splitLegendScrollRef}
               className={[
-                "flex w-[16rem] shrink-0 flex-col space-y-1.5 border-l border-rsi-border bg-rsi-bg-deep/95 px-2 py-1.5",
+                "pointer-events-auto absolute top-8 right-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
                 splitLegendScrollClassName,
               ].join(" ")}
-              style={{ maxHeight: panelHeightPx }}
+              style={{ maxHeight: Math.max(120, panelHeightPx - 40) }}
               aria-label="Cargo color legend"
             >
               {renderCargoLegendBody({
                 includeIsoLayers: true,
-                topLayersTitle: "Top layers",
+                topLayersTitle: "2D layers",
               })}
             </div>
           ) : null}

@@ -9,6 +9,7 @@ import {
   focusPickupHangarPile,
   type StopCargoStacksPlan,
 } from "@/lib/missions/stopDeliveryBoxes";
+import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 
 export type StopDeliveryStacksViewProps = {
   plan: StopCargoStacksPlan;
@@ -496,23 +497,27 @@ export function StopDeliveryStacksView({
           >
             −
           </button>
-          <button
-            type="button"
-            aria-label="Fit zoom"
-            title="Fit to width"
+          <EditableZoomPercent
+            zoom={zoom}
+            min={ZOOM_MIN}
+            max={ZOOM_MAX}
+            onChange={(next) => {
+              userZoomedRef.current = true;
+              setZoom(next);
+            }}
             onClick={() => {
               userZoomedRef.current = false;
               setZoom(fitZoom);
             }}
+            title="Fit to width · double-click to set"
+            aria-label="Fit zoom"
             className={[
               "inline-flex min-w-[2.5rem] items-center justify-center border-r border-rsi-border/80 px-1",
               "font-mono text-[0.5rem] tabular-nums tracking-[0.08em] text-rsi-text-muted",
               "transition-colors hover:text-rsi-accent",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             ].join(" ")}
-          >
-            {Math.round(zoom * 100)}%
-          </button>
+          />
           <button
             type="button"
             aria-label="Zoom in"

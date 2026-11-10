@@ -36,7 +36,7 @@ export type ShipBayEndsFrameProps = {
   flipped?: boolean;
   /**
    * `iso`: slant Front/Rear with the classic SE bay (~±30°), matching the
-   * 3D floor. `upright`: vertical side rails for the top view.
+   * 3D floor. `upright`: vertical side rails for the 2D view.
    */
   slant?: "upright" | "iso";
   /**
@@ -47,6 +47,66 @@ export type ShipBayEndsFrameProps = {
   className?: string;
   children: ReactNode;
 };
+
+/**
+ * Same footprint as the 2D “Bay N” header so Front/Rear center on the grids,
+ * not on the label+grid column.
+ */
+function BayLabelSpacer() {
+  return (
+    <span
+      className="pointer-events-none invisible shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]"
+      aria-hidden
+    >
+      Bay 0
+    </span>
+  );
+}
+
+function EndRail({
+  end,
+  iso,
+  railWidth,
+  labelClassName,
+  labelStyle,
+}: {
+  end: "front" | "rear";
+  iso: boolean;
+  railWidth: string;
+  labelClassName: string;
+  labelStyle?: CSSProperties;
+}) {
+  const label = (
+    <EndLabel end={end} className={labelClassName} style={labelStyle} />
+  );
+
+  if (iso) {
+    return (
+      <div
+        className={[
+          "flex shrink-0 items-center justify-center self-stretch",
+          railWidth,
+        ].join(" ")}
+      >
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={[
+        "flex shrink-0 flex-col items-center gap-1.5 self-stretch",
+        railWidth,
+      ].join(" ")}
+    >
+      <BayLabelSpacer />
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        {label}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Wraps bay sketch content with Front / Rear rails
@@ -71,52 +131,42 @@ export function ShipBayEndsFrame({
         .filter(Boolean)
         .join(" ")}
     >
-      <div
-        className={[
-          "flex shrink-0 items-center justify-center self-stretch",
-          railWidth,
-        ].join(" ")}
-      >
-        <EndLabel
-          end={left}
-          className={
-            iso
-              ? "max-w-[5.5rem] whitespace-nowrap"
-              : "max-w-[5rem] -rotate-90 whitespace-nowrap"
-          }
-          style={
-            iso
-              ? {
-                  // Parallel to the SE-iso floor edge on the ramp/aft side.
-                  transform: flipped ? "rotate(30deg)" : "rotate(-30deg)",
-                }
-              : undefined
-          }
-        />
-      </div>
+      <EndRail
+        end={left}
+        iso={iso}
+        railWidth={railWidth}
+        labelClassName={
+          iso
+            ? "max-w-[5.5rem] whitespace-nowrap"
+            : "max-w-[5rem] -rotate-90 whitespace-nowrap"
+        }
+        labelStyle={
+          iso
+            ? {
+                // Parallel to the SE-iso floor edge on the ramp/aft side.
+                transform: flipped ? "rotate(30deg)" : "rotate(-30deg)",
+              }
+            : undefined
+        }
+      />
       <div className="min-w-0 shrink">{children}</div>
-      <div
-        className={[
-          "flex shrink-0 items-center justify-center self-stretch",
-          railWidth,
-        ].join(" ")}
-      >
-        <EndLabel
-          end={right}
-          className={
-            iso
-              ? "max-w-[5.5rem] whitespace-nowrap"
-              : "max-w-[5rem] rotate-90 whitespace-nowrap"
-          }
-          style={
-            iso
-              ? {
-                  transform: flipped ? "rotate(-30deg)" : "rotate(30deg)",
-                }
-              : undefined
-          }
-        />
-      </div>
+      <EndRail
+        end={right}
+        iso={iso}
+        railWidth={railWidth}
+        labelClassName={
+          iso
+            ? "max-w-[5.5rem] whitespace-nowrap"
+            : "max-w-[5rem] rotate-90 whitespace-nowrap"
+        }
+        labelStyle={
+          iso
+            ? {
+                transform: flipped ? "rotate(-30deg)" : "rotate(30deg)",
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

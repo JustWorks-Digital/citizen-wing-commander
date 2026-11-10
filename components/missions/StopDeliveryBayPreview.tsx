@@ -97,8 +97,8 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
       onClick={(event) => event.stopPropagation()}
     >
       {deliveryPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-gold/40 bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-gold/30 px-2.5 py-1.5">
+        <section className="min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
               Drop off
             </p>
@@ -120,8 +120,8 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         </section>
       ) : null}
       {pickupPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-accent/40 bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-accent/30 px-2.5 py-1.5">
+        <section className="min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
               Collect
             </p>
@@ -137,7 +137,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                   <div
                     role="tablist"
                     aria-label="Collect pad grouping"
-                    className="inline-flex rounded-rsi border border-rsi-accent/35 bg-rsi-bg-deep/70 p-0.5"
+                    className="inline-flex rounded-rsi border border-rsi-border bg-rsi-bg-deep/70 p-0.5"
                   >
                     {(
                       [
