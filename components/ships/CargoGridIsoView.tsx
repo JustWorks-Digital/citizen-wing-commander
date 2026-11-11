@@ -34,6 +34,10 @@ import {
   defaultBayFacing,
   type BayFacing,
 } from "@/components/ships/BayFacingPad";
+import {
+  CargoGridLayerPad,
+  CargoGridLayerPadToggle,
+} from "@/components/ships/CargoGridLayerPad";
 
 export type CargoGridIsoLegendItem = {
   commoditySlug: string;
@@ -107,6 +111,9 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
+  /** Show bottom-center layer pad on the grid (default on). */
+  showLayerPad?: boolean;
+  onShowLayerPadChange?: (value: boolean) => void;
   /**
    * Debug: bright crate silhouettes so footprints / Z height are obvious.
    * Controlled when `onDebugBoxOutlinesChange` is set.
@@ -688,6 +695,8 @@ export function CargoGridIsoView({
   onPeelStackChange,
   hiddenLayers: hiddenLayersProp,
   onToggleLayer,
+  showLayerPad: showLayerPadProp,
+  onShowLayerPadChange,
   debugBoxOutlines: debugBoxOutlinesProp,
   onDebugBoxOutlinesChange,
   panelHeightPx = 26 * 16,
@@ -701,6 +710,13 @@ export function CargoGridIsoView({
     ReadonlySet<number>
   >(() => new Set());
   const hiddenLayers = hiddenLayersProp ?? hiddenLayersInternal;
+  const [showLayerPadInternal, setShowLayerPadInternal] = useState(true);
+  const showLayerPad = showLayerPadProp ?? showLayerPadInternal;
+  function setShowLayerPad(value: boolean | ((prev: boolean) => boolean)) {
+    const next = typeof value === "function" ? value(showLayerPad) : value;
+    if (onShowLayerPadChange) onShowLayerPadChange(next);
+    else setShowLayerPadInternal(next);
+  }
   const [debugBoxOutlinesInternal, setDebugBoxOutlinesInternal] =
     useState(false);
   const [debugSectionExpanded, setDebugSectionExpanded] = useState(false);
@@ -1144,6 +1160,15 @@ export function CargoGridIsoView({
           {toolbarExtra}
         </div>
       ) : null}
+      {showLayers && showLayerPad ? (
+        <CargoGridLayerPad
+          mode="toggle"
+          layers={layerOptions}
+          hiddenLayers={hiddenLayers}
+          onToggleLayer={toggleLayer}
+          ariaLabel="3D Z layers"
+        />
+      ) : null}
       {showLegend ? (
         <div
           ref={isoLegendScrollRef}
@@ -1331,38 +1356,51 @@ export function CargoGridIsoView({
           {showLayers ? (
             <div
               className={[
-                "flex items-center justify-between gap-2",
+                "space-y-1.5",
                 showActionKey || legend.length > 0
                   ? "border-t border-rsi-border/60 pt-1.5"
                   : "",
               ].join(" ")}
             >
-              <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
-                Layers
-              </p>
-              <div className="flex flex-wrap items-center justify-start gap-1">
-                {layerOptions.map((z) => {
-                  const isOn = !hiddenLayers.has(z);
-                  const number = layerNumber(z);
-                  return (
-                    <button
-                      key={`layer-${z}`}
-                      type="button"
-                      aria-pressed={isOn}
-                      aria-label={`Layer ${number}`}
-                      onClick={() => toggleLayer(z)}
-                      className={[
-                        "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                        isOn
-                          ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                          : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
-                      ].join(" ")}
-                    >
-                      {number}
-                    </button>
-                  );
-                })}
+              <div className="flex items-center justify-between gap-2">
+                <p className="shrink-0 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted">
+                  Layers
+                </p>
+                <CargoGridLayerPadToggle
+                  isOn={showLayerPad}
+                  onToggle={() => setShowLayerPad((value) => !value)}
+                  ariaLabel="Show 3D layer controls on grid"
+                />
               </div>
+              {!showLayerPad ? (
+                <div
+                  role="group"
+                  aria-label="3D layers"
+                  className="flex flex-wrap items-center justify-start gap-1"
+                >
+                  {layerOptions.map((z) => {
+                    const isOn = !hiddenLayers.has(z);
+                    const number = layerNumber(z);
+                    return (
+                      <button
+                        key={`layer-${z}`}
+                        type="button"
+                        aria-pressed={isOn}
+                        aria-label={`Layer ${number}`}
+                        onClick={() => toggleLayer(z)}
+                        className={[
+                          "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                          isOn
+                            ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
+                        ].join(" ")}
+                      >
+                        {number}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {showDebugOutlines ? (

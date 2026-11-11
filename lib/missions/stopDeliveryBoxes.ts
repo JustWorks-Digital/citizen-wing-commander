@@ -39,6 +39,13 @@ const STACK_GAP_CELLS = 2;
 const PILE_GAP_CELLS = 4;
 /** Pack each stack into a 2-wide column (fits 8 / 4 SCU crates). */
 const STACK_WIDTH_CELLS = 2;
+/**
+ * Max physical crates in one vertical column. Taller materials wrap into
+ * another column beside the first so 99-SCU scrap piles stay readable.
+ */
+const MAX_COLUMN_BOXES = 7;
+/** Tight gap between wrap columns of the same material. */
+const SAME_MATERIAL_COLUMN_GAP_CELLS = 1;
 
 function tallyBoxSizes(sizes: CargoBoxScu[]): CargoBoxCountBySize[] {
   const tallies = new Map<number, number>();
@@ -88,6 +95,89 @@ function flatFootprint(size: CargoBoxScu): CargoBoxFootprint {
       return _exhaustive;
     }
   }
+}
+
+type PlaceMaterialStackInput = {
+  sizes: CargoBoxScu[];
+  startX: number;
+  boxIdPrefix: string;
+  startBoxIndex: number;
+  commoditySlug: string;
+  commodityName: string;
+  color: string | null;
+  color2: string | null;
+  action: CargoGridBoxAction;
+  deliveryLocationSlug?: string;
+  deliveryLocationName?: string;
+  locationGroupIndex?: number;
+};
+
+/**
+ * Place one material’s crates in vertical columns, wrapping to a new column
+ * beside the previous once a column would exceed {@link MAX_COLUMN_BOXES}.
+ */
+function placeMaterialStackColumns(input: PlaceMaterialStackInput): {
+  boxes: PlacedCargoBox[];
+  /** X just past the last column (no trailing inter-group gap). */
+  endXExclusive: number;
+  widthCells: number;
+  heightCells: number;
+  nextBoxIndex: number;
+  maxY: number;
+} {
+  const sizes = [...input.sizes].sort((a, b) => b - a);
+  const boxes: PlacedCargoBox[] = [];
+  let columnX = input.startX;
+  let z = 0;
+  let boxesInColumn = 0;
+  let maxZ = 1;
+  let maxY = STACK_WIDTH_CELLS;
+  let boxIndex = input.startBoxIndex;
+  let startedColumn = false;
+
+  for (const size of sizes) {
+    if (boxesInColumn >= MAX_COLUMN_BOXES) {
+      columnX += STACK_WIDTH_CELLS + SAME_MATERIAL_COLUMN_GAP_CELLS;
+      z = 0;
+      boxesInColumn = 0;
+    }
+    startedColumn = true;
+    const footprint = flatFootprint(size);
+    const origin: CargoGridCoord = { x: columnX, y: 0, z };
+    boxes.push({
+      id: `${input.boxIdPrefix}-box-${boxIndex}`,
+      size,
+      origin,
+      footprint,
+      commoditySlug: input.commoditySlug,
+      commodityName: input.commodityName,
+      color: input.color,
+      color2: input.color2,
+      cells: cellsForBox(origin, footprint),
+      action: input.action,
+      deliveryLocationSlug: input.deliveryLocationSlug,
+      deliveryLocationName: input.deliveryLocationName,
+      locationGroupIndex: input.locationGroupIndex,
+    });
+    boxIndex += 1;
+    boxesInColumn += 1;
+    z += footprint.dz;
+    maxY = Math.max(maxY, footprint.dy);
+    maxZ = Math.max(maxZ, z);
+  }
+
+  const endXExclusive = startedColumn
+    ? columnX + STACK_WIDTH_CELLS
+    : input.startX + STACK_WIDTH_CELLS;
+
+  return {
+    boxes,
+    endXExclusive,
+    widthCells: Math.max(STACK_WIDTH_CELLS, endXExclusive - input.startX),
+    heightCells: Math.max(1, maxZ),
+    nextBoxIndex: boxIndex,
+    maxY,
+  };
 }
 
 function cellsForBox(
@@ -191,15 +281,20 @@ export function stopDeliveryBoxGroups(
 
 export type StopCargoStackLabel = {
   id: string;
-  /** Stack origin X on the pad. */
+  /** Stack origin X on the pad (left edge of first column). */
   x: number;
+  /**
+   * Horizontal span of all columns for this material (includes tight gaps
+   * between wrap columns). Label SCU centers under this width.
+   */
+  widthCells: number;
   commoditySlug: string;
   commodityName: string;
   /** Short label drawn under the stack. */
   abbrev: string;
-  /** Total SCU in this stack (shown above the column). */
+  /** Total SCU in this stack (shown under the column group). */
   scu: number;
-  /** Stack height in cells — anchors the top SCU label. */
+  /** Tallest column height in cells. */
   heightCells: number;
 };
 
@@ -274,8 +369,9 @@ export function abbreviateCommodityName(
 export type StopDeliveryStacksPlan = StopCargoStacksPlan;
 
 /**
- * Generic pad (not a ship bay): one vertical stack per mission+commodity,
- * with gaps between stacks. Boxes sit flat and stack against gravity.
+ * Generic pad (not a ship bay): one stack group per mission+commodity.
+ * Columns wrap beside each other after {@link MAX_COLUMN_BOXES} crates so
+ * tall materials (e.g. 99 scrap) stay short; SCU labels center under the group.
  */
 export function planStopCargoStacks(
   row: HaulingChecklistRow,
@@ -292,46 +388,34 @@ export function planStopCargoStacks(
   let boxIndex = 0;
 
   for (const group of groups) {
-    const sizes = [...group.sizes].sort((a, b) => b - a);
-    let z = 0;
-
-    for (const size of sizes) {
-      const footprint = flatFootprint(size);
-      const origin: CargoGridCoord = {
-        x: cursorX,
-        y: 0,
-        z,
-      };
-      const cells = cellsForBox(origin, footprint);
-      boxes.push({
-        id: `${group.id}-box-${boxIndex}`,
-        size,
-        origin,
-        footprint,
-        commoditySlug: group.commoditySlug,
-        commodityName: group.commodityName,
-        color: group.color,
-        color2: group.color2,
-        cells,
-        action,
-      });
-      boxIndex += 1;
-      z += footprint.dz;
-      maxY = Math.max(maxY, footprint.dy);
-      maxZ = Math.max(maxZ, z);
-    }
+    const placed = placeMaterialStackColumns({
+      sizes: group.sizes,
+      startX: cursorX,
+      boxIdPrefix: group.id,
+      startBoxIndex: boxIndex,
+      commoditySlug: group.commoditySlug,
+      commodityName: group.commodityName,
+      color: group.color,
+      color2: group.color2,
+      action,
+    });
+    boxes.push(...placed.boxes);
+    boxIndex = placed.nextBoxIndex;
+    maxY = Math.max(maxY, placed.maxY);
+    maxZ = Math.max(maxZ, placed.heightCells);
 
     stackLabels.push({
       id: group.id,
       x: cursorX,
+      widthCells: placed.widthCells,
       commoditySlug: group.commoditySlug,
       commodityName: group.commodityName,
       abbrev: abbreviateCommodityName(group.commodityName),
       scu: group.scu,
-      heightCells: Math.max(1, z),
+      heightCells: placed.heightCells,
     });
 
-    cursorX += STACK_WIDTH_CELLS + STACK_GAP_CELLS;
+    cursorX = placed.endXExclusive + STACK_GAP_CELLS;
   }
 
   const lengthCells = Math.max(1, cursorX - STACK_GAP_CELLS);
@@ -413,41 +497,35 @@ export function planPickupHangarStacks(
     const first = pileSegments[0]!;
 
     for (const segment of pileSegments) {
-      const sizes = [...segment.sizes].sort((a, b) => b - a);
-      let z = 0;
-      for (const size of sizes) {
-        const footprint = flatFootprint(size);
-        const origin: CargoGridCoord = { x: cursorX, y: 0, z };
-        boxes.push({
-          id: `pile-${locationSlug}-${segment.commoditySlug}-box-${boxIndex}`,
-          size,
-          origin,
-          footprint,
-          commoditySlug: segment.commoditySlug,
-          commodityName: segment.commodityName,
-          color: segment.color,
-          color2: segment.color2,
-          cells: cellsForBox(origin, footprint),
-          action: "pickup",
-          deliveryLocationSlug: segment.locationSlug,
-          deliveryLocationName: segment.locationName,
-          locationGroupIndex: segment.locationGroupIndex,
-        });
-        boxIndex += 1;
-        z += footprint.dz;
-        maxY = Math.max(maxY, footprint.dy);
-        maxZ = Math.max(maxZ, z);
-      }
-
       const stackId = `pile-${locationSlug}-${segment.commoditySlug}-${segment.missionId ?? "_"}`;
+      const placed = placeMaterialStackColumns({
+        sizes: segment.sizes,
+        startX: cursorX,
+        boxIdPrefix: `pile-${locationSlug}-${segment.commoditySlug}`,
+        startBoxIndex: boxIndex,
+        commoditySlug: segment.commoditySlug,
+        commodityName: segment.commodityName,
+        color: segment.color,
+        color2: segment.color2,
+        action: "pickup",
+        deliveryLocationSlug: segment.locationSlug,
+        deliveryLocationName: segment.locationName,
+        locationGroupIndex: segment.locationGroupIndex,
+      });
+      boxes.push(...placed.boxes);
+      boxIndex = placed.nextBoxIndex;
+      maxY = Math.max(maxY, placed.maxY);
+      maxZ = Math.max(maxZ, placed.heightCells);
+
       stackLabels.push({
         id: stackId,
         x: cursorX,
+        widthCells: placed.widthCells,
         commoditySlug: segment.commoditySlug,
         commodityName: segment.commodityName,
         abbrev: abbreviateCommodityName(segment.commodityName),
         scu: segment.scu,
-        heightCells: Math.max(1, z),
+        heightCells: placed.heightCells,
       });
       legendItems.push({
         id: stackId,
@@ -462,7 +540,7 @@ export function planPickupHangarStacks(
         locationName: segment.locationName,
       });
       pileScu += segment.scu;
-      cursorX += STACK_WIDTH_CELLS + STACK_GAP_CELLS;
+      cursorX = placed.endXExclusive + STACK_GAP_CELLS;
     }
 
     const pileWidth = Math.max(

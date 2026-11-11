@@ -30,6 +30,13 @@ const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
 /** Horizontal padding on the scroll viewport (`px-2.5` × 2). */
 const VIEWPORT_PAD_X = 20;
+/** Vertical padding on the scroll viewport (`pt-1` + `pb-2.5`). */
+const VIEWPORT_PAD_Y = 14;
+/**
+ * Cap graph frame height so tall piles zoom out instead of stretching the
+ * stop card / introducing a default vertical scroll.
+ */
+const MAX_VIEWPORT_HEIGHT_PX = 421;
 
 const FLOOR_TOP =
   "color-mix(in srgb, var(--rsi-surface) 70%, var(--rsi-bg-deep))";
@@ -286,7 +293,7 @@ export function StopDeliveryStacksView({
   const stackWidthCells = 2;
   const hasPileLabels = Boolean(pileLabels && pileLabels.length > 0);
 
-  const baseBoundsWidth = useMemo(
+  const baseBounds = useMemo(
     () =>
       stackViewBounds(
         frameLengthCells,
@@ -294,15 +301,21 @@ export function StopDeliveryStacksView({
         viewHeight,
         cellPx,
         hasPileLabels,
-      ).width,
+      ),
     [frameLengthCells, widthCells, viewHeight, cellPx, hasPileLabels],
   );
 
   const fitZoom = useMemo(() => {
-    const available = Math.max(0, viewportWidth - VIEWPORT_PAD_X);
-    if (available <= 0 || baseBoundsWidth <= 0) return 1;
-    return clampZoom(available / baseBoundsWidth);
-  }, [viewportWidth, baseBoundsWidth]);
+    const availableW = Math.max(0, viewportWidth - VIEWPORT_PAD_X);
+    // Fit to the fixed max frame height (not measured height) so tall piles
+    // zoom out instead of fighting a content-sized viewport feedback loop.
+    const availableH = Math.max(0, MAX_VIEWPORT_HEIGHT_PX - VIEWPORT_PAD_Y);
+    if (availableW <= 0 || baseBounds.width <= 0) return 1;
+    const zoomW = availableW / baseBounds.width;
+    const zoomH =
+      baseBounds.height > 0 ? availableH / baseBounds.height : zoomW;
+    return clampZoom(Math.min(zoomW, zoomH));
+  }, [viewportWidth, baseBounds.width, baseBounds.height]);
 
   useEffect(() => {
     userZoomedRef.current = false;
@@ -509,7 +522,7 @@ export function StopDeliveryStacksView({
               userZoomedRef.current = false;
               setZoom(fitZoom);
             }}
-            title="Fit to width · double-click to set"
+            title="Fit to view · click to reset"
             aria-label="Fit zoom"
             className={[
               "inline-flex min-w-[2.5rem] items-center justify-center border-r border-rsi-border/80 px-1",
@@ -541,7 +554,8 @@ export function StopDeliveryStacksView({
 
       <div
         ref={viewportRef}
-        className="relative min-w-0 overflow-x-auto px-2.5 pb-2.5 pt-1"
+        className="relative min-w-0 overflow-auto px-2.5 pb-2.5 pt-1"
+        style={{ maxHeight: MAX_VIEWPORT_HEIGHT_PX }}
       >
         <div className="flex w-max min-w-full items-start justify-center">
           <svg
@@ -658,8 +672,9 @@ export function StopDeliveryStacksView({
             })}
             {stackLabels.map((label) => {
               const dimmed = hiddenCommodities.has(label.commoditySlug);
+              const labelSpan = label.widthCells ?? stackWidthCells;
               const foot = project(
-                label.x + stackWidthCells / 2,
+                label.x + labelSpan / 2,
                 widthCells / 2,
                 0,
                 renderCellPx,

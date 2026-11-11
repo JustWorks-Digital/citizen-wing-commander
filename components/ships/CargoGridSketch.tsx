@@ -48,9 +48,14 @@ import {
   topBayLabelChrome,
   type BayFacing,
 } from "./BayFacingPad";
+import {
+  CargoGridLayerPad,
+  CargoGridLayerPadToggle,
+} from "./CargoGridLayerPad";
 import { RotatableTopBay } from "./RotatableTopBay";
 import { ShipBayEndsFrame } from "./ShipBayEndsMarkers";
 import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
+import { Switch } from "@/components/ui/Switch";
 
 type LegendSectionKey =
   | "locations"
@@ -59,6 +64,7 @@ type LegendSectionKey =
   | "scuSizes"
   | "topLayers"
   | "isoLayers"
+  | "settings"
   | "debugging";
 
 const GRID_ZOOM_MIN = 0.5;
@@ -178,9 +184,9 @@ export type CargoGridSketchProps = {
 };
 
 const CARGO_ZONE_FILL = [
-  "bg-rsi-accent/20 border-rsi-accent/60",
-  "bg-rsi-warn/15 border-rsi-warn/50",
-  "bg-rsi-success/15 border-rsi-success/50",
+  "bg-rsi-accent/20 border-rsi-accent/30",
+  "bg-rsi-warn/15 border-rsi-warn/25",
+  "bg-rsi-success/15 border-rsi-success/25",
 ] as const;
 
 function zoneFillClass(zone: CargoGridZone, cargoIndex: number): string {
@@ -250,6 +256,9 @@ export function CargoGridSketch({
   const [hiddenIsoLayers, setHiddenIsoLayers] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
+  /** Bottom-center layer pads on the 2D / 3D grids (toggled from legend). */
+  const [topLayerPadVisible, setTopLayerPadVisible] = useState(true);
+  const [isoLayerPadVisible, setIsoLayerPadVisible] = useState(true);
   const { top: topScale, iso: isoScale } = getCargoGridViewScale(
     sketch.shipSlug,
   );
@@ -316,6 +325,8 @@ export function CargoGridSketch({
   >(() => new Set<LegendSectionKey>(["debugging"]));
   /** Bright crate silhouettes for checking footprints / Z height. */
   const [debugBoxOutlines, setDebugBoxOutlines] = useState(false);
+  /** Abbreviated commodity labels on 2D crates. */
+  const [showCargoNames, setShowCargoNames] = useState(true);
 
   const {
     overflowScrollRef: topLegendScrollRef,
@@ -780,34 +791,43 @@ export function CargoGridSketch({
                 showScuSizeFilters,
             )}
           >
-            <div
-              role="radiogroup"
-              aria-label={
-                options.includeIsoLayers ? "2D view Z layer" : "Z layer"
-              }
-              className="flex flex-wrap items-center justify-start gap-1"
-            >
-              {Array.from({ length: sketch.heightCells }, (_, layer) => {
-                const isActive = z === layer;
-                return (
-                  <button
-                    key={layer}
-                    type="button"
-                    role="radio"
-                    aria-checked={isActive}
-                    aria-label={`Layer ${layer + 1}`}
-                    onClick={() => setActiveZ(layer)}
-                    className={[
-                      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                      isActive
-                        ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                        : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
-                    ].join(" ")}
-                  >
-                    {layer + 1}
-                  </button>
-                );
-              })}
+            <div className="space-y-1.5">
+              <CargoGridLayerPadToggle
+                isOn={topLayerPadVisible}
+                onToggle={() => setTopLayerPadVisible((value) => !value)}
+                ariaLabel="Show 2D layer controls on grid"
+              />
+              {!topLayerPadVisible ? (
+                <div
+                  role="radiogroup"
+                  aria-label={
+                    options.includeIsoLayers ? "2D view Z layer" : "Z layer"
+                  }
+                  className="flex flex-wrap items-center justify-start gap-1"
+                >
+                  {Array.from({ length: sketch.heightCells }, (_, layer) => {
+                    const isActive = z === layer;
+                    return (
+                      <button
+                        key={layer}
+                        type="button"
+                        role="radio"
+                        aria-checked={isActive}
+                        aria-label={`Layer ${layer + 1}`}
+                        onClick={() => setActiveZ(layer)}
+                        className={[
+                          "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                          isActive
+                            ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        {layer + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </CargoLegendSection>
         ) : null}
@@ -826,32 +846,57 @@ export function CargoGridSketch({
                 showTopLayers,
             )}
           >
-            <div
-              role="group"
-              aria-label="3D layers"
-              className="flex flex-wrap items-center justify-start gap-1"
-            >
-              {isoLayerOptions.map((layer) => {
-                const isOn = !hiddenIsoLayers.has(layer);
-                return (
-                  <button
-                    key={`iso-${layer}`}
-                    type="button"
-                    aria-pressed={isOn}
-                    aria-label={`3D layer ${layer + 1}`}
-                    onClick={() => toggleIsoLayer(layer)}
-                    className={[
-                      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                      isOn
-                        ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                        : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
-                    ].join(" ")}
-                  >
-                    {layer + 1}
-                  </button>
-                );
-              })}
+            <div className="space-y-1.5">
+              <CargoGridLayerPadToggle
+                isOn={isoLayerPadVisible}
+                onToggle={() => setIsoLayerPadVisible((value) => !value)}
+                ariaLabel="Show 3D layer controls on grid"
+              />
+              {!isoLayerPadVisible ? (
+                <div
+                  role="group"
+                  aria-label="3D layers"
+                  className="flex flex-wrap items-center justify-start gap-1"
+                >
+                  {isoLayerOptions.map((layer) => {
+                    const isOn = !hiddenIsoLayers.has(layer);
+                    return (
+                      <button
+                        key={`iso-${layer}`}
+                        type="button"
+                        aria-pressed={isOn}
+                        aria-label={`3D layer ${layer + 1}`}
+                        onClick={() => toggleIsoLayer(layer)}
+                        className={[
+                          "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
+                          isOn
+                            ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                        ].join(" ")}
+                      >
+                        {layer + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
+          </CargoLegendSection>
+        ) : null}
+        {useBoxFootprints ? (
+          <CargoLegendSection
+            title="Settings"
+            sectionId="settings"
+            isExpanded={isLegendSectionExpanded("settings")}
+            onToggle={() => toggleLegendSection("settings")}
+            showBorder
+          >
+            <Switch
+              label="Cargo names"
+              checked={showCargoNames}
+              onCheckedChange={setShowCargoNames}
+              ariaLabel="Show cargo names on 2D crates"
+            />
           </CargoLegendSection>
         ) : null}
         {useBoxFootprints ? (
@@ -1042,6 +1087,18 @@ export function CargoGridSketch({
             <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
               {topZoomControls}
             </div>
+            {showTopLayers && topLayerPadVisible ? (
+              <CargoGridLayerPad
+                mode="select"
+                layers={Array.from(
+                  { length: sketch.heightCells },
+                  (_, layer) => layer,
+                )}
+                activeLayer={z}
+                onSelectLayer={setActiveZ}
+                ariaLabel="2D Z layers"
+              />
+            ) : null}
             {isPlacementView ? (
               <BayFacingPad
                 facing={topFacing}
@@ -1146,7 +1203,7 @@ export function CargoGridSketch({
                         title="Grid break"
                         aria-label={`${zone.label} grid break`}
                         className={[
-                          "relative flex items-center justify-center border-2 bg-rsi-bg-deep/40",
+                          "relative flex items-center justify-center border bg-rsi-bg-deep/40",
                           fillClass,
                         ].join(" ")}
                         style={{
@@ -1180,7 +1237,7 @@ export function CargoGridSketch({
 
                 const cargoGrid = (
                   <div
-                    className={["relative grid border-2", fillClass].join(" ")}
+                    className={["relative grid border", fillClass].join(" ")}
                     style={{
                       gridTemplateColumns: `repeat(${zone.lengthCells}, ${viewCellPx}px)`,
                       gridTemplateRows: `repeat(${zoneWidth}, ${viewCellPx}px)`,
@@ -1415,19 +1472,21 @@ export function CargoGridSketch({
                               className="pointer-events-none absolute inset-[3px] rounded-[1px] border border-rsi-bg-deep/55"
                             />
                           ) : null}
-                          <span
-                            className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
-                            style={{
-                              fontSize: abbrevPx,
-                              writingMode: isTallNarrow
-                                ? "vertical-rl"
-                                : undefined,
-                              textShadow:
-                                "0 0 2px color-mix(in srgb, white 55%, transparent)",
-                            }}
-                          >
-                            {abbrev}
-                          </span>
+                          {showCargoNames ? (
+                            <span
+                              className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
+                              style={{
+                                fontSize: abbrevPx,
+                                writingMode: isTallNarrow
+                                  ? "vertical-rl"
+                                  : undefined,
+                                textShadow:
+                                  "0 0 2px color-mix(in srgb, white 55%, transparent)",
+                              }}
+                            >
+                              {abbrev}
+                            </span>
+                          ) : null}
                           {scuSizeBadges.has(box.size as CargoBoxScu) ? (
                             <span
                               className="pointer-events-none absolute right-0.5 bottom-0.5 inline-flex min-w-[0.85rem] items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 px-0.5 font-mono text-[0.5rem] font-bold tabular-nums leading-none text-rsi-text"
@@ -1497,6 +1556,8 @@ export function CargoGridSketch({
                 onPeelStackChange={setPeelStack}
                 hiddenLayers={isSplit ? hiddenIsoLayers : undefined}
                 onToggleLayer={isSplit ? toggleIsoLayer : undefined}
+                showLayerPad={isoLayerPadVisible}
+                onShowLayerPadChange={setIsoLayerPadVisible}
                 debugBoxOutlines={debugBoxOutlines}
                 onDebugBoxOutlinesChange={setDebugBoxOutlines}
                 panelHeightPx={panelHeightPx}

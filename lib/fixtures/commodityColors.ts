@@ -248,3 +248,4 @@ export function commodityBadgeForeground(hex: string): string {
   return hex;
 }
 
+
