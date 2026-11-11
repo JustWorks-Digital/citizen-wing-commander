@@ -36,6 +36,8 @@ export const Interactive: Story = {
       scuTwo: 0,
       scuFour: 0,
       scuEight: 4,
+      scuSixteen: 0,
+      scuThirtyTwo: 0,
     };
     return (
       <div className="max-w-md rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4">
@@ -55,8 +57,8 @@ export const Corrected: Story = {
   args: {
     totalScu: 25,
     maxContainerScu: 4,
-    autoSelected: { scuOne: 1, scuTwo: 0, scuFour: 6, scuEight: 0 },
-    selected: { scuOne: 1, scuTwo: 2, scuFour: 5, scuEight: 0 },
+    autoSelected: { scuOne: 1, scuTwo: 0, scuFour: 6, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
+    selected: { scuOne: 1, scuTwo: 2, scuFour: 5, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
   },
 };
 

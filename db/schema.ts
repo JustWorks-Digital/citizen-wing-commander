@@ -380,12 +380,12 @@ export const catalogMissions = pgTable(
     offerStarSystemSlug: text("offer_star_system_slug"),
     scuTotal: integer("scu_total").notNull().default(0),
     scuMaxContainerSize: integer("scu_max_container_size"),
-    /** Crate counts: { scuOne, scuTwo, scuFour, scuEight }. */
+    /** Crate counts: { scuOne…scuThirtyTwo }. */
     scuBoxSplits: jsonb("scu_box_splits")
       .$type<HaulingCatalogMissionPayload["scuBoxSplits"]>()
       .notNull()
       .default(
-        sql`'{"scuOne":0,"scuTwo":0,"scuFour":0,"scuEight":0}'::jsonb`,
+        sql`'{"scuOne":0,"scuTwo":0,"scuFour":0,"scuEight":0,"scuSixteen":0,"scuThirtyTwo":0}'::jsonb`,
       ),
     /** SCU totals per location: { from: { slug: scu }, to: { slug: scu } }. */
     scuLocationSplits: jsonb("scu_location_splits").$type<ScuLocationSplits | null>(),

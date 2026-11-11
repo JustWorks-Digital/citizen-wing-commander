@@ -1397,21 +1397,7 @@ function ExpectedCompletionsMeta({
       ? null
       : (missions.find((mission) => mission.id === detailMissionId) ?? null);
 
-  // Desktop: keep an invisible footprint so Next stop does not jump.
-  // Mobile: collapse — vertical space matters more than column alignment.
-  if (missions.length === 0) {
-    return (
-      <div
-        className="invisible hidden py-5 pr-4 text-sm md:block md:pr-8"
-        aria-hidden
-      >
-        <p className="mb-2 w-fit border-b border-transparent pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]">
-          Contracts
-        </p>
-        <p>None</p>
-      </div>
-    );
-  }
+  if (missions.length === 0) return null;
 
   return (
     <div className="py-5 pr-4 text-sm md:pr-8">
@@ -1493,7 +1479,7 @@ function NextDistanceMeta({
   const isLastStop = nextLocationSlug == null && nextLocationName == null;
   if (isLastStop) {
     return (
-      <div className="py-5 text-sm">
+      <div className="pt-5 text-sm">
         <p
           className={[
             "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
@@ -1515,7 +1501,7 @@ function NextDistanceMeta({
   );
 
   return (
-    <div className="py-5 text-sm">
+    <div className="pt-5 text-sm">
       <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Next stop / Distance
       </p>
@@ -1865,7 +1851,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
-                    <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-1 flex-col">
                       <LocationHeader
                         row={row}
                         location={location}
@@ -1884,53 +1870,43 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                           onToggleCargoHandled={onToggleCargoHandled}
                         />
                       </div>
-                    </div>
-                    <div className="w-full min-w-0 md:w-1/2 md:shrink-0 md:self-start">
-                      <StopDeliveryBayPreview row={row} rows={rows} />
-                    </div>
-                  </div>
-                  <div className="md:hidden">
-                    <TotalMeta
-                      row={row}
-                      location={location}
-                      shipName={transferShipName}
-                      onboardReceipt={onboardByStop.get(row.id) ?? null}
-                    />
-                  </div>
-                  <div className="flex flex-col md:flex-row md:items-start md:gap-4">
-                    <div className="min-w-0 flex-1">
-                      <ExpectedCompletionsMeta missions={expectedCompletions} />
-                      <PayoutMeta
-                        row={row}
-                        completionAuec={completionAuec}
-                        completingMissionCount={expectedCompletions.length}
-                      />
-                      <div className="flex justify-start py-3 md:hidden">
-                        <DoneStopButton
-                          location={location}
-                          step={step}
-                          isCompleted={row.isCompleted}
-                          onToggle={toggleStopDone}
-                        />
-                      </div>
-                      <NextDistanceMeta
-                        row={row}
-                        nextLocationName={nextLocationName}
-                        nextLocationSlug={nextLocationSlug}
-                      />
-                    </div>
-                    <div className="hidden w-full md:flex md:w-1/2 md:shrink-0 md:flex-col">
                       <TotalMeta
                         row={row}
                         location={location}
                         shipName={transferShipName}
                         onboardReceipt={onboardByStop.get(row.id) ?? null}
                       />
+                      <div className="mt-auto">
+                        <NextDistanceMeta
+                          row={row}
+                          nextLocationName={nextLocationName}
+                          nextLocationSlug={nextLocationSlug}
+                        />
+                      </div>
+                    </div>
+                    <div className="relative w-full min-w-0 md:w-1/2 md:shrink-0">
+                      <StopDeliveryBayPreview row={row} rows={rows} />
                       {row.isCompleted ? (
-                        <div className="flex flex-1 items-center justify-center">
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                           <CompletedStamp />
                         </div>
                       ) : null}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <ExpectedCompletionsMeta missions={expectedCompletions} />
+                    <PayoutMeta
+                      row={row}
+                      completionAuec={completionAuec}
+                      completingMissionCount={expectedCompletions.length}
+                    />
+                    <div className="flex justify-start py-3 md:hidden">
+                      <DoneStopButton
+                        location={location}
+                        step={step}
+                        isCompleted={row.isCompleted}
+                        onToggle={toggleStopDone}
+                      />
                     </div>
                   </div>
                   {sessionId ? (

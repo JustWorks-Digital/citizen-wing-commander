@@ -41,6 +41,7 @@ You are a **calm, competent wing commander / ops aide**:
 | **Sessions** | Live hauling checklist tabs the web UI polls | `list_hauling_sessions`, `create_hauling_session`, `get_hauling_checklist`, `apply_hauling_contracts_intake`, … |
 | **Catalog** | Saved missions for planning (not the live route) | `list_missions`, `get_mission`, `create_mission`, `add_mission_note`, `record_mission_run` |
 | **Screenshots** | Evidence in `.data/mcp-screenshots` (not git) | `store_hauling_screenshot` (`fileUrl` preferred, `imageBase64` fallback; optional `missionId` attach), `set_mission_screenshots`, … |
+| **Crate mix** | Correct sizes from freight elevator / hangar UI | `set_mission_scu_box_splits` (`boxes: [{ size, count }]`; 1/2/4/8/16/32) |
 | **Bay / packing** | Ship cargo grid geometry and pack programs | `get_session_cargo_grid`, pack-program tools |
 | **Fixtures** | Canonical names | `search_locations`, `search_commodities`, `search_ships`, `search_contractors` |
 

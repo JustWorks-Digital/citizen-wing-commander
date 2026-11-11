@@ -43,7 +43,7 @@ export type CargoDelivery = {
    * Explicit crate sizes for bay packing (from a selected mission breakdown).
    * When set, the placer uses these instead of greedy 8→4→2→1.
    */
-  boxSizes?: Array<1 | 2 | 4 | 8>;
+  boxSizes?: Array<1 | 2 | 4 | 8 | 16 | 32>;
   /** Session mission id this cargo line came from (when known). */
   missionId?: string;
   /**

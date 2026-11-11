@@ -21,6 +21,8 @@ export type ScuBoxSplits = {
   scuTwo: number;
   scuFour: number;
   scuEight: number;
+  scuSixteen: number;
+  scuThirtyTwo: number;
 };
 
 /** @deprecated Prefer `ScuBoxSplits` */
@@ -124,7 +126,7 @@ export type HaulingCatalogMissionPayload = {
   category?: HaulingCategory | null;
   /** Largest allowed crate size in SCU (from contract text). */
   scuMaxContainerSize?: number | null;
-  /** Crate-size counts for the contract total (1/2/4/8 SCU). */
+  /** Crate-size counts for the contract total (1/2/4/8/16/32 SCU). */
   scuBoxSplits: ScuBoxSplits;
   /** Logical screenshot path under `.data/mcp-screenshots`. */
   latestScreenshotPath?: string | null;
@@ -135,7 +137,14 @@ export type HaulingCatalogMissionPayload = {
 export type CatalogMissionNoteSentiment = "good" | "bad" | "neutral";
 
 export function emptyScuBoxSplits(): ScuBoxSplits {
-  return { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 0 };
+  return {
+    scuOne: 0,
+    scuTwo: 0,
+    scuFour: 0,
+    scuEight: 0,
+    scuSixteen: 0,
+    scuThirtyTwo: 0,
+  };
 }
 
 /** @deprecated Prefer `emptyScuBoxSplits` */
@@ -148,6 +157,8 @@ export function normalizeScuBoxSplits(
     size2?: number;
     size4?: number;
     size8?: number;
+    size16?: number;
+    size32?: number;
   } | null | undefined,
 ): ScuBoxSplits {
   if (!raw) return emptyScuBoxSplits();
@@ -156,15 +167,30 @@ export function normalizeScuBoxSplits(
     scuTwo: Number(raw.scuTwo ?? raw.size2 ?? 0) || 0,
     scuFour: Number(raw.scuFour ?? raw.size4 ?? 0) || 0,
     scuEight: Number(raw.scuEight ?? raw.size8 ?? 0) || 0,
+    scuSixteen: Number(raw.scuSixteen ?? raw.size16 ?? 0) || 0,
+    scuThirtyTwo: Number(raw.scuThirtyTwo ?? raw.size32 ?? 0) || 0,
   };
 }
 
 /** @deprecated Prefer `normalizeScuBoxSplits` */
 export const normalizeCargoBoxBreakdown = normalizeScuBoxSplits;
 
+export function incrementScuBoxSplit(
+  counts: ScuBoxSplits,
+  size: CargoBoxScu,
+  by = 1,
+): void {
+  if (size === 1) counts.scuOne += by;
+  else if (size === 2) counts.scuTwo += by;
+  else if (size === 4) counts.scuFour += by;
+  else if (size === 8) counts.scuEight += by;
+  else if (size === 16) counts.scuSixteen += by;
+  else if (size === 32) counts.scuThirtyTwo += by;
+}
+
 /**
- * Greedy 8→4→2→1 counts. When `scuMaxContainerSize` is set, never emit a box
- * larger than that size (validated against allowed crate sizes).
+ * Greedy largest-first counts (default cap 8). When `scuMaxContainerSize` is
+ * set, never emit a box larger than that size (validated against allowed crates).
  */
 export function scuBoxSplitsForScu(
   scu: number,
@@ -185,10 +211,7 @@ export function scuBoxSplitsForScu(
 
   const counts = emptyScuBoxSplits();
   for (const size of boxes) {
-    if (size === 1) counts.scuOne += 1;
-    else if (size === 2) counts.scuTwo += 1;
-    else if (size === 4) counts.scuFour += 1;
-    else if (size === 8) counts.scuEight += 1;
+    incrementScuBoxSplit(counts, size);
   }
   return counts;
 }

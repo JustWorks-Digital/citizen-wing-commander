@@ -49,7 +49,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     offerStarSystemSlug: "stanton",
     scuTotal: 10,
     scuMaxContainerSize: 8,
-    scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1 },
+    scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1, scuSixteen: 0, scuThirtyTwo: 0 },
     scuLocationSplits: {
       from: { "everus-harbor": 10 },
       to: { lorville: 10 },
@@ -72,7 +72,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       ],
       scuTotal: 10,
       scuMaxContainerSize: 8,
-      scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1 },
+      scuBoxSplits: { scuOne: 0, scuTwo: 1, scuFour: 0, scuEight: 1, scuSixteen: 0, scuThirtyTwo: 0 },
       scuLocationSplits: {
         from: { "everus-harbor": 10 },
         to: { lorville: 10 },
@@ -99,7 +99,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     offerStarSystemSlug: "stanton",
     scuTotal: 32,
     scuMaxContainerSize: 4,
-    scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0 },
+    scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
     scuLocationSplits: {
       from: { lorville: 32 },
       to: { area18: 16, "port-tressler": 16 },
@@ -122,7 +122,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       ],
       scuTotal: 32,
       scuMaxContainerSize: 4,
-      scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0 },
+      scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 8, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
       scuLocationSplits: {
         from: { lorville: 32 },
         to: { area18: 16, "port-tressler": 16 },
@@ -149,7 +149,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
     offerStarSystemSlug: "stanton",
     scuTotal: 48,
     scuMaxContainerSize: 8,
-    scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6 },
+    scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6, scuSixteen: 0, scuThirtyTwo: 0 },
     scuLocationSplits: {
       from: { magda: 24, "yela-asteroid-belt": 24 },
       to: { "everus-harbor": 48 },
@@ -172,7 +172,7 @@ export const sampleCatalogMissions: CatalogMission[] = [
       ],
       scuTotal: 48,
       scuMaxContainerSize: 8,
-      scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6 },
+      scuBoxSplits: { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 6, scuSixteen: 0, scuThirtyTwo: 0 },
       scuLocationSplits: {
         from: { magda: 24, "yela-asteroid-belt": 24 },
         to: { "everus-harbor": 48 },

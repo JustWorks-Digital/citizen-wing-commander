@@ -96,6 +96,8 @@ export function MissionCatalogDetail({
             <MetaRow
               label="Crates"
               value={[
+                box.scuThirtyTwo ? `${box.scuThirtyTwo}×32` : null,
+                box.scuSixteen ? `${box.scuSixteen}×16` : null,
                 box.scuEight ? `${box.scuEight}×8` : null,
                 box.scuFour ? `${box.scuFour}×4` : null,
                 box.scuTwo ? `${box.scuTwo}×2` : null,

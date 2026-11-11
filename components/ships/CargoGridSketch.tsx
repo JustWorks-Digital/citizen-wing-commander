@@ -4,7 +4,9 @@ import {
   startTransition,
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
@@ -71,7 +73,7 @@ const GRID_ZOOM_MIN = 0.5;
 const GRID_ZOOM_MAX = 2.5;
 const GRID_ZOOM_STEP = 0.25;
 /** Top-view size badge toggles (ascending). */
-const SCU_SIZE_BADGE_OPTIONS = [1, 2, 4, 8] as const satisfies readonly CargoBoxScu[];
+const SCU_SIZE_BADGE_OPTIONS = [1, 2, 4, 8, 16, 32] as const satisfies readonly CargoBoxScu[];
 
 function CargoGridZoomControls({
   zoom,
@@ -181,6 +183,23 @@ export type CargoGridSketchProps = {
   onPeelStackChange?: (value: boolean) => void;
   /** Outer panel height in px for top / 3D / split views (default `26rem`). */
   panelHeightPx?: number;
+  /**
+   * Enable 2D drag-to-reposition for Manual sorting.
+   * 3D still renders the same placementBoxes; it does not accept drags.
+   */
+  manualEdit?: boolean;
+  /** Fired when a 2D drag starts (snapshot base layout). */
+  onManualDragStart?: (boxId: string) => void;
+  /**
+   * Cell delta from drag start (sketch axes: +X nose→ramp, +Y port→starboard).
+   * Parent validates and updates placementBoxes.
+   */
+  onManualDragDelta?: (
+    boxId: string,
+    deltaCellsX: number,
+    deltaCellsY: number,
+  ) => void;
+  onManualDragEnd?: () => void;
 };
 
 const CARGO_ZONE_FILL = [
@@ -223,9 +242,21 @@ export function CargoGridSketch({
   peelStack: peelStackProp,
   onPeelStackChange,
   panelHeightPx = 26 * 16,
+  manualEdit = false,
+  onManualDragStart,
+  onManualDragDelta,
+  onManualDragEnd,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
+  const manualDragRef = useRef<{
+    boxId: string;
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    lastDx: number;
+    lastDy: number;
+  } | null>(null);
   /** Independent zooms so split view can scale 2D and 3D separately. */
   const [topZoom, setTopZoom] = useState(1);
   const [isoZoom, setIsoZoom] = useState(1);
@@ -1429,12 +1460,95 @@ export function CargoGridSketch({
                           ),
                         ),
                       );
+                      const onManualPointerDown = (
+                        event: ReactPointerEvent<HTMLDivElement>,
+                      ) => {
+                        if (!manualEdit) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        manualDragRef.current = {
+                          boxId: box.id,
+                          pointerId: event.pointerId,
+                          startClientX: event.clientX,
+                          startClientY: event.clientY,
+                          lastDx: 0,
+                          lastDy: 0,
+                        };
+                        onManualDragStart?.(box.id);
+                      };
+                      const onManualPointerMove = (
+                        event: ReactPointerEvent<HTMLDivElement>,
+                      ) => {
+                        const drag = manualDragRef.current;
+                        if (
+                          !manualEdit ||
+                          !drag ||
+                          drag.boxId !== box.id ||
+                          drag.pointerId !== event.pointerId
+                        ) {
+                          return;
+                        }
+                        // Top view mirrors X (ramp left / nose right): +screenX → −sketchX.
+                        const dx = Math.round(
+                          -(event.clientX - drag.startClientX) / viewCellPx,
+                        );
+                        const dy = Math.round(
+                          (event.clientY - drag.startClientY) / viewCellPx,
+                        );
+                        if (dx === drag.lastDx && dy === drag.lastDy) return;
+                        drag.lastDx = dx;
+                        drag.lastDy = dy;
+                        onManualDragDelta?.(box.id, dx, dy);
+                      };
+                      const endManualDrag = (
+                        event: ReactPointerEvent<HTMLDivElement>,
+                      ) => {
+                        const drag = manualDragRef.current;
+                        if (
+                          !drag ||
+                          drag.boxId !== box.id ||
+                          drag.pointerId !== event.pointerId
+                        ) {
+                          return;
+                        }
+                        manualDragRef.current = null;
+                        try {
+                          event.currentTarget.releasePointerCapture(
+                            event.pointerId,
+                          );
+                        } catch {
+                          // Already released.
+                        }
+                        onManualDragEnd?.();
+                      };
                       return (
                         <div
                           key={box.id}
-                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}`}
-                          aria-hidden
-                          className="pointer-events-none absolute z-[5] box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5"
+                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`}
+                          role={manualEdit ? "button" : undefined}
+                          aria-hidden={manualEdit ? undefined : true}
+                          aria-label={
+                            manualEdit
+                              ? `Move ${box.commodityName} ${box.size} SCU crate`
+                              : undefined
+                          }
+                          onPointerDown={
+                            manualEdit ? onManualPointerDown : undefined
+                          }
+                          onPointerMove={
+                            manualEdit ? onManualPointerMove : undefined
+                          }
+                          onPointerUp={manualEdit ? endManualDrag : undefined}
+                          onPointerCancel={
+                            manualEdit ? endManualDrag : undefined
+                          }
+                          className={[
+                            "absolute z-[5] box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
+                            manualEdit
+                              ? "pointer-events-auto cursor-grab touch-none active:cursor-grabbing"
+                              : "pointer-events-none",
+                          ].join(" ")}
                           style={{
                             left,
                             top,

@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session ship layout as the ship’s bay grid at the active stop, with 2D/Split/3D tabs, Sorting + Peel toggles (same chrome row), left Sorting panel (Suggested / Cargo type / Contract based), right Legend, Front/Rear rails, optional inventory beside the title, and a bottom drag handle to resize panel height. Legend/Sorting start hidden on new sessions; open state and panel height persist per session in localStorage.",
+          "Session ship layout as the ship’s bay grid at the active stop, with 2D/Split/3D tabs, Sorting + Peel toggles (same chrome row), left Sorting panel (Suggested / Cargo type / Contract based / Manual), right Legend, Front/Rear rails, optional inventory beside the title, and a bottom drag handle to resize panel height. Manual mode: drag crates on 2D (3D follows); session-local presets as neutral badges. Legend/Sorting start hidden on new sessions; chrome + Manual presets persist per session in localStorage.",
       },
     },
   },

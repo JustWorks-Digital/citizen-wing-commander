@@ -34,6 +34,7 @@ import {
   toolSetSessionStartLocation,
   toolSetLegCompleted,
   toolSetMissionScreenshots,
+  toolSetMissionScuBoxSplits,
   toolSetSessionName,
   toolSetSessionShips,
   toolStoreHaulingScreenshot,
@@ -326,6 +327,67 @@ const handler = createMcpHandler(
         annotations: { idempotentHint: true },
       },
       async (input) => toolSetMissionScreenshots(input),
+    );
+
+    server.registerTool(
+      "set_mission_scu_box_splits",
+      {
+        title: "Set mission crate mix",
+        description:
+          "Use this when the player is at a freight elevator / hangar and the in-game UI shows the real crate sizes (1/2/4/8/16/32 SCU). Corrects the session mission’s scuBoxSplits, restamps boxSizes onto pickup/delivery cargo for Collect pads and bay packing, and updates the linked catalog default when present. Prefer boxes: [{ size, count }, …] matching the terminal list (counts must sum to the mission SCU total).",
+        inputSchema: z.object({
+          missionId: z
+            .string()
+            .min(1)
+            .describe(
+              "Session mission id from get_hauling_checklist (e.g. experienced-ice-289)",
+            ),
+          boxes: z
+            .array(
+              z.object({
+                size: z
+                  .union([
+                    z.literal(1),
+                    z.literal(2),
+                    z.literal(4),
+                    z.literal(8),
+                    z.literal(16),
+                    z.literal(32),
+                  ])
+                  .describe("Crate size in SCU"),
+                count: z
+                  .number()
+                  .int()
+                  .nonnegative()
+                  .describe("How many crates of this size"),
+              }),
+            )
+            .optional()
+            .describe(
+              "Preferred: terminal-style mix, e.g. [{ size: 16, count: 18 }, { size: 1, count: 1 }]",
+            ),
+          scuBoxSplits: z
+            .object({
+              scuOne: z.number().int().nonnegative().optional(),
+              scuTwo: z.number().int().nonnegative().optional(),
+              scuFour: z.number().int().nonnegative().optional(),
+              scuEight: z.number().int().nonnegative().optional(),
+              scuSixteen: z.number().int().nonnegative().optional(),
+              scuThirtyTwo: z.number().int().nonnegative().optional(),
+            })
+            .optional()
+            .describe("Alternate explicit counts (same family as catalog scuBoxSplits)"),
+          updateCatalog: z
+            .boolean()
+            .optional()
+            .describe(
+              "Also write the linked catalog mission default (default true). Set false for session-only.",
+            ),
+          sessionId: sessionIdSchema,
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolSetMissionScuBoxSplits(input),
     );
 
     server.registerTool(
@@ -1048,11 +1110,12 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.5",
+      version: "0.2.6",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
+      "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32; totals must match mission SCU).",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
       "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it; imageBase64 remains a fallback. ChatGPT /mnt/data paths are not reachable by remote MCP — do not pass them. Pass sessionId (= batch). Optional missionId stores+attaches in one call. Otherwise put returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath / set_mission_screenshots. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",

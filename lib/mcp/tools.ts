@@ -8,6 +8,7 @@ import {
   listCatalogMissionVariants,
   listCatalogMissions,
   recordCatalogMissionRun,
+  updateCatalogMissionScuBoxSplits,
   upsertCatalogMission,
 } from "@/db/queries/catalogMissions";
 import {
@@ -33,14 +34,25 @@ import {
   setQuantumTravelReason,
 } from "@/lib/missions/quantumTravel";
 import {
+  breakdownFromBoxSizes,
+  formatBreakdownLabel,
+} from "@/lib/missions/boxBreakdownOptions";
+import {
   cargoFromScuSplits,
   locationsFromScuSplits,
   normalizeCatalogRewards,
+  normalizeScuBoxSplits,
   objectivesFromScuSplits,
   type CatalogMissionReward,
   type CatalogMissionScuSplit,
   type HaulingCatalogMissionPayload,
+  type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
+import { setMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
+import {
+  CARGO_BOX_SCU,
+  type CargoBoxScu,
+} from "@/lib/ships/cargoBoxSizes";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { renameAllCatalogMissionScreenshots } from "@/lib/missions/renameCatalogScreenshot";
@@ -167,7 +179,7 @@ const cargoGridCoordinateSystem = {
     z: "deck → ceiling (height)",
   },
   storageLocations: ["front", "middle", "rear"] as const,
-  boxSizesScu: [1, 2, 4, 8] as const,
+  boxSizesScu: [1, 2, 4, 8, 16, 32] as const,
   note: "Do not invent grid sizes. Prefer these sketches when packing; ships without a sketch have no bay geometry yet.",
 };
 
@@ -903,6 +915,169 @@ export async function toolSetMissionScreenshots(input: {
         error instanceof Error
           ? error.message
           : "Failed to set mission screenshots",
+    });
+  }
+}
+
+function isCargoBoxScu(size: number): size is CargoBoxScu {
+  return (CARGO_BOX_SCU as readonly number[]).includes(size);
+}
+
+function scuTotalFromSplits(splits: ScuBoxSplits): number {
+  return (
+    splits.scuOne * 1 +
+    splits.scuTwo * 2 +
+    splits.scuFour * 4 +
+    splits.scuEight * 8 +
+    splits.scuSixteen * 16 +
+    splits.scuThirtyTwo * 32
+  );
+}
+
+function resolveScuBoxSplitsInput(input: {
+  scuBoxSplits?: Partial<ScuBoxSplits> | null;
+  boxes?: Array<{ size: number; count: number }> | null;
+}): ScuBoxSplits | { error: string } {
+  if (input.boxes && input.boxes.length > 0) {
+    const sizes: CargoBoxScu[] = [];
+    for (const entry of input.boxes) {
+      if (!isCargoBoxScu(entry.size)) {
+        return {
+          error: `Unsupported crate size ${entry.size}. Allowed: ${CARGO_BOX_SCU.join(", ")}`,
+        };
+      }
+      const count = Math.max(0, Math.floor(Number(entry.count) || 0));
+      for (let i = 0; i < count; i += 1) sizes.push(entry.size);
+    }
+    return breakdownFromBoxSizes(sizes);
+  }
+  if (input.scuBoxSplits) {
+    return normalizeScuBoxSplits(input.scuBoxSplits);
+  }
+  return {
+    error:
+      "Provide boxes: [{ size, count }, …] (preferred from terminal UI) or scuBoxSplits counts.",
+  };
+}
+
+/**
+ * Correct a session mission’s crate mix (e.g. after reading the freight
+ * elevator / hangar UI at pickup). Restamps bay packing sizes onto the route;
+ * also updates the linked catalog default when present.
+ */
+export async function toolSetMissionScuBoxSplits(input: {
+  missionId: string;
+  sessionId?: string | null;
+  /** Preferred: terminal-style counts, e.g. [{ size: 16, count: 18 }, { size: 1, count: 1 }]. */
+  boxes?: Array<{ size: number; count: number }> | null;
+  /** Alternate: explicit scuOne…scuThirtyTwo counts. */
+  scuBoxSplits?: Partial<ScuBoxSplits> | null;
+  /** When false, skip writing the linked catalog mission default. Default true. */
+  updateCatalog?: boolean;
+}) {
+  try {
+    const session = await getChecklistSession(input.sessionId);
+    const missionId = input.missionId.trim();
+    const mission = (session.missions ?? []).find(
+      (entry) => entry.id === missionId,
+    );
+    if (!mission) {
+      return textResult({
+        error: `Unknown mission id: ${missionId}`,
+        knownMissionIds: (session.missions ?? []).map((entry) => entry.id),
+      });
+    }
+
+    const resolved = resolveScuBoxSplitsInput({
+      boxes: input.boxes,
+      scuBoxSplits: input.scuBoxSplits,
+    });
+    if ("error" in resolved) {
+      return textResult({ error: resolved.error });
+    }
+    const scuBoxSplits = resolved;
+
+    const missionScu = mission.cargo.reduce(
+      (sum, line) => sum + (Number(line.scu) || 0),
+      0,
+    );
+    const boxScu = scuTotalFromSplits(scuBoxSplits);
+    if (missionScu > 0 && boxScu !== missionScu) {
+      return textResult({
+        error: `Box mix totals ${boxScu} SCU but mission cargo is ${missionScu} SCU. Counts must sum to the mission total.`,
+        missionScu,
+        boxScu,
+        label: formatBreakdownLabel(scuBoxSplits),
+      });
+    }
+
+    const result = setMissionScuBoxSplits(session, missionId, scuBoxSplits);
+    if (!result.ok) {
+      return textResult({ error: result.error });
+    }
+
+    const next = await saveChecklistSession(result.session);
+    const updated = (next.missions ?? []).find(
+      (entry) => entry.id === missionId,
+    );
+
+    let catalogUpdated: string | null = null;
+    let catalogError: string | null = null;
+    const catalogId = updated?.catalogMissionId ?? null;
+    const shouldUpdateCatalog = input.updateCatalog !== false;
+    if (shouldUpdateCatalog && catalogId) {
+      try {
+        await updateCatalogMissionScuBoxSplits({
+          missionId: catalogId,
+          scuBoxSplits,
+        });
+        catalogUpdated = catalogId;
+      } catch (error) {
+        catalogError =
+          error instanceof Error
+            ? error.message
+            : "Failed to update catalog scuBoxSplits";
+      }
+    }
+
+    const stampedPickup = next.rows
+      .flatMap((row) =>
+        row.cargoDeliveries
+          .filter(
+            (cargo) =>
+              cargo.missionId === missionId &&
+              (cargo.role === "pickup" ||
+                row.legKind === "pickup" ||
+                row.legKind === "both"),
+          )
+          .map((cargo) => ({
+            locationSlug: row.locationSlug,
+            commoditySlug: cargo.commoditySlug,
+            scu: cargo.scu,
+            boxSizes: cargo.boxSizes ?? [],
+          })),
+      )
+      .filter((entry) => (entry.boxSizes?.length ?? 0) > 0);
+
+    return textResult({
+      ok: true,
+      sessionId: next.id,
+      missionId,
+      label: formatBreakdownLabel(scuBoxSplits),
+      scuBoxSplits,
+      boxScu,
+      missionScu,
+      catalogUpdated,
+      catalogError,
+      stampedPickup,
+      note: "Session crate mix updated and bay packing sizes restamped. UI Collect pads use these boxSizes.",
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to set mission scuBoxSplits",
     });
   }
 }

@@ -26,7 +26,7 @@ function poly(points: Pt[]): string {
 }
 
 /**
- * Miniature isometric glyph for an 8 / 4 / 2 / 1 SCU crate footprint.
+ * Miniature isometric glyph for a 32 / 16 / 8 / 4 / 2 / 1 SCU crate footprint.
  * Uses the same visible faces + shading as CargoGridIsoView crates.
  */
 export function CargoBoxSizeIcon({
@@ -47,9 +47,9 @@ export function CargoBoxSizeIcon({
   const botC = project(dx, dy, 0);
   const botD = project(0, dy, 0);
 
-  // Shared world frame sized for an 8 SCU (2×2×2) so smaller crates stay
-  // proportionally shorter instead of filling the same CSS box.
-  const frame = cargoBoxOrientations(8)[0]!;
+  // Frame at least 8 SCU (2×2×2); larger crates expand the view so they fit.
+  const frameSize = size >= 16 ? size : 8;
+  const frame = cargoBoxOrientations(frameSize)[0]!;
   const frameCorners = [
     project(0, 0, frame.dz),
     project(frame.dx, 0, frame.dz),
@@ -122,7 +122,9 @@ export function CargoBoxCountIcons({
   const entries = boxCounts.filter(
     (entry): entry is { size: CargoBoxScu; count: number } =>
       entry.count > 0 &&
-      (entry.size === 8 ||
+      (entry.size === 32 ||
+        entry.size === 16 ||
+        entry.size === 8 ||
         entry.size === 4 ||
         entry.size === 2 ||
         entry.size === 1),

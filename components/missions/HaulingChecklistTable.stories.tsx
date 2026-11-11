@@ -15,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp centered on the Collect / Drop off pad. Station → Ship / Ship → Station transfer blocks sit under Collect in the left column; Next stop pins under that column. Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },

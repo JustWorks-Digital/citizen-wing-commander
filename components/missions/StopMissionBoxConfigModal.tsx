@@ -20,7 +20,14 @@ export type StopMissionBoxConfigModalProps = {
 };
 
 function breakdownId(breakdown: ScuBoxSplits): string {
-  return `8:${breakdown.scuEight}|4:${breakdown.scuFour}|2:${breakdown.scuTwo}|1:${breakdown.scuOne}`;
+  return [
+    `32:${breakdown.scuThirtyTwo ?? 0}`,
+    `16:${breakdown.scuSixteen ?? 0}`,
+    `8:${breakdown.scuEight}`,
+    `4:${breakdown.scuFour}`,
+    `2:${breakdown.scuTwo}`,
+    `1:${breakdown.scuOne}`,
+  ].join("|");
 }
 
 /**

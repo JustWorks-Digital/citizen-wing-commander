@@ -90,11 +90,25 @@ function flatFootprint(size: CargoBoxScu): CargoBoxFootprint {
       return { dx: 2, dy: 2, dz: 1 };
     case 8:
       return { dx: 2, dy: 2, dz: 2 };
+    // Two 8s side-by-side, one 8 tall.
+    case 16:
+      return { dx: 4, dy: 2, dz: 2 };
+    // Four 8s in a row, one 8 tall.
+    case 32:
+      return { dx: 8, dy: 2, dz: 2 };
     default: {
       const _exhaustive: never = size;
       return _exhaustive;
     }
   }
+}
+
+function columnWidthForSizes(sizes: CargoBoxScu[]): number {
+  let width = STACK_WIDTH_CELLS;
+  for (const size of sizes) {
+    width = Math.max(width, flatFootprint(size).dx);
+  }
+  return width;
 }
 
 type PlaceMaterialStackInput = {
@@ -126,6 +140,7 @@ function placeMaterialStackColumns(input: PlaceMaterialStackInput): {
   maxY: number;
 } {
   const sizes = [...input.sizes].sort((a, b) => b - a);
+  const columnWidth = columnWidthForSizes(sizes);
   const boxes: PlacedCargoBox[] = [];
   let columnX = input.startX;
   let z = 0;
@@ -137,7 +152,7 @@ function placeMaterialStackColumns(input: PlaceMaterialStackInput): {
 
   for (const size of sizes) {
     if (boxesInColumn >= MAX_COLUMN_BOXES) {
-      columnX += STACK_WIDTH_CELLS + SAME_MATERIAL_COLUMN_GAP_CELLS;
+      columnX += columnWidth + SAME_MATERIAL_COLUMN_GAP_CELLS;
       z = 0;
       boxesInColumn = 0;
     }
@@ -167,13 +182,13 @@ function placeMaterialStackColumns(input: PlaceMaterialStackInput): {
   }
 
   const endXExclusive = startedColumn
-    ? columnX + STACK_WIDTH_CELLS
-    : input.startX + STACK_WIDTH_CELLS;
+    ? columnX + columnWidth
+    : input.startX + columnWidth;
 
   return {
     boxes,
     endXExclusive,
-    widthCells: Math.max(STACK_WIDTH_CELLS, endXExclusive - input.startX),
+    widthCells: Math.max(columnWidth, endXExclusive - input.startX),
     heightCells: Math.max(1, maxZ),
     nextBoxIndex: boxIndex,
     maxY,

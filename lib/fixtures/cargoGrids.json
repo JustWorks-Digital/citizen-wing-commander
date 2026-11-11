@@ -9,7 +9,7 @@
         {
           "id": "forward",
           "label": "Front bay",
-          "lengthCells": 9,
+          "lengthCells": 7,
           "widthCells": 6,
           "kind": "cargo",
           "storageLocation": "front"
@@ -31,7 +31,7 @@
         }
       ],
       "notes": [
-        "Front 6×9×4 = 216 SCU, rear 8×15×4 = 480 SCU (696 total). Height: two 8 SCU crates stacked (4 cells)."
+        "Player-measured: front 6×7×4 = 168 SCU, rear 8×15×4 = 480 SCU (648 grid total). Height: two 8 SCU crates stacked (4 cells). UEX ship cargoScu remains 696."
       ]
     },
     {

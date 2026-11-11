@@ -1,11 +1,13 @@
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   emptyScuBoxSplits,
+  incrementScuBoxSplit,
   scuBoxSplitsForScu,
   normalizeScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import {
   CARGO_BOX_SCU,
+  DEFAULT_MAX_CARGO_BOX_SCU,
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
 
@@ -21,12 +23,26 @@ export type BoxBreakdownOption = {
 
 function breakdownBoxCount(breakdown: ScuBoxSplits): number {
   const b = normalizeScuBoxSplits(breakdown);
-  return b.scuOne + b.scuTwo + b.scuFour + b.scuEight;
+  return (
+    b.scuOne +
+    b.scuTwo +
+    b.scuFour +
+    b.scuEight +
+    b.scuSixteen +
+    b.scuThirtyTwo
+  );
 }
 
-function breakdownKey(breakdown: ScuBoxSplits): string {
+export function breakdownKey(breakdown: ScuBoxSplits): string {
   const b = normalizeScuBoxSplits(breakdown);
-  return `8:${b.scuEight}|4:${b.scuFour}|2:${b.scuTwo}|1:${b.scuOne}`;
+  return [
+    `32:${b.scuThirtyTwo}`,
+    `16:${b.scuSixteen}`,
+    `8:${b.scuEight}`,
+    `4:${b.scuFour}`,
+    `2:${b.scuTwo}`,
+    `1:${b.scuOne}`,
+  ].join("|");
 }
 
 export function boxCountsFromBreakdown(
@@ -34,6 +50,8 @@ export function boxCountsFromBreakdown(
 ): Array<{ size: CargoBoxScu; count: number }> {
   const b = normalizeScuBoxSplits(breakdown);
   const counts: Array<{ size: CargoBoxScu; count: number }> = [];
+  if (b.scuThirtyTwo > 0) counts.push({ size: 32, count: b.scuThirtyTwo });
+  if (b.scuSixteen > 0) counts.push({ size: 16, count: b.scuSixteen });
   if (b.scuEight > 0) counts.push({ size: 8, count: b.scuEight });
   if (b.scuFour > 0) counts.push({ size: 4, count: b.scuFour });
   if (b.scuTwo > 0) counts.push({ size: 2, count: b.scuTwo });
@@ -46,6 +64,8 @@ export function expandBreakdownToBoxSizes(
 ): CargoBoxScu[] {
   const b = normalizeScuBoxSplits(breakdown);
   const boxes: CargoBoxScu[] = [];
+  for (let i = 0; i < b.scuThirtyTwo; i += 1) boxes.push(32);
+  for (let i = 0; i < b.scuSixteen; i += 1) boxes.push(16);
   for (let i = 0; i < b.scuEight; i += 1) boxes.push(8);
   for (let i = 0; i < b.scuFour; i += 1) boxes.push(4);
   for (let i = 0; i < b.scuTwo; i += 1) boxes.push(2);
@@ -56,10 +76,7 @@ export function expandBreakdownToBoxSizes(
 export function breakdownFromBoxSizes(boxes: CargoBoxScu[]): ScuBoxSplits {
   const counts = emptyScuBoxSplits();
   for (const size of boxes) {
-    if (size === 1) counts.scuOne += 1;
-    else if (size === 2) counts.scuTwo += 1;
-    else if (size === 4) counts.scuFour += 1;
-    else if (size === 8) counts.scuEight += 1;
+    incrementScuBoxSplit(counts, size);
   }
   return counts;
 }
@@ -72,8 +89,9 @@ export function formatBreakdownLabel(breakdown: ScuBoxSplits): string {
 }
 
 /**
- * All ways to fill `scu` with crates of size ≤ maxContainer (from {8,4,2,1}).
- * Sorted fewest crates first; capped for UI.
+ * Ways to fill `scu` with crates of size ≤ maxContainer (from allowed set).
+ * Without a max, stays at the legacy 8 SCU cap. Sorted fewest crates first;
+ * capped for UI. Stops once enough options are found (largest-first DFS).
  */
 export function enumerateBoxBreakdowns(
   scu: number,
@@ -89,24 +107,24 @@ export function enumerateBoxBreakdowns(
           ...CARGO_BOX_SCU.filter((size) => size <= maxContainerScu),
           1,
         )
-      : 8;
+      : DEFAULT_MAX_CARGO_BOX_SCU;
 
   const sizes = CARGO_BOX_SCU.filter((size) => size <= maxAllowed);
   const found: ScuBoxSplits[] = [];
+  const target = Math.max(1, limit);
 
   function walk(remaining: number, startIndex: number, current: ScuBoxSplits) {
+    if (found.length >= target) return;
     if (remaining === 0) {
       found.push({ ...current });
       return;
     }
     for (let i = startIndex; i < sizes.length; i += 1) {
+      if (found.length >= target) return;
       const size = sizes[i]!;
       if (size > remaining) continue;
       const next = { ...current };
-      if (size === 8) next.scuEight += 1;
-      else if (size === 4) next.scuFour += 1;
-      else if (size === 2) next.scuTwo += 1;
-      else next.scuOne += 1;
+      incrementScuBoxSplit(next, size);
       walk(remaining - size, i, next);
     }
   }
@@ -119,12 +137,17 @@ export function enumerateBoxBreakdowns(
   found.sort((a, b) => {
     const countDelta = breakdownBoxCount(a) - breakdownBoxCount(b);
     if (countDelta !== 0) return countDelta;
-    if (a.scuOne !== b.scuOne) return a.scuOne - b.scuOne;
-    if (a.scuTwo !== b.scuTwo) return a.scuTwo - b.scuTwo;
-    return a.scuFour - b.scuFour;
+    if (a.scuThirtyTwo !== b.scuThirtyTwo) {
+      return b.scuThirtyTwo - a.scuThirtyTwo;
+    }
+    if (a.scuSixteen !== b.scuSixteen) return b.scuSixteen - a.scuSixteen;
+    if (a.scuEight !== b.scuEight) return b.scuEight - a.scuEight;
+    if (a.scuFour !== b.scuFour) return b.scuFour - a.scuFour;
+    if (a.scuTwo !== b.scuTwo) return b.scuTwo - a.scuTwo;
+    return a.scuOne - b.scuOne;
   });
 
-  const capped = found.slice(0, Math.max(1, limit));
+  const capped = found.slice(0, target);
   // Ensure greedy default is present even if beyond the cap.
   if (!capped.some((row) => breakdownKey(row) === defaultKey)) {
     capped.unshift(defaultBreakdown);

@@ -58,6 +58,7 @@ Link evidence on each contract:
 | `store_hauling_screenshot` | Save base64/data-URL image → `.data/mcp-screenshots/<batchId>/` (prefer batchId = sessionId) |
 | `list_hauling_screenshots` | List stored files for a batch |
 | `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
+| `set_mission_scu_box_splits` | Correct crate sizes from freight elevator / hangar UI (`boxes: [{ size, count }]`) |
 | `clear_hauling_screenshots` | Delete a batch’s temp images |
 
 **Soft gate (not a hard fail):** `apply_hauling_contracts_intake` and `create_mission` still succeed when screenshot paths are missing, but return `screenshotsMissing: true` plus `warning` / `next`. Treat that as a defect to fix **in the same turn** when the user had images (`store_hauling_screenshot` → `set_mission_screenshots` or re-`create_mission` with `latestScreenshotPath`).
