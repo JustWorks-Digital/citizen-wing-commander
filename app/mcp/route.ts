@@ -25,9 +25,12 @@ import {
   toolReplaceHaulingChecklist,
   toolSearchCommodities,
   toolSearchContractors,
+  toolInsertQuantumTravel,
+  toolListLocationShops,
   toolSearchLocations,
   toolSearchShips,
   toolSetActiveHaulingSession,
+  toolSetQuantumTravelReason,
   toolSetSessionStartLocation,
   toolSetLegCompleted,
   toolSetMissionScreenshots,
@@ -72,14 +75,29 @@ const cargoLineSchema = z.object({
 
 const legSchema = z.object({
   id: z.string().optional().describe("Stable row id; auto-generated if omitted"),
-  legKind: z.enum(["pickup", "delivery", "both"]),
+  legKind: z.enum(["pickup", "delivery", "both", "quantum"]),
   location: z
     .string()
     .describe("Star Citizen location name or fixture slug (e.g. Area18)"),
+  quantumToLocation: z
+    .string()
+    .optional()
+    .describe(
+      "Required when legKind is quantum: destination location name or slug.",
+    ),
+  reasonShop: z
+    .string()
+    .optional()
+    .describe(
+      "Optional shop reason for quantum legs (name or slug, e.g. Platinum Bay, cargo-center). Prefer list_location_shops for the destination.",
+    ),
   cargo: z.array(cargoLineSchema).optional().default([]),
-  shipStorageLocation: shipStorageSchema.describe(
-    "Default cargo bay zone for the leg (used when cargo lines omit shipStorageLocation).",
-  ),
+  shipStorageLocation: shipStorageSchema
+    .optional()
+    .default("front")
+    .describe(
+      "Default cargo bay zone for the leg (used when cargo lines omit shipStorageLocation). Defaults to front for quantum legs.",
+    ),
   distanceToNext: z
     .object({
       value: z.number(),
@@ -499,6 +517,78 @@ const handler = createMcpHandler(
         annotations: { readOnlyHint: true },
       },
       async ({ query, limit }) => toolSearchLocations(query, limit),
+    );
+
+    server.registerTool(
+      "list_location_shops",
+      {
+        title: "List location shops",
+        description:
+          "Use this before setting a quantum-travel Reason. Returns shops/facilities at a station (Platinum Bay, Cargo Center, Casaba Outlet, …) from UEX terminal fixtures.",
+        inputSchema: z.object({
+          location: z
+            .string()
+            .min(1)
+            .describe("Location name or slug (destination station)"),
+          query: z
+            .string()
+            .optional()
+            .describe("Optional filter (e.g. Platinum, Cargo)"),
+          limit: z.number().int().min(1).max(100).optional().default(40),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolListLocationShops(input),
+    );
+
+    server.registerTool(
+      "insert_quantum_travel",
+      {
+        title: "Insert quantum travel",
+        description:
+          "Use this to add a quantum travel row (from → to + shop Reason) after a checklist stop, or after session start. Prefer list_location_shops for reasonShop. Pass afterRowId=route-start to insert at the front.",
+        inputSchema: z.object({
+          to: z.string().min(1).describe("Destination location name or slug"),
+          reasonShop: z
+            .string()
+            .min(1)
+            .describe("Shop reason name or slug (e.g. Platinum Bay)"),
+          from: z
+            .string()
+            .optional()
+            .describe(
+              "Optional origin location; defaults from afterRowId presence / session start",
+            ),
+          afterRowId: z
+            .string()
+            .optional()
+            .describe(
+              "Insert after this row id. Use route-start (default) to insert before the first stop.",
+            ),
+          sessionId: sessionIdSchema,
+        }),
+        annotations: { destructiveHint: false },
+      },
+      async (input) => toolInsertQuantumTravel(input),
+    );
+
+    server.registerTool(
+      "set_quantum_travel_reason",
+      {
+        title: "Set quantum travel reason",
+        description:
+          "Use this to set or clear the shop Reason on an existing quantum travel row (rowId from get_hauling_checklist). Pass reasonShop empty/null to clear.",
+        inputSchema: z.object({
+          rowId: z.string().min(1),
+          reasonShop: z
+            .string()
+            .nullable()
+            .describe("Shop name/slug, or null/empty to clear"),
+          sessionId: sessionIdSchema,
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolSetQuantumTravelReason(input),
     );
 
     server.registerTool(
@@ -958,11 +1048,12 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.4",
+      version: "0.2.5",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
+      "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
       "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it; imageBase64 remains a fallback. ChatGPT /mnt/data paths are not reachable by remote MCP — do not pass them. Pass sessionId (= batch). Optional missionId stores+attaches in one call. Otherwise put returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath / set_mission_screenshots. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",

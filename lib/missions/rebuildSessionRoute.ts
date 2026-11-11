@@ -22,6 +22,7 @@ import type {
   SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
+import { mergePreservedQuantumRows } from "@/lib/missions/quantumTravel";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 
 function resolveCargoRole(
@@ -95,7 +96,7 @@ function rebuildRowsFromMissions(
         missions: nextMissions,
         missionCount,
         missionsCompleted,
-        rows: [],
+        rows: mergePreservedQuantumRows(session.rows, []),
       }),
     };
   }
@@ -127,6 +128,7 @@ function rebuildRowsFromMissions(
     if (!effectiveMissionScuBoxSplits(mission)) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
+  nextRows = mergePreservedQuantumRows(session.rows, nextRows);
 
   return {
     ok: true,

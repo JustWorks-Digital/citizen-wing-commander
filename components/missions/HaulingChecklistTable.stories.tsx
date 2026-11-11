@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+import { insertQuantumTravelAfter } from "@/lib/missions/quantumTravel";
 import {
   defaultFocusedStopId,
   HaulingChecklistTable,
@@ -14,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },
@@ -43,6 +44,15 @@ function InteractiveTable(args: {
       missions={args.missions ?? mockSessionChecklist.missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
       startLocationSlug={args.startLocationSlug ?? null}
+      onInsertQuantumTravel={({ afterRowId, fromSlug, toSlug, reasonShopSlug }) => {
+        setRows((prev) =>
+          insertQuantumTravelAfter(prev, afterRowId, {
+            fromSlug,
+            toSlug,
+            reasonShopSlug,
+          }),
+        );
+      }}
       onToggle={(rowId) => {
         setRows((prev) =>
           prev.map((row) =>

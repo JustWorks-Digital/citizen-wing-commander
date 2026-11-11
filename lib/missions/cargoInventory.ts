@@ -10,6 +10,7 @@ function applyCargoToOnboard(
   let peak = Math.max(0, current);
   for (const row of rows) {
     if (options?.stopAfterIncomplete && !row.isCompleted) break;
+    if (row.legKind === "quantum") continue;
     const fallback = row.legKind === "both" ? null : row.legKind;
     for (const cargo of row.cargoDeliveries) {
       const role = cargo.role ?? fallback;
@@ -53,11 +54,13 @@ export function estimateOnboardScuByStop(
   for (const row of rows) {
     let pickup = 0;
     let delivery = 0;
-    const fallback = row.legKind === "both" ? null : row.legKind;
-    for (const cargo of row.cargoDeliveries) {
-      const role = cargo.role ?? fallback;
-      if (role === "pickup") pickup += cargo.scu;
-      else if (role === "delivery") delivery += cargo.scu;
+    if (row.legKind !== "quantum") {
+      const fallback = row.legKind === "both" ? null : row.legKind;
+      for (const cargo of row.cargoDeliveries) {
+        const role = cargo.role ?? fallback;
+        if (role === "pickup") pickup += cargo.scu;
+        else if (role === "delivery") delivery += cargo.scu;
+      }
     }
     const beforePickup = current;
     current += pickup;

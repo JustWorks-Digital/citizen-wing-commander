@@ -54,7 +54,7 @@ export type CargoDelivery = {
 };
 
 /** Stop role for the location badge. */
-export type LegKind = "pickup" | "delivery" | "both";
+export type LegKind = "pickup" | "delivery" | "both" | "quantum";
 
 /**
  * Cargo bay zone on the ship (front / mid / aft).
@@ -80,6 +80,16 @@ export type HaulingChecklistRow = {
   legKind: LegKind;
   /** Slug from `lib/fixtures/locations.json` (Star Citizen Wiki starmap). */
   locationSlug: string;
+  /**
+   * Destination for `legKind: "quantum"` travel rows (from = `locationSlug`).
+   * Null/omitted on pickup/delivery stops.
+   */
+  quantumToLocationSlug?: string | null;
+  /**
+   * Shop / facility reason for a quantum leg (fixture slug from
+   * `locationShops`, e.g. platinum-bay, cargo-center).
+   */
+  reasonShopSlug?: string | null;
   /** Cargo amounts at this stop (pickup and/or delivery). */
   cargoDeliveries: CargoDelivery[];
   shipStorageLocation: ShipStorageLocation;
@@ -87,6 +97,21 @@ export type HaulingChecklistRow = {
   distanceToNext: DistanceToNext | null;
   isCompleted: boolean;
 };
+
+export function isQuantumTravelRow(row: HaulingChecklistRow): boolean {
+  return row.legKind === "quantum";
+}
+
+/** Where the crew is after finishing this row (quantum → destination). */
+export function rowPresenceLocationSlug(row: HaulingChecklistRow): string {
+  if (
+    row.legKind === "quantum" &&
+    row.quantumToLocationSlug?.trim()
+  ) {
+    return row.quantumToLocationSlug.trim();
+  }
+  return row.locationSlug;
+}
 
 export type SessionChecklistModel = {
   /**
@@ -196,7 +221,11 @@ export function describeShipStorageLines(
     "legKind" | "cargoDeliveries" | "shipStorageLocation"
   >,
 ): ShipStorageLineDisplay[] {
-  const fallbackRole = row.legKind === "both" ? null : row.legKind;
+  if (row.legKind === "quantum") return [];
+  const fallbackRole =
+    row.legKind === "pickup" || row.legKind === "delivery"
+      ? row.legKind
+      : null;
   const lines: ShipStorageLineDisplay[] = [];
   const seen = new Set<string>();
 

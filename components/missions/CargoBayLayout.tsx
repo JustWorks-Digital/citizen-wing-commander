@@ -14,6 +14,7 @@ import {
   CargoGridSketch,
   type CargoGridViewTab,
 } from "@/components/ships/CargoGridSketch";
+import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
@@ -63,8 +64,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     [shipSlug],
   );
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
-  const [legendHidden, setLegendHidden] = useState(false);
-  const [sortingHidden, setSortingHidden] = useState(false);
+  const { legendHidden, sortingHidden, setLegendHidden, setSortingHidden } =
+    useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
   const [packMode, setPackMode] = useState<CargoBayPackMode>(
     defaultCargoBayPackMode,
@@ -266,7 +267,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   type="button"
                   aria-pressed={!sortingHidden}
                   aria-label={sortingHidden ? "Show sorting" : "Hide sorting"}
-                  onClick={() => setSortingHidden((value) => !value)}
+                  onClick={() => setSortingHidden(!sortingHidden)}
                   className={[
                     "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
                     !sortingHidden
@@ -297,7 +298,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 type="button"
                 aria-pressed={!legendHidden}
                 aria-label={legendHidden ? "Show legend" : "Hide legend"}
-                onClick={() => setLegendHidden((value) => !value)}
+                onClick={() => setLegendHidden(!legendHidden)}
                 className={[
                   "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
                   !legendHidden

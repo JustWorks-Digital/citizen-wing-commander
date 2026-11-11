@@ -73,11 +73,10 @@ export function buildCargoBaySections(
   const buckets = new Map<string, CargoBayTile>();
 
   for (const row of rows) {
-    const fallbackRole =
-      row.legKind === "both" ? null : (row.legKind as "pickup" | "delivery");
+    if (row.legKind === "quantum") continue;
 
     for (const cargo of row.cargoDeliveries) {
-      const role = resolveRole(row.legKind, cargo.role) ?? fallbackRole;
+      const role = resolveRole(row.legKind, cargo.role);
       if (!role) continue;
 
       const zone = cargo.shipStorageLocation ?? row.shipStorageLocation;

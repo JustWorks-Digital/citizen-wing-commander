@@ -5,7 +5,15 @@ import { LocationFuzzySearch } from "./LocationFuzzySearch";
 const meta = {
   title: "Primitives/LocationFuzzySearch",
   component: LocationFuzzySearch,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Fuzzy location search. When a value or typed query is present, a clear (X) control sits on the right edge of the input.",
+      },
+    },
+  },
   args: {
     valueSlug: null as string | null,
     onChange: () => undefined,

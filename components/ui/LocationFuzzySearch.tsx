@@ -12,6 +12,25 @@ export type LocationFuzzySearchProps = {
   disabled?: boolean;
 };
 
+function ClearIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4.5 4.5l7 7M11.5 4.5l-7 7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function LocationFuzzySearch({
   valueSlug,
   onChange,
@@ -64,14 +83,16 @@ export function LocationFuzzySearch({
     setIsOpen(false);
   };
 
+  const showClear = Boolean(valueSlug) || query.trim().length > 0;
+
   return (
     <div ref={rootRef} className="relative w-full max-w-md">
       <label className="mb-1 block font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
         {label}
       </label>
-      <div className="flex gap-2">
+      <div className="relative">
         <input
-          type="search"
+          type="text"
           role="combobox"
           aria-expanded={isOpen}
           aria-controls={listId}
@@ -81,7 +102,8 @@ export function LocationFuzzySearch({
           placeholder={placeholder}
           autoComplete="off"
           className={[
-            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep px-3 py-2",
+            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep py-2 pl-3",
+            showClear ? "pr-9" : "pr-3",
             "font-sans text-sm text-rsi-text placeholder:text-rsi-text-muted",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             "disabled:cursor-not-allowed disabled:opacity-50",
@@ -110,14 +132,21 @@ export function LocationFuzzySearch({
             }
           }}
         />
-        {valueSlug ? (
+        {showClear ? (
           <button
             type="button"
             disabled={disabled}
             onClick={clear}
-            className="shrink-0 rounded-rsi border border-rsi-border px-3 py-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text disabled:opacity-50"
+            aria-label="Clear location"
+            title="Clear"
+            className={[
+              "absolute top-1/2 right-1.5 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-rsi",
+              "text-rsi-text-muted transition-colors hover:bg-rsi-surface-raised hover:text-rsi-text",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+            ].join(" ")}
           >
-            Clear
+            <ClearIcon className="size-3.5" />
           </button>
         ) : null}
       </div>

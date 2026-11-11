@@ -161,6 +161,26 @@ sources:
     added: "2026-11-07"
     last_verified: "2026-11-07"
 
+  - id: uex-terminals-location-shops
+    status: accepted
+    purpose:
+      - location-shops
+      - quantum-travel-reason
+      - terminals
+    label: UEX Corp terminals (location shops)
+    url: https://api.uexcorp.uk/2.0/terminals
+    docs_url: https://uexcorp.space/api/documentation/id/get_terminals/
+    used_by:
+      - scripts/fetch-location-shops.mjs
+      - lib/fixtures/locationShops.json
+      - lib/fixtures/locationShops.ts
+    notes: >
+      Same terminals feed, grouped by matched wiki location into shop brands
+      (Platinum Bay, Cargo Center, Casaba Outlet, …) for quantum-travel Reason
+      dropdowns and MCP list_location_shops / set_quantum_travel_reason.
+    added: "2026-11-11"
+    last_verified: "2026-11-11"
+
   - id: sc-wiki-hauling-ranks
     status: accepted
     purpose:

@@ -1,0 +1,6239 @@
+{
+  "source": "https://api.uexcorp.uk/2.0/terminals",
+  "sourceLabel": "UEX Corp terminals (location shops)",
+  "fetchedAt": "2026-11-11T04:12:10.147Z",
+  "matchedTerminals": 742,
+  "locationCount": 139,
+  "items": [
+    {
+      "locationSlug": "arc-l1-wide-forest-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arc-l2-lively-pathway-station",
+      "shops": [
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arc-l3-modern-express-station",
+      "shops": [
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arc-l4-faint-glen-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arc-l5-yellow-core-station",
+      "shops": [
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-045",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-048",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-056",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-061",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-141",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "arccorp-mining-area-157",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "area18",
+      "shops": [
+        {
+          "slug": "arccorp",
+          "name": "ArcCorp",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "dumper-s-depot",
+          "name": "Dumper's Depot",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "arid-reach",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "ashland",
+      "shops": [
+        {
+          "slug": "ashland",
+          "name": "Ashland",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "astors-clearing",
+      "shops": [
+        {
+          "slug": "bar",
+          "name": "Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fps-shop",
+          "name": "FPS Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "baijini-point",
+      "shops": [
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "blackrock-exchange",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "brios-breaker-yard",
+      "shops": [
+        {
+          "slug": "brio-s-breaker-yard",
+          "name": "Brio's Breaker Yard",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "bueno-ravine",
+      "shops": [
+        {
+          "slug": "bueno-ravine",
+          "name": "Bueno Ravine",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "bullocks-reach",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "canard-view",
+      "shops": [
+        {
+          "slug": "canard-view",
+          "name": "Canard View",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "carvers-ridge",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "chawlas-beach",
+      "shops": [
+        {
+          "slug": "chawla-s-beach",
+          "name": "Chawla's Beach",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "checkmate",
+      "shops": [
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pyrotechnic-amalgamated",
+          "name": "Pyrotechnic Amalgamated",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "shops": [
+        {
+          "slug": "covalex",
+          "name": "Covalex",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "cru-l1-ambitious-dream-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "cru-l4-shallow-fields-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 3
+        }
+      ]
+    },
+    {
+      "locationSlug": "cru-l5-beautiful-glen-station",
+      "shops": [
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 3
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "deakins-research-outpost",
+      "shops": [
+        {
+          "slug": "deakins-research-outpost",
+          "name": "Deakins Research Outpost",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "devlin-scrap-salvage",
+      "shops": [
+        {
+          "slug": "devlin-scrap-and-salvage",
+          "name": "Devlin Scrap and Salvage",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "dingers-depot",
+      "shops": [
+        {
+          "slug": "dinger-s-depot",
+          "name": "Dinger's Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "dudley-daughters",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "dunboro",
+      "shops": [
+        {
+          "slug": "bar",
+          "name": "Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fps-shop",
+          "name": "FPS Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rust",
+          "name": "Rust",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "endgame",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "everus-harbor",
+      "shops": [
+        {
+          "slug": "arkanis",
+          "name": "Arkanis",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "fallow-field",
+      "shops": [
+        {
+          "slug": "fallow-field",
+          "name": "Fallow Field",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "feo-canyon-depot",
+      "shops": [
+        {
+          "slug": "feo-canyon-depot",
+          "name": "Feo Canyon Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "frigid-knot",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "frostbite",
+      "shops": [
+        {
+          "slug": "frostbite",
+          "name": "Frostbite",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "gaslight",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "goners-deal",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "gray-gardens-depot",
+      "shops": [
+        {
+          "slug": "gray-gardens-depot",
+          "name": "Gray Gardens Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "grim-hex",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "dumper-s-depot",
+          "name": "Dumper's Depot",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "skutters",
+          "name": "Skutters",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "technotic",
+          "name": "Technotic",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-anderson",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-bezdek",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-edmond",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-hadley",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-hahn",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-lathan",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-norgaard",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-oparei",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-perlman",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-pinewood",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-ryder",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-stanhope",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-thedus",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hdms-woodruff",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "hickes-research-outpost",
+      "shops": [
+        {
+          "slug": "hickes-research-outpost",
+          "name": "Hickes Research Outpost",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "humboldt-mines",
+      "shops": [
+        {
+          "slug": "humboldt-mines",
+          "name": "Humboldt Mines",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hur-l1-green-glade-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hur-l2-faithful-dream-station",
+      "shops": [
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hur-l3-thundering-express-station",
+      "shops": [
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hur-l4-melodic-fields-station",
+      "shops": [
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "hur-l5-high-course-station",
+      "shops": [
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "jacksons-swap",
+      "shops": [
+        {
+          "slug": "jackson-s-swap",
+          "name": "Jackson's Swap",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "kabirs-post",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "kinder-plots",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "last-landings",
+      "shops": [
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "last-landings",
+          "name": "Last Landings",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "levski",
+      "shops": [
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "conscientious-objects",
+          "name": "Conscientious Objects",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cordry-s",
+          "name": "Cordry's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "feed-the-people",
+          "name": "Feed The People",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hats-more",
+          "name": "Hats & More",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "laying-roots",
+          "name": "Laying Roots",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "levski",
+          "name": "Levski",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "near-beer",
+          "name": "Near Beer",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "nyx-nax",
+          "name": "Nyx Nax",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shelf-stable",
+          "name": "Shelf Stable",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "teach-s-ship-shop",
+          "name": "Teach's Ship Shop",
+          "types": [
+            "item",
+            "vehicle_buy",
+            "vehicle_rent"
+          ],
+          "terminalCount": 3
+        },
+        {
+          "slug": "tech-shop",
+          "name": "Tech Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tools-supplies",
+          "name": "Tools & Supplies",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wake-up",
+          "name": "Wake Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wear-tear",
+          "name": "Wear & Tear",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "lorville",
+      "shops": [
+        {
+          "slug": "hurston-dynamics",
+          "name": "Hurston Dynamics",
+          "types": [
+            "commodity",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 5
+        },
+        {
+          "slug": "kel-to-constores",
+          "name": "Kel-To Constores",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "new-deal",
+          "name": "New Deal",
+          "types": [
+            "vehicle_buy"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tammany-and-sons",
+          "name": "Tammany and Sons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "megumi-refueling",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "mic-l1-shallow-frontier-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "mic-l2-long-forest-station",
+      "shops": [
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "mic-l3-endless-odyssey-station",
+      "shops": [
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "mic-l4-red-crossroads-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "mic-l5-modern-icarus-station",
+      "shops": [
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "narenas-rest",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "new-babbage",
+      "shops": [
+        {
+          "slug": "aparelli",
+          "name": "Aparelli",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "brentworth-care-center",
+          "name": "Brentworth Care Center",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "centermass",
+          "name": "CenterMass",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "garcia-s-greens",
+          "name": "Garcia's Greens",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-constores",
+          "name": "Kel-To Constores",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "microtech",
+          "name": "microTech",
+          "types": [
+            "commodity",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "microtech-factory-line",
+          "name": "microTech Factory Line",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "omega-pro",
+          "name": "Omega Pro",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "regal-luxury-rentals",
+          "name": "Regal Luxury Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "twyn-s-sandwiches",
+          "name": "Twyn's Sandwiches",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "whammer-s",
+          "name": "Whammer's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "nyx-gateway",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 7
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire-weapons-nyx-gateway-pyro",
+          "name": "Live Fire Weapons- Nyx Gateway (Pyro)",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "nyx-gateway-2",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 7
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire-weapons-nyx-gateway-pyro",
+          "name": "Live Fire Weapons- Nyx Gateway (Pyro)",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "orbituary",
+      "shops": [
+        {
+          "slug": "buy-and-fly",
+          "name": "Buy and Fly",
+          "types": [
+            "vehicle_buy"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "item"
+          ],
+          "terminalCount": 3
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "chuan",
+          "name": "Chuan",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "filtered-water",
+          "name": "Filtered Water",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "gear-up",
+          "name": "Gear Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pyrotechnic-amalgamated",
+          "name": "Pyrotechnic Amalgamated",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ready-to-trade",
+          "name": "Ready to Trade",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sharp-shooters",
+          "name": "Sharp Shooters",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "station-convenience",
+          "name": "Station Convenience",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "unique-quality",
+          "name": "Unique Quality",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "orison",
+      "shops": [
+        {
+          "slug": "cousin-crow-s",
+          "name": "Cousin Crow's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "covalex",
+          "name": "Covalex",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "crusader-industries",
+          "name": "Crusader Industries",
+          "types": [
+            "commodity",
+            "item"
+          ],
+          "terminalCount": 6
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-constores",
+          "name": "Kel-To Constores",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "makau",
+          "name": "Makau",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "new-deal",
+          "name": "New Deal",
+          "types": [
+            "vehicle_buy"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "whammer-s",
+          "name": "Whammer's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "ostlers-claim",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "patch-city",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "peoples-service-station-alpha",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ore-sales",
+          "name": "Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shelf-stable",
+          "name": "Shelf Stable",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sundries",
+          "name": "Sundries",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tools-supplies",
+          "name": "Tools & Supplies",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wake-up",
+          "name": "Wake Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "weapons-and-armor",
+          "name": "Weapons and Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "peoples-service-station-delta",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ore-sales",
+          "name": "Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shelf-stable",
+          "name": "Shelf Stable",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sundries",
+          "name": "Sundries",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tools-supplies",
+          "name": "Tools & Supplies",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wake-up",
+          "name": "Wake Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "weapons-and-armor",
+          "name": "Weapons and Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "peoples-service-station-lambda",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ore-sales",
+          "name": "Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shelf-stable",
+          "name": "Shelf Stable",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sundries",
+          "name": "Sundries",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tools-supplies",
+          "name": "Tools & Supplies",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wake-up",
+          "name": "Wake Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "weapons-and-armor",
+          "name": "Weapons and Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "peoples-service-station-theta",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ore-sales",
+          "name": "Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shelf-stable",
+          "name": "Shelf Stable",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sundries",
+          "name": "Sundries",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "tools-supplies",
+          "name": "Tools & Supplies",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "wake-up",
+          "name": "Wake Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "weapons-and-armor",
+          "name": "Weapons and Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "pickers-field",
+      "shops": [
+        {
+          "slug": "rust",
+          "name": "Rust",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop",
+          "name": "Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "port-tressler",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "prophets-peak",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "pyro-gateway",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire-weapons",
+          "name": "Live Fire Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "pyro-gateway-2",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire-weapons",
+          "name": "Live Fire Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "rappel",
+      "shops": [
+        {
+          "slug": "scrap",
+          "name": "Scrap",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop",
+          "name": "Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "rats-nest",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "rayari-anvik-research-outpost",
+      "shops": [
+        {
+          "slug": "rayari-inc",
+          "name": "Rayari Inc.",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "rayari-cantwell-research-outpost",
+      "shops": [
+        {
+          "slug": "rayari-inc",
+          "name": "Rayari Inc.",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "rayari-deltana-research-outpost",
+      "shops": [
+        {
+          "slug": "rayari-inc",
+          "name": "Rayari Inc.",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "rayari-kaltag-research-outpost",
+      "shops": [
+        {
+          "slug": "rayari-inc",
+          "name": "Rayari Inc.",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "rayari-mcgrath-research-outpost",
+      "shops": [
+        {
+          "slug": "rayari-inc",
+          "name": "Rayari Inc.",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "reclamation-disposal-orinth",
+      "shops": [
+        {
+          "slug": "reclamation-and-disposal-orinth",
+          "name": "Reclamation and Disposal Orinth",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "rods-fuel-n-supplies",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "rough-landing",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "ruin-station",
+      "shops": [
+        {
+          "slug": "buy-and-fly",
+          "name": "Buy and Fly",
+          "types": [
+            "vehicle_buy"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "carafi",
+          "name": "Carafi",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "chuan",
+          "name": "Chuan",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "clothing-shop",
+          "name": "Clothing Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "filtered-water",
+          "name": "Filtered Water",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "gear-up",
+          "name": "Gear Up",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodles",
+          "name": "Noodles",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pyrotechnic-amalgamated",
+          "name": "Pyrotechnic Amalgamated",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ready-to-trade",
+          "name": "Ready To Trade",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rust",
+          "name": "Rust",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "seanuts",
+          "name": "Seanuts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sharp-shooters",
+          "name": "Sharp Shooters",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "station-convenience",
+          "name": "Station Convenience",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "unique-quality",
+          "name": "Unique Quality",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "rustville",
+      "shops": [
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rustville",
+          "name": "Rustville",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "sacrens-plot",
+      "shops": [
+        {
+          "slug": "sacren-s-plot",
+          "name": "Sacren's Plot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "samson-sons-salvage-center",
+      "shops": [
+        {
+          "slug": "samson-son-s-salvage-center",
+          "name": "Samson & Son's Salvage Center",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "scarpers-turn",
+      "shops": [
+        {
+          "slug": "scarper-s-turn",
+          "name": "Scarper's Turn",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "seers-canyon",
+      "shops": [
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "seer-s-canyon",
+          "name": "Seer's Canyon",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "seraphim-station",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aydoexpress-hub",
+          "name": "AydoExpress Hub",
+          "types": [
+            "vehicle_buy"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "shepherds-rest",
+      "shops": [
+        {
+          "slug": "shepherd-s-rest",
+          "name": "Shepherd's Rest",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sal-2",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sal-5",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-scd-1",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sm0-10",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-smca-6",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "shubin-mining-facility-smca-8",
+      "shops": [
+        {
+          "slug": "shubin-interstellar",
+          "name": "Shubin Interstellar",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "slowburn-depot",
+      "shops": [
+        {
+          "slug": "slowburn-depot",
+          "name": "Slowburn Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "slowburn-depot-2",
+      "shops": [
+        {
+          "slug": "slowburn-depot",
+          "name": "Slowburn Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "stags-rut",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "stanton-gateway",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity",
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 9
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "live-fire-weapons",
+          "name": "Live Fire Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "stanton-gateway-2",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity",
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 9
+        },
+        {
+          "slug": "cargo-services",
+          "name": "Cargo Services",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "hot-dogs",
+          "name": "Hot Dogs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "live-fire-weapons",
+          "name": "Live Fire Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "pharmacy",
+          "name": "Pharmacy",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinement-center",
+          "name": "Refinement Center",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinery-ore-sales",
+          "name": "Refinery Ore Sales",
+          "types": [
+            "commodity_raw"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "refinery-shop",
+          "name": "Refinery Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "traveler-rentals",
+          "name": "Traveler Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "starlight-service-station",
+      "shops": [
+        {
+          "slug": "admin",
+          "name": "Admin",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "aloprats",
+          "name": "Aloprats",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "fried-grubs",
+          "name": "Fried Grubs",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "guns",
+          "name": "Guns",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "medical-shop",
+          "name": "Medical Shop",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ship-parts",
+          "name": "Ship Parts",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "sunset-mesa",
+      "shops": [
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "sunset-mesa",
+          "name": "Sunset Mesa",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "terra-gateway",
+      "shops": [
+        {
+          "slug": "armor",
+          "name": "Armor",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "burrito-bar",
+          "name": "Burrito Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "cargo-center",
+          "name": "Cargo Center",
+          "types": [
+            "item",
+            "vehicle_rent"
+          ],
+          "terminalCount": 2
+        },
+        {
+          "slug": "casaba-outlet",
+          "name": "Casaba Outlet",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "ellroy-s",
+          "name": "Ellroy's",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "hot-dog",
+          "name": "Hot Dog",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "juice-bar",
+          "name": "Juice Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "kel-to-rx",
+          "name": "Kel-To Rx",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "live-fire",
+          "name": "Live Fire",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "noodle-bar",
+          "name": "Noodle Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "pizza",
+          "name": "Pizza",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "platinum-bay",
+          "name": "Platinum Bay",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "refinement-processing",
+          "name": "Refinement Processing",
+          "types": [
+            "refinery"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "rest-relax",
+          "name": "Rest & Relax",
+          "types": [
+            "commodity",
+            "commodity_raw",
+            "fuel",
+            "item"
+          ],
+          "terminalCount": 4
+        },
+        {
+          "slug": "ship-weapons",
+          "name": "Ship Weapons",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "vantage-rentals",
+          "name": "Vantage Rentals",
+          "types": [
+            "vehicle_rent"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "terra-mills-hydrofarm",
+      "shops": [
+        {
+          "slug": "terra-mills",
+          "name": "Terra Mills",
+          "types": [
+            "commodity",
+            "fuel"
+          ],
+          "terminalCount": 2
+        }
+      ]
+    },
+    {
+      "locationSlug": "the-golden-riviera",
+      "shops": [
+        {
+          "slug": "the-golden-riviera",
+          "name": "The Golden Riviera",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "the-yard",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "watchers-depot",
+      "shops": [
+        {
+          "slug": "watcher-s-depot",
+          "name": "Watcher's Depot",
+          "types": [
+            "commodity"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "weeping-cove",
+      "shops": [
+        {
+          "slug": "bar",
+          "name": "Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "wikelo-emporium-dasi-station",
+      "shops": [
+        {
+          "slug": "wikelo-emporium-dasi-station",
+          "name": "Wikelo Emporium Dasi Station",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "wikelo-emporium-kinga-station",
+      "shops": [
+        {
+          "slug": "wikelo-emporium-kinga-station",
+          "name": "Wikelo Emporium Kinga Station",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "wikelo-emporium-selo-station",
+      "shops": [
+        {
+          "slug": "wikelo-emporium-selo-station",
+          "name": "Wikelo Emporium Selo Station",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "windfall",
+      "shops": [
+        {
+          "slug": "landing-services",
+          "name": "Landing Services",
+          "types": [
+            "fuel"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "yangs-place",
+      "shops": [
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    },
+    {
+      "locationSlug": "zephyr",
+      "shops": [
+        {
+          "slug": "bar",
+          "name": "Bar",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        },
+        {
+          "slug": "shop-terminal",
+          "name": "Shop Terminal",
+          "types": [
+            "item"
+          ],
+          "terminalCount": 1
+        }
+      ]
+    }
+  ]
+}

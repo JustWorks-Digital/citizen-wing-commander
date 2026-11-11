@@ -52,6 +52,7 @@ import {
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
 import { CargoBayLayout } from "./CargoBayLayout";
+import { insertQuantumTravelAfter } from "@/lib/missions/quantumTravel";
 import {
   defaultFocusedStopId,
   HaulingChecklistTable,
@@ -455,6 +456,34 @@ export function SessionChecklistView({
     [persistSession],
   );
 
+  const onInsertQuantumTravel = useCallback(
+    (input: {
+      afterRowId: string;
+      fromSlug: string;
+      toSlug: string;
+      reasonShopSlug?: string | null;
+    }) => {
+      const current = sessionRef.current;
+      persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: insertQuantumTravelAfter(
+            current.rows,
+            input.afterRowId,
+            {
+              fromSlug: input.fromSlug,
+              toSlug: input.toSlug,
+              reasonShopSlug: input.reasonShopSlug ?? null,
+            },
+          ),
+        }),
+      );
+    },
+    [persistSession],
+  );
+
   const applyBoxBreakdown = (
     missionId: string,
     breakdown: ScuBoxSplits,
@@ -659,6 +688,7 @@ export function SessionChecklistView({
         sessionId={session.id}
         startLocationSlug={session.startLocationSlug ?? null}
         onToggleCargoHandled={onToggleCargoHandled}
+        onInsertQuantumTravel={onInsertQuantumTravel}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
         onToggle={onToggleStop}

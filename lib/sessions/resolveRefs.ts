@@ -8,6 +8,7 @@ import {
   listLocations,
   listShips,
 } from "@/lib/fixtures";
+import { resolveLocationShopSlug } from "@/lib/fixtures/locationShops";
 import {
   shipStorageLocationValues,
   type CargoDelivery,
@@ -231,6 +232,10 @@ export type IncomingLeg = {
   id?: string;
   legKind: LegKind;
   location: string;
+  /** Destination location for `legKind: "quantum"` (name or slug). */
+  quantumToLocation?: string | null;
+  /** Shop reason for quantum legs (name or slug, e.g. Platinum Bay). */
+  reasonShop?: string | null;
   cargo?: IncomingCargoLine[];
   /** Required: front | middle | rear (aliases like aft/fore accepted). */
   shipStorageLocation: string;
@@ -247,12 +252,63 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
     };
   }
 
-  const rowShipStorage = resolveShipStorageLocation(leg.shipStorageLocation);
+  let quantumToLocationSlug: string | null = null;
+  let reasonShopSlug: string | null = null;
+  if (leg.legKind === "quantum") {
+    const toRaw = leg.quantumToLocation?.trim() || "";
+    if (!toRaw) {
+      return {
+        ok: false as const,
+        error: "quantum legs require quantumToLocation",
+      };
+    }
+    quantumToLocationSlug = resolveLocationSlug(toRaw);
+    if (!quantumToLocationSlug) {
+      return {
+        ok: false as const,
+        error: `Unknown quantum destination: ${toRaw}`,
+      };
+    }
+    const reasonRaw = leg.reasonShop?.trim() || "";
+    if (reasonRaw) {
+      reasonShopSlug = resolveLocationShopSlug(
+        reasonRaw,
+        quantumToLocationSlug,
+      );
+      if (!reasonShopSlug) {
+        return {
+          ok: false as const,
+          error: `Unknown shop reason at destination: ${reasonRaw}`,
+        };
+      }
+    }
+  }
+
+  const rowShipStorage = resolveShipStorageLocation(
+    leg.shipStorageLocation || "front",
+  );
   if (!rowShipStorage) {
     return {
       ok: false as const,
       error:
         "shipStorageLocation must be front, middle, or rear (cargo bay zone)",
+    };
+  }
+
+  if (leg.legKind === "quantum") {
+    return {
+      ok: true as const,
+      row: {
+        id: leg.id?.trim() || `quantum-${index + 1}`,
+        legKind: "quantum" as const,
+        locationSlug,
+        quantumToLocationSlug,
+        reasonShopSlug,
+        cargoDeliveries: [],
+        shipStorageLocation: rowShipStorage,
+        distanceToNext: leg.distanceToNext ?? null,
+        isCompleted: Boolean(leg.isCompleted),
+      },
     };
   }
 

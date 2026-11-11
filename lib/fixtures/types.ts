@@ -63,6 +63,20 @@ export type FixtureStarSystem = {
   wiki: string | null;
 };
 
+/** Shop / terminal brand available at a location (from UEX terminals). */
+export type FixtureLocationShop = {
+  slug: string;
+  name: string;
+  /** UEX terminal types seen for this shop at the location. */
+  types: string[];
+  terminalCount: number;
+};
+
+export type FixtureLocationShops = {
+  locationSlug: string;
+  shops: FixtureLocationShop[];
+};
+
 export type FixtureFile<T> = {
   source: string;
   sourceLabel: string;
