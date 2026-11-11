@@ -58,6 +58,7 @@ import {
   updateChecklistRowLocation,
   updateQuantumTravelEndpoints,
 } from "@/lib/missions/quantumTravel";
+import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
@@ -71,6 +72,7 @@ import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
+import { SessionControlsHelp } from "./SessionControlsHelp";
 import {
   SessionInventoryStat,
   SessionRouteProgressStats,
@@ -396,6 +398,16 @@ export function SessionChecklistView({
     ],
   );
 
+  const toggleCargoLayout = useCallback(() => {
+    setCargoLayoutOpen((open) => !open);
+  }, []);
+  const toggleStops = useCallback(() => {
+    setStopsOpen((open) => !open);
+  }, []);
+  const toggleMissions = useCallback(() => {
+    setMissionsOpen((open) => !open);
+  }, []);
+
   const routeProgressStats = useMemo(
     () => (
       <SessionRouteProgressStats
@@ -410,6 +422,7 @@ export function SessionChecklistView({
         onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
         cargoBayCount={cargoBayCount}
+        trailing={<SessionControlsHelp />}
       />
     ),
     [
@@ -465,16 +478,31 @@ export function SessionChecklistView({
 
   const onToggleStop = useCallback(
     (rowId: string) => {
+      const current = sessionRef.current;
+      const target = current.rows.find((row) => row.id === rowId);
+      if (!target) return;
+      const stopIsCompleted = !target.isCompleted;
+      const missions = syncMissionsForStopCompletion({
+        missions: current.missions ?? [],
+        rows: current.rows,
+        rowId,
+        stopIsCompleted,
+      });
+      const counted = missions.filter((mission) => !mission.isHidden);
       persistSession(
         applySessionCompletionTiming({
-          ...sessionRef.current,
-          shipSlugs: sessionRef.current.shipSlugs ?? [],
-          startLocationSlug: sessionRef.current.startLocationSlug ?? null,
-          rows: sessionRef.current.rows.map((row) =>
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: current.rows.map((row) =>
             row.id === rowId
-              ? { ...row, isCompleted: !row.isCompleted }
+              ? { ...row, isCompleted: stopIsCompleted }
               : row,
           ),
+          missions,
+          missionCount: counted.length,
+          missionsCompleted: counted.filter((mission) => mission.isCompleted)
+            .length,
         }),
       );
     },
@@ -770,6 +798,9 @@ export function SessionChecklistView({
         onToggleCargoHandled={onToggleCargoHandled}
         onInsertQuantumTravel={onInsertQuantumTravel}
         onUpdateQuantumTravel={onUpdateQuantumTravel}
+        onOpenCargoBays={toggleCargoLayout}
+        onOpenStops={toggleStops}
+        onOpenContracts={toggleMissions}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
         onToggle={onToggleStop}

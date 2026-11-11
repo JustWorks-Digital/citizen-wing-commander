@@ -54,7 +54,7 @@ export type CargoBayLayoutProps = {
   focusedStopId?: string | null;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
-  /** Optional session stats — right of the Cargo layout title. */
+  /** Optional session stats — right of the Cargo bays title. */
   headerAside?: ReactNode;
   className?: string;
 };
@@ -440,7 +440,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-              Cargo layout
+              Cargo bays
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
@@ -724,11 +724,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
-          <div className="-mx-4 mt-2 border-t border-rsi-border/50">
+          <div className="-mx-4 mt-1">
             <button
               type="button"
               role="slider"
-              aria-label="Cargo layout height"
+              aria-label="Cargo bays height"
               aria-orientation="vertical"
               aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
               aria-valuemax={MAX_CARGO_BAY_LAYOUT_HEIGHT_PX}
@@ -758,7 +758,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   setHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
                 }
               }}
-              className="group flex h-5 w-full cursor-ns-resize items-center justify-center hover:bg-rsi-bg-deep/40"
+              className="group flex h-3 w-full cursor-ns-resize items-center justify-center"
             >
               <span
                 aria-hidden

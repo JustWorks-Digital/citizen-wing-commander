@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay (checklist toolbar — opens Cargo layout modal), Inventory (inside Cargo layout modal, including per-contract SCU).",
+          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay (checklist toolbar — opens Cargo bays modal) with optional Controls trailing link, Inventory (inside Cargo bays modal, including per-contract SCU).",
       },
     },
   },

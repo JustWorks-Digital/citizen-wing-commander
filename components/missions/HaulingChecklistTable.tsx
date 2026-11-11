@@ -99,6 +99,10 @@ export type HaulingChecklistTableProps = {
     fromSlug?: string;
     toSlug?: string;
   }) => void;
+  /** Keyboard shortcuts: B cargo bays, S stops, C contracts. */
+  onOpenCargoBays?: () => void;
+  onOpenStops?: () => void;
+  onOpenContracts?: () => void;
 };
 
 function sameLocationSlug(a: string, b: string): boolean {
@@ -1720,6 +1724,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   startLocationSlug = null,
   onInsertQuantumTravel,
   onUpdateQuantumTravel,
+  onOpenCargoBays,
+  onOpenStops,
+  onOpenContracts,
 }: HaulingChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
@@ -1848,6 +1855,89 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
     }
   };
 
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      return Boolean(
+        target.closest(
+          "input, textarea, select, [contenteditable='true'], [role='textbox']",
+        ),
+      );
+    };
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.repeat) return;
+      if (isTypingTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key === "b") {
+        event.preventDefault();
+        onOpenCargoBays?.();
+        return;
+      }
+      if (key === "s") {
+        event.preventDefault();
+        onOpenStops?.();
+        return;
+      }
+      if (key === "c") {
+        event.preventDefault();
+        onOpenContracts?.();
+        return;
+      }
+      if (key === "h") {
+        if (completedCount === 0) return;
+        event.preventDefault();
+        setHideCompleted((value) => !value);
+        return;
+      }
+      if (key === "d") {
+        if (!activeRowId) return;
+        event.preventDefault();
+        if (activeRowId === QUANTUM_ORIGIN_ROW_ID && showQuantumInList) {
+          if (quantumCompleted) {
+            setQuantumDeparted(false);
+            onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+          } else {
+            completeQuantumOrigin();
+          }
+          return;
+        }
+        const row = rows.find((entry) => entry.id === activeRowId);
+        if (!row) return;
+        const completing = !row.isCompleted;
+        onToggle(row.id);
+        if (completing) {
+          const routeIndex = rows.findIndex((entry) => entry.id === row.id);
+          const nextIncomplete = rows
+            .slice(routeIndex + 1)
+            .find((entry) => !entry.isCompleted);
+          if (nextIncomplete) {
+            startTransition(() => {
+              pendingScrollToIdRef.current = nextIncomplete.id;
+              onFocusStop?.(nextIncomplete.id);
+            });
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    activeRowId,
+    completedCount,
+    onFocusStop,
+    onOpenCargoBays,
+    onOpenContracts,
+    onOpenStops,
+    onToggle,
+    quantumCompleted,
+    rows,
+    showQuantumInList,
+  ]);
+
   const confirmQuantumDraft = (input: {
     toSlug: string;
     reasonShopSlug: string;
@@ -1971,7 +2061,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             const completing = !row.isCompleted;
             onToggle(row.id);
             // Defer focus/scroll/bay replan so the checkbox paints first.
-            if (completing && !hideCompleted) {
+            // Always advance when completing — especially with history hidden,
+            // the finished stop leaves the list and the next one should be active.
+            if (completing) {
               const nextIncomplete = rows
                 .slice(routeIndex + 1)
                 .find((entry) => !entry.isCompleted);

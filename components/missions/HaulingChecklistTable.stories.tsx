@@ -6,6 +6,7 @@ import {
   updateChecklistRowLocation,
   updateQuantumTravelEndpoints,
 } from "@/lib/missions/quantumTravel";
+import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
@@ -38,6 +39,9 @@ function InteractiveTable(args: {
   startLocationSlug?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
+  const [missions, setMissions] = useState(
+    args.missions ?? mockSessionChecklist.missions,
+  );
   const [startLocationSlug, setStartLocationSlug] = useState(
     args.startLocationSlug ?? null,
   );
@@ -50,7 +54,7 @@ function InteractiveTable(args: {
       rows={rows}
       focusedStopId={focusedStopId}
       onFocusStop={setFocusedStopId}
-      missions={args.missions ?? mockSessionChecklist.missions}
+      missions={missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
       startLocationSlug={startLocationSlug}
       onInsertQuantumTravel={({ afterRowId, fromSlug, toSlug, reasonShopSlug }) => {
@@ -95,13 +99,24 @@ function InteractiveTable(args: {
         });
       }}
       onToggle={(rowId) => {
-        setRows((prev) =>
-          prev.map((row) =>
+        setRows((prevRows) => {
+          const target = prevRows.find((row) => row.id === rowId);
+          if (!target) return prevRows;
+          const stopIsCompleted = !target.isCompleted;
+          setMissions((prevMissions) =>
+            syncMissionsForStopCompletion({
+              missions: prevMissions,
+              rows: prevRows,
+              rowId,
+              stopIsCompleted,
+            }),
+          );
+          return prevRows.map((row) =>
             row.id === rowId
-              ? { ...row, isCompleted: !row.isCompleted }
+              ? { ...row, isCompleted: stopIsCompleted }
               : row,
-          ),
-        );
+          );
+        });
       }}
     />
   );

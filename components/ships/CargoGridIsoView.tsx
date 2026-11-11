@@ -1346,7 +1346,7 @@ export function CargoGridIsoView({
                   ].join(" ")}
                 >
                   <span
-                    className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/75 bg-transparent"
+                    className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/30 bg-transparent"
                     aria-hidden
                   />
                   Delivery
@@ -1540,7 +1540,7 @@ export function CargoGridIsoView({
               : action === "pickup"
                 ? "color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
                 : action === "delivery"
-                  ? "color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))"
+                  ? "color-mix(in srgb, var(--rsi-success) 28%, var(--rsi-border-strong))"
                   : null;
           const actionDash =
             useFullGroupOutline || useOuterGroupOutline

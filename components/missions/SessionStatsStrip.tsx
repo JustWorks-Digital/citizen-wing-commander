@@ -137,6 +137,8 @@ export type SessionRouteProgressStatsProps = {
    * Drives singular / plural “Cargo bay(s)” label. Defaults to 1.
    */
   cargoBayCount?: number;
+  /** Optional control rendered just right of the Cargo bay block (e.g. Controls). */
+  trailing?: ReactNode;
   className?: string;
 };
 
@@ -153,6 +155,7 @@ export function SessionRouteProgressStats({
   onStopsClick,
   onCapacityClick,
   cargoBayCount = 1,
+  trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
@@ -175,50 +178,59 @@ export function SessionRouteProgressStats({
           total={capacityLabel}
           currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
         />
+        <span
+          className="ml-1 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+          title={SCU_TITLE}
+        >
+          SCU
+        </span>
       </StatValue>
     </>
   );
 
   return (
     <div
-      className={[stripClass, className].filter(Boolean).join(" ")}
-      role="group"
-      aria-label="Route progress"
+      className={["flex flex-wrap items-center gap-2", className]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <button
-        type="button"
-        onClick={onMissionsClick}
-        className={interactiveCellClass}
-      >
-        <StatLabel>Contracts</StatLabel>
-        <StatValue>
-          <Fraction current={missionsCompleted} total={missionCount} />
-        </StatValue>
-      </button>
-      {onStopsClick ? (
+      <div className={stripClass} role="group" aria-label="Route progress">
         <button
           type="button"
-          onClick={onStopsClick}
+          onClick={onMissionsClick}
           className={interactiveCellClass}
         >
-          {stopsBody}
+          <StatLabel>Contracts</StatLabel>
+          <StatValue>
+            <Fraction current={missionsCompleted} total={missionCount} />
+          </StatValue>
         </button>
-      ) : (
-        <div className={cellClass}>{stopsBody}</div>
-      )}
-      {onCapacityClick ? (
-        <button
-          type="button"
-          onClick={onCapacityClick}
-          className={interactiveCellClass}
-          title={`Open ${cargoBayLabel.toLowerCase()}`}
-          aria-label={`Open ${cargoBayLabel.toLowerCase()}`}
-        >
-          {capacityBody}
-        </button>
-      ) : (
-        <div className={cellClass}>{capacityBody}</div>
-      )}
+        {onStopsClick ? (
+          <button
+            type="button"
+            onClick={onStopsClick}
+            className={interactiveCellClass}
+          >
+            {stopsBody}
+          </button>
+        ) : (
+          <div className={cellClass}>{stopsBody}</div>
+        )}
+        {onCapacityClick ? (
+          <button
+            type="button"
+            onClick={onCapacityClick}
+            className={interactiveCellClass}
+            title={`Open ${cargoBayLabel.toLowerCase()}`}
+            aria-label={`Open ${cargoBayLabel.toLowerCase()}`}
+          >
+            {capacityBody}
+          </button>
+        ) : (
+          <div className={cellClass}>{capacityBody}</div>
+        )}
+      </div>
+      {trailing}
     </div>
   );
 }

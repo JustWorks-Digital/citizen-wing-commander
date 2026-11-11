@@ -41,6 +41,10 @@ export function SessionStopsTimelineModal({
     [rows, startLocationSlug],
   );
   const nodeCount = timeline.nodes.length;
+  const progressRatio =
+    timeline.totalStopCount > 0
+      ? timeline.completedStopCount / timeline.totalStopCount
+      : 0;
   /** Tighter rows as the route grows so more stops fit in one screen. */
   const isDense = nodeCount >= 8;
   const isCompact = nodeCount >= 5;
@@ -67,7 +71,7 @@ export function SessionStopsTimelineModal({
       }}
     >
       <div className="relative flex max-h-[min(42rem,92vh)] w-full max-w-lg flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
-        <div className="relative flex shrink-0 items-baseline justify-between gap-3 border-b border-rsi-border px-4 py-2.5 pr-12 sm:px-5 sm:pr-14">
+        <div className="relative flex shrink-0 items-baseline gap-3 border-b border-rsi-border px-4 py-2.5 pr-12 sm:px-5 sm:pr-14">
           <ModalCloseButton label="Dismiss" onClick={onClose} />
           <div className="min-w-0">
             <p className="font-mono text-[0.55rem] uppercase tracking-[0.2em] text-rsi-accent">
@@ -78,11 +82,12 @@ export function SessionStopsTimelineModal({
               className="text-sm font-semibold tracking-wide text-rsi-text"
             >
               Stops
+              <span className="ml-1.5 font-mono text-[0.65rem] font-normal tabular-nums tracking-wide text-rsi-text-secondary">
+                - {timeline.completedStopCount}/{timeline.totalStopCount}{" "}
+                complete
+              </span>
             </h2>
           </div>
-          <p className="shrink-0 font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary">
-            {timeline.completedStopCount}/{timeline.totalStopCount} complete
-          </p>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-2 sm:px-4">
@@ -192,7 +197,42 @@ export function SessionStopsTimelineModal({
           )}
         </div>
 
-        <div className="grid shrink-0 grid-cols-3 gap-2 border-t border-rsi-border bg-rsi-bg-deep/40 px-4 py-2 sm:px-5">
+        <div className="shrink-0 border-t border-rsi-border bg-rsi-bg-deep/40 px-4 py-2 sm:px-5">
+          {timeline.totalStopCount > 0 ? (
+            <div className="mb-2">
+              <p
+                className={[
+                  "mb-1.5 text-center font-mono text-[0.55rem] uppercase tracking-[0.16em]",
+                  progressRatio >= 1
+                    ? "text-rsi-success"
+                    : "text-rsi-text-secondary",
+                ].join(" ")}
+              >
+                {progressRatio >= 1
+                  ? "Complete"
+                  : `Progress · ${Math.round(progressRatio * 100)}%`}
+              </p>
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-rsi-bg-deep"
+                role="progressbar"
+                aria-label="Route stop completion"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progressRatio * 100)}
+                aria-valuetext={
+                  progressRatio >= 1
+                    ? "Complete"
+                    : `${timeline.completedStopCount} of ${timeline.totalStopCount} stops complete`
+                }
+              >
+                <div
+                  className="h-full rounded-full bg-rsi-success transition-[width] duration-300 ease-out"
+                  style={{ width: `${Math.min(100, progressRatio * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-3 gap-2">
           <div>
             <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
               Traveled
@@ -216,6 +256,7 @@ export function SessionStopsTimelineModal({
             <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
               {formatDistanceToNext(timeline.total)}
             </p>
+          </div>
           </div>
         </div>
       </div>

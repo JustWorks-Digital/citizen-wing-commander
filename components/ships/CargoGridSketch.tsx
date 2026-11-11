@@ -749,7 +749,7 @@ export function CargoGridSketch({
             ].join(" ")}
           >
             <span
-              className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/75 bg-transparent"
+              className="size-2 shrink-0 rounded-[2px] border border-dashed border-rsi-success/30 bg-transparent"
               aria-hidden
             />
             Delivery
@@ -1362,7 +1362,7 @@ export function CargoGridSketch({
                                   ...(tint?.action === "delivery"
                                     ? {
                                         outline:
-                                          "1.5px dashed color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))",
+                                          "1.5px dashed color-mix(in srgb, var(--rsi-success) 28%, var(--rsi-border-strong))",
                                         outlineOffset: "-1px",
                                       }
                                     : {}),
@@ -1405,7 +1405,7 @@ export function CargoGridSketch({
                         box.action === "pickup"
                           ? "1px solid color-mix(in srgb, var(--rsi-accent) 55%, var(--rsi-border-strong))"
                           : box.action === "delivery"
-                            ? "1px dashed color-mix(in srgb, var(--rsi-success) 75%, var(--rsi-border-strong))"
+                            ? "1px dashed color-mix(in srgb, var(--rsi-success) 28%, var(--rsi-border-strong))"
                             : "1px solid color-mix(in srgb, var(--rsi-border-strong) 70%, black)";
                       const groupEdge = (exposed: boolean) =>
                         groupStroke != null &&

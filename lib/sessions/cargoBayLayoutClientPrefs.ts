@@ -3,6 +3,11 @@ export const DEFAULT_CARGO_BAY_LAYOUT_HEIGHT_PX = 26 * 16;
 export const MIN_CARGO_BAY_LAYOUT_HEIGHT_PX = 16 * 16;
 export const MAX_CARGO_BAY_LAYOUT_HEIGHT_PX = 48 * 16;
 
+/** Default cargo-base modal width (`72rem`). */
+export const DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX = 72 * 16;
+export const MIN_CARGO_BAY_LAYOUT_WIDTH_PX = 36 * 16;
+export const MAX_CARGO_BAY_LAYOUT_WIDTH_PX = 96 * 16;
+
 /** 2D / Split / 3D projection for the cargo layout modal. */
 export type CargoBayViewTab = "top" | "iso" | "split";
 
@@ -29,10 +34,15 @@ function isCargoBayViewTab(value: unknown): value is CargoBayViewTab {
 
 const STORAGE_PREFIX = "cwc:session:";
 const STORAGE_SUFFIX = ":cargoBayLayoutHeightPx";
+const WIDTH_SUFFIX = ":cargoBayLayoutWidthPx";
 const CHROME_SUFFIX = ":cargoBayChrome";
 
 function storageKey(sessionId: string): string {
   return `${STORAGE_PREFIX}${sessionId}${STORAGE_SUFFIX}`;
+}
+
+function widthStorageKey(sessionId: string): string {
+  return `${STORAGE_PREFIX}${sessionId}${WIDTH_SUFFIX}`;
 }
 
 function chromeStorageKey(sessionId: string): string {
@@ -44,6 +54,14 @@ export function clampCargoBayLayoutHeightPx(value: number): number {
   return Math.min(
     MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
     Math.max(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX, Math.round(value)),
+  );
+}
+
+export function clampCargoBayLayoutWidthPx(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX;
+  return Math.min(
+    MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
+    Math.max(MIN_CARGO_BAY_LAYOUT_WIDTH_PX, Math.round(value)),
   );
 }
 
@@ -73,6 +91,38 @@ export function writeCargoBayLayoutHeightPx(
     window.localStorage.setItem(
       storageKey(sessionId),
       String(clampCargoBayLayoutHeightPx(heightPx)),
+    );
+  } catch {
+    // Quota / private mode — ignore.
+  }
+}
+
+/** Read per-session cargo-base modal width from `localStorage` (browser only). */
+export function readCargoBayLayoutWidthPx(
+  sessionId: string | null | undefined,
+): number {
+  if (!sessionId || typeof window === "undefined") {
+    return DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX;
+  }
+  try {
+    const raw = window.localStorage.getItem(widthStorageKey(sessionId));
+    if (raw == null) return DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX;
+    return clampCargoBayLayoutWidthPx(Number(raw));
+  } catch {
+    return DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX;
+  }
+}
+
+/** Persist per-session cargo-base modal width in `localStorage` (browser only). */
+export function writeCargoBayLayoutWidthPx(
+  sessionId: string | null | undefined,
+  widthPx: number,
+): void {
+  if (!sessionId || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      widthStorageKey(sessionId),
+      String(clampCargoBayLayoutWidthPx(widthPx)),
     );
   } catch {
     // Quota / private mode — ignore.

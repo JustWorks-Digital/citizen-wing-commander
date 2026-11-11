@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Route stops timeline from the sticky Stops stat: location thumbnails per stop, completed vs ahead, leg distances, traveled / remaining / total. Start is omitted when it matches stop 1. Density scales with stop count.",
+          "Route stops timeline from the sticky Stops stat: title shows Stops - N/M complete (ASCII hyphen). Continuous completion progress bar above the distance summary. Location thumbnails per stop, completed vs ahead, leg distances, traveled / remaining / total. Start is omitted when it matches stop 1. Density scales with stop count.",
       },
     },
   },

@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useId, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+import { useSessionCargoBayLayoutWidth } from "@/hooks/useSessionCargoBayLayoutWidth";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import {
+  MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
+  MIN_CARGO_BAY_LAYOUT_WIDTH_PX,
+} from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import { CargoBayLayout } from "./CargoBayLayout";
 
 export type SessionCargoLayoutModalProps = {
@@ -11,14 +24,14 @@ export type SessionCargoLayoutModalProps = {
   shipSlug?: string | null;
   focusedStopId?: string | null;
   sessionId?: string | null;
-  /** Inventory / capacity aside shown beside the Cargo layout title. */
+  /** Inventory / capacity aside shown beside the Cargo bays title. */
   headerAside?: ReactNode;
   onClose: () => void;
 };
 
 /**
- * Centered Cargo layout modal — CargoBayLayout panel opened from the sticky
- * Cargo bay control. Height follows content.
+ * Centered Cargo bays modal — CargoBayLayout panel opened from the sticky
+ * Cargo bay control. Height follows content; left edge resizes width.
  * Close X sits in the backdrop above the panel so it does not steal bay width.
  */
 export function SessionCargoLayoutModal({
@@ -31,6 +44,14 @@ export function SessionCargoLayoutModal({
   onClose,
 }: SessionCargoLayoutModalProps) {
   const titleId = useId();
+  const { widthPx, setWidthPx, resetWidthPx } =
+    useSessionCargoBayLayoutWidth(sessionId);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +61,59 @@ export function SessionCargoLayoutModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const previous = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previous;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [isResizing]);
+
+  const onResizePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: widthPx,
+      };
+      setIsResizing(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [widthPx],
+  );
+
+  const onResizePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      // Dragging the left edge leftward grows the panel.
+      const delta = drag.startX - event.clientX;
+      setWidthPx(drag.startWidth + delta, { persist: false });
+    },
+    [setWidthPx],
+  );
+
+  const endResize = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const delta = drag.startX - event.clientX;
+      dragRef.current = null;
+      setIsResizing(false);
+      setWidthPx(drag.startWidth + delta);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [setWidthPx],
+  );
 
   if (!open) return null;
 
@@ -53,7 +127,10 @@ export function SessionCargoLayoutModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex w-full max-w-[min(96rem,100%)] flex-col items-stretch">
+      <div
+        className="relative flex max-w-full flex-col items-stretch"
+        style={{ width: widthPx }}
+      >
         <div className="pointer-events-none absolute inset-x-0 bottom-full mb-2 flex justify-end">
           <ModalCloseButton
             label="Dismiss"
@@ -62,16 +139,55 @@ export function SessionCargoLayoutModal({
           />
         </div>
         <h2 id={titleId} className="sr-only">
-          Cargo layout
+          Cargo bays
         </h2>
-        <CargoBayLayout
-          rows={rows}
-          shipSlug={shipSlug}
-          focusedStopId={focusedStopId}
-          sessionId={sessionId}
-          headerAside={headerAside}
-          className="max-h-[min(85vh,52rem)] overflow-y-auto overscroll-contain"
-        />
+        <div className="relative min-w-0">
+          <button
+            type="button"
+            role="slider"
+            aria-label="Cargo bays width"
+            aria-orientation="horizontal"
+            aria-valuemin={MIN_CARGO_BAY_LAYOUT_WIDTH_PX}
+            aria-valuemax={MAX_CARGO_BAY_LAYOUT_WIDTH_PX}
+            aria-valuenow={widthPx}
+            title="Drag to resize · double-click to reset"
+            onPointerDown={onResizePointerDown}
+            onPointerMove={onResizePointerMove}
+            onPointerUp={endResize}
+            onPointerCancel={endResize}
+            onDoubleClick={resetWidthPx}
+            onKeyDown={(event) => {
+              const step = event.shiftKey ? 48 : 16;
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setWidthPx(widthPx + step);
+              } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setWidthPx(widthPx - step);
+              } else if (event.key === "Home") {
+                event.preventDefault();
+                setWidthPx(MAX_CARGO_BAY_LAYOUT_WIDTH_PX);
+              } else if (event.key === "End") {
+                event.preventDefault();
+                setWidthPx(MIN_CARGO_BAY_LAYOUT_WIDTH_PX);
+              }
+            }}
+            className="group absolute top-0 bottom-0 left-0 z-20 flex w-3 -translate-x-1/2 cursor-ew-resize items-center justify-center"
+          >
+            <span
+              aria-hidden
+              className="h-10 w-0.5 rounded-full bg-rsi-border-strong/80 group-hover:bg-rsi-accent"
+            />
+          </button>
+          <CargoBayLayout
+            rows={rows}
+            shipSlug={shipSlug}
+            focusedStopId={focusedStopId}
+            sessionId={sessionId}
+            headerAside={headerAside}
+            className="max-h-[min(85vh,52rem)] overflow-y-auto overscroll-contain"
+          />
+        </div>
       </div>
     </div>
   );

@@ -106,3 +106,28 @@ export function missionsExpectedToCompleteAtStop(
   }
   return expected;
 }
+
+/**
+ * When a delivery stop is marked done/undone, mirror that onto missions whose
+ * final delivery is this stop (contracts finish with the location).
+ */
+export function syncMissionsForStopCompletion(input: {
+  missions: SessionMission[];
+  rows: HaulingChecklistRow[];
+  rowId: string;
+  stopIsCompleted: boolean;
+}): SessionMission[] {
+  const expectedIds = new Set(
+    missionsExpectedToCompleteAtStop(
+      input.missions,
+      input.rows,
+      input.rowId,
+    ).map((mission) => mission.id),
+  );
+  if (expectedIds.size === 0) return input.missions;
+  return input.missions.map((mission) =>
+    expectedIds.has(mission.id)
+      ? { ...mission, isCompleted: input.stopIsCompleted }
+      : mission,
+  );
+}
