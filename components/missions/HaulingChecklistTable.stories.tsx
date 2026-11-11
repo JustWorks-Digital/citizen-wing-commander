@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
-import { insertQuantumTravelAfter } from "@/lib/missions/quantumTravel";
+import {
+  insertQuantumTravelAfter,
+  updateChecklistRowLocation,
+  updateQuantumTravelEndpoints,
+} from "@/lib/missions/quantumTravel";
+import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
   HaulingChecklistTable,
+  QUANTUM_ORIGIN_ROW_ID,
 } from "./HaulingChecklistTable";
 
 const meta = {
@@ -15,7 +21,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo). When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp centered on the Collect / Drop off pad. Station → Ship / Ship → Station transfer blocks sit under Collect in the left column; Next stop pins under that column. Contracts (rank / name / SCU; click for details) then Payout + approximate Exp (hauling XP by contract rank) under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history link toolbar. Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo). When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp centered on the Collect / Drop off pad. Station → Ship / Ship → Station transfer blocks sit under Collect in the left column; Next stop pins under that column. Contracts (rank / name / SCU; click for details) then Payout + approximate Exp (hauling XP by contract rank) under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless history is hidden; the toolbar link toggles Hide history ↔ N hidden.",
       },
     },
   },
@@ -32,6 +38,9 @@ function InteractiveTable(args: {
   startLocationSlug?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
+  const [startLocationSlug, setStartLocationSlug] = useState(
+    args.startLocationSlug ?? null,
+  );
   const [focusedStopId, setFocusedStopId] = useState<string | null>(
     defaultFocusedStopId(args.rows, args.startLocationSlug),
   );
@@ -43,7 +52,7 @@ function InteractiveTable(args: {
       onFocusStop={setFocusedStopId}
       missions={args.missions ?? mockSessionChecklist.missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
-      startLocationSlug={args.startLocationSlug ?? null}
+      startLocationSlug={startLocationSlug}
       onInsertQuantumTravel={({ afterRowId, fromSlug, toSlug, reasonShopSlug }) => {
         setRows((prev) =>
           insertQuantumTravelAfter(prev, afterRowId, {
@@ -52,6 +61,38 @@ function InteractiveTable(args: {
             reasonShopSlug,
           }),
         );
+      }}
+      onUpdateQuantumTravel={({ rowId, fromSlug, toSlug }) => {
+        if (rowId === QUANTUM_ORIGIN_ROW_ID) {
+          if (fromSlug) setStartLocationSlug(fromSlug);
+          if (toSlug) {
+            setRows((prev) => {
+              const first = prev[0];
+              if (!first) return prev;
+              const updated = updateChecklistRowLocation(
+                prev,
+                first.id,
+                toSlug,
+              );
+              return updated.ok ? updated.rows : prev;
+            });
+          }
+          return;
+        }
+        setRows((prev) => {
+          const updated = updateQuantumTravelEndpoints(
+            prev,
+            rowId,
+            { fromSlug, toSlug },
+            {
+              isReasonValidAtDestination: (reasonShopSlug, destination) =>
+                listLocationShops(destination).some(
+                  (shop) => shop.slug === reasonShopSlug,
+                ),
+            },
+          );
+          return updated.ok ? updated.rows : prev;
+        });
       }}
       onToggle={(rowId) => {
         setRows((prev) =>

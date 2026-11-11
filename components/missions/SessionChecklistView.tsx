@@ -53,7 +53,12 @@ import {
   emptySessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
-import { insertQuantumTravelAfter } from "@/lib/missions/quantumTravel";
+import {
+  insertQuantumTravelAfter,
+  updateChecklistRowLocation,
+  updateQuantumTravelEndpoints,
+} from "@/lib/missions/quantumTravel";
+import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
   HaulingChecklistTable,
@@ -504,6 +509,69 @@ export function SessionChecklistView({
     [persistSession],
   );
 
+  const onUpdateQuantumTravel = useCallback(
+    (input: { rowId: string; fromSlug?: string; toSlug?: string }) => {
+      const current = sessionRef.current;
+
+      if (input.rowId === QUANTUM_ORIGIN_ROW_ID) {
+        let startLocationSlug = current.startLocationSlug ?? null;
+        let rows = current.rows;
+        if (input.fromSlug) {
+          startLocationSlug = input.fromSlug;
+        }
+        if (input.toSlug && rows[0]) {
+          const updated = updateChecklistRowLocation(
+            rows,
+            rows[0].id,
+            input.toSlug,
+          );
+          if (!updated.ok) {
+            setLoadError(updated.error);
+            return;
+          }
+          rows = updated.rows;
+        }
+        persistSession(
+          applySessionCompletionTiming({
+            ...current,
+            shipSlugs: current.shipSlugs ?? [],
+            startLocationSlug,
+            rows,
+          }),
+        );
+        return;
+      }
+
+      const updated = updateQuantumTravelEndpoints(
+        current.rows,
+        input.rowId,
+        {
+          fromSlug: input.fromSlug,
+          toSlug: input.toSlug,
+        },
+        {
+          isReasonValidAtDestination: (reasonShopSlug, toSlug) =>
+            listLocationShops(toSlug).some(
+              (shop) => shop.slug === reasonShopSlug,
+            ),
+        },
+      );
+      if (!updated.ok) {
+        setLoadError(updated.error);
+        return;
+      }
+      persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: updated.rows,
+        }),
+      );
+    },
+    [persistSession],
+  );
+
   const applyBoxBreakdown = (
     missionId: string,
     breakdown: ScuBoxSplits,
@@ -701,6 +769,7 @@ export function SessionChecklistView({
         startLocationSlug={session.startLocationSlug ?? null}
         onToggleCargoHandled={onToggleCargoHandled}
         onInsertQuantumTravel={onInsertQuantumTravel}
+        onUpdateQuantumTravel={onUpdateQuantumTravel}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
         onToggle={onToggleStop}

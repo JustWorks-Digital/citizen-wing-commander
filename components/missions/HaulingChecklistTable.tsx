@@ -68,7 +68,7 @@ export type HaulingChecklistTableProps = {
   onFocusStop?: (rowId: string) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
-  /** Right side of the toolbar, left of Hide history (e.g. total time). */
+  /** Right side of the toolbar, left of the Hide history / N hidden link (e.g. total time). */
   toolbarEnd?: ReactNode;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
@@ -89,6 +89,15 @@ export type HaulingChecklistTableProps = {
     fromSlug: string;
     toSlug: string;
     reasonShopSlug?: string | null;
+  }) => void;
+  /**
+   * Double-click edit on a quantum travel row (or the synthetic origin row).
+   * Pass `QUANTUM_ORIGIN_ROW_ID` for the start → first-stop travel row.
+   */
+  onUpdateQuantumTravel?: (input: {
+    rowId: string;
+    fromSlug?: string;
+    toSlug?: string;
   }) => void;
 };
 
@@ -525,7 +534,9 @@ function CargoGroups({
                     </span>
                     <span
                       className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90"
-                      title={line.commodityName ?? line.commoditySlug}
+                      title={
+                        line.commodityName ?? line.commoditySlug ?? undefined
+                      }
                     >
                       {abbrev}
                     </span>
@@ -763,6 +774,7 @@ function AddStopAfterButton({
 function QuantumTravelRow({
   rowId,
   fromSlug,
+  destinationSlug,
   destinationName,
   reasonShopSlug = null,
   isCompleted,
@@ -771,10 +783,13 @@ function QuantumTravelRow({
   onCopy,
   onFocus,
   onToggle,
+  onChangeFrom,
+  onChangeTo,
   footer = null,
 }: {
   rowId: string;
   fromSlug: string;
+  destinationSlug: string | null;
   destinationName: string;
   reasonShopSlug?: string | null;
   isCompleted: boolean;
@@ -783,8 +798,11 @@ function QuantumTravelRow({
   onCopy: () => void;
   onFocus: () => void;
   onToggle: () => void;
+  onChangeFrom?: (slug: string) => void;
+  onChangeTo?: (slug: string) => void;
   footer?: ReactNode;
 }) {
+  const [editing, setEditing] = useState<"from" | "to" | null>(null);
   const reasonLabel = reasonShopSlug
     ? (getLocationShopBySlug(reasonShopSlug)?.name ?? reasonShopSlug)
     : null;
@@ -794,11 +812,15 @@ function QuantumTravelRow({
     id: rowId,
     legKind: "quantum",
     locationSlug: fromSlug,
-    quantumToLocationSlug: null,
+    quantumToLocationSlug: destinationSlug,
     cargoDeliveries: [],
     shipStorageLocation: "front",
     distanceToNext: null,
     isCompleted,
+  };
+
+  const stopEditBubble = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
   };
 
   return (
@@ -823,17 +845,58 @@ function QuantumTravelRow({
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-start md:gap-6">
           <div className="min-w-0 flex-1">
-            <LocationHeader
-              row={stubRow}
-              location={location}
-              hasOutdoorFreightElevator={Boolean(
-                locationFixture?.hasOutdoorFreightElevator,
-              )}
-              isCopied={isCopied}
-              onCopy={onCopy}
-              compact
-              showTravelChevron
-            />
+            {editing === "from" && onChangeFrom ? (
+              <div
+                className="flex min-w-0 flex-col gap-2"
+                onClick={stopEditBubble}
+                onDoubleClick={stopEditBubble}
+              >
+                <LocationFuzzySearch
+                  label="Current location"
+                  placeholder="Search current location…"
+                  valueSlug={fromSlug}
+                  onChange={(slug) => {
+                    if (!slug || sameLocationSlug(slug, fromSlug)) {
+                      setEditing(null);
+                      return;
+                    }
+                    onChangeFrom(slug);
+                    setEditing(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditing(null)}
+                  className="self-start font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted hover:text-rsi-text"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div
+                title={
+                  onChangeFrom
+                    ? "Double-click to change current location"
+                    : undefined
+                }
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  if (onChangeFrom) setEditing("from");
+                }}
+              >
+                <LocationHeader
+                  row={stubRow}
+                  location={location}
+                  hasOutdoorFreightElevator={Boolean(
+                    locationFixture?.hasOutdoorFreightElevator,
+                  )}
+                  isCopied={isCopied}
+                  onCopy={onCopy}
+                  compact
+                  showTravelChevron
+                />
+              </div>
+            )}
             <div className="mt-3 md:hidden">
               <DoneStopButton
                 location={location}
@@ -844,22 +907,62 @@ function QuantumTravelRow({
             </div>
           </div>
           <div className="flex w-full min-w-0 flex-col gap-1 pl-2 md:w-1/2 md:shrink-0 md:pl-4">
-            {/* Match thumbnail / origin title row so destination + chevron share the same vertical center. */}
-            <p
-              className={[
-                "flex h-14 min-w-0 items-center text-base tracking-wide sm:text-lg",
-                isCompleted
-                  ? "text-rsi-text-muted"
-                  : "text-rsi-text",
-              ].join(" ")}
-            >
-              <span className="min-w-0 truncate">
-                Quantum to{" "}
-                <span className={isCompleted ? "" : "text-rsi-text-secondary"}>
-                  {destinationName}
+            {editing === "to" && onChangeTo ? (
+              <div
+                className="flex min-w-0 flex-col gap-2 py-2"
+                onClick={stopEditBubble}
+                onDoubleClick={stopEditBubble}
+              >
+                <LocationFuzzySearch
+                  label="Destination"
+                  placeholder="Search destination…"
+                  valueSlug={destinationSlug}
+                  onChange={(slug) => {
+                    if (
+                      !slug ||
+                      (destinationSlug &&
+                        sameLocationSlug(slug, destinationSlug))
+                    ) {
+                      setEditing(null);
+                      return;
+                    }
+                    onChangeTo(slug);
+                    setEditing(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditing(null)}
+                  className="self-start font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted hover:text-rsi-text"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p
+                className={[
+                  "flex h-14 min-w-0 items-center text-base tracking-wide sm:text-lg",
+                  isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
+                  onChangeTo ? "cursor-pointer" : "cursor-default",
+                ].join(" ")}
+                title={
+                  onChangeTo
+                    ? "Double-click to change destination"
+                    : undefined
+                }
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  if (onChangeTo) setEditing("to");
+                }}
+              >
+                <span className="min-w-0 truncate">
+                  Quantum to{" "}
+                  <span className={isCompleted ? "" : "text-rsi-text-secondary"}>
+                    {destinationName}
+                  </span>
                 </span>
-              </span>
-            </p>
+              </p>
+            )}
             {reasonLabel ? (
               <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Reason · {reasonLabel}
@@ -1616,6 +1719,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   onToggleCargoHandled,
   startLocationSlug = null,
   onInsertQuantumTravel,
+  onUpdateQuantumTravel,
 }: HaulingChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
@@ -1678,26 +1782,34 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       {toolbarStart}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {toolbarEnd}
-        {hideCompleted && completedCount > 0 ? (
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-secondary">
-            {completedCount} hidden
-          </p>
-        ) : null}
         <button
           type="button"
           aria-pressed={hideCompleted}
           disabled={completedCount === 0}
           onClick={() => setHideCompleted((value) => !value)}
           className={[
-            "rounded-rsi border px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] transition-colors",
+            "ml-4 pl-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary transition-colors hover:text-rsi-text",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
             "disabled:cursor-not-allowed disabled:opacity-40",
-            hideCompleted
-              ? "border-rsi-accent/40 bg-rsi-accent-muted/40 text-rsi-accent"
-              : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
           ].join(" ")}
         >
-          {hideCompleted ? "Show history" : "Hide history"}
+          <span className="inline-grid justify-items-end">
+            <span
+              className="invisible col-start-1 row-start-1 whitespace-nowrap"
+              aria-hidden
+            >
+              Hide history
+            </span>
+            <span
+              className="invisible col-start-1 row-start-1 whitespace-nowrap"
+              aria-hidden
+            >
+              {completedCount} hidden
+            </span>
+            <span className="col-start-1 row-start-1 whitespace-nowrap">
+              {hideCompleted ? `${completedCount} hidden` : "Hide history"}
+            </span>
+          </span>
         </button>
       </div>
     </div>
@@ -1798,6 +1910,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             <QuantumTravelRow
               rowId={QUANTUM_ORIGIN_ROW_ID}
               fromSlug={startSlugTrimmed}
+              destinationSlug={firstStop?.locationSlug ?? null}
               destinationName={quantumDestinationName}
               isCompleted={quantumCompleted}
               isFocused={activeRowId === QUANTUM_ORIGIN_ROW_ID}
@@ -1817,6 +1930,24 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                 }
                 completeQuantumOrigin();
               }}
+              onChangeFrom={
+                onUpdateQuantumTravel
+                  ? (slug) =>
+                      onUpdateQuantumTravel({
+                        rowId: QUANTUM_ORIGIN_ROW_ID,
+                        fromSlug: slug,
+                      })
+                  : undefined
+              }
+              onChangeTo={
+                onUpdateQuantumTravel
+                  ? (slug) =>
+                      onUpdateQuantumTravel({
+                        rowId: QUANTUM_ORIGIN_ROW_ID,
+                        toSlug: slug,
+                      })
+                  : undefined
+              }
               footer={addStopFooter(QUANTUM_ORIGIN_ROW_ID)}
             />
             {draftingAfterRowId === QUANTUM_ORIGIN_ROW_ID ? draftComposer : null}
@@ -1863,6 +1994,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                 <QuantumTravelRow
                   rowId={row.id}
                   fromSlug={row.locationSlug}
+                  destinationSlug={destinationSlug || null}
                   destinationName={destinationName}
                   reasonShopSlug={row.reasonShopSlug ?? null}
                   isCompleted={row.isCompleted}
@@ -1876,6 +2008,24 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   }}
                   onFocus={() => onFocusStop?.(row.id)}
                   onToggle={toggleStopDone}
+                  onChangeFrom={
+                    onUpdateQuantumTravel
+                      ? (slug) =>
+                          onUpdateQuantumTravel({
+                            rowId: row.id,
+                            fromSlug: slug,
+                          })
+                      : undefined
+                  }
+                  onChangeTo={
+                    onUpdateQuantumTravel
+                      ? (slug) =>
+                          onUpdateQuantumTravel({
+                            rowId: row.id,
+                            toSlug: slug,
+                          })
+                      : undefined
+                  }
                   footer={addStopFooter(row.id)}
                 />
                 {draftingAfterRowId === row.id ? draftComposer : null}

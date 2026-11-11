@@ -148,3 +148,85 @@ export function setQuantumTravelReason(
   };
   return { ok: true, rows: next };
 }
+
+/**
+ * Update origin and/or destination on an existing quantum travel row.
+ * Clears reason when the destination shop is no longer at the new `to` location.
+ */
+export function updateQuantumTravelEndpoints(
+  rows: HaulingChecklistRow[],
+  rowId: string,
+  patch: { fromSlug?: string; toSlug?: string },
+  options?: {
+    /** Return true when `reasonShopSlug` still belongs at `toSlug`. */
+    isReasonValidAtDestination?: (
+      reasonShopSlug: string,
+      toSlug: string,
+    ) => boolean;
+  },
+):
+  | { ok: true; rows: HaulingChecklistRow[] }
+  | { ok: false; error: string } {
+  const index = rows.findIndex((row) => row.id === rowId);
+  if (index < 0) {
+    return { ok: false, error: `Unknown row id: ${rowId}` };
+  }
+  const row = rows[index]!;
+  if (!isQuantumTravelRow(row)) {
+    return { ok: false, error: `Row ${rowId} is not a quantum travel leg` };
+  }
+
+  const fromSlug = (patch.fromSlug ?? row.locationSlug).trim();
+  const toSlug = (patch.toSlug ?? row.quantumToLocationSlug ?? "").trim();
+  if (!fromSlug) {
+    return { ok: false, error: "Current location is required" };
+  }
+  if (!toSlug) {
+    return { ok: false, error: "Destination is required" };
+  }
+  if (sameSlug(fromSlug, toSlug)) {
+    return { ok: false, error: "Destination must differ from current location" };
+  }
+
+  let reasonShopSlug = row.reasonShopSlug ?? null;
+  if (
+    reasonShopSlug &&
+    patch.toSlug &&
+    options?.isReasonValidAtDestination &&
+    !options.isReasonValidAtDestination(reasonShopSlug, toSlug)
+  ) {
+    reasonShopSlug = null;
+  }
+
+  const next = [...rows];
+  next[index] = {
+    ...row,
+    locationSlug: fromSlug,
+    quantumToLocationSlug: toSlug,
+    reasonShopSlug,
+    distanceToNext: distanceBetweenLocationSlugs(fromSlug, toSlug),
+  };
+  return { ok: true, rows: recomputeDistances(next) };
+}
+
+/** Update a stop’s `locationSlug` and refresh adjacent leg distances. */
+export function updateChecklistRowLocation(
+  rows: HaulingChecklistRow[],
+  rowId: string,
+  locationSlug: string,
+):
+  | { ok: true; rows: HaulingChecklistRow[] }
+  | { ok: false; error: string } {
+  const slug = locationSlug.trim();
+  if (!slug) {
+    return { ok: false, error: "Location is required" };
+  }
+  const index = rows.findIndex((row) => row.id === rowId);
+  if (index < 0) {
+    return { ok: false, error: `Unknown row id: ${rowId}` };
+  }
+  const row = rows[index]!;
+  const next = [...rows];
+  next[index] = { ...row, locationSlug: slug };
+  return { ok: true, rows: recomputeDistances(next) };
+}
