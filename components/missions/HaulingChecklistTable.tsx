@@ -42,6 +42,9 @@ import { SessionMissionDetailModal } from "./SessionMissionDetailModal";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 import { StopMissionScreenshots } from "./StopMissionScreenshots";
 
+/** Display-only origin row when start ≠ first stop (matches route timeline). */
+export const QUANTUM_ORIGIN_ROW_ID = "route-start";
+
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
   onToggle: (rowId: string) => void;
@@ -61,12 +64,43 @@ export type HaulingChecklistTableProps = {
   sessionId?: string | null;
   /** Toggle shared pickup/delivery brick handled state (persisted). */
   onToggleCargoHandled?: (rowId: string, cargoIndex: number) => void;
+  /**
+   * Session origin. When set and different from the first stop, a compact
+   * “Quantum to …” row is shown above the checklist.
+   */
+  startLocationSlug?: string | null;
 };
 
-/** Default focus: first incomplete stop, else last stop. */
+function sameLocationSlug(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** True when we should show the travel-from-start quantum row. */
+export function needsQuantumOriginRow(
+  rows: HaulingChecklistRow[],
+  startLocationSlug?: string | null,
+): boolean {
+  const startSlug = startLocationSlug?.trim() || null;
+  const firstSlug = rows[0]?.locationSlug ?? null;
+  return Boolean(
+    startSlug && firstSlug && !sameLocationSlug(startSlug, firstSlug),
+  );
+}
+
+/**
+ * Default focus: quantum origin (when start ≠ first and no stop done yet),
+ * else first incomplete stop, else last stop.
+ */
 export function defaultFocusedStopId(
   rows: HaulingChecklistRow[],
+  startLocationSlug?: string | null,
 ): string | null {
+  if (
+    needsQuantumOriginRow(rows, startLocationSlug) &&
+    !rows.some((row) => row.isCompleted)
+  ) {
+    return QUANTUM_ORIGIN_ROW_ID;
+  }
   return (
     rows.find((row) => !row.isCompleted)?.id ??
     rows[rows.length - 1]?.id ??
@@ -204,7 +238,7 @@ function DoneCheckbox({
   onToggle,
 }: {
   location: string;
-  step: number;
+  step: number | string;
   isCompleted: boolean;
   isActive?: boolean;
   onToggle: () => void;
@@ -264,7 +298,7 @@ function DoneStopButton({
   onToggle,
 }: {
   location: string;
-  step: number;
+  step: number | string;
   isCompleted: boolean;
   onToggle: () => void;
 }) {
@@ -491,6 +525,8 @@ function LocationHeader({
   isCopied,
   onCopy,
   align = "start",
+  compact = false,
+  showTravelChevron = false,
 }: {
   row: HaulingChecklistRow;
   location: string;
@@ -498,6 +534,10 @@ function LocationHeader({
   isCopied: boolean;
   onCopy: () => void;
   align?: "start" | "end";
+  /** Image + title only (no badges) — height matches the thumbnail. */
+  compact?: boolean;
+  /** Double chevron after the copy control (quantum origin row). */
+  showTravelChevron?: boolean;
 }) {
   const locationLabel =
     location.length > LOCATION_TITLE_MAX_CHARS
@@ -509,7 +549,8 @@ function LocationHeader({
     <div
       className={[
         "flex gap-3",
-        align === "end" ? "w-full flex-row-reverse" : "items-start",
+        compact ? "h-14 items-center" : "",
+        align === "end" ? "w-full flex-row-reverse" : compact ? "" : "items-start",
       ].join(" ")}
     >
       {imageSrc ? (
@@ -531,7 +572,8 @@ function LocationHeader({
       ) : null}
       <div
         className={[
-          "flex min-w-0 flex-1 flex-col gap-2",
+          "flex min-w-0 flex-1 flex-col",
+          compact ? "justify-center gap-0" : "gap-2",
           align === "end" ? "items-stretch" : "",
         ].join(" ")}
       >
@@ -569,24 +611,146 @@ function LocationHeader({
           >
             <CopyIcon className="size-3" />
           </button>
-        </div>
-        <div
-          className={[
-            "flex flex-wrap items-center gap-2",
-            align === "end" ? "justify-end" : "",
-          ].join(" ")}
-        >
-          {legKindBadges(row.legKind).map((badge) => (
-            <Badge key={badge.label} variant={badge.variant} size="sm">
-              {badge.label}
-            </Badge>
-          ))}
-          {hasOutdoorFreightElevator ? (
-            <OutdoorFreightBadge locationSlug={row.locationSlug} />
+          {showTravelChevron ? (
+            <span
+              aria-hidden
+              className="inline-flex shrink-0 translate-y-0.5 items-center text-rsi-text-muted"
+              title="Travel"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                className="size-4"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M3.5 3.5 L8 8 L3.5 12.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M8.5 3.5 L13 8 L8.5 12.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
           ) : null}
         </div>
+        {compact ? null : (
+          <div
+            className={[
+              "flex flex-wrap items-center gap-2",
+              align === "end" ? "justify-end" : "",
+            ].join(" ")}
+          >
+            {legKindBadges(row.legKind).map((badge) => (
+              <Badge key={badge.label} variant={badge.variant} size="sm">
+                {badge.label}
+              </Badge>
+            ))}
+            {hasOutdoorFreightElevator ? (
+              <OutdoorFreightBadge locationSlug={row.locationSlug} />
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Compact travel row: current location → Quantum to first stop. */
+function QuantumOriginRow({
+  startLocationSlug,
+  destinationName,
+  isCompleted,
+  isFocused,
+  isCopied,
+  onCopy,
+  onFocus,
+  onToggle,
+}: {
+  startLocationSlug: string;
+  destinationName: string;
+  isCompleted: boolean;
+  isFocused: boolean;
+  isCopied: boolean;
+  onCopy: () => void;
+  onFocus: () => void;
+  onToggle: () => void;
+}) {
+  const locationFixture = getLocationBySlug(startLocationSlug);
+  const location = locationFixture?.name ?? startLocationSlug;
+  const stubRow: HaulingChecklistRow = {
+    id: QUANTUM_ORIGIN_ROW_ID,
+    legKind: "pickup",
+    locationSlug: startLocationSlug,
+    cargoDeliveries: [],
+    shipStorageLocation: "front",
+    distanceToNext: null,
+    isCompleted,
+  };
+
+  return (
+    <li
+      aria-checked={isCompleted}
+      aria-current={isFocused ? "step" : undefined}
+      className={[
+        "scroll-mt-14 border-b border-rsi-divider/80 px-3 py-3",
+        checklistRowToneClass(isCompleted, isFocused),
+      ].join(" ")}
+      onClick={onFocus}
+    >
+      <div className="flex gap-3">
+        <div className="hidden h-14 shrink-0 items-center self-start md:flex">
+          <DoneCheckbox
+            location={location}
+            step="QT"
+            isCompleted={isCompleted}
+            isActive={isFocused}
+            onToggle={onToggle}
+          />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
+          <div className="min-w-0 flex-1">
+            <LocationHeader
+              row={stubRow}
+              location={location}
+              hasOutdoorFreightElevator={false}
+              isCopied={isCopied}
+              onCopy={onCopy}
+              compact
+              showTravelChevron
+            />
+            <div className="mt-3 md:hidden">
+              <DoneStopButton
+                location={location}
+                step="QT"
+                isCompleted={isCompleted}
+                onToggle={onToggle}
+              />
+            </div>
+          </div>
+          <div className="flex w-full min-w-0 items-center md:w-1/2 md:shrink-0">
+            <p
+              className={[
+                "min-w-0 text-base tracking-wide sm:text-lg",
+                isCompleted
+                  ? "text-rsi-text-muted line-through decoration-rsi-success/60"
+                  : "text-rsi-text",
+              ].join(" ")}
+            >
+              Quantum to{" "}
+              <span className="text-rsi-text-secondary">{destinationName}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -1171,16 +1335,30 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   missions = [],
   sessionId = null,
   onToggleCargoHandled,
+  startLocationSlug = null,
 }: HaulingChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
+  /** Local-only: quantum depart marked before any stop is completed. */
+  const [quantumDeparted, setQuantumDeparted] = useState(false);
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
   const pendingScrollToIdRef = useRef<string | null>(null);
-  const completedCount = rows.filter((row) => row.isCompleted).length;
+  const showQuantumOrigin = needsQuantumOriginRow(rows, startLocationSlug);
+  const quantumCompleted =
+    quantumDeparted || rows.some((row) => row.isCompleted);
+  const completedCount =
+    rows.filter((row) => row.isCompleted).length +
+    (showQuantumOrigin && quantumCompleted ? 1 : 0);
   const visibleRows = hideCompleted
     ? rows.filter((row) => !row.isCompleted)
     : rows;
+  const showQuantumInList =
+    showQuantumOrigin && !(hideCompleted && quantumCompleted);
+
+  useEffect(() => {
+    setQuantumDeparted(false);
+  }, [startLocationSlug, rows[0]?.id, rows[0]?.locationSlug]);
 
   useEffect(() => {
     const targetId = pendingScrollToIdRef.current;
@@ -1239,20 +1417,64 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
   const onboardByStop = estimateOnboardScuByStop(rows);
+  const focusTargetsQuantum =
+    focusedStopId === QUANTUM_ORIGIN_ROW_ID && showQuantumOrigin;
   const activeRowId =
-    focusedStopId && rows.some((row) => row.id === focusedStopId)
+    focusTargetsQuantum ||
+    (focusedStopId && rows.some((row) => row.id === focusedStopId))
       ? focusedStopId
-      : defaultFocusedStopId(rows);
+      : defaultFocusedStopId(rows, startLocationSlug);
+  const firstStop = rows[0] ?? null;
+  const quantumDestinationName = firstStop
+    ? (getLocationBySlug(firstStop.locationSlug)?.name ??
+      firstStop.locationSlug)
+    : null;
+  const startSlugTrimmed = startLocationSlug?.trim() || null;
+
+  const completeQuantumOrigin = () => {
+    const nextIncomplete =
+      rows.find((entry) => !entry.isCompleted) ?? firstStop;
+    setQuantumDeparted(true);
+    if (nextIncomplete) {
+      startTransition(() => {
+        pendingScrollToIdRef.current = nextIncomplete.id;
+        onFocusStop?.(nextIncomplete.id);
+      });
+    }
+  };
 
   return (
     <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
       {toolbar}
 
       <ul className="flex flex-col">
-        {visibleRows.length === 0 ? (
+        {visibleRows.length === 0 && !showQuantumInList ? (
           <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
             {emptyMessage}
           </li>
+        ) : null}
+        {showQuantumInList && startSlugTrimmed && quantumDestinationName ? (
+          <QuantumOriginRow
+            startLocationSlug={startSlugTrimmed}
+            destinationName={quantumDestinationName}
+            isCompleted={quantumCompleted}
+            isFocused={activeRowId === QUANTUM_ORIGIN_ROW_ID}
+            isCopied={copiedRowId === QUANTUM_ORIGIN_ROW_ID}
+            onCopy={() => {
+              const name =
+                getLocationBySlug(startSlugTrimmed)?.name ?? startSlugTrimmed;
+              void copyStarmapName(QUANTUM_ORIGIN_ROW_ID, name);
+            }}
+            onFocus={() => onFocusStop?.(QUANTUM_ORIGIN_ROW_ID)}
+            onToggle={() => {
+              if (quantumCompleted) {
+                setQuantumDeparted(false);
+                onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+                return;
+              }
+              completeQuantumOrigin();
+            }}
+          />
         ) : null}
         {visibleRows.map((row) => {
           const locationFixture = getLocationBySlug(row.locationSlug);

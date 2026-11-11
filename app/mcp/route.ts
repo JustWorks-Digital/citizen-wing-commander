@@ -7,6 +7,7 @@ import {
   toolCreateHaulingSession,
   toolBackfillCatalogMissionVariants,
   toolCreateMission,
+  toolGetAiProfile,
   toolGetHaulingChecklist,
   toolGetHaulingIntakePlaybook,
   toolGetHaulingScreenshot,
@@ -150,6 +151,18 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "get_ai_profile",
+      {
+        title: "Get AI profile",
+        description:
+          "Use this early in a conversation (or whenever you lose product context). Returns the standing Citizen Wing Commander AI brief: what Star Citizen is, why the UI is hard, how to help the player generally (not only hauling), tone, and how to use sessions/catalog/bay tools. Specialized jobs still need their own playbooks (e.g. get_hauling_intake_playbook).",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => toolGetAiProfile(),
+    );
+
+    server.registerTool(
       "get_hauling_intake_playbook",
       {
         title: "Get hauling intake playbook",
@@ -166,27 +179,59 @@ const handler = createMcpHandler(
       {
         title: "Store hauling screenshot",
         description:
-          "Use this whenever the user attaches or pastes a MobiGlas / contract screenshot (before apply_hauling_contracts_intake / create_mission). Saves into .data/mcp-screenshots and returns logicalPath for contracts[].screenshots or latestScreenshotPath. Pass raw base64 or a data:image/...;base64 URL. batchId should be the session UUID. Do not commit screenshots into the repo. If you already wrote missions without shots, store here then call set_mission_screenshots (session) or re-call create_mission with latestScreenshotPath (catalog).",
-        inputSchema: z.object({
-          imageBase64: z
-            .string()
-            .min(1)
-            .describe("Raw base64 bytes or data:image/...;base64,... URL"),
-          filename: z
-            .string()
-            .optional()
-            .describe("Optional filename (e.g. 01-stims-everus-lorville.png)"),
-          batchId: z
-            .string()
-            .optional()
-            .describe(
-              "Screenshot batch folder. Prefer the session UUID (same as sessionId / UI tabs). Defaults to default.",
+          "Use this whenever the user attaches a MobiGlas / contract screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it — ChatGPT /mnt/data paths are NOT reachable by a remote MCP server. Keep imageBase64 as fallback when you can encode bytes. Saves into .data/mcp-screenshots and returns logicalPath. Pass sessionId (batch folder = session UUID). When missionId is set, stores and auto-attaches logicalPath onto that session mission (append by default). Otherwise use the returned path in contracts[].screenshots / set_mission_screenshots / create_mission latestScreenshotPath.",
+        inputSchema: z
+          .object({
+            fileUrl: z
+              .string()
+              .optional()
+              .describe(
+                "Preferred for ChatGPT: publicly reachable http(s) image URL. Server downloads, validates, and stores it. Do not pass /mnt/data paths here.",
+              ),
+            filePath: z
+              .string()
+              .optional()
+              .describe(
+                "Local path readable by the MCP host, or an http(s) URL. ChatGPT sandbox paths like /mnt/data/... are rejected — use fileUrl instead.",
+              ),
+            imageBase64: z
+              .string()
+              .optional()
+              .describe(
+                "Fallback: raw base64 bytes or data:image/...;base64,... URL when fileUrl/filePath are unavailable.",
+              ),
+            filename: z
+              .string()
+              .optional()
+              .describe("Optional filename (e.g. 01-stims-everus-lorville.png)"),
+            sessionId: sessionIdSchema.describe(
+              "Session UUID — used as screenshot batchId and as the attach target when missionId is set.",
             ),
-          contractId: z
-            .string()
-            .optional()
-            .describe("Optional contract id to associate (e.g. contract-01-stims)"),
-        }),
+            batchId: z
+              .string()
+              .optional()
+              .describe(
+                "Screenshot batch folder. Prefer sessionId. Defaults to sessionId or default.",
+              ),
+            missionId: z
+              .string()
+              .optional()
+              .describe(
+                "When set, auto-attach the stored logicalPath onto this session mission (after store).",
+              ),
+            attachMode: z
+              .enum(["append", "replace"])
+              .optional()
+              .describe(
+                "With missionId: append (default) or replace mission.screenshots.",
+              ),
+            contractId: z
+              .string()
+              .optional()
+              .describe(
+                "Optional contract id to associate (e.g. contract-01-stims)",
+              ),
+          }),
         annotations: { destructiveHint: false },
       },
       async (input) => toolStoreHaulingScreenshot(input),
@@ -913,16 +958,16 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.2",
+      version: "0.2.4",
     },
     instructions: [
-      "Citizen Wing Commander manages hauling session checklists.",
+      "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
-      "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot (base64, batchId=session UUID) and attach returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
+      "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it; imageBase64 remains a fallback. ChatGPT /mnt/data paths are not reachable by remote MCP — do not pass them. Pass sessionId (= batch). Optional missionId stores+attaches in one call. Otherwise put returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath / set_mission_screenshots. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
-      "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and the user had images, fix immediately: store_hauling_screenshot then set_mission_screenshots (session) or re-create_mission with latestScreenshotPath (catalog). Prefer set_mission_screenshots over rebuilding the route.",
+      "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and the user had images, fix immediately: store_hauling_screenshot with sessionId + missionId (fileUrl preferred) or set_mission_screenshots / re-create_mission with latestScreenshotPath. Prefer attach-after over rebuilding the route.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
       "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids. For Sorting DSL: compile_cargo_bay_pack_program (preset→JSON primitives) then plan_stop_occupancy_with_pack_program (optional custom program).",

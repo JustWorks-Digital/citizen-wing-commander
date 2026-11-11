@@ -55,6 +55,8 @@ import { CargoBayLayout } from "./CargoBayLayout";
 import {
   defaultFocusedStopId,
   HaulingChecklistTable,
+  needsQuantumOriginRow,
+  QUANTUM_ORIGIN_ROW_ID,
 } from "./HaulingChecklistTable";
 import { SessionCatalogMissionsPanel } from "./SessionCatalogMissionsPanel";
 import { SessionMissionsModal } from "./SessionMissionsModal";
@@ -264,14 +266,24 @@ export function SessionChecklistView({
   }, [session.id]);
 
   const resolvedFocusedStopId = useMemo(() => {
+    const canFocusQuantum =
+      focusedStopId === QUANTUM_ORIGIN_ROW_ID &&
+      needsQuantumOriginRow(
+        session.rows,
+        session.startLocationSlug ?? null,
+      );
     if (
       focusedStopId &&
-      session.rows.some((row) => row.id === focusedStopId)
+      (canFocusQuantum ||
+        session.rows.some((row) => row.id === focusedStopId))
     ) {
       return focusedStopId;
     }
-    return defaultFocusedStopId(session.rows);
-  }, [focusedStopId, session.rows]);
+    return defaultFocusedStopId(
+      session.rows,
+      session.startLocationSlug ?? null,
+    );
+  }, [focusedStopId, session.rows, session.startLocationSlug]);
 
   const selectedShipSlug = session.shipSlugs?.[0] ?? null;
   const shipBySlug = new Map(shipCatalog.map((ship) => [ship.slug, ship]));
@@ -645,6 +657,7 @@ export function SessionChecklistView({
         shipName={selectedShipName}
         missions={session.missions ?? []}
         sessionId={session.id}
+        startLocationSlug={session.startLocationSlug ?? null}
         onToggleCargoHandled={onToggleCargoHandled}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}

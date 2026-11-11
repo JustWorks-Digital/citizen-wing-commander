@@ -55,7 +55,8 @@ import {
   clearHaulingScreenshots,
   listHaulingScreenshots,
   readHaulingScreenshot,
-  storeHaulingScreenshot,
+  resolveHaulingScreenshotBytes,
+  storeHaulingScreenshotBuffer,
 } from "@/lib/sessions/screenshotStore";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
@@ -106,6 +107,8 @@ const PLAYBOOK_PATH = path.join(
   process.cwd(),
   "docs/mcp-screenshot-hauling-playbook.md",
 );
+
+const AI_PROFILE_PATH = path.join(process.cwd(), "docs/mcp-ai-profile.md");
 
 function presentShips(shipSlugs: string[]) {
   return shipSlugs.map((slug) => {
@@ -266,8 +269,8 @@ function sessionScreenshotSoftGate(
     screenshotsMissing: true,
     contractsWithoutScreenshots,
     warning:
-      "SCREENSHOTS MISSING: one or more contracts have empty/omitted screenshots[]. If the user attached images, you MUST call store_hauling_screenshot (batchId = sessionId) then set_mission_screenshots (or re-apply intake with screenshots[]). Omit screenshots only when the user provided no images.",
-    next: "store_hauling_screenshot → set_mission_screenshots",
+      "SCREENSHOTS MISSING: one or more contracts have empty/omitted screenshots[]. If the user attached images, you MUST call store_hauling_screenshot (prefer fileUrl; sessionId + missionId auto-attaches) or set_mission_screenshots. Omit screenshots only when the user provided no images.",
+    next: "store_hauling_screenshot (fileUrl + sessionId + missionId) or set_mission_screenshots",
   };
 }
 
@@ -687,6 +690,20 @@ export async function toolGetSessionCargoGrid(input?: {
   });
 }
 
+/** Standing AI brief: Star Citizen context, tone, and how to use this product. */
+export async function toolGetAiProfile() {
+  try {
+    const markdown = await readFile(AI_PROFILE_PATH, "utf8");
+    return {
+      content: [{ type: "text" as const, text: markdown }],
+    };
+  } catch {
+    return textResult({
+      error: "AI profile missing on server. Expected docs/mcp-ai-profile.md",
+    });
+  }
+}
+
 /** Playbook for screenshot → optimized route → replace_hauling_checklist. */
 export async function toolGetHaulingIntakePlaybook() {
   try {
@@ -702,20 +719,102 @@ export async function toolGetHaulingIntakePlaybook() {
   }
 }
 
-/** Persist a user/chat screenshot into the ephemeral MCP screenshot store. */
+/**
+ * Persist a user/chat screenshot into the ephemeral MCP screenshot store.
+ * Prefer `fileUrl` (server downloads) when the client cannot send base64.
+ * Optional `missionId` attaches the stored path onto that session mission.
+ */
 export async function toolStoreHaulingScreenshot(input: {
-  imageBase64: string;
+  imageBase64?: string;
+  fileUrl?: string;
+  filePath?: string;
   filename?: string;
   batchId?: string;
+  sessionId?: string | null;
+  missionId?: string;
   contractId?: string;
+  /** When missionId is set: append (default) or replace mission.screenshots. */
+  attachMode?: "append" | "replace";
 }) {
   try {
-    const stored = await storeHaulingScreenshot(input);
+    const resolved = await resolveHaulingScreenshotBytes({
+      imageBase64: input.imageBase64,
+      fileUrl: input.fileUrl,
+      filePath: input.filePath,
+    });
+    const batchId =
+      input.batchId?.trim() ||
+      input.sessionId?.trim() ||
+      undefined;
+    const stored = await storeHaulingScreenshotBuffer({
+      batchId,
+      filename: input.filename?.trim() || resolved.suggestedFilename,
+      buffer: resolved.buffer,
+      ext: resolved.ext,
+      contractId: input.contractId,
+    });
+
+    let attached: {
+      missionId: string;
+      screenshots: string[];
+      sessionId: string;
+    } | null = null;
+
+    const missionId = input.missionId?.trim() || "";
+    if (missionId) {
+      const session = await getChecklistSession(input.sessionId ?? batchId);
+      const missions = session.missions ?? [];
+      if (!missions.some((mission) => mission.id === missionId)) {
+        return textResult({
+          ok: true,
+          stored: true,
+          attached: false,
+          message: `Stored screenshot at ${stored.logicalPath}, but mission was not found for attach`,
+          ...stored,
+          sourceKind: resolved.sourceKind,
+          error: `Unknown mission id: ${missionId}`,
+          knownMissionIds: missions.map((mission) => mission.id),
+          note: "File is saved. Call set_mission_screenshots with this logicalPath once you have the correct missionId.",
+        });
+      }
+      const mode = input.attachMode === "replace" ? "replace" : "append";
+      const nextMissions = missions.map((mission) => {
+        if (mission.id !== missionId) return mission;
+        const previous = mission.screenshots ?? [];
+        const screenshots =
+          mode === "replace"
+            ? [stored.logicalPath]
+            : [
+                ...previous.filter((path) => path !== stored.logicalPath),
+                stored.logicalPath,
+              ];
+        return { ...mission, screenshots };
+      });
+      const next = await saveChecklistSession({
+        ...session,
+        missions: nextMissions,
+      });
+      const updated = (next.missions ?? []).find(
+        (mission) => mission.id === missionId,
+      );
+      attached = {
+        missionId,
+        sessionId: next.id,
+        screenshots: updated?.screenshots ?? [stored.logicalPath],
+      };
+    }
+
     return textResult({
       ok: true,
-      message: `Stored screenshot at ${stored.logicalPath}`,
+      message: attached
+        ? `Stored screenshot at ${stored.logicalPath} and attached to mission ${attached.missionId}`
+        : `Stored screenshot at ${stored.logicalPath}`,
       ...stored,
-      note: "Stored under .data/mcp-screenshots (gitignored). Survives redeploy when Railway mounts a volume at /app/.data.",
+      sourceKind: resolved.sourceKind,
+      attached,
+      note: attached
+        ? "Stored under .data/mcp-screenshots and linked on mission.screenshots."
+        : "Stored under .data/mcp-screenshots (gitignored). Pass missionId to auto-attach, or call set_mission_screenshots. Prefer fileUrl over imageBase64 for ChatGPT.",
     });
   } catch (error) {
     return textResult({

@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
+          "Stacked stop cards (same on mobile and desktop). Sticky Contracts / Stops / Cargo / Hide history toolbar. Stop headers show a wiki location thumbnail when available. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Completed stops get an angled COMPLETED stamp under the delivery grid. Station → Ship / Ship → Station transfer blocks sit under the pad graph (right column on desktop). Contracts (rank / name / SCU; click for details) then Payout under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless Hide history is on.",
       },
     },
   },
@@ -28,10 +28,11 @@ function InteractiveTable(args: {
   onToggle: (rowId: string) => void;
   missions?: typeof mockSessionChecklist.missions;
   sessionId?: string | null;
+  startLocationSlug?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(
-    defaultFocusedStopId(args.rows),
+    defaultFocusedStopId(args.rows, args.startLocationSlug),
   );
 
   return (
@@ -41,6 +42,7 @@ function InteractiveTable(args: {
       onFocusStop={setFocusedStopId}
       missions={args.missions ?? mockSessionChecklist.missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
+      startLocationSlug={args.startLocationSlug ?? null}
       onToggle={(rowId) => {
         setRows((prev) =>
           prev.map((row) =>
@@ -60,6 +62,27 @@ export const Default: Story = {
     onToggle: () => {},
     missions: mockSessionChecklist.missions,
     sessionId: mockSessionChecklist.id,
+    startLocationSlug: mockSessionChecklist.startLocationSlug,
+  },
+  render: (args) => <InteractiveTable {...args} />,
+};
+
+/** Start differs from first stop — compact Quantum origin row is active. */
+export const QuantumOrigin: Story = {
+  args: {
+    rows: mockSessionChecklist.rows.map((row, index) =>
+      index === 0
+        ? {
+            ...row,
+            isCompleted: false,
+            locationSlug: "port-tressler",
+          }
+        : { ...row, isCompleted: false },
+    ),
+    onToggle: () => {},
+    missions: mockSessionChecklist.missions,
+    sessionId: mockSessionChecklist.id,
+    startLocationSlug: "everus-harbor",
   },
   render: (args) => <InteractiveTable {...args} />,
 };
@@ -70,6 +93,7 @@ export const Mobile: Story = {
     onToggle: () => {},
     missions: mockSessionChecklist.missions,
     sessionId: mockSessionChecklist.id,
+    startLocationSlug: mockSessionChecklist.startLocationSlug,
   },
   parameters: {
     viewport: { defaultViewport: "mobile1" },
