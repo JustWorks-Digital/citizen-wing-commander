@@ -7,7 +7,7 @@ Use this when the user pastes or uploads **Accepted** contract screenshots (or c
 ## Goal
 
 1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/hurston-covalex-2026-11-08/`.
-2. For each user-attached screenshot, call **`store_hauling_screenshot`** with base64 (or data URL) and **`batchId` = session UUID**. Files go to `.data/mcp-screenshots/<batchId>/` — **not git**. Put returned `logicalPath` on each contract’s **`screenshots: [...]`**. If the checklist already exists, call **`set_mission_screenshots`** instead of re-applying the whole intake.
+2. **Screenshot attachment rule (critical):** If the user attached or pasted contract image(s), you **must** call **`store_hauling_screenshot`** (base64 / data URL, **`batchId` = session UUID**) and put each returned `logicalPath` on that contract’s **`screenshots: [...]`** (session) or **`latestScreenshotPath`** (catalog `create_mission`). Omit screenshots **only** when the user provided no images (text-only). Never invent paths. If you already wrote the checklist without shots, call **`set_mission_screenshots`** (session) or re-call **`create_mission`** with `latestScreenshotPath` (catalog) — do not rebuild the whole route just to attach evidence. Files go to `.data/mcp-screenshots/<batchId>/` — **not git**.
 3. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths. Keep a MobiGlas-layout `.md` next to the JSON in the batch folder.
 4. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
 5. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
@@ -59,6 +59,8 @@ Link evidence on each contract:
 | `list_hauling_screenshots` | List stored files for a batch |
 | `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
 | `clear_hauling_screenshots` | Delete a batch’s temp images |
+
+**Soft gate (not a hard fail):** `apply_hauling_contracts_intake` and `create_mission` still succeed when screenshot paths are missing, but return `screenshotsMissing: true` plus `warning` / `next`. Treat that as a defect to fix **in the same turn** when the user had images (`store_hauling_screenshot` → `set_mission_screenshots` or re-`create_mission` with `latestScreenshotPath`).
 
 Railway without a volume: store is wiped on redeploy (same as checklist `.data`).
 

@@ -2,6 +2,7 @@ import { getCommodityBySlug, getLocationBySlug } from "@/lib/fixtures";
 import {
   cargoBoxOrientations,
   decomposeScuIntoBoxes,
+  maxCargoBoxScu,
   type CargoBoxFootprint,
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
@@ -25,6 +26,15 @@ import {
   getShipBayPreferenceFixture,
   type MissionPriorityPackBias,
 } from "@/lib/ships/shipBayPreferences";
+import {
+  comparePackSlotCandidates,
+  countEmptyOnLayer,
+  supportScuMinUnder,
+  type PackSlotCandidateMetrics,
+  type PackSlotPolicy,
+} from "@/lib/ships/packSlotPolicy";
+import { orderPackItemsByProgram } from "@/lib/ships/packItemOrder";
+import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
 import type {
   CargoDelivery,
   HaulingChecklistRow,
@@ -244,6 +254,8 @@ type FindSlotCluster = {
   missionRank?: number;
   missionRankMax?: number;
   missionPriorityBias?: MissionPriorityPackBias;
+  /** When set, slot pick uses pack-program tiered compare. */
+  packSlotPolicy?: PackSlotPolicy | null;
 };
 
 /** Neighbor cells (face-adjacent) — used to keep same-commodity crates clustered. */
@@ -286,6 +298,25 @@ function clusterAffinity(
     }
   }
   return { horizontal, vertical };
+}
+
+/** Side contacts with a different cargo-type cluster (gap preference). */
+function otherClusterSideCount(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  cluster: FindSlotCluster | null,
+): number {
+  if (!cluster) return 0;
+  let side = 0;
+  for (const cell of cellsForBox(origin, footprint)) {
+    for (const neighbor of neighborCoords(cell)) {
+      if (neighbor.z !== cell.z) continue;
+      const other = cluster.occupiedClusters.get(cargoGridCoordKey(neighbor));
+      if (other == null || other === cluster.clusterKey) continue;
+      side += 1;
+    }
+  }
+  return side;
 }
 
 /** Weaker neighbor pull toward the same delivery-location region. */
@@ -585,12 +616,18 @@ function findSlot(
     foreignSide: number;
     foreignSupport: number;
     identicalSizeStack: boolean;
+    packMetrics: PackSlotCandidateMetrics;
   };
   const preferRegionStacking = Boolean(cluster?.preferRegionStacking);
-  const requireRegionContiguity = Boolean(cluster?.requireRegionContiguity);
-  const forbidForeignRegionSupport = Boolean(
-    cluster?.forbidForeignRegionSupport,
+  const requireRegionContiguity = Boolean(
+    cluster?.requireRegionContiguity ||
+      cluster?.packSlotPolicy?.requireRegionContiguity,
   );
+  const forbidForeignRegionSupport = Boolean(
+    cluster?.forbidForeignRegionSupport ||
+      cluster?.packSlotPolicy?.forbidForeignSupport,
+  );
+  const packSlotPolicy = cluster?.packSlotPolicy ?? null;
   const candidates: Candidate[] = [];
   forEachPlacementOrigin(order, (origin) => {
     if (!fits(bounds, origin, footprint, occupied)) return;
@@ -656,6 +693,38 @@ function findSlot(
       foreign.support * (preferRegionStacking ? 48 : 20) +
       bayEndScore(origin, footprint, bounds, cluster?.preferBayEnd) +
       missionPriorityScore(origin, footprint, bounds, cluster);
+    const packMetrics: PackSlotCandidateMetrics = {
+      origin,
+      sameClusterTouch: affinity.horizontal + affinity.vertical,
+      sameRegionTouch: regionPull.horizontal + regionPull.vertical,
+      sameClusterSupport: supportCounts.same,
+      otherClusterSupport: supportCounts.other,
+      otherClusterSide: otherClusterSideCount(origin, footprint, cluster),
+      regionSupport,
+      foreignSide: foreign.side,
+      foreignSupport: foreign.support,
+      supportScuMin: supportScuMinUnder(
+        origin,
+        footprint,
+        occupiedSizes,
+        cargoGridCoordKey,
+      ),
+      emptyCellsOnSameZ: countEmptyOnLayer(
+        bounds,
+        origin.z,
+        occupied,
+        cargoGridCoordKey,
+      ),
+      bayEndToward: bayEndScore(
+        origin,
+        footprint,
+        bounds,
+        cluster?.preferBayEnd,
+      ),
+      edgeDistance: edgeDistanceFromBayCenter(origin, footprint, bounds),
+      identicalSizeStack,
+      placementRuleScore: score,
+    };
     candidates.push({
       origin,
       score,
@@ -668,9 +737,64 @@ function findSlot(
       foreignSide: foreign.side,
       foreignSupport: foreign.support,
       identicalSizeStack,
+      packMetrics,
     });
   });
   if (candidates.length === 0) return null;
+
+  /** Pack-program path: hard filters + tiered pack-call compare. */
+  if (packSlotPolicy) {
+    let pool = candidates;
+    const hasCluster =
+      cluster != null &&
+      [...cluster.occupiedClusters.values()].includes(cluster.clusterKey);
+    const hasRegion =
+      cluster?.regionKey != null &&
+      cluster.occupiedRegions != null &&
+      [...cluster.occupiedRegions.values()].includes(cluster.regionKey);
+    const touchesRegionPool = (c: Candidate) =>
+      c.regionSupport > 0 ||
+      c.regionPull.horizontal > 0 ||
+      c.regionPull.vertical > 0 ||
+      c.affinity.horizontal > 0 ||
+      c.affinity.vertical > 0 ||
+      c.sameSupport > 0;
+    if (requireRegionContiguity && hasRegion) {
+      pool = candidates.filter(touchesRegionPool);
+      if (pool.length === 0) return null;
+    }
+    // New pile: seed on deck when possible (matches require/order z intent).
+    if (!hasCluster) {
+      const onDeck = pool.filter((c) => c.onDeck);
+      if (onDeck.length > 0) pool = onDeck;
+    }
+    if (cluster?.preferBayEnd) {
+      const onEnd = pool.filter((c) =>
+        isOnPreferredBayEnd(c.origin, footprint, bounds, cluster.preferBayEnd!),
+      );
+      if (onEnd.length > 0) pool = onEnd;
+    }
+    let best: Candidate | null = null;
+    for (const candidate of pool) {
+      const cmp = best
+        ? comparePackSlotCandidates(
+            candidate.packMetrics,
+            best.packMetrics,
+            packSlotPolicy,
+            boxScu,
+          )
+        : -1;
+      if (!best || cmp < 0) {
+        best = candidate;
+      } else if (
+        cmp === 0 &&
+        candidate.packMetrics.bayEndToward > best.packMetrics.bayEndToward
+      ) {
+        best = candidate;
+      }
+    }
+    return best?.origin ?? null;
+  }
 
   const hasCluster =
     cluster != null &&
@@ -977,6 +1101,16 @@ export type PlaceCargoInZoneOptions = {
    * Never stack onto a different region's crates (priority mission piles).
    */
   forbidForeignRegionSupport?: boolean;
+  /**
+   * Pack-program slot policy: when set, `findSlot` uses tiered pack-call
+   * comparison instead of legacy magic-number scores.
+   */
+  packSlotPolicy?: PackSlotPolicy | null;
+  /**
+   * When true, items are already ordered by the pack program — skip internal
+   * cluster reordering and place in list order (still clusterByKey affinity).
+   */
+  itemsPreordered?: boolean;
 };
 
 function sizesForSegment(segment: CargoPlacementSegment): CargoBoxScu[] {
@@ -1053,12 +1187,15 @@ export function placeCargoItemsInZone(
 
   const pending: CargoPlacementItem[] = [...items];
   const missionPriorityBias = options?.missionPriorityBias ?? null;
+  const packSlotPolicy = options?.packSlotPolicy ?? null;
   const missionRankMax = pending.reduce(
     (max, item) => Math.max(max, item.missionRank ?? 0),
     0,
   );
 
-  if (options?.clusterByKey) {
+  if (options?.itemsPreordered) {
+    // Pack program already ordered items — keep list order.
+  } else if (options?.clusterByKey) {
     const clusterOrder = options.clusterOrder ?? "rank-then-size";
     if (clusterOrder === "cargo-then-location") {
       // Load order: finish one cargo type across all mission piles, then the
@@ -1171,21 +1308,35 @@ export function placeCargoItemsInZone(
   for (const item of pending) {
     const clusterKey = itemClusterKey(item);
     const regionKey = item.regionKey;
-    const cluster: FindSlotCluster | null = options?.clusterByKey
-      ? {
-          clusterKey,
-          occupiedClusters,
-          regionKey,
-          occupiedRegions,
-          preferRegionStacking: options.preferRegionStacking,
-          requireRegionContiguity: options.requireRegionContiguity,
-          forbidForeignRegionSupport: options.forbidForeignRegionSupport,
-          preferBayEnd: item.preferBayEnd,
-          missionRank: item.missionRank,
-          missionRankMax,
-          missionPriorityBias: missionPriorityBias ?? undefined,
-        }
-      : null;
+    const preferRegionStacking =
+      options?.preferRegionStacking ||
+      Boolean(packSlotPolicy?.preferSameDeliveryLocation);
+    const requireRegionContiguity =
+      options?.requireRegionContiguity ||
+      Boolean(packSlotPolicy?.requireRegionContiguity);
+    const forbidForeignRegionSupport =
+      options?.forbidForeignRegionSupport ||
+      Boolean(packSlotPolicy?.forbidForeignSupport);
+    const cluster: FindSlotCluster | null =
+      options?.clusterByKey || packSlotPolicy
+        ? {
+            clusterKey,
+            occupiedClusters,
+            regionKey,
+            occupiedRegions,
+            preferRegionStacking,
+            requireRegionContiguity,
+            forbidForeignRegionSupport,
+            preferBayEnd: item.preferBayEnd,
+            missionRank: item.missionRank,
+            missionRankMax,
+            missionPriorityBias:
+              missionPriorityBias ??
+              packSlotPolicy?.biasXyMode ??
+              undefined,
+            packSlotPolicy,
+          }
+        : null;
     let placed = false;
     for (const footprint of cargoBoxOrientations(item.size)) {
       const origin = findSlot(
@@ -2004,17 +2155,21 @@ function sizesByDeliveryLocation(
   }
   if (splits.length === 1) {
     const only = splits[0]!;
+    if (segment.boxSizes && segment.scu === only.scu) {
+      return [
+        {
+          locationSlug: only.locationSlug,
+          sizes: sizesForSegment(segment),
+        },
+      ];
+    }
     return [
       {
         locationSlug: only.locationSlug,
-        sizes: sizesForSegment({
-          ...segment,
-          scu: only.scu,
-          boxSizes:
-            segment.boxSizes && segment.scu === only.scu
-              ? segment.boxSizes
-              : undefined,
-        }),
+        sizes: decomposeScuIntoBoxes(
+          only.scu,
+          maxCargoBoxScu(segment.boxSizes),
+        ),
       },
     ];
   }
@@ -2025,9 +2180,11 @@ function sizesByDeliveryLocation(
     );
     if (partitioned) return partitioned;
   }
+  // Keep contract max container size when partition cannot assign whole crates.
+  const maxBox = maxCargoBoxScu(segment.boxSizes);
   return splits.map((split) => ({
     locationSlug: split.locationSlug,
-    sizes: decomposeScuIntoBoxes(split.scu),
+    sizes: decomposeScuIntoBoxes(split.scu, maxBox),
   }));
 }
 
@@ -2158,7 +2315,12 @@ export function planOccupancyByCargoTypeAtStop(
   sketch: ShipCargoGridSketch,
   rows: HaulingChecklistRow[],
   rowId: string,
-  options?: { missionPrioritized?: boolean },
+  options?: {
+    missionPrioritized?: boolean;
+    /** When set, order + slot pick come from the pack program. */
+    packProgram?: CargoBayPackProgram;
+    packSlotPolicy?: PackSlotPolicy | null;
+  },
 ): CargoGridPlacementPlan {
   const row = rows.find((entry) => entry.id === rowId);
   if (!row) {
@@ -2171,6 +2333,8 @@ export function planOccupancyByCargoTypeAtStop(
     missionPrioritized && shipPrefs.missionPriorityPacking
       ? shipPrefs.missionPriorityPacking.bias
       : null;
+  const packSlotPolicy = options?.packSlotPolicy ?? null;
+  const packProgram = options?.packProgram ?? null;
 
   const { deliveries, pickups } = splitRowCargo(row);
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
@@ -2242,11 +2406,19 @@ export function planOccupancyByCargoTypeAtStop(
     sketch,
     itemsByStorage,
   )) {
-    const placed = placeCargoItemsInZone(sketch, storage, items, {
+    let ordered = items;
+    let itemsPreordered = false;
+    if (packProgram) {
+      ordered = orderPackItemsByProgram(items, packProgram);
+      itemsPreordered = true;
+    }
+    const placed = placeCargoItemsInZone(sketch, storage, ordered, {
       occupied,
       occupiedClusters,
       clusterByKey: true,
       missionPriorityBias,
+      packSlotPolicy,
+      itemsPreordered,
     });
     boxes.push(...placed.boxes);
     unplaced.push(...placed.unplaced);
@@ -2275,11 +2447,21 @@ export function planOccupancyByMissionLocationAtStop(
   sketch: ShipCargoGridSketch,
   rows: HaulingChecklistRow[],
   rowId: string,
+  options?: {
+    priorityLocationCount?: number;
+    packProgram?: CargoBayPackProgram;
+    packSlotPolicy?: PackSlotPolicy | null;
+  },
 ): CargoGridPlacementPlan {
   const from = rows.findIndex((row) => row.id === rowId);
   if (from < 0) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
+
+  const priorityCount =
+    options?.priorityLocationCount ?? MISSION_PRIORITY_LOCATION_COUNT;
+  const packSlotPolicy = options?.packSlotPolicy ?? null;
+  const packProgram = options?.packProgram ?? null;
 
   const locationOrder: string[] = [];
   const itemsByStorage = new Map<
@@ -2298,8 +2480,8 @@ export function planOccupancyByMissionLocationAtStop(
     const locationGroupIndex = missionRank + 1;
     const locationName =
       getLocationBySlug(stop.locationSlug)?.name ?? stop.locationSlug;
-    const isPriorityLocation = missionRank < MISSION_PRIORITY_LOCATION_COUNT;
-    // First two missions sit on opposite ends (rear vs front), never mid-bay.
+    const isPriorityLocation = missionRank < priorityCount;
+    // Priority missions sit on opposite ends (rear vs front), never mid-bay.
     const preferBayEnd: "low-x" | "high-x" | undefined = isPriorityLocation
       ? missionRank === 0
         ? "high-x"
@@ -2355,23 +2537,32 @@ export function planOccupancyByMissionLocationAtStop(
     itemsByStorage,
   )) {
     const priorityByRank: CargoPlacementItem[][] = Array.from(
-      { length: MISSION_PRIORITY_LOCATION_COUNT },
+      { length: priorityCount },
       () => [],
     );
     const restItems: CargoPlacementItem[] = [];
     for (const item of items) {
       const rank = item.missionRank ?? Number.POSITIVE_INFINITY;
-      if (rank < MISSION_PRIORITY_LOCATION_COUNT) {
+      if (rank < priorityCount) {
         priorityByRank[rank]!.push(item);
       } else {
         restItems.push(item);
       }
     }
 
+    const orderMaybe = (list: CargoPlacementItem[]) => {
+      if (!packProgram) return { ordered: list, itemsPreordered: false };
+      return {
+        ordered: orderPackItemsByProgram(list, packProgram),
+        itemsPreordered: true,
+      };
+    };
+
     for (const priorityItems of priorityByRank) {
       if (priorityItems.length === 0) continue;
+      const { ordered, itemsPreordered } = orderMaybe(priorityItems);
       appendPlaced(
-        placeCargoItemsInZone(sketch, storage, priorityItems, {
+        placeCargoItemsInZone(sketch, storage, ordered, {
           occupied,
           occupiedClusters,
           occupiedRegions,
@@ -2381,13 +2572,16 @@ export function planOccupancyByMissionLocationAtStop(
           forbidForeignRegionSupport: true,
           // End bias comes from preferBayEnd on each item, not rank/max.
           missionPriorityBias: null,
+          packSlotPolicy,
+          itemsPreordered,
         }),
       );
     }
 
     if (restItems.length > 0) {
+      const { ordered, itemsPreordered } = orderMaybe(restItems);
       appendPlaced(
-        placeCargoItemsInZone(sketch, storage, restItems, {
+        placeCargoItemsInZone(sketch, storage, ordered, {
           occupied,
           occupiedClusters,
           occupiedRegions,
@@ -2395,48 +2589,14 @@ export function planOccupancyByMissionLocationAtStop(
           forbidForeignRegionSupport: true,
           // Fill leftover (typically mid-bay) by cargo type.
           missionPriorityBias: null,
+          packSlotPolicy,
+          itemsPreordered,
         }),
       );
     }
   }
 
   return { zone: "front", boxes, unplaced };
-}
-
-export type PlanStopOccupancyOptions = {
-  packMode?: CargoBayPackMode;
-  /** Cargo type only: bias placement by upcoming delivery order (ship prefs). */
-  missionPrioritized?: boolean;
-};
-
-/** Whole-stop bay plan (all front/middle/rear cargo at `rowId`). */
-export function planStopOccupancyAtStop(
-  sketch: ShipCargoGridSketch,
-  rows: HaulingChecklistRow[],
-  rowId: string,
-  packModeOrOptions:
-    | CargoBayPackMode
-    | PlanStopOccupancyOptions = defaultCargoBayPackMode,
-): CargoGridPlacementPlan {
-  const options: PlanStopOccupancyOptions =
-    typeof packModeOrOptions === "string"
-      ? { packMode: packModeOrOptions }
-      : packModeOrOptions;
-  const packMode = options.packMode ?? defaultCargoBayPackMode;
-  switch (packMode) {
-    case "suggested":
-      return planZoneOccupancyAtStop(sketch, rows, rowId, null);
-    case "by-cargo-type":
-      return planOccupancyByCargoTypeAtStop(sketch, rows, rowId, {
-        missionPrioritized: options.missionPrioritized,
-      });
-    case "by-mission-location":
-      return planOccupancyByMissionLocationAtStop(sketch, rows, rowId);
-    default: {
-      const _exhaustive: never = packMode;
-      return _exhaustive;
-    }
-  }
 }
 
 /** Flat set of all occupied cells in a plan (for view highlighting). */

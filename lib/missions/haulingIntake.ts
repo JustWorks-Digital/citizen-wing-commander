@@ -31,6 +31,8 @@ export type HaulingIntakeContract = {
   /**
    * Logical MCP screenshot paths (`<batchId>/<filename>` under
    * `.data/mcp-screenshots`, via `store_hauling_screenshot`).
+   * Optional in the schema, but required in practice whenever the user
+   * attached images — omit only for text-only intake.
    */
   screenshots?: string[];
   /** Path to normalized MobiGlas transcript JSON relative to the batch folder. */

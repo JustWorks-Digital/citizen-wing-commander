@@ -3,11 +3,12 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 /**
- * Apply vertical overflow scrolling only when content exceeds the box.
- * Avoids trapping wheel/trackpad scroll when nothing can scroll.
+ * Prefer `overflow-y-auto` always so wheel/trackpad can scroll when content
+ * overflows. Only add `overscroll-contain` when the box actually overflows —
+ * that is what trapped parent scroll when the legend fit without scrolling.
  *
- * Uses ResizeObserver only (no MutationObserver) so React reconciles of
- * legend buttons/sections do not schedule extra main-thread work per click.
+ * Never use `overflow-y-hidden`: a late/false overflow measure would lock
+ * scrolling entirely (absolute legends do not scroll their parent).
  */
 export function useOverflowScrollY(deps: readonly unknown[] = []): {
   overflowScrollRef: RefObject<HTMLDivElement | null>;
@@ -40,6 +41,9 @@ export function useOverflowScrollY(deps: readonly unknown[] = []): {
     measure();
     const resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(el);
+    for (const child of el.children) {
+      resizeObserver.observe(child);
+    }
 
     return () => {
       resizeObserver.disconnect();
@@ -56,6 +60,6 @@ export function useOverflowScrollY(deps: readonly unknown[] = []): {
     overflowScrollRef,
     overflowScrollClassName: canScrollY
       ? "overflow-y-auto overscroll-contain"
-      : "overflow-y-hidden",
+      : "overflow-y-auto",
   };
 }

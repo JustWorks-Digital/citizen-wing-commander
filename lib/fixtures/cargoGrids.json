@@ -30,7 +30,9 @@
           "storageLocation": "rear"
         }
       ],
-      "notes": []
+      "notes": [
+        "Front 6×9×4 = 216 SCU, rear 8×15×4 = 480 SCU (696 total). Height: two 8 SCU crates stacked (4 cells)."
+      ]
     },
     {
       "shipSlug": "constellation-mk-v-centaurus",

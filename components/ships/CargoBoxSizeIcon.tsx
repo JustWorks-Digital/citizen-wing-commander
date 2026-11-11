@@ -47,9 +47,20 @@ export function CargoBoxSizeIcon({
   const botC = project(dx, dy, 0);
   const botD = project(0, dy, 0);
 
-  const corners = [topA, topB, topC, topD, botB, botC, botD];
-  const xs = corners.map((p) => p.x);
-  const ys = corners.map((p) => p.y);
+  // Shared world frame sized for an 8 SCU (2×2×2) so smaller crates stay
+  // proportionally shorter instead of filling the same CSS box.
+  const frame = cargoBoxOrientations(8)[0]!;
+  const frameCorners = [
+    project(0, 0, frame.dz),
+    project(frame.dx, 0, frame.dz),
+    project(frame.dx, frame.dy, frame.dz),
+    project(0, frame.dy, frame.dz),
+    project(frame.dx, 0, 0),
+    project(frame.dx, frame.dy, 0),
+    project(0, frame.dy, 0),
+  ];
+  const xs = frameCorners.map((p) => p.x);
+  const ys = frameCorners.map((p) => p.y);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);

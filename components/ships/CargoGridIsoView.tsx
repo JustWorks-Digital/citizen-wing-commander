@@ -28,6 +28,13 @@ import {
 } from "@/lib/ships/locationGroupOutline";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
+import { CargoLegendSection } from "@/components/ships/CargoLegendSection";
+import {
+  BayFacingPad,
+  defaultBayFacing,
+  type BayFacing,
+} from "@/components/ships/BayFacingPad";
+
 export type CargoGridIsoLegendItem = {
   commoditySlug: string;
   commodityName: string;
@@ -100,6 +107,12 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
+  /**
+   * Debug: bright crate silhouettes so footprints / Z height are obvious.
+   * Controlled when `onDebugBoxOutlinesChange` is set.
+   */
+  debugBoxOutlines?: boolean;
+  onDebugBoxOutlinesChange?: (value: boolean) => void;
   /** Outer panel height in px (default `26rem`). */
   panelHeightPx?: number;
 };
@@ -187,9 +200,9 @@ function kindSortRank(kind: IsoCube["kind"]): number {
  * Home / Left = classic SE iso (same angle). Right = that view turned 180° (opposite).
  * Down = 15° CCW + X-mirrored left-facing variant; Up is that projection turned 180°.
  */
-export type CargoGridIsoFacing = "home" | "down" | "up" | "left" | "right";
+export type CargoGridIsoFacing = BayFacing;
 
-export const defaultCargoGridIsoFacing: CargoGridIsoFacing = "home";
+export const defaultCargoGridIsoFacing: CargoGridIsoFacing = defaultBayFacing;
 
 /** Fine yaw used only for the Down facing (positive = counterclockwise). */
 const DOWN_YAW_CCW_DEG = 15;
@@ -304,10 +317,18 @@ function readableIsoLabelAngle(deg: number): number {
   return a;
 }
 
+/** True when any crate occupies Z layer 4 (0-based z ≥ 3). */
+function placementUsesFourthLayer(maxPlacedZ: number): boolean {
+  return maxPlacedZ >= 3;
+}
+
 /**
  * Front / Rear sit just outside the bay end edges, text parallel to that
  * edge (matches the floor line). Bay space is post-`buildCubes` mirror:
  * lx=0 rear, lx=L front.
+ *
+ * When stacks use the 4th layer, push both labels farther out (same distance
+ * on every facing) so tall crates do not cover them.
  */
 function bayEndLabelAnchors(
   facing: CargoGridIsoFacing,
@@ -317,6 +338,7 @@ function bayEndLabelAnchors(
   cx: number,
   cy: number,
   style: IsoProjectStyle,
+  clearTallStacks: boolean,
 ): {
   front: { x: number; y: number; angle: number };
   rear: { x: number; y: number; angle: number };
@@ -360,9 +382,12 @@ function bayEndLabelAnchors(
     };
   };
 
-  // Clear of stacked crates — aft needs more room than the open fore tip.
-  const frontPos = outward(frontMid, cellPx * 2.0);
-  const rearPos = outward(rearMid, cellPx * 3.2);
+  // Tall stacks (layer 4): same outward gap on every facing (tuned from View up).
+  // Shorter stacks: aft sits a bit farther than the open fore tip.
+  const frontDist = clearTallStacks ? cellPx * 6.5 : cellPx * 2.0;
+  const rearDist = clearTallStacks ? cellPx * 6.5 : cellPx * 3.2;
+  const frontPos = outward(frontMid, frontDist);
+  const rearPos = outward(rearMid, rearDist);
 
   return {
     front: {
@@ -601,17 +626,19 @@ function buildCubes(
     cube.lx = totalLength - cube.lx - cube.footprint.dx;
   }
 
-  // Floor → placeholders → cargo; within each, low Z first then far → near.
-  // Height before XY so lower tops cannot cover crates stacked above them.
-  const depthKeyXY = (cube: IsoCube) =>
-    cube.lx + cube.footprint.dx + cube.wy + cube.footprint.dy;
+  // Floor → placeholders → cargo; within each, iso depth (far/low first).
+  // Final view re-sorts after facing orient — keep the same depth rule here.
+  const painterDepth = (cube: IsoCube) =>
+    cube.lx +
+    cube.footprint.dx / 2 +
+    cube.wy +
+    cube.footprint.dy / 2 +
+    cube.hz;
   cubes.sort((a, b) => {
     const kindDelta = kindSortRank(a.kind) - kindSortRank(b.kind);
     if (kindDelta !== 0) return kindDelta;
-    const hzDelta = a.hz - b.hz;
-    if (hzDelta !== 0) return hzDelta;
-    const xyDelta = depthKeyXY(a) - depthKeyXY(b);
-    if (xyDelta !== 0) return xyDelta;
+    const depthDelta = painterDepth(a) - painterDepth(b);
+    if (depthDelta !== 0) return depthDelta;
     return a.footprint.dz - b.footprint.dz;
   });
 
@@ -621,112 +648,6 @@ function buildCubes(
 /**
  * Isometric 3D cargo grid — SCU cubes stacked on Z (height).
  */
-function DefaultFacingIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      className={className}
-      aria-hidden
-      focusable="false"
-    >
-      <path
-        d="M6 1.4 L10.4 3.9 L6 6.4 L1.6 3.9 Z"
-        fill="currentColor"
-        opacity="0.95"
-      />
-      <path
-        d="M1.6 3.9 L6 6.4 L6 10.6 L1.6 8.1 Z"
-        fill="currentColor"
-        opacity="0.55"
-      />
-      <path
-        d="M6 6.4 L10.4 3.9 L10.4 8.1 L6 10.6 Z"
-        fill="currentColor"
-        opacity="0.7"
-      />
-    </svg>
-  );
-}
-
-function IsoFacingPad({
-  facing,
-  onFacingChange,
-}: {
-  facing: CargoGridIsoFacing;
-  onFacingChange: (facing: CargoGridIsoFacing) => void;
-}) {
-  const buttonClass = (id: CargoGridIsoFacing) =>
-    [
-      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] leading-none transition-colors",
-      facing === id
-        ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-        : "border-rsi-border bg-rsi-bg-deep/80 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-    ].join(" ");
-
-  return (
-    <div
-      role="group"
-      aria-label="Bay view direction"
-      className="pointer-events-auto absolute bottom-2 left-2 z-20 grid grid-cols-3 gap-px"
-    >
-      <span className="size-5" aria-hidden />
-      <button
-        type="button"
-        aria-pressed={facing === "up"}
-        aria-label="View up"
-        title="Up"
-        onClick={() => onFacingChange("up")}
-        className={buttonClass("up")}
-      >
-        ↑
-      </button>
-      <span className="size-5" aria-hidden />
-      <button
-        type="button"
-        aria-pressed={facing === "left"}
-        aria-label="View left"
-        title="Left"
-        onClick={() => onFacingChange("left")}
-        className={buttonClass("left")}
-      >
-        ←
-      </button>
-      <button
-        type="button"
-        aria-pressed={facing === "home"}
-        aria-label="View default"
-        title="Default"
-        onClick={() => onFacingChange("home")}
-        className={buttonClass("home")}
-      >
-        <DefaultFacingIcon className="size-2.5" />
-      </button>
-      <button
-        type="button"
-        aria-pressed={facing === "right"}
-        aria-label="View right"
-        title="Right"
-        onClick={() => onFacingChange("right")}
-        className={buttonClass("right")}
-      >
-        →
-      </button>
-      <span className="size-5" aria-hidden />
-      <button
-        type="button"
-        aria-pressed={facing === "down"}
-        aria-label="View down"
-        title="Down"
-        onClick={() => onFacingChange("down")}
-        className={buttonClass("down")}
-      >
-        ↓
-      </button>
-      <span className="size-5" aria-hidden />
-    </div>
-  );
-}
-
 /** Extra empty cells inserted between Z layers when peel is on. */
 const PEEL_GAP = 0.85;
 
@@ -767,6 +688,8 @@ export function CargoGridIsoView({
   onPeelStackChange,
   hiddenLayers: hiddenLayersProp,
   onToggleLayer,
+  debugBoxOutlines: debugBoxOutlinesProp,
+  onDebugBoxOutlinesChange,
   panelHeightPx = 26 * 16,
 }: CargoGridIsoViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(false);
@@ -778,6 +701,18 @@ export function CargoGridIsoView({
     ReadonlySet<number>
   >(() => new Set());
   const hiddenLayers = hiddenLayersProp ?? hiddenLayersInternal;
+  const [debugBoxOutlinesInternal, setDebugBoxOutlinesInternal] =
+    useState(false);
+  const [debugSectionExpanded, setDebugSectionExpanded] = useState(false);
+  const debugBoxOutlines =
+    debugBoxOutlinesProp ?? debugBoxOutlinesInternal;
+
+  function setDebugBoxOutlines(value: boolean | ((prev: boolean) => boolean)) {
+    const next =
+      typeof value === "function" ? value(debugBoxOutlines) : value;
+    if (onDebugBoxOutlinesChange) onDebugBoxOutlinesChange(next);
+    else setDebugBoxOutlinesInternal(next);
+  }
 
   function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
     const next =
@@ -869,27 +804,24 @@ export function CargoGridIsoView({
         });
       }
     }
-    // Horizontal far→near only (far corner after yaw). Height is ordered
-    // separately so a nearer lower crate cannot paint over a farther upper one.
-    const depthKeyXY = (cube: IsoCube) => {
+    // Iso painter depth: far/low first. Combining XY + Z avoids two failure modes:
+    // hz-then-XY lets far elevated crates cover nearer deck crates (bad on View up);
+    // XY-then-hz lets a large lower footprint paint over a crate stacked on it.
+    const painterDepth = (cube: IsoCube) => {
       const spun = yawPoint(
-        cube.lx + cube.footprint.dx,
-        cube.wy + cube.footprint.dy,
+        cube.lx + cube.footprint.dx / 2,
+        cube.wy + cube.footprint.dy / 2,
         yawCenterX,
         yawCenterY,
         projectStyle.yawRad,
       );
-      return spun.x + spun.y;
+      return spun.x + spun.y + cube.hz;
     };
-    // Painter: kind → stack height (low first) → horizontal depth → taller top.
-    // Height-before-XY stops deck tops from covering crates stacked above them.
     const sorted = [...built].sort((a, b) => {
       const kindDelta = kindSortRank(a.kind) - kindSortRank(b.kind);
       if (kindDelta !== 0) return kindDelta;
-      const hzDelta = a.hz - b.hz;
-      if (hzDelta !== 0) return hzDelta;
-      const xyDelta = depthKeyXY(a) - depthKeyXY(b);
-      if (xyDelta !== 0) return xyDelta;
+      const depthDelta = painterDepth(a) - painterDepth(b);
+      if (depthDelta !== 0) return depthDelta;
       return a.footprint.dz - b.footprint.dz;
     });
     return {
@@ -1064,6 +996,7 @@ export function CargoGridIsoView({
         projectStyle,
       ),
     ];
+    const clearTallStacks = placementUsesFourthLayer(maxPlacedZ);
     const labels = bayEndLabelAnchors(
       facing,
       viewLength,
@@ -1072,6 +1005,7 @@ export function CargoGridIsoView({
       yawCenterX,
       yawCenterY,
       projectStyle,
+      clearTallStacks,
     );
     let minX = Infinity;
     let maxX = -Infinity;
@@ -1088,8 +1022,8 @@ export function CargoGridIsoView({
       maxY = Math.max(maxY, point.y);
     }
     // Extra room for rotated FRONT / REAR glyphs outside the hull.
-    const padX = cellPx * 2.2;
-    const padY = cellPx * 1.35;
+    const padX = cellPx * (clearTallStacks ? 2.8 : 2.2);
+    const padY = cellPx * (clearTallStacks ? 1.8 : 1.35);
     return {
       minX: minX - padX,
       minY: minY - padY,
@@ -1100,6 +1034,7 @@ export function CargoGridIsoView({
   }, [
     cellPx,
     facing,
+    maxPlacedZ,
     viewHeight,
     viewLength,
     viewWidth,
@@ -1125,6 +1060,8 @@ export function CargoGridIsoView({
   const canPeel = mode === "placement" && maxPlacedZ > 0;
   const showPeel = canPeel && !hidePeel;
   const showLayers = layerOptions.length > 0;
+  const showDebugOutlines =
+    mode === "placement" && placementBoxes.length > 0;
   const hasPickup = placementTints.some((tint) => tint.action === "pickup");
   const hasDelivery = placementTints.some(
     (tint) => tint.action === "delivery",
@@ -1133,7 +1070,11 @@ export function CargoGridIsoView({
   const showLocationKey = locationLegendItems.length > 0;
   const showLegend =
     !hideLegend &&
-    (legend.length > 0 || showActionKey || showLayers || showLocationKey);
+    (legend.length > 0 ||
+      showActionKey ||
+      showLayers ||
+      showLocationKey ||
+      showDebugOutlines);
 
   const showToolbar =
     showPeel || mode !== "placement" || Boolean(toolbarBelow);
@@ -1147,15 +1088,17 @@ export function CargoGridIsoView({
     showActionKey,
     showLayers,
     showLocationKey,
+    showDebugOutlines,
+    debugSectionExpanded,
     panelHeightPx,
   ]);
 
   return (
     <div
       className={[
-        "relative flex flex-col overflow-hidden px-3 pt-3 pb-3",
+        "relative flex min-w-0 flex-col overflow-hidden px-3 pt-3 pb-3",
         embedded
-          ? "bg-transparent"
+          ? "h-full w-full bg-transparent"
           : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
       ].join(" ")}
       style={{ height: panelHeightPx }}
@@ -1190,21 +1133,22 @@ export function CargoGridIsoView({
         <span className="sr-only">3D cargo grid</span>
       )}
       {showFacingPad ? (
-        <IsoFacingPad facing={facing} onFacingChange={setFacing} />
+        <BayFacingPad
+          facing={facing}
+          onFacingChange={setFacing}
+          ariaLabel="3D bay view direction"
+        />
       ) : null}
       {toolbarExtra ? (
         <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
           {toolbarExtra}
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex min-h-full min-w-full items-center justify-center">
-
       {showLegend ? (
         <div
           ref={isoLegendScrollRef}
           className={[
-            "absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+            "pointer-events-auto absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
             isoLegendScrollClassName,
             legendToggleAbove ? "top-8" : "top-2",
           ].join(" ")}
@@ -1421,9 +1365,43 @@ export function CargoGridIsoView({
               </div>
             </div>
           ) : null}
+          {showDebugOutlines ? (
+            <CargoLegendSection
+              title="Debugging"
+              sectionId="iso-debugging"
+              isExpanded={debugSectionExpanded}
+              onToggle={() => setDebugSectionExpanded((value) => !value)}
+              showBorder={Boolean(
+                showLocationKey ||
+                  legend.length > 0 ||
+                  showActionKey ||
+                  showLayers,
+              )}
+            >
+              <button
+                type="button"
+                aria-pressed={debugBoxOutlines}
+                onClick={() => setDebugBoxOutlines((value) => !value)}
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.55rem] uppercase tracking-[0.1em] transition-colors",
+                  debugBoxOutlines
+                    ? "border-rsi-warn/55 bg-rsi-warn/15 text-rsi-warn"
+                    : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                ].join(" ")}
+              >
+                <span
+                  className="size-2.5 shrink-0 rounded-[2px] border-2 border-rsi-warn bg-transparent"
+                  aria-hidden
+                />
+                Box outlines
+              </button>
+            </CargoLegendSection>
+          ) : null}
         </div>
       ) : null}
 
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex min-h-full min-w-full items-center justify-center">
       <svg
         role="img"
         aria-label={`${sketch.shipName} isometric cargo grid, ${cubes.length} cubes. Rear left, front right by default.`}
@@ -1674,6 +1652,54 @@ export function CargoGridIsoView({
                       useOuterGroupOutline ? undefined : actionDash
                     }
                   />
+                  {debugBoxOutlines &&
+                  cube.kind === "cargo" &&
+                  !isPlaceholder ? (
+                    <g pointerEvents="none" aria-hidden>
+                      <polygon
+                        points={faces.left}
+                        fill="none"
+                        stroke="#000"
+                        strokeWidth={3.25}
+                        strokeLinejoin="round"
+                      />
+                      <polygon
+                        points={faces.right}
+                        fill="none"
+                        stroke="#000"
+                        strokeWidth={3.25}
+                        strokeLinejoin="round"
+                      />
+                      <polygon
+                        points={faces.top}
+                        fill="none"
+                        stroke="#000"
+                        strokeWidth={3.25}
+                        strokeLinejoin="round"
+                      />
+                      <polygon
+                        points={faces.left}
+                        fill="none"
+                        stroke="var(--rsi-warn)"
+                        strokeWidth={2}
+                        strokeLinejoin="round"
+                      />
+                      <polygon
+                        points={faces.right}
+                        fill="none"
+                        stroke="var(--rsi-warn)"
+                        strokeWidth={2}
+                        strokeLinejoin="round"
+                      />
+                      <polygon
+                        points={faces.top}
+                        fill="none"
+                        stroke="var(--rsi-warn)"
+                        strokeWidth={2}
+                        strokeLinejoin="round"
+                      />
+                    </g>
+                  ) : null}
                   {useOuterGroupOutline &&
                   groupStroke != null &&
                   outline != null &&

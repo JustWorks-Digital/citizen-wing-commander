@@ -8,6 +8,9 @@ import type { CSSProperties, ReactNode } from "react";
 const LABEL_CLASS =
   "pointer-events-none select-none font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted";
 
+/** Shift Front/Rear toward the grids on up/down (Bay labels sit screen-left). */
+const VERTICAL_END_LABEL_NUDGE_PX = 12;
+
 function EndLabel({
   end,
   className,
@@ -44,13 +47,18 @@ export type ShipBayEndsFrameProps = {
    * are less likely to clip in a narrow pane.
    */
   compact?: boolean;
+  /**
+   * 2D square facing degrees (0/90/180/270). Drives upright Front/Rear
+   * counter-rotation and centering when the bay is turned on end.
+   */
+  squareDegrees?: number;
   className?: string;
   children: ReactNode;
 };
 
 /**
  * Same footprint as the 2D “Bay N” header so Front/Rear center on the grids,
- * not on the label+grid column.
+ * not on the label+grid column (home / left / right only).
  */
 function BayLabelSpacer() {
   return (
@@ -69,12 +77,15 @@ function EndRail({
   railWidth,
   labelClassName,
   labelStyle,
+  /** Match Bay N chrome: before = home/left; after = right (180°). */
+  baySpacer,
 }: {
   end: "front" | "rear";
   iso: boolean;
   railWidth: string;
   labelClassName: string;
   labelStyle?: CSSProperties;
+  baySpacer: "before" | "after" | "none";
 }) {
   const label = (
     <EndLabel end={end} className={labelClassName} style={labelStyle} />
@@ -100,12 +111,46 @@ function EndRail({
         railWidth,
       ].join(" ")}
     >
-      <BayLabelSpacer />
+      {baySpacer === "before" ? <BayLabelSpacer /> : null}
       <div className="flex min-h-0 flex-1 items-center justify-center">
         {label}
       </div>
+      {baySpacer === "after" ? <BayLabelSpacer /> : null}
     </div>
   );
+}
+
+/**
+ * Upright (2D) Front/Rear chrome for a given square facing.
+ * Bottom end gets +180° so it reads L→R; vertical facings nudge toward grids.
+ *
+ * With parent `rotate(d)` and label `rotate(rot) translate(tx,0)` (translate
+ * first), when net rotation is 0 the translate is in screen space — so +tx
+ * moves Front/Rear toward screen-right (onto the grids).
+ */
+function uprightEndChrome(
+  side: "left" | "right",
+  degrees: number,
+): { className: string; style?: CSSProperties } {
+  const d = ((degrees % 360) + 360) % 360;
+  // Home: left −90°, right +90°.
+  let rot = side === "left" ? -90 : 90;
+  // After parent rotate, the screen-bottom end is upside down — flip it.
+  if (d === 90 && side === "right") rot += 180;
+  if (d === 270 && side === "left") rot += 180;
+
+  const nudge =
+    d === 90 || d === 270 ? VERTICAL_END_LABEL_NUDGE_PX : 0;
+
+  return {
+    className: "max-w-[5rem] whitespace-nowrap",
+    style: {
+      transform:
+        nudge > 0
+          ? `rotate(${rot}deg) translate(${nudge}px, 0)`
+          : `rotate(${rot}deg)`,
+    },
+  };
 }
 
 /**
@@ -116,6 +161,7 @@ export function ShipBayEndsFrame({
   flipped = false,
   slant = "upright",
   compact = false,
+  squareDegrees = 0,
   className,
   children,
 }: ShipBayEndsFrameProps) {
@@ -124,6 +170,34 @@ export function ShipBayEndsFrame({
   const iso = slant === "iso";
   const railWidth = compact ? "w-8" : "w-11";
   const gap = compact ? "gap-2" : "gap-4";
+  const d = ((squareDegrees % 360) + 360) % 360;
+  // Home/left: Bay N above grid → spacer before label.
+  // Right (180°): Bay N below grid locally (screen-above after turn) → spacer after.
+  // Up/down: Bay N screen-left → no spacer; ends center on grids.
+  const baySpacer: "before" | "after" | "none" = iso
+    ? "none"
+    : d === 180
+      ? "after"
+      : d === 90 || d === 270
+        ? "none"
+        : "before";
+
+  const leftChrome = iso
+    ? {
+        className: "max-w-[5.5rem] whitespace-nowrap",
+        style: {
+          transform: flipped ? "rotate(30deg)" : "rotate(-30deg)",
+        } as CSSProperties,
+      }
+    : uprightEndChrome("left", d);
+  const rightChrome = iso
+    ? {
+        className: "max-w-[5.5rem] whitespace-nowrap",
+        style: {
+          transform: flipped ? "rotate(-30deg)" : "rotate(30deg)",
+        } as CSSProperties,
+      }
+    : uprightEndChrome("right", d);
 
   return (
     <div
@@ -135,37 +209,18 @@ export function ShipBayEndsFrame({
         end={left}
         iso={iso}
         railWidth={railWidth}
-        labelClassName={
-          iso
-            ? "max-w-[5.5rem] whitespace-nowrap"
-            : "max-w-[5rem] -rotate-90 whitespace-nowrap"
-        }
-        labelStyle={
-          iso
-            ? {
-                // Parallel to the SE-iso floor edge on the ramp/aft side.
-                transform: flipped ? "rotate(30deg)" : "rotate(-30deg)",
-              }
-            : undefined
-        }
+        labelClassName={leftChrome.className}
+        labelStyle={leftChrome.style}
+        baySpacer={baySpacer}
       />
       <div className="min-w-0 shrink">{children}</div>
       <EndRail
         end={right}
         iso={iso}
         railWidth={railWidth}
-        labelClassName={
-          iso
-            ? "max-w-[5.5rem] whitespace-nowrap"
-            : "max-w-[5rem] rotate-90 whitespace-nowrap"
-        }
-        labelStyle={
-          iso
-            ? {
-                transform: flipped ? "rotate(-30deg)" : "rotate(30deg)",
-              }
-            : undefined
-        }
+        labelClassName={rightChrome.className}
+        labelStyle={rightChrome.style}
+        baySpacer={baySpacer}
       />
     </div>
   );

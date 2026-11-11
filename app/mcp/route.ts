@@ -11,8 +11,10 @@ import {
   toolGetHaulingIntakePlaybook,
   toolGetHaulingScreenshot,
   toolGetMission,
+  toolCompileCargoBayPackProgram,
   toolGetSessionCargoGrid,
   toolGetShipBayPreferences,
+  toolPlanStopOccupancyWithPackProgram,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
   toolListMissions,
@@ -152,7 +154,7 @@ const handler = createMcpHandler(
       {
         title: "Get hauling intake playbook",
         description:
-          "Use this first when ingesting mission screenshots or contract text. Returns the screenshot→route→replace_hauling_checklist playbook (extract fields, fixture resolution, merge/optimize stops, bay zoning).",
+          "Use this first when ingesting mission screenshots or contract text. Returns the screenshot→route playbook, including the rule that user-attached images must be stored and linked (screenshots[] / latestScreenshotPath); omit only for text-only intake.",
         inputSchema: z.object({}),
         annotations: { readOnlyHint: true },
       },
@@ -164,7 +166,7 @@ const handler = createMcpHandler(
       {
         title: "Store hauling screenshot",
         description:
-          "Use this when the user attaches a MobiGlas / contract screenshot. Saves the image into the server temp store (.data/mcp-screenshots) and returns a logical path to reference from transcripts. Pass raw base64 or a data:image/...;base64 URL. Do not commit screenshots into the repo.",
+          "Use this whenever the user attaches or pastes a MobiGlas / contract screenshot (before apply_hauling_contracts_intake / create_mission). Saves into .data/mcp-screenshots and returns logicalPath for contracts[].screenshots or latestScreenshotPath. Pass raw base64 or a data:image/...;base64 URL. batchId should be the session UUID. Do not commit screenshots into the repo. If you already wrote missions without shots, store here then call set_mission_screenshots (session) or re-call create_mission with latestScreenshotPath (catalog).",
         inputSchema: z.object({
           imageBase64: z
             .string()
@@ -245,7 +247,7 @@ const handler = createMcpHandler(
       {
         title: "Set mission screenshots",
         description:
-          "Use this to attach or replace screenshot logical paths on an existing session mission without rewriting the route/checklist. Call store_hauling_screenshot first (batchId = sessionId), then pass the returned logicalPath(s) here. Prefer this when screenshots were uploaded after the checklist was already built.",
+          "Use this to attach or replace screenshot logical paths on an existing session mission without rewriting the route/checklist. Preferred recovery when apply_hauling_contracts_intake returned screenshotsMissing: true. Call store_hauling_screenshot first (batchId = sessionId), then pass the returned logicalPath(s) here.",
         inputSchema: z.object({
           missionId: z
             .string()
@@ -350,7 +352,7 @@ const handler = createMcpHandler(
         .array(z.string())
         .optional()
         .describe(
-          "Logical paths from store_hauling_screenshot (`<batchId>/<filename>`). Required for Contract source UI.",
+          "Logical paths from store_hauling_screenshot (`<batchId>/<filename>`). Strongly expected whenever the user attached images; omit only for text-only intake. Missing paths still apply but return screenshotsMissing — then use set_mission_screenshots.",
         ),
       transcript: z
         .string()
@@ -363,7 +365,7 @@ const handler = createMcpHandler(
       {
         title: "Apply hauling contracts intake",
         description:
-          "Use this to apply accepted hauling_contracts_intake JSON (from screenshots). Pass contracts (include screenshots[] logical paths from store_hauling_screenshot); optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Resets the session timer by default.",
+          "Use this to apply accepted hauling_contracts_intake JSON. When the user attached images, each contract MUST include screenshots[] logical paths from store_hauling_screenshot (omit screenshots only for text-only intake). Optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Still succeeds if screenshots are missing, but returns screenshotsMissing: true — then call set_mission_screenshots. Resets the session timer by default.",
         inputSchema: z.object({
           kind: z.literal("hauling_contracts_intake").optional(),
           version: z.literal(1).optional(),
@@ -520,6 +522,68 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
+      "compile_cargo_bay_pack_program",
+      {
+        title: "Compile cargo bay pack program",
+        description:
+          "Use this to get the JSON pack-program DSL for a Sorting preset (suggested / by-cargo-type / by-mission-location). The program is explicit group/order/stack/require/reserve/bias-xy primitives with priorities — not opaque mode names. Pass the result (or a custom equivalent) to plan_stop_occupancy_with_pack_program.",
+        inputSchema: z.object({
+          sessionId: sessionIdSchema,
+          ship: z
+            .string()
+            .optional()
+            .describe("Optional ship name/slug when not using the session ship."),
+          mode: z
+            .enum(["suggested", "by-cargo-type", "by-mission-location"])
+            .optional()
+            .default("by-cargo-type"),
+          missionPrioritized: z
+            .boolean()
+            .optional()
+            .default(false)
+            .describe("Cargo type only: bias by upcoming delivery rank (ship must support bias)."),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolCompileCargoBayPackProgram(input),
+    );
+
+    server.registerTool(
+      "plan_stop_occupancy_with_pack_program",
+      {
+        title: "Plan stop occupancy with pack program",
+        description:
+          "Use this to pack the focused (or given) checklist stop using a pack-program DSL document. Omit program to compile from mode. Returns placed boxes/cells for comparison with the UI bay grid.",
+        inputSchema: z.object({
+          sessionId: sessionIdSchema,
+          rowId: z
+            .string()
+            .optional()
+            .describe("Checklist row id; omit for next incomplete stop."),
+          mode: z
+            .enum(["suggested", "by-cargo-type", "by-mission-location"])
+            .optional()
+            .default("by-cargo-type"),
+          missionPrioritized: z.boolean().optional().default(false),
+          program: z
+            .record(z.string(), z.unknown())
+            .optional()
+            .describe(
+              "Full CargoBayPackProgram JSON (version, bays, pack). When set, overrides mode compilation.",
+            ),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) =>
+        toolPlanStopOccupancyWithPackProgram({
+          ...input,
+          program: input.program as
+            | import("@/lib/ships/cargoBayPackProgram").CargoBayPackProgram
+            | undefined,
+        }),
+    );
+
+    server.registerTool(
       "list_ship_bay_preferences",
       {
         title: "List ship bay preferences",
@@ -600,7 +664,7 @@ const handler = createMcpHandler(
       {
         title: "Create mission",
         description:
-          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), screenshot path, scuMaxContainerSize, category, variantOf. Same SCU upserts by fingerprint (aUEC-only diffs update the same row). Different SCU creates a linked variant (auto family match or variantOf).",
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), latestScreenshotPath from store_hauling_screenshot (strongly expected when the user attached an image; omit only for text-only), scuMaxContainerSize, category, variantOf. Same SCU upserts by fingerprint (aUEC-only diffs update the same row). Different SCU creates a linked variant (auto family match or variantOf). Missing latestScreenshotPath still saves but returns screenshotsMissing: true — fix with store_hauling_screenshot then re-create_mission.",
         inputSchema: z.object({
           type: z
             .enum(["hauling"])
@@ -738,7 +802,9 @@ const handler = createMcpHandler(
           latestScreenshotPath: z
             .string()
             .optional()
-            .describe("Logical path from store_hauling_screenshot / UI upload"),
+            .describe(
+              "Logical path from store_hauling_screenshot / UI upload. Strongly expected when the user attached an image; omit only for text-only. Missing path returns screenshotsMissing — re-call create_mission after store_hauling_screenshot.",
+            ),
           extras: z.record(z.string(), z.unknown()).optional(),
         }),
         annotations: { destructiveHint: false },
@@ -847,20 +913,20 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.1",
+      version: "0.2.2",
     },
     instructions: [
       "Citizen Wing Commander manages hauling session checklists.",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
-      "When the user attaches contract screenshots, call store_hauling_screenshot (base64, batchId=session UUID) so files land in .data/mcp-screenshots; keep returned logicalPath. Do not put screenshot binaries in git.",
-      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",
+      "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot (base64, batchId=session UUID) and attach returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
+      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
-      "To attach screenshots to an existing mission without rebuilding the route, call set_mission_screenshots after store_hauling_screenshot.",
+      "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and the user had images, fix immediately: store_hauling_screenshot then set_mission_screenshots (session) or re-create_mission with latestScreenshotPath (catalog). Prefer set_mission_screenshots over rebuilding the route.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
-      "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids.",
-      "To save missions for later planning (not the live checklist), call create_mission (type=hauling today) with offerLocation + from/to/cargo; use add_mission_note and record_mission_run for notes and timing. Browse with list_missions / get_mission.",
+      "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids. For Sorting DSL: compile_cargo_bay_pack_program (preset→JSON primitives) then plan_stop_occupancy_with_pack_program (optional custom program).",
+      "To save missions for later planning (not the live checklist), call create_mission (type=hauling today) with offerLocation + from/to/cargo (+ latestScreenshotPath when an image existed); use add_mission_note and record_mission_run for notes and timing. Browse with list_missions / get_mission.",
       "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",
       "After writes, the web UI polls the same multi-session checklist store.",

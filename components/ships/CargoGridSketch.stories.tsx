@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Ship bay 2D / 3D views with Front/Rear rails (rear left, front right). Legend toggles hide inactive cargo types completely.",
+          "Ship bay 2D / 3D views with Front/Rear rails (rear left, front right). 2D uses square facing snaps; 3D keeps iso facings. Zoom is independent per pane. Legend toggles hide inactive cargo types completely.",
       },
     },
   },

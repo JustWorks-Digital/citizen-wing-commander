@@ -41,6 +41,14 @@ import {
   CargoGridIsoView,
   type CargoGridIsoLegendItem,
 } from "./CargoGridIsoView";
+import {
+  BayFacingPad,
+  bayFacingSquareDegrees,
+  defaultBayFacing,
+  topBayLabelChrome,
+  type BayFacing,
+} from "./BayFacingPad";
+import { RotatableTopBay } from "./RotatableTopBay";
 import { ShipBayEndsFrame } from "./ShipBayEndsMarkers";
 import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 
@@ -50,7 +58,8 @@ type LegendSectionKey =
   | "actions"
   | "scuSizes"
   | "topLayers"
-  | "isoLayers";
+  | "isoLayers"
+  | "debugging";
 
 const GRID_ZOOM_MIN = 0.5;
 const GRID_ZOOM_MAX = 2.5;
@@ -159,6 +168,11 @@ export type CargoGridSketchProps = {
   hideLegend?: boolean;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
+  /** Hide Peel (e.g. parent hosts it next to Sorting). */
+  hidePeel?: boolean;
+  /** Controlled peel; falls back to internal state when omitted. */
+  peelStack?: boolean;
+  onPeelStackChange?: (value: boolean) => void;
   /** Outer panel height in px for top / 3D / split views (default `26rem`). */
   panelHeightPx?: number;
 };
@@ -199,6 +213,9 @@ export function CargoGridSketch({
   isoToolbarBelow = null,
   hideLegend: hideLegendProp,
   legendToggleAbove = false,
+  hidePeel = false,
+  peelStack: peelStackProp,
+  onPeelStackChange,
   panelHeightPx = 26 * 16,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
@@ -206,6 +223,10 @@ export function CargoGridSketch({
   /** Independent zooms so split view can scale 2D and 3D separately. */
   const [topZoom, setTopZoom] = useState(1);
   const [isoZoom, setIsoZoom] = useState(1);
+  /** 2D square facing — separate from 3D iso facing inside CargoGridIsoView. */
+  const [topFacing, setTopFacing] = useState<BayFacing>(defaultBayFacing);
+  const topFacingDegrees = bayFacingSquareDegrees(topFacing);
+  const bayLabelChrome = topBayLabelChrome(topFacingDegrees);
   const [legendHiddenLocal, setLegendHiddenLocal] = useState(false);
   const legendHidden = hideLegendProp ?? legendHiddenLocal;
   const isSplit =
@@ -219,7 +240,13 @@ export function CargoGridSketch({
   const totalScu = cargoGridTotalScu(sketch);
   const maxWidth = cargoGridMaxWidth(sketch);
   const [activeZ, setActiveZ] = useState(0);
-  const [peelStack, setPeelStack] = useState(false);
+  const [peelStackInternal, setPeelStackInternal] = useState(false);
+  const peelStack = peelStackProp ?? peelStackInternal;
+  function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
+    const next = typeof value === "function" ? value(peelStack) : value;
+    if (onPeelStackChange) onPeelStackChange(next);
+    else setPeelStackInternal(next);
+  }
   const [hiddenIsoLayers, setHiddenIsoLayers] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
@@ -286,7 +313,9 @@ export function CargoGridSketch({
   );
   const [collapsedLegendSections, setCollapsedLegendSections] = useState<
     ReadonlySet<LegendSectionKey>
-  >(() => new Set());
+  >(() => new Set<LegendSectionKey>(["debugging"]));
+  /** Bright crate silhouettes for checking footprints / Z height. */
+  const [debugBoxOutlines, setDebugBoxOutlines] = useState(false);
 
   const {
     overflowScrollRef: topLegendScrollRef,
@@ -825,6 +854,33 @@ export function CargoGridSketch({
             </div>
           </CargoLegendSection>
         ) : null}
+        {useBoxFootprints ? (
+          <CargoLegendSection
+            title="Debugging"
+            sectionId="debugging"
+            isExpanded={isLegendSectionExpanded("debugging")}
+            onToggle={() => toggleLegendSection("debugging")}
+            showBorder
+          >
+            <button
+              type="button"
+              aria-pressed={debugBoxOutlines}
+              onClick={() => setDebugBoxOutlines((value) => !value)}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-[3px] border px-1.5 py-0.5 font-mono text-[0.55rem] uppercase tracking-[0.1em] transition-colors",
+                debugBoxOutlines
+                  ? "border-rsi-warn/55 bg-rsi-warn/15 text-rsi-warn"
+                  : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+              ].join(" ")}
+            >
+              <span
+                className="size-2.5 shrink-0 rounded-[2px] border-2 border-rsi-warn bg-transparent"
+                aria-hidden
+              />
+              Box outlines
+            </button>
+          </CargoLegendSection>
+        ) : null}
       </>
     );
   }
@@ -885,7 +941,7 @@ export function CargoGridSketch({
       )}
 
       {tabbed ? (
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center justify-center gap-1">
           <div
             role="tablist"
             aria-label="Cargo grid projection"
@@ -940,18 +996,18 @@ export function CargoGridSketch({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div
           className={[
-            "relative flex min-w-0 flex-1",
+            "relative min-w-0 flex-1",
             isSplit
-              ? "flex-row overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50"
-              : "flex-col gap-4",
+              ? "grid grid-cols-2 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50"
+              : "flex flex-col gap-4",
           ].join(" ")}
         >
           {showTop ? (
           <div
             className={[
-              "relative flex flex-col overflow-hidden p-3 pb-10",
+              "relative flex min-w-0 flex-col overflow-hidden p-3 pb-10",
               isSplit
-                ? "min-w-0 flex-1 border-r border-rsi-border"
+                ? "border-r border-rsi-border"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
             ].join(" ")}
             style={{ height: panelHeightPx }}
@@ -963,10 +1019,10 @@ export function CargoGridSketch({
                 2D view
               </p>
             )}
-            {isoToolbarBelow ? (
+            {isoToolbarBelow || (isSplit && canPeel && !hidePeel) ? (
               <div className="mb-1 flex shrink-0 flex-col items-start gap-1.5">
                 {isoToolbarBelow}
-                {isSplit && canPeel ? (
+                {isSplit && canPeel && !hidePeel ? (
                   <button
                     type="button"
                     aria-pressed={peelStack}
@@ -986,11 +1042,18 @@ export function CargoGridSketch({
             <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
               {topZoomControls}
             </div>
+            {isPlacementView ? (
+              <BayFacingPad
+                facing={topFacing}
+                onFacingChange={setTopFacing}
+                ariaLabel="2D bay view direction"
+              />
+            ) : null}
             {showTopLegend ? (
               <div
                 ref={topLegendScrollRef}
                 className={[
-                  "absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+                  "pointer-events-auto absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
                   topLegendScrollClassName,
                   legendToggleAbove ? "top-8" : "top-2",
                 ].join(" ")}
@@ -1008,7 +1071,11 @@ export function CargoGridSketch({
               role="img"
               aria-label={`${sketch.shipName} 2D cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
-              <ShipBayEndsFrame compact={isSplit}>
+              <RotatableTopBay degrees={topFacingDegrees}>
+              <ShipBayEndsFrame
+                compact={isSplit}
+                squareDegrees={topFacingDegrees}
+              >
               <div className="flex items-center">
               {(() => {
                 let displayBayNumber = 0;
@@ -1053,19 +1120,28 @@ export function CargoGridSketch({
                     )
                   : [];
 
+                const bayLabel = (text: string, invisible: boolean) => (
+                  <span
+                    className={[
+                      "pointer-events-none shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]",
+                      invisible
+                        ? "invisible"
+                        : "text-rsi-text-muted",
+                    ].join(" ")}
+                    style={
+                      bayLabelChrome.labelTransform
+                        ? { transform: bayLabelChrome.labelTransform }
+                        : undefined
+                    }
+                    title={invisible ? undefined : zone.label}
+                    aria-hidden={invisible || undefined}
+                  >
+                    {text}
+                  </span>
+                );
+
                 if (zone.kind === "gap") {
-                  return (
-                    <div
-                      key={zone.id}
-                      className="flex flex-col items-center gap-1.5"
-                    >
-                      {/* Match Bay N label height so the gap sits on the same rows as cargo grids. */}
-                      <span
-                        className="pointer-events-none invisible shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]"
-                        aria-hidden
-                      >
-                        Bay 0
-                      </span>
+                  const gapGrid = (
                       <div
                         title="Grid break"
                         aria-label={`${zone.label} grid break`}
@@ -1084,21 +1160,25 @@ export function CargoGridSketch({
                           </span>
                         </span>
                       </div>
+                  );
+                  return (
+                    <div
+                      key={zone.id}
+                      className={bayLabelChrome.columnClass}
+                    >
+                      {/* Match Bay N chrome so the gap sits with cargo grids. */}
+                      {bayLabelChrome.labelBeforeGrid
+                        ? bayLabel("Bay 0", true)
+                        : null}
+                      {gapGrid}
+                      {!bayLabelChrome.labelBeforeGrid
+                        ? bayLabel("Bay 0", true)
+                        : null}
                     </div>
                   );
                 }
 
-                return (
-                  <div
-                    key={zone.id}
-                    className="flex flex-col items-center gap-1.5"
-                  >
-                    <span
-                      className="pointer-events-none shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted"
-                      title={zone.label}
-                    >
-                      Bay {bayNumber}
-                    </span>
+                const cargoGrid = (
                   <div
                     className={["relative grid border-2", fillClass].join(" ")}
                     style={{
@@ -1306,6 +1386,13 @@ export function CargoGridSketch({
                             backgroundColor: hex,
                             opacity: 0.92,
                             ...borderStyle,
+                            ...(debugBoxOutlines
+                              ? {
+                                  boxShadow:
+                                    "0 0 0 1px #000, 0 0 0 2.5px var(--rsi-warn)",
+                                  zIndex: 6,
+                                }
+                              : null),
                           }}
                         >
                           {groupStroke != null &&
@@ -1353,19 +1440,34 @@ export function CargoGridSketch({
                       );
                     })}
                   </div>
+                );
+
+                return (
+                  <div
+                    key={zone.id}
+                    className={bayLabelChrome.columnClass}
+                  >
+                    {bayLabelChrome.labelBeforeGrid
+                      ? bayLabel(`Bay ${bayNumber}`, false)
+                      : null}
+                    {cargoGrid}
+                    {!bayLabelChrome.labelBeforeGrid
+                      ? bayLabel(`Bay ${bayNumber}`, false)
+                      : null}
                   </div>
                 );
               });
               })()}
               </div>
               </ShipBayEndsFrame>
+              </RotatableTopBay>
             </div>
             </div>
           </div>
           ) : null}
 
           {showIso ? (
-            <div className={isSplit ? "relative min-w-0 flex-1" : undefined}>
+            <div className={isSplit ? "relative min-w-0" : undefined}>
               <CargoGridIsoView
                 sketch={sketch}
                 cellPx={viewIsoCellPx}
@@ -1390,11 +1492,13 @@ export function CargoGridSketch({
                 embedded={isSplit}
                 hideLegend={isSplit || legendHidden}
                 legendToggleAbove={legendToggleAbove}
-                hidePeel={isSplit}
+                hidePeel={isSplit || hidePeel}
                 peelStack={peelStack}
                 onPeelStackChange={setPeelStack}
                 hiddenLayers={isSplit ? hiddenIsoLayers : undefined}
                 onToggleLayer={isSplit ? toggleIsoLayer : undefined}
+                debugBoxOutlines={debugBoxOutlines}
+                onDebugBoxOutlinesChange={setDebugBoxOutlines}
                 panelHeightPx={panelHeightPx}
               />
             </div>
@@ -1404,7 +1508,7 @@ export function CargoGridSketch({
             <div
               ref={splitLegendScrollRef}
               className={[
-                "pointer-events-auto absolute top-8 right-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+                "pointer-events-auto absolute top-8 right-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
                 splitLegendScrollClassName,
               ].join(" ")}
               style={{ maxHeight: Math.max(120, panelHeightPx - 40) }}

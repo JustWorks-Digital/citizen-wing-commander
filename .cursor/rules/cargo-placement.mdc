@@ -5,15 +5,22 @@ alwaysApply: false
 
 # Cargo grid placement rules
 
-- Implementation: `lib/ships/cargoGridPlacementRules.ts` (ordered `cargoPlacementRules`).
+- Low-level scan/score rules: `lib/ships/cargoGridPlacementRules.ts` (ordered `cargoPlacementRules`).
 - Consumer: `findSlot` in `lib/ships/cargoGridPlacement.ts` via `resolvePlacementSlotOrder`, `forEachPlacementOrigin`, and `scorePlacementSlot`.
-- Add new behavior as a named rule object (`id`, `summary`, optional `slotOrder` / `scoreSlot`) and append it to `cargoPlacementRules` — do not hardcode one-off axis loops in `findSlot`.
+- Add new bay physics as a named rule object (`id`, `summary`, optional `slotOrder` / `scoreSlot`) and append it to `cargoPlacementRules` — do not hardcode one-off axis loops in `findSlot`.
 - Logical X remains nose → ramp; “back of bay” is high X (toward gap on the front bay, toward ramp on the rear bay).
-- Current rules:
-  - `prefer-flat-layers` — scan Z outer so a layer (especially the deck) fills before crates stack higher; users prefer flat, organized floors.
-  - `prefer-flat-stable-support` — when stacking, prefer smaller crates on larger ones; avoid bigger-on-smaller. Deck placements score highest.
-  - `prefer-back-when-full-height` — footprints with `dz >= bay height` scan X descending so full stacks sit at the back and do not wall off the rest of the bay.
-- Cargo layout pack modes (`CargoBayLayout` / `planStopOccupancyAtStop`):
-  - **Suggested** — AI/route chronological bay layout.
-  - **Cargo type** — cluster by commodity; optional **Prioritized** sub-toggle (ship fixture `missionPriorityPacking.bias`) orders by upcoming delivery **stop**. Mk V `edges-first`: early toward bay edges, later toward center. Within a type, later stops are placed first (then largest crates) so first-to-unload sits on top of same-type stacks; stack-on-own preferred over new deck columns. Each crate’s rank/`deliveryLocationSlug` comes from its unload stop (not the mission’s first-seen stop).
-  - **Mission based** — first two upcoming delivery locations each get an exclusive contiguous pile in the outer ~20% bay ends (front vs rear); fill that end (deck then up) before spilling mid-bay; nothing else stacks on them. Remaining crates pack by **cargo type** in the mid strip. Contiguity treats same-cluster side contacts as touching (location is both cluster + region). Same physical bay merge (e.g. Centaurus hold) still applies.
+- Current physics rules:
+  - `prefer-flat-layers` — fill lower Z before stacking higher.
+  - `prefer-flat-stable-support` — prefer solid/larger support under footprints.
+  - `prefer-back-when-full-height` — full-height crates pack from high X so they do not wall off the bay.
+
+## Pack program DSL (Sorting UI + MCP)
+
+- **Contract:** JSON pack programs (`CargoBayPackProgram`) in `lib/ships/cargoBayPackProgram.ts`.
+- **Primitives** (engine verbs, not business nicknames): `group`, `order`, `stack`, `require`, `reserve`, `bias-xy`. Each call has `priority` (lower = higher precedence; fall through when a call does not apply).
+- **Bays:** numeric `id` + human `alias` (`front`/`middle`/`rear`) + `size` + `orientation` (`towardShipFront` / `towardShipRear`). Built from the sketch via `packBaysFromSketch`.
+- **Presets compile to programs** (`compilePackProgramForMode` / `compileCargoTypePackProgram` / …). UI Sorting toggles and MCP `compile_cargo_bay_pack_program` emit the same JSON.
+- **Interpret:** `interpretCargoBayPackProgram` / `planStopOccupancyAtStop` (`lib/ships/planStopOccupancy.ts`) derive strategy from primitives and place cargo. Optional `packProgram` overrides preset compilation.
+- **Explicit params:** e.g. `order` uses `target` + `by` + `direction: ascending|descending` — not opaque labels like `flat-layers`.
+- MCP: `compile_cargo_bay_pack_program`, `plan_stop_occupancy_with_pack_program`.
+- Baseline compare fixture (local): `.ai-progress/pack-baseline-6ec5cb16/` (gitignored).

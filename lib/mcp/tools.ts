@@ -92,6 +92,15 @@ import {
   updateShipBayPreferences,
 } from "@/lib/ships/resolveShipBayPreferences";
 import type { ShipBayPreferencePayload } from "@/lib/ships/shipBayPreferences";
+import {
+  compilePackProgramForMode,
+  derivePackStrategy,
+  type CargoBayPackProgram,
+} from "@/lib/ships/cargoBayPackProgram";
+import { packBaysFromSketch } from "@/lib/ships/packBaysFromSketch";
+import { planStopOccupancyAtStop } from "@/lib/ships/planStopOccupancy";
+import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
+import { placementPlanLegend } from "@/lib/ships/cargoGridPlacement";
 
 const PLAYBOOK_PATH = path.join(
   process.cwd(),
@@ -208,6 +217,71 @@ function textResult(payload: unknown) {
         text: JSON.stringify(payload, null, 2),
       },
     ],
+  };
+}
+
+type McpTextResult = ReturnType<typeof textResult>;
+
+/** Merge fields into a successful tool JSON payload (leave error responses alone). */
+function mergeTextResult(
+  result: McpTextResult,
+  extra: Record<string, unknown>,
+): McpTextResult {
+  const block = result.content[0];
+  if (!block || block.type !== "text") return textResult(extra);
+  try {
+    const parsed = JSON.parse(block.text) as Record<string, unknown>;
+    if (typeof parsed.error === "string") return result;
+    return textResult({ ...parsed, ...extra });
+  } catch {
+    return result;
+  }
+}
+
+/**
+ * Soft gate: screenshots stay optional in the schema, but missing paths get a
+ * loud warning so agents attach evidence when the user had images.
+ */
+function sessionScreenshotSoftGate(
+  contracts: HaulingContractsIntake["contracts"],
+): Record<string, unknown> {
+  const contractsWithoutScreenshots = contracts
+    .map((contract, index) => ({
+      key:
+        contract.id?.trim() ||
+        contract.title?.trim() ||
+        `contracts[${index}]`,
+      hasShots:
+        Array.isArray(contract.screenshots) &&
+        contract.screenshots.some((path) => path.trim().length > 0),
+    }))
+    .filter((row) => !row.hasShots)
+    .map((row) => row.key);
+
+  if (contractsWithoutScreenshots.length === 0) {
+    return { screenshotsMissing: false };
+  }
+
+  return {
+    screenshotsMissing: true,
+    contractsWithoutScreenshots,
+    warning:
+      "SCREENSHOTS MISSING: one or more contracts have empty/omitted screenshots[]. If the user attached images, you MUST call store_hauling_screenshot (batchId = sessionId) then set_mission_screenshots (or re-apply intake with screenshots[]). Omit screenshots only when the user provided no images.",
+    next: "store_hauling_screenshot → set_mission_screenshots",
+  };
+}
+
+function catalogScreenshotSoftGate(
+  latestScreenshotPath?: string | null,
+): Record<string, unknown> {
+  if (latestScreenshotPath?.trim()) {
+    return { screenshotsMissing: false };
+  }
+  return {
+    screenshotsMissing: true,
+    warning:
+      "SCREENSHOT MISSING: latestScreenshotPath was omitted. If the user attached an image for this mission, you MUST call store_hauling_screenshot and re-call create_mission with latestScreenshotPath set to the returned logicalPath. Omit only when the user provided no image.",
+    next: "store_hauling_screenshot → create_mission (same fields + latestScreenshotPath)",
   };
 }
 
@@ -429,15 +503,17 @@ export async function toolApplyHaulingContractsIntake(
     missions,
   });
 
+  const screenshotGate = sessionScreenshotSoftGate(intake.contracts);
+
   if (intake.startLocation != null && intake.startLocation.trim()) {
     const start = await toolSetSessionStartLocation(
       intake.startLocation,
       intake.sessionId,
     );
-    return start;
+    return mergeTextResult(start, screenshotGate);
   }
 
-  return replaced;
+  return mergeTextResult(replaced, screenshotGate);
 }
 
 export async function toolSetLegCompleted(input: {
@@ -1025,6 +1101,7 @@ export async function toolCreateMission(input: {
       ok: true,
       message: `Saved ${row.type} mission ${row.id} (${row.title}).`,
       mission: await presentCatalogMissionWithVariants(row),
+      ...catalogScreenshotSoftGate(input.latestScreenshotPath),
     });
   } catch (error) {
     return textResult({
@@ -1268,4 +1345,126 @@ export async function toolUpdateShipBayPreferences(input: {
           : "Failed to update ship bay preferences",
     });
   }
+}
+
+/**
+ * Compile a Sorting UI preset into an explicit pack-program DSL document.
+ * Use this when ChatGPT/UI should emit or inspect the JSON sorting contract.
+ */
+export async function toolCompileCargoBayPackProgram(input: {
+  sessionId?: string;
+  ship?: string;
+  mode?: "suggested" | "by-cargo-type" | "by-mission-location";
+  missionPrioritized?: boolean;
+}) {
+  const mode = input.mode ?? "by-cargo-type";
+  let shipSlug: string | null = null;
+  if (input.ship?.trim()) {
+    const resolved = resolveShipSlugs([input.ship]);
+    if (!resolved.ok) {
+      return textResult({ error: resolved.error });
+    }
+    shipSlug = resolved.shipSlugs[0] ?? null;
+    if (!shipSlug) {
+      return textResult({ error: `Unknown ship: ${input.ship}` });
+    }
+  } else {
+    const session = await getChecklistSession(input.sessionId);
+    shipSlug = session.shipSlugs[0] ?? null;
+    if (!shipSlug) {
+      return textResult({
+        error: "Session has no ships; pass ship= or set_session_ships first.",
+      });
+    }
+  }
+
+  const sketch = getCargoGridSketchBySlug(shipSlug);
+  if (!sketch) {
+    return textResult({
+      error: `No cargo-grid sketch for ${shipSlug}`,
+    });
+  }
+
+  const biasXyMode =
+    mode === "by-cargo-type" && input.missionPrioritized
+      ? (getShipBayPreferenceFixture(shipSlug).missionPriorityPacking?.bias ??
+        null)
+      : null;
+
+  const program = compilePackProgramForMode({
+    mode,
+    bays: packBaysFromSketch(sketch),
+    missionPrioritized: Boolean(input.missionPrioritized),
+    biasXyMode,
+  });
+
+  return textResult({
+    ok: true,
+    shipSlug,
+    mode,
+    strategy: derivePackStrategy(program),
+    program,
+    note: "Pass program to plan_stop_occupancy_with_pack_program, or emit an equivalent custom program of group/order/stack/require/reserve/bias-xy calls.",
+  });
+}
+
+/**
+ * Plan bay occupancy for the active (or given) stop using a pack-program DSL
+ * document, or compile from a Sorting preset when program is omitted.
+ */
+export async function toolPlanStopOccupancyWithPackProgram(input: {
+  sessionId?: string;
+  rowId?: string;
+  mode?: "suggested" | "by-cargo-type" | "by-mission-location";
+  missionPrioritized?: boolean;
+  program?: CargoBayPackProgram;
+}) {
+  const session = await getChecklistSession(input.sessionId);
+  const shipSlug = session.shipSlugs[0] ?? null;
+  if (!shipSlug) {
+    return textResult({ error: "Session has no ships." });
+  }
+  const sketch = getCargoGridSketchBySlug(shipSlug);
+  if (!sketch) {
+    return textResult({ error: `No cargo-grid sketch for ${shipSlug}` });
+  }
+
+  const activeRow =
+    (input.rowId
+      ? session.rows.find((row) => row.id === input.rowId)
+      : null) ??
+    session.rows.find((row) => !row.isCompleted) ??
+    session.rows[session.rows.length - 1] ??
+    null;
+  if (!activeRow) {
+    return textResult({ error: "Session has no checklist rows." });
+  }
+
+  const plan = planStopOccupancyAtStop(sketch, session.rows, activeRow.id, {
+    packMode: input.mode ?? "by-cargo-type",
+    missionPrioritized: Boolean(input.missionPrioritized),
+    packProgram: input.program,
+  });
+
+  return textResult({
+    ok: true,
+    sessionId: session.id,
+    shipSlug,
+    rowId: activeRow.id,
+    boxCount: plan.boxes.length,
+    unplacedCount: plan.unplaced.length,
+    unplaced: plan.unplaced,
+    legend: placementPlanLegend(plan),
+    boxes: plan.boxes.map((box) => ({
+      id: box.id,
+      size: box.size,
+      commoditySlug: box.commoditySlug,
+      commodityName: box.commodityName,
+      origin: box.origin,
+      footprint: box.footprint,
+      cells: box.cells,
+      action: box.action,
+      deliveryLocationSlug: box.deliveryLocationSlug ?? null,
+    })),
+  });
 }

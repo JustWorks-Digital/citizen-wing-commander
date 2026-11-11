@@ -17,6 +17,7 @@ const meta = {
     flipped: false,
     slant: "upright",
     compact: false,
+    squareDegrees: 0,
     children: (
       <div className="flex h-24 w-48 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
         Bay
@@ -40,4 +41,8 @@ export const IsoSlant: Story = {
 
 export const Compact: Story = {
   args: { compact: true },
+};
+
+export const SquareDegrees90: Story = {
+  args: { squareDegrees: 90 },
 };

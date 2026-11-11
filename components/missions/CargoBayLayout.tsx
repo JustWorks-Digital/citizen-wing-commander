@@ -23,7 +23,6 @@ import {
 import {
   cargoBayPackModes,
   defaultCargoBayPackMode,
-  planStopOccupancyAtStop,
   placementPlanLegend,
   placementPlanLocationLegend,
   placementPlanTints,
@@ -31,6 +30,7 @@ import {
   type CargoBayPackMode,
 } from "@/lib/ships/cargoGridPlacement";
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
+import { planStopOccupancyAtStop } from "@/lib/ships/planStopOccupancy";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 export type CargoBayLayoutProps = {
@@ -65,6 +65,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
   const [legendHidden, setLegendHidden] = useState(false);
   const [sortingHidden, setSortingHidden] = useState(false);
+  const [peelStack, setPeelStack] = useState(false);
   const [packMode, setPackMode] = useState<CargoBayPackMode>(
     defaultCargoBayPackMode,
   );
@@ -129,6 +130,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const showLocationOutlines = packMode === "by-mission-location";
   const showViewTabs = Boolean(sketch && plan && plan.boxes.length > 0);
   const showGrid = Boolean(sketch && plan && plan.boxes.length > 0);
+  const canPeel = useMemo(() => {
+    if (!plan) return false;
+    let maxZ = -1;
+    for (const box of plan.boxes) {
+      maxZ = Math.max(maxZ, box.origin.z + box.footprint.dz - 1);
+    }
+    return maxZ > 0;
+  }, [plan]);
+  const showPeelToggle =
+    canPeel && (viewTab === "iso" || viewTab === "split");
 
   const onResizePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -215,7 +226,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="relative">
           {showViewTabs ? (
             <>
-              <div className="pointer-events-none absolute top-2 right-14 left-14 z-20 flex justify-center">
+              <div className="pointer-events-none absolute top-2 left-1/2 z-20 -translate-x-1/2">
                 <div
                   role="tablist"
                   aria-label="Cargo grid projection"
@@ -250,20 +261,38 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   })}
                 </div>
               </div>
-              <button
-                type="button"
-                aria-pressed={!sortingHidden}
-                aria-label={sortingHidden ? "Show sorting" : "Hide sorting"}
-                onClick={() => setSortingHidden((value) => !value)}
-                className={[
-                  "pointer-events-auto absolute top-2 left-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
-                  !sortingHidden
-                    ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                    : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                ].join(" ")}
-              >
-                Sorting
-              </button>
+              <div className="pointer-events-auto absolute top-2 left-2 z-30 flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-pressed={!sortingHidden}
+                  aria-label={sortingHidden ? "Show sorting" : "Hide sorting"}
+                  onClick={() => setSortingHidden((value) => !value)}
+                  className={[
+                    "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                    !sortingHidden
+                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                  ].join(" ")}
+                >
+                  Sorting
+                </button>
+                {showPeelToggle ? (
+                  <button
+                    type="button"
+                    aria-pressed={peelStack}
+                    aria-label={peelStack ? "Disable peel" : "Enable peel"}
+                    onClick={() => setPeelStack((value) => !value)}
+                    className={[
+                      "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                      peelStack
+                        ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                        : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                    ].join(" ")}
+                  >
+                    Peel
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 aria-pressed={!legendHidden}
@@ -362,6 +391,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             inlineTopLegend={viewTab === "top" || viewTab === "split"}
             hideLegend={legendHidden}
             legendToggleAbove
+            hidePeel
+            peelStack={peelStack}
+            onPeelStackChange={setPeelStack}
             panelHeightPx={heightPx}
             placementTints={placementTints}
             placementBoxes={plan!.boxes}

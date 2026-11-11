@@ -63,6 +63,42 @@ export const PlacementOnly: Story = {
   },
 };
 
+/** Debug crate silhouettes (legend → Debugging → Box outlines). */
+export const DebugBoxOutlines: Story = {
+  args: {
+    sketch: mkVCentaurusCargoGridSketch,
+    mode: "placement",
+    showFacingPad: true,
+    debugBoxOutlines: true,
+    placementBoxes: [
+      {
+        id: "debug-8",
+        size: 8,
+        origin: { x: 0, y: 0, z: 0 },
+        footprint: { dx: 2, dy: 2, dz: 2 },
+        commoditySlug: "tin",
+        commodityName: "Tin",
+        color: "#8a9bb0",
+        color2: null,
+        cells: [],
+        action: "pickup",
+      },
+      {
+        id: "debug-4",
+        size: 4,
+        origin: { x: 2, y: 0, z: 0 },
+        footprint: { dx: 2, dy: 2, dz: 1 },
+        commoditySlug: "aluminum",
+        commodityName: "Aluminum",
+        color: "#b0b0b0",
+        color2: null,
+        cells: [],
+        action: "pickup",
+      },
+    ],
+  },
+};
+
 /** Parent passes already location-filtered boxes; empty = no crates. */
 export const EmptyAfterLocationFilter: Story = {
   args: {

@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Expand/collapse header for a cargo bay legend block (locations, cargo, SCU sizes, layers).",
+          "Expand/collapse header for a cargo bay legend block (locations, cargo, SCU sizes, layers, debugging).",
       },
     },
   },
@@ -42,6 +42,17 @@ function InteractiveDemo() {
       >
         <p className="font-mono text-[0.65rem] text-rsi-text-secondary">
           Layer toggles
+        </p>
+      </CargoLegendSection>
+      <CargoLegendSection
+        title="Debugging"
+        sectionId="debugging"
+        isExpanded={open}
+        onToggle={() => setOpen((value) => !value)}
+        showBorder
+      >
+        <p className="font-mono text-[0.65rem] text-rsi-text-secondary">
+          Box outlines
         </p>
       </CargoLegendSection>
     </div>
