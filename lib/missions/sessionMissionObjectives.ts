@@ -115,8 +115,8 @@ function rowCargoForRole(
   row: HaulingChecklistRow,
   role: "pickup" | "delivery",
 ): CargoDelivery[] {
-  if (row.legKind === role) return row.cargoDeliveries;
-  if (row.legKind === "both") {
+  if (row.routeAction === role) return row.cargoDeliveries;
+  if (row.routeAction === "both") {
     return row.cargoDeliveries.filter(
       (cargo) => cargo.role === role || cargo.role == null,
     );

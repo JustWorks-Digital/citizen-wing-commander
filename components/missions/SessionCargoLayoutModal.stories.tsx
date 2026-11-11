@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout; left edge resizes width (persisted per session). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows per-contract SCU, Contracts total, and bay load.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All stops / Current stop scope toggle; left edge resizes width (persisted per session). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows per-contract SCU, Contracts total, and bay load.",
       },
     },
   },

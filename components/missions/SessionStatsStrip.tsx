@@ -137,7 +137,7 @@ export type SessionRouteProgressStatsProps = {
    * Drives singular / plural “Cargo bay(s)” label. Defaults to 1.
    */
   cargoBayCount?: number;
-  /** Optional control rendered just right of the Cargo bay block (e.g. Controls). */
+  /** Optional control rendered just right of the Cargo bay block. */
   trailing?: ReactNode;
   className?: string;
 };

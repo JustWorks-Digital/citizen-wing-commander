@@ -31,8 +31,8 @@ function missionDeliversAt(
 }
 
 function rowDeliveryCargo(row: HaulingChecklistRow): CargoDelivery[] {
-  if (row.legKind === "pickup") return [];
-  if (row.legKind === "delivery") return row.cargoDeliveries;
+  if (row.routeAction === "pickup") return [];
+  if (row.routeAction === "delivery") return row.cargoDeliveries;
   return row.cargoDeliveries.filter(
     (cargo) => cargo.role === "delivery" || cargo.role == null,
   );

@@ -38,7 +38,7 @@ import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
 import type {
   CargoDelivery,
   HaulingChecklistRow,
-  LegKind,
+  RouteAction,
   ShipStorageLocation,
 } from "@/lib/missions/mockSession";
 
@@ -1421,11 +1421,11 @@ export function placeCargoInZone(
 }
 
 function resolveCargoRole(
-  legKind: LegKind,
+  routeAction: RouteAction,
   role: CargoDelivery["role"],
 ): "pickup" | "delivery" | null {
   if (role) return role;
-  if (legKind === "pickup" || legKind === "delivery") return legKind;
+  if (routeAction === "pickup" || routeAction === "delivery") return routeAction;
   return null;
 }
 
@@ -1642,7 +1642,7 @@ function splitRowCargo(row: HaulingChecklistRow): {
     storage: ShipStorageLocation;
   }> = [];
   for (const cargo of row.cargoDeliveries) {
-    const role = resolveCargoRole(row.legKind, cargo.role);
+    const role = resolveCargoRole(row.routeAction, cargo.role);
     const storage = cargo.shipStorageLocation ?? row.shipStorageLocation;
     if (role === "delivery") deliveries.push({ cargo, storage });
     else if (role === "pickup") pickups.push({ cargo, storage });
@@ -2350,10 +2350,166 @@ export function upcomingDeliveryLocationSlugs(
   return order;
 }
 
+/** Soft (unplaced) onboard lot used when re-packing by cargo type / contract. */
+type SoftOnboardLot = {
+  storage: ShipStorageLocation;
+  cargo: CargoDelivery;
+};
+
+/** One cargo line visible in the bay at a stop (Suggested parity). */
+type SoftVisibleCargo = {
+  cargo: CargoDelivery;
+  storage: ShipStorageLocation;
+  action: CargoGridBoxAction;
+};
+
+function softLotKey(
+  storage: ShipStorageLocation,
+  commoditySlug: string,
+): string {
+  return `${storage}:${commoditySlug}`;
+}
+
+function addSoftOnboardLot(
+  lots: Map<string, SoftOnboardLot>,
+  storage: ShipStorageLocation,
+  cargo: CargoDelivery,
+): void {
+  const key = softLotKey(storage, cargo.commoditySlug);
+  const existing = lots.get(key);
+  if (existing) {
+    existing.cargo = {
+      ...existing.cargo,
+      scu: existing.cargo.scu + cargo.scu,
+    };
+    return;
+  }
+  lots.set(key, {
+    storage,
+    cargo: { ...cargo },
+  });
+}
+
+/** How much of `cargo` is currently aboard in soft lots (preferred bay first). */
+function availableSoftOnboardScu(
+  lots: Map<string, SoftOnboardLot>,
+  storage: ShipStorageLocation,
+  cargo: CargoDelivery,
+): number {
+  let available = 0;
+  const preferredKey = softLotKey(storage, cargo.commoditySlug);
+  const preferred = lots.get(preferredKey);
+  if (preferred) available += preferred.cargo.scu;
+  for (const [key, lot] of lots) {
+    if (key === preferredKey) continue;
+    if (!key.endsWith(`:${cargo.commoditySlug}`)) continue;
+    available += lot.cargo.scu;
+  }
+  return Math.min(cargo.scu, available);
+}
+
 /**
- * Pack this stop’s pickup/delivery crates by commodity into each bay:
+ * Subtract SCU from soft lots (prefer tagged bay, else any bay with commodity).
+ * Mirrors Suggested’s `lotsForDelivery` fallback. Returns SCU actually removed.
+ */
+function consumeSoftOnboardLot(
+  lots: Map<string, SoftOnboardLot>,
+  storage: ShipStorageLocation,
+  cargo: CargoDelivery,
+): number {
+  let remaining = cargo.scu;
+  if (remaining <= 0) return 0;
+  let taken = 0;
+
+  const preferredKey = softLotKey(storage, cargo.commoditySlug);
+  const preferred = lots.get(preferredKey);
+  if (preferred && preferred.cargo.scu > 0) {
+    const take = Math.min(remaining, preferred.cargo.scu);
+    preferred.cargo = { ...preferred.cargo, scu: preferred.cargo.scu - take };
+    remaining -= take;
+    taken += take;
+    if (preferred.cargo.scu <= 0) lots.delete(preferredKey);
+  }
+
+  if (remaining <= 0) return taken;
+
+  for (const [key, lot] of lots) {
+    if (remaining <= 0) break;
+    if (!key.endsWith(`:${cargo.commoditySlug}`)) continue;
+    if (lot.cargo.scu <= 0) continue;
+    const take = Math.min(remaining, lot.cargo.scu);
+    lot.cargo = { ...lot.cargo, scu: lot.cargo.scu - take };
+    remaining -= take;
+    taken += take;
+    if (lot.cargo.scu <= 0) lots.delete(key);
+  }
+  return taken;
+}
+
+/**
+ * Cargo visible in the bay at `rowId` (Suggested parity):
+ * aboard deliveries leaving + this stop’s pickups + stay from earlier pickups.
+ * Returns null when `rowId` is missing.
+ */
+function collectSoftVisibleCargoAtStop(
+  rows: HaulingChecklistRow[],
+  rowId: string,
+): SoftVisibleCargo[] | null {
+  const rowIndex = rows.findIndex((entry) => entry.id === rowId);
+  if (rowIndex < 0) return null;
+
+  const softLots = new Map<string, SoftOnboardLot>();
+  const visible: SoftVisibleCargo[] = [];
+
+  for (let index = 0; index <= rowIndex; index += 1) {
+    const stop = rows[index]!;
+    const { deliveries, pickups } = splitRowCargo(stop);
+    const isTarget = index === rowIndex;
+
+    if (!isTarget) {
+      for (const { cargo, storage } of deliveries) {
+        consumeSoftOnboardLot(softLots, storage, cargo);
+      }
+      for (const { cargo, storage } of pickups) {
+        addSoftOnboardLot(softLots, storage, cargo);
+      }
+      continue;
+    }
+
+    for (const { cargo, storage } of deliveries) {
+      const aboard = availableSoftOnboardScu(softLots, storage, cargo);
+      if (aboard > 0) {
+        visible.push({
+          cargo: { ...cargo, scu: aboard },
+          storage,
+          action: "delivery",
+        });
+      }
+      consumeSoftOnboardLot(softLots, storage, cargo);
+    }
+    for (const { cargo, storage } of pickups) {
+      visible.push({ cargo, storage, action: "pickup" });
+    }
+    for (const lot of softLots.values()) {
+      if (lot.cargo.scu <= 0) continue;
+      visible.push({
+        cargo: lot.cargo,
+        storage: lot.storage,
+        action: "pickup",
+      });
+    }
+  }
+
+  return visible;
+}
+
+/**
+ * Pack crates aboard at this stop by commodity into each bay:
  * same cargo type clusters together (missions merged), using configured
  * `boxSizes` when present, and fitting against the ship grid rules.
+ *
+ * Includes stay cargo from earlier pickups (not only this stop’s lines),
+ * matching Suggested’s before-delivery inventory.
  */
 export function planOccupancyByCargoTypeAtStop(
   sketch: ShipCargoGridSketch,
@@ -2366,8 +2522,9 @@ export function planOccupancyByCargoTypeAtStop(
     packSlotPolicy?: PackSlotPolicy | null;
   },
 ): CargoGridPlacementPlan {
-  const row = rows.find((entry) => entry.id === rowId);
-  if (!row) {
+  const rowIndex = rows.findIndex((entry) => entry.id === rowId);
+  const visible = collectSoftVisibleCargoAtStop(rows, rowId);
+  if (rowIndex < 0 || !visible) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
 
@@ -2380,8 +2537,6 @@ export function planOccupancyByCargoTypeAtStop(
   const packSlotPolicy = options?.packSlotPolicy ?? null;
   const packProgram = options?.packProgram ?? null;
 
-  const { deliveries, pickups } = splitRowCargo(row);
-  const rowIndex = rows.findIndex((entry) => entry.id === rowId);
   // Rank by upcoming delivery *stop* (0 = first unload), not by mission
   // first-seen — multi-stop contracts split crates across locations.
   const locationOrder = upcomingDeliveryLocationSlugs(rows, rowId);
@@ -2395,11 +2550,7 @@ export function planOccupancyByCargoTypeAtStop(
     CargoPlacementItem[]
   >();
 
-  const pushCargo = (
-    cargo: CargoDelivery,
-    storage: ShipStorageLocation,
-    action: CargoGridBoxAction,
-  ) => {
+  for (const { cargo, storage, action } of visible) {
     const segment = segmentFromCargo(cargo);
     const splits =
       action === "delivery"
@@ -2413,9 +2564,9 @@ export function planOccupancyByCargoTypeAtStop(
       const meta = locationMetaForSlug(locationSlug, locationGroups);
       const missionRank = missionPrioritized
         ? locationSlug
-          ? (locationGroups.has(locationSlug)
-              ? (locationGroups.get(locationSlug)! - 1)
-              : defaultRank)
+          ? locationGroups.has(locationSlug)
+            ? locationGroups.get(locationSlug)! - 1
+            : defaultRank
           : defaultRank
         : undefined;
       for (const size of sizes) {
@@ -2432,13 +2583,6 @@ export function planOccupancyByCargoTypeAtStop(
       }
     }
     itemsByStorage.set(storage, list);
-  };
-
-  for (const { cargo, storage } of deliveries) {
-    pushCargo(cargo, storage, "delivery");
-  }
-  for (const { cargo, storage } of pickups) {
-    pushCargo(cargo, storage, "pickup");
   }
 
   const occupied: CargoGridCoord[] = [];
@@ -2482,10 +2626,14 @@ export function planOccupancyByCargoTypeAtStop(
 const MISSION_PRIORITY_LOCATION_COUNT = 2;
 
 /**
- * Pack remaining route deliveries for easy unload:
+ * Pack crates aboard at this stop for easy unload by delivery location:
  * 1) First delivery location — one tight pile, nothing else on top
  * 2) Second location — same
  * 3) Everything else — group by cargo type (not location)
+ *
+ * Uses the same aboard inventory as Suggested / Cargo type (stay + pickups +
+ * deliveries that are actually loaded) — never packs future deliveries that
+ * are not yet aboard.
  */
 export function planOccupancyByMissionLocationAtStop(
   sketch: ShipCargoGridSketch,
@@ -2498,7 +2646,8 @@ export function planOccupancyByMissionLocationAtStop(
   },
 ): CargoGridPlacementPlan {
   const from = rows.findIndex((row) => row.id === rowId);
-  if (from < 0) {
+  const visible = collectSoftVisibleCargoAtStop(rows, rowId);
+  if (from < 0 || !visible) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
 
@@ -2507,59 +2656,81 @@ export function planOccupancyByMissionLocationAtStop(
   const packSlotPolicy = options?.packSlotPolicy ?? null;
   const packProgram = options?.packProgram ?? null;
 
-  const locationOrder: string[] = [];
+  const locationOrder = upcomingDeliveryLocationSlugs(rows, rowId);
+  const locationGroups = locationGroupIndexMap(locationOrder);
+  const defaultRank = locationOrder.length;
+  const deliveryPool = buildDeliveryScuPool(rows, from);
+  const targetStop = rows[from]!;
+
   const itemsByStorage = new Map<
     CargoGridStorageLocation,
     CargoPlacementItem[]
   >();
 
-  for (let index = from; index < rows.length; index += 1) {
-    const stop = rows[index]!;
-    const { deliveries } = splitRowCargo(stop);
-    if (deliveries.length === 0) continue;
-    if (!locationOrder.includes(stop.locationSlug)) {
-      locationOrder.push(stop.locationSlug);
-    }
-    const missionRank = locationOrder.indexOf(stop.locationSlug);
-    const locationGroupIndex = missionRank + 1;
-    const locationName =
-      getLocationBySlug(stop.locationSlug)?.name ?? stop.locationSlug;
-    const isPriorityLocation = missionRank < priorityCount;
-    // Priority missions sit on opposite ends (rear vs front), never mid-bay.
-    const preferBayEnd: "low-x" | "high-x" | undefined = isPriorityLocation
-      ? missionRank === 0
-        ? "high-x"
-        : "low-x"
-      : undefined;
+  for (const { cargo, storage, action } of visible) {
+    const segment = segmentFromCargo(cargo);
+    const splits =
+      action === "delivery"
+        ? [
+            {
+              locationSlug: targetStop.locationSlug,
+              scu: cargo.scu,
+            },
+          ]
+        : takeDeliveryLocationScuSplits(deliveryPool, cargo, cargo.scu);
+    const list = itemsByStorage.get(storage) ?? [];
+    for (const { locationSlug, sizes } of sizesByDeliveryLocation(
+      segment,
+      splits,
+    )) {
+      const resolvedSlug = locationSlug || "";
+      const missionRank = resolvedSlug
+        ? locationGroups.has(resolvedSlug)
+          ? locationGroups.get(resolvedSlug)! - 1
+          : defaultRank
+        : defaultRank;
+      const locationGroupIndex =
+        resolvedSlug && locationGroups.has(resolvedSlug)
+          ? locationGroups.get(resolvedSlug)!
+          : 0;
+      const locationName = resolvedSlug
+        ? (getLocationBySlug(resolvedSlug)?.name ?? resolvedSlug)
+        : segment.commodityName;
+      const isPriorityLocation = missionRank < priorityCount;
+      // Priority missions sit on opposite ends (rear vs front), never mid-bay.
+      const preferBayEnd: "low-x" | "high-x" | undefined = isPriorityLocation
+        ? missionRank === 0
+          ? "high-x"
+          : "low-x"
+        : undefined;
 
-    for (const { cargo, storage } of deliveries) {
-      const segment = segmentFromCargo(cargo);
-      const list = itemsByStorage.get(storage) ?? [];
-      for (const size of sizesForSegment(segment)) {
+      for (const size of sizes) {
         list.push({
           size,
           commoditySlug: segment.commoditySlug,
           commodityName: segment.commodityName,
           color: segment.color,
           color2: segment.color2,
-          action: "delivery",
+          action,
           missionRank,
           // Priority locations: whole stop is one pile. Rest: cargo type only.
           clusterKey: isPriorityLocation
-            ? stop.locationSlug
+            ? resolvedSlug || segment.commoditySlug
             : segment.commoditySlug,
           clusterLabel: isPriorityLocation
             ? locationName
             : segment.commodityName,
-          regionKey: isPriorityLocation ? stop.locationSlug : undefined,
+          regionKey: isPriorityLocation
+            ? resolvedSlug || undefined
+            : undefined,
           preferBayEnd,
-          deliveryLocationSlug: stop.locationSlug,
-          deliveryLocationName: locationName,
-          locationGroupIndex,
+          deliveryLocationSlug: resolvedSlug || undefined,
+          deliveryLocationName: resolvedSlug ? locationName : undefined,
+          locationGroupIndex: locationGroupIndex || undefined,
         });
       }
-      itemsByStorage.set(storage, list);
     }
+    itemsByStorage.set(storage, list);
   }
 
   const occupied: CargoGridCoord[] = [];

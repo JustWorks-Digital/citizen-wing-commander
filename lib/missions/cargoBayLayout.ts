@@ -2,7 +2,7 @@ import { getCommodityBySlug, getLocationBySlug } from "@/lib/fixtures";
 import {
   shipStorageLocationValues,
   type HaulingChecklistRow,
-  type LegKind,
+  type RouteAction,
   type ShipStorageLocation,
 } from "@/lib/missions/mockSession";
 
@@ -33,11 +33,11 @@ export type CargoBaySection = {
 export const CARGO_BAY_TILES_PER_ROW = 2;
 
 function resolveRole(
-  legKind: LegKind,
+  routeAction: RouteAction,
   role: "pickup" | "delivery" | undefined,
 ): "pickup" | "delivery" | null {
   if (role) return role;
-  if (legKind === "pickup" || legKind === "delivery") return legKind;
+  if (routeAction === "pickup" || routeAction === "delivery") return routeAction;
   return null;
 }
 
@@ -73,10 +73,10 @@ export function buildCargoBaySections(
   const buckets = new Map<string, CargoBayTile>();
 
   for (const row of rows) {
-    if (row.legKind === "quantum") continue;
+    if (row.routeAction === "quantum") continue;
 
     for (const cargo of row.cargoDeliveries) {
-      const role = resolveRole(row.legKind, cargo.role);
+      const role = resolveRole(row.routeAction, cargo.role);
       if (!role) continue;
 
       const zone = cargo.shipStorageLocation ?? row.shipStorageLocation;

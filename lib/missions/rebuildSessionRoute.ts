@@ -18,7 +18,7 @@ import {
 import type {
   CargoDelivery,
   HaulingChecklistRow,
-  LegKind,
+  RouteAction,
   SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
@@ -26,12 +26,12 @@ import { mergePreservedQuantumRows } from "@/lib/missions/quantumTravel";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 
 function resolveCargoRole(
-  legKind: LegKind,
+  routeAction: RouteAction,
   role: CargoDelivery["role"],
 ): "pickup" | "delivery" | null {
   if (role === "pickup" || role === "delivery") return role;
-  if (legKind === "pickup") return "pickup";
-  if (legKind === "delivery") return "delivery";
+  if (routeAction === "pickup") return "pickup";
+  if (routeAction === "delivery") return "delivery";
   return null;
 }
 
@@ -299,7 +299,7 @@ function stampMissionBoxSizesOntoRows(
     for (const [rowIndex, row] of nextRows.entries()) {
       for (const [cargoIndex, cargo] of row.cargoDeliveries.entries()) {
         if (!cargoBelongs(cargo, assignment.commoditySlug)) continue;
-        const role = resolveCargoRole(row.legKind, cargo.role);
+        const role = resolveCargoRole(row.routeAction, cargo.role);
         if (role !== "pickup" && role !== "delivery") continue;
         const hit = {
           rowIndex,

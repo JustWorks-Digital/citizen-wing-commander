@@ -10,7 +10,7 @@
   "rows": [
     {
       "id": "leg-1",
-      "legKind": "pickup",
+      "routeAction": "pickup",
       "locationSlug": "hdms-lathan",
       "cargoDeliveries": [
         { "commoditySlug": "iron-ore", "scu": 2, "shipStorageLocation": "rear" },
@@ -22,7 +22,7 @@
     },
     {
       "id": "leg-2",
-      "legKind": "pickup",
+      "routeAction": "pickup",
       "locationSlug": "hdms-bezdek",
       "cargoDeliveries": [
         { "commoditySlug": "iron-ore", "scu": 2, "shipStorageLocation": "rear" },
@@ -34,7 +34,7 @@
     },
     {
       "id": "leg-3",
-      "legKind": "pickup",
+      "routeAction": "pickup",
       "locationSlug": "hdpc-cassillo",
       "cargoDeliveries": [
         { "commoditySlug": "iron-ore", "scu": 85, "shipStorageLocation": "middle" },
@@ -46,7 +46,7 @@
     },
     {
       "id": "leg-4",
-      "legKind": "both",
+      "routeAction": "both",
       "locationSlug": "everus-harbor",
       "cargoDeliveries": [
         { "commoditySlug": "iron-ore", "scu": 89, "role": "delivery", "shipStorageLocation": "middle" },
@@ -65,7 +65,7 @@
     },
     {
       "id": "leg-5",
-      "legKind": "delivery",
+      "routeAction": "delivery",
       "locationSlug": "hdpc-cassillo",
       "cargoDeliveries": [
         { "commoditySlug": "quartz", "scu": 11, "shipStorageLocation": "middle" },
@@ -77,7 +77,7 @@
     },
     {
       "id": "leg-6",
-      "legKind": "delivery",
+      "routeAction": "delivery",
       "locationSlug": "hdpc-farnesway",
       "cargoDeliveries": [
         { "commoditySlug": "tungsten", "scu": 9, "shipStorageLocation": "rear" }
@@ -88,7 +88,7 @@
     },
     {
       "id": "leg-7",
-      "legKind": "delivery",
+      "routeAction": "delivery",
       "locationSlug": "lorville",
       "cargoDeliveries": [
         { "commoditySlug": "stims", "scu": 96, "shipStorageLocation": "front" },

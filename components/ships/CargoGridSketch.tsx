@@ -177,7 +177,7 @@ export type CargoGridSketchProps = {
   hideLegend?: boolean;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
-  /** Hide Peel (e.g. parent hosts it next to Sorting). */
+  /** Hide Peel (e.g. parent hosts it next to Packing). */
   hidePeel?: boolean;
   /** Controlled peel; falls back to internal state when omitted. */
   peelStack?: boolean;

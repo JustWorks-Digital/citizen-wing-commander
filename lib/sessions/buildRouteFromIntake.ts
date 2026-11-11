@@ -252,10 +252,10 @@ function bucketsToLegs(ordered: StopBucket[]): IncomingLeg[] {
   return ordered.map((bucket, index) => {
     const hasP = bucket.pickups.length > 0;
     const hasD = bucket.deliveries.length > 0;
-    const legKind = hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
+    const routeAction = hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
     const bay = defaultBay(bucket.locationSlug);
     const cargo =
-      legKind === "both"
+      routeAction === "both"
         ? [...bucket.deliveries, ...bucket.pickups]
         : hasP
           ? bucket.pickups.map(({ commodity, scu, shipStorageLocation }) => ({
@@ -271,7 +271,7 @@ function bucketsToLegs(ordered: StopBucket[]): IncomingLeg[] {
 
     return {
       id: `leg-${index + 1}`,
-      legKind,
+      routeAction,
       location: bucket.location,
       shipStorageLocation: bay,
       cargo,

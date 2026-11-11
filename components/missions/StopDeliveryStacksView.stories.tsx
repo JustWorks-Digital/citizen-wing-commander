@@ -5,7 +5,7 @@ import { StopDeliveryStacksView } from "./StopDeliveryStacksView";
 
 const splitMissionRow: HaulingChecklistRow = {
   id: "leg-split",
-  legKind: "delivery",
+  routeAction: "delivery",
   locationSlug: "baijini-point",
   shipStorageLocation: "middle",
   distanceToNext: null,

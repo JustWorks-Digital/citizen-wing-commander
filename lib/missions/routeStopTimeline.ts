@@ -2,7 +2,7 @@ import { getLocationBySlug } from "@/lib/fixtures";
 import type {
   DistanceToNext,
   HaulingChecklistRow,
-  LegKind,
+  RouteAction,
 } from "@/lib/missions/mockSession";
 import {
   distanceBetweenLocationSlugs,
@@ -16,7 +16,7 @@ export type RouteTimelineNode = {
   kind: RouteTimelineNodeKind;
   locationSlug: string;
   locationName: string;
-  legKind: LegKind | null;
+  routeAction: RouteAction | null;
   /** 1-based stop number; null for start. */
   stopNumber: number | null;
   isCompleted: boolean;
@@ -86,7 +86,7 @@ export function buildRouteStopTimeline(input: {
       kind: "start",
       locationSlug: startSlug,
       locationName: locationName(startSlug),
-      legKind: null,
+      routeAction: null,
       stopNumber: null,
       isCompleted: lastCompletedIndex >= 0,
       isNext: false,
@@ -104,7 +104,7 @@ export function buildRouteStopTimeline(input: {
       kind: "stop",
       locationSlug: row.locationSlug,
       locationName: locationName(row.locationSlug),
-      legKind: row.legKind,
+      routeAction: row.routeAction,
       stopNumber: i + 1,
       isCompleted: row.isCompleted,
       isNext: i === nextIncompleteIndex,

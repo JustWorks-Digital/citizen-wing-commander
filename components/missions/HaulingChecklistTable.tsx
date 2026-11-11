@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { RouteChecklistMenu } from "@/components/missions/RouteChecklistMenu";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import {
@@ -35,7 +36,7 @@ import {
   formatDistanceToNext,
   isQuantumTravelRow,
   type HaulingChecklistRow,
-  type LegKind,
+  type RouteAction,
 } from "@/lib/missions/mockSession";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import {
@@ -68,7 +69,7 @@ export type HaulingChecklistTableProps = {
   onFocusStop?: (rowId: string) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
-  /** Right side of the toolbar, left of the Hide history / N hidden link (e.g. total time). */
+  /** Right side of the toolbar, left of the ⋯ menu (e.g. total time). */
   toolbarEnd?: ReactNode;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
@@ -229,14 +230,14 @@ function CopyIcon({ className }: { className?: string }) {
   );
 }
 
-function legKindBadges(legKind: LegKind): { label: string; variant: BadgeVariant }[] {
-  if (legKind === "quantum") {
+function routeActionBadges(routeAction: RouteAction): { label: string; variant: BadgeVariant }[] {
+  if (routeAction === "quantum") {
     return [{ label: "Quantum", variant: "neutral" }];
   }
-  if (legKind === "pickup") {
+  if (routeAction === "pickup") {
     return [{ label: "Pickup", variant: "accent" }];
   }
-  if (legKind === "delivery") {
+  if (routeAction === "delivery") {
     return [{ label: "Delivery", variant: "success" }];
   }
   return [
@@ -583,7 +584,7 @@ function LocationHeader({
   const imageSrc = getLocationImageSrc(row.locationSlug);
   const shortName = getLocationShortName(row.locationSlug);
 
-  const showLegKind = !compact;
+  const showRouteAction = !compact;
   const showLocationTags = hasOutdoorFreightElevator;
 
   return (
@@ -700,15 +701,15 @@ function LocationHeader({
             </span>
           ) : null}
         </div>
-        {showLegKind || showLocationTags ? (
+        {showRouteAction || showLocationTags ? (
           <div
             className={[
               "flex flex-wrap items-center gap-2",
               align === "end" ? "justify-end" : "",
             ].join(" ")}
           >
-            {showLegKind
-              ? legKindBadges(row.legKind).map((badge) => (
+            {showRouteAction
+              ? routeActionBadges(row.routeAction).map((badge) => (
                   <Badge key={badge.label} variant={badge.variant} size="sm">
                     {badge.label}
                   </Badge>
@@ -814,7 +815,7 @@ function QuantumTravelRow({
   const location = locationFixture?.name ?? fromSlug;
   const stubRow: HaulingChecklistRow = {
     id: rowId,
-    legKind: "quantum",
+    routeAction: "quantum",
     locationSlug: fromSlug,
     quantumToLocationSlug: destinationSlug,
     cargoDeliveries: [],
@@ -997,7 +998,7 @@ function QuantumTravelComposer({
   const shops = toSlug ? listLocationShops(toSlug) : [];
   const stubRow: HaulingChecklistRow = {
     id: "quantum-draft",
-    legKind: "quantum",
+    routeAction: "quantum",
     locationSlug: fromSlug,
     cargoDeliveries: [],
     shipStorageLocation: "front",
@@ -1789,35 +1790,11 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       {toolbarStart}
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {toolbarEnd}
-        <button
-          type="button"
-          aria-pressed={hideCompleted}
-          disabled={completedCount === 0}
-          onClick={() => setHideCompleted((value) => !value)}
-          className={[
-            "ml-4 pl-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-secondary transition-colors hover:text-rsi-text",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-            "disabled:cursor-not-allowed disabled:opacity-40",
-          ].join(" ")}
-        >
-          <span className="inline-grid justify-items-end">
-            <span
-              className="invisible col-start-1 row-start-1 whitespace-nowrap"
-              aria-hidden
-            >
-              Hide history
-            </span>
-            <span
-              className="invisible col-start-1 row-start-1 whitespace-nowrap"
-              aria-hidden
-            >
-              {completedCount} hidden
-            </span>
-            <span className="col-start-1 row-start-1 whitespace-nowrap">
-              {hideCompleted ? `${completedCount} hidden` : "Hide history"}
-            </span>
-          </span>
-        </button>
+        <RouteChecklistMenu
+          hideCompleted={hideCompleted}
+          completedCount={completedCount}
+          onToggleHistory={() => setHideCompleted((value) => !value)}
+        />
       </div>
     </div>
   );
@@ -2126,8 +2103,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           }
 
           const cargoFallbackRole =
-            row.legKind === "pickup" || row.legKind === "delivery"
-              ? row.legKind
+            row.routeAction === "pickup" || row.routeAction === "delivery"
+              ? row.routeAction
               : null;
           const cargoLines = describeCargoDeliveries(
             row.cargoDeliveries,

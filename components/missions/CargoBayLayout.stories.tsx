@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
-import { CargoBayLayout } from "./CargoBayLayout";
+import {
+  CargoBayLayout,
+  type CargoBayStopScope,
+} from "./CargoBayLayout";
 import { SessionInventoryStat } from "./SessionStatsStrip";
 
 const meta = {
@@ -11,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session cargo layout as the ship’s bay grid at the active stop, with 2D/Split/3D tabs (default Split), Sorting + Peel toggles (same chrome row), left Sorting panel (Suggested / Cargo type / Contract based / Manual), right Legend, Front/Rear rails, optional inventory beside the title (per-contract SCU + totals), and a bottom drag handle to resize panel height. Manual mode: drag crates on 2D (3D follows); session-local presets as neutral badges. Legend/Sorting start hidden on new sessions; view tab + chrome + Manual presets persist per session in localStorage (survives modal close).",
+          "Session cargo layout as the ship’s bay grid at the active stop, with optional All stops / Current stop scope (modal), 2D/Split/3D tabs (default Split), Packing + Peel toggles (same chrome row), left Packing panel (Suggested / Cargo type / Contract based / Manual), right Legend, Front/Rear rails, optional inventory beside the title (per-contract SCU + totals), and a bottom drag handle to resize panel height. Manual mode: drag crates on 2D (3D follows); session-local presets as neutral badges. Legend/Packing start hidden on new sessions; view tab + chrome + Manual presets persist per session in localStorage (survives modal close).",
       },
     },
   },
@@ -53,6 +57,20 @@ export const WithInventory: Story = {
         availableScu={24}
       />
     ),
+  },
+};
+
+export const WithStopScope: Story = {
+  render: function StopScopeDemo(args) {
+    const [stopScope, setStopScope] = useState<CargoBayStopScope>("current");
+    return (
+      <CargoBayLayout
+        {...args}
+        stopScope={stopScope}
+        onStopScopeChange={setStopScope}
+        focusedStopId={mockSessionChecklist.rows[0]?.id ?? null}
+      />
+    );
   },
 };
 

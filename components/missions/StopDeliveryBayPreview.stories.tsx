@@ -8,20 +8,20 @@ import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 const deliveryRow =
   mockSessionChecklist.rows.find((row) =>
     row.cargoDeliveries.some(
-      (cargo) => cargo.role === "delivery" || row.legKind === "delivery",
+      (cargo) => cargo.role === "delivery" || row.routeAction === "delivery",
     ),
   ) ?? mockSessionChecklist.rows[0]!;
 
 const pickupRow =
   mockSessionChecklist.rows.find((row) =>
     row.cargoDeliveries.some(
-      (cargo) => cargo.role === "pickup" || row.legKind === "pickup",
+      (cargo) => cargo.role === "pickup" || row.routeAction === "pickup",
     ),
   ) ?? mockSessionChecklist.rows[0]!;
 
 const bothRow: HaulingChecklistRow = {
   id: "leg-both",
-  legKind: "both",
+  routeAction: "both",
   locationSlug: "orison",
   shipStorageLocation: "front",
   distanceToNext: null,
@@ -48,7 +48,7 @@ const bothRow: HaulingChecklistRow = {
 const hangarPileRows: HaulingChecklistRow[] = [
   {
     id: "pile-pickup",
-    legKind: "pickup",
+    routeAction: "pickup",
     locationSlug: "everus-harbor",
     shipStorageLocation: "front",
     distanceToNext: { value: 1, unit: "Mm" },
@@ -72,7 +72,7 @@ const hangarPileRows: HaulingChecklistRow[] = [
   },
   {
     id: "pile-cassillo",
-    legKind: "delivery",
+    routeAction: "delivery",
     locationSlug: "hdpc-cassillo",
     shipStorageLocation: "front",
     distanceToNext: { value: 1, unit: "Mm" },
@@ -96,7 +96,7 @@ const hangarPileRows: HaulingChecklistRow[] = [
   },
   {
     id: "pile-lorville",
-    legKind: "delivery",
+    routeAction: "delivery",
     locationSlug: "lorville",
     shipStorageLocation: "front",
     distanceToNext: null,

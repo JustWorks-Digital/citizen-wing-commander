@@ -39,7 +39,7 @@ export function createQuantumTravelRow(input: {
   const reasonShopSlug = input.reasonShopSlug?.trim() || null;
   return {
     id: input.id ?? `quantum-${crypto.randomUUID()}`,
-    legKind: "quantum",
+    routeAction: "quantum",
     locationSlug: fromSlug,
     quantumToLocationSlug: toSlug,
     reasonShopSlug,

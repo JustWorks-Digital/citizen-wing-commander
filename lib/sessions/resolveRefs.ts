@@ -12,7 +12,7 @@ import { resolveLocationShopSlug } from "@/lib/fixtures/locationShops";
 import {
   shipStorageLocationValues,
   type CargoDelivery,
-  type LegKind,
+  type RouteAction,
   type ShipStorageLocation,
 } from "@/lib/missions/mockSession";
 
@@ -230,9 +230,9 @@ export function resolveShipStorageLocation(
 
 export type IncomingLeg = {
   id?: string;
-  legKind: LegKind;
+  routeAction: RouteAction;
   location: string;
-  /** Destination location for `legKind: "quantum"` (name or slug). */
+  /** Destination location for `routeAction: "quantum"` (name or slug). */
   quantumToLocation?: string | null;
   /** Shop reason for quantum legs (name or slug, e.g. Platinum Bay). */
   reasonShop?: string | null;
@@ -254,7 +254,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
 
   let quantumToLocationSlug: string | null = null;
   let reasonShopSlug: string | null = null;
-  if (leg.legKind === "quantum") {
+  if (leg.routeAction === "quantum") {
     const toRaw = leg.quantumToLocation?.trim() || "";
     if (!toRaw) {
       return {
@@ -295,12 +295,12 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
     };
   }
 
-  if (leg.legKind === "quantum") {
+  if (leg.routeAction === "quantum") {
     return {
       ok: true as const,
       row: {
         id: leg.id?.trim() || `quantum-${index + 1}`,
-        legKind: "quantum" as const,
+        routeAction: "quantum" as const,
         locationSlug,
         quantumToLocationSlug,
         reasonShopSlug,
@@ -321,7 +321,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
         error: `Unknown commodity: ${line.commodity}`,
       };
     }
-    if (leg.legKind === "both" && !line.role) {
+    if (leg.routeAction === "both" && !line.role) {
       return {
         ok: false as const,
         error: `Cargo lines on both stops need role pickup or delivery (${line.commodity})`,
@@ -340,7 +340,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
         };
       }
       lineStorage = resolvedLineStorage;
-    } else if (leg.legKind === "both") {
+    } else if (leg.routeAction === "both") {
       return {
         ok: false as const,
         error: `Cargo lines on both stops need shipStorageLocation (${line.commodity})`,
@@ -359,7 +359,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
     ok: true as const,
     row: {
       id: leg.id?.trim() || `leg-${index + 1}`,
-      legKind: leg.legKind,
+      routeAction: leg.routeAction,
       locationSlug,
       cargoDeliveries,
       shipStorageLocation: rowShipStorage,

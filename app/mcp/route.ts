@@ -65,49 +65,67 @@ const cargoLineSchema = z.object({
     .enum(["pickup", "delivery"])
     .optional()
     .describe(
-      "Required on legKind both: whether this cargo line is picked up or delivered at the stop.",
+      "Required when routeAction is both: whether this cargo line is picked up or delivered at the stop.",
     ),
   shipStorageLocation: shipStorageSchema
     .optional()
     .describe(
-      "Bay zone for this cargo line. Required on legKind both when pickup and delivery use different zones; otherwise falls back to the leg shipStorageLocation.",
+      "Bay zone for this cargo line. Required when routeAction is both and pickup/delivery use different zones; otherwise falls back to the stop shipStorageLocation.",
     ),
 });
 
-const legSchema = z.object({
-  id: z.string().optional().describe("Stable row id; auto-generated if omitted"),
-  legKind: z.enum(["pickup", "delivery", "both", "quantum"]),
-  location: z
-    .string()
-    .describe("Star Citizen location name or fixture slug (e.g. Area18)"),
-  quantumToLocation: z
-    .string()
-    .optional()
-    .describe(
-      "Required when legKind is quantum: destination location name or slug.",
-    ),
-  reasonShop: z
-    .string()
-    .optional()
-    .describe(
-      "Optional shop reason for quantum legs (name or slug, e.g. Platinum Bay, cargo-center). Prefer list_location_shops for the destination.",
-    ),
-  cargo: z.array(cargoLineSchema).optional().default([]),
-  shipStorageLocation: shipStorageSchema
-    .optional()
-    .default("front")
-    .describe(
-      "Default cargo bay zone for the leg (used when cargo lines omit shipStorageLocation). Defaults to front for quantum legs.",
-    ),
-  distanceToNext: z
-    .object({
-      value: z.number(),
-      unit: distanceUnitSchema,
-    })
-    .nullable()
-    .optional(),
-  isCompleted: z.boolean().optional().default(false),
-});
+// TODO: remove legKind preprocess once MCP clients send routeAction only.
+const legSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return value;
+    }
+    const row = value as Record<string, unknown>;
+    if (row.routeAction == null && typeof row.legKind === "string") {
+      const { legKind, ...rest } = row;
+      return { ...rest, routeAction: legKind };
+    }
+    return value;
+  },
+  z.object({
+    id: z.string().optional().describe("Stable row id; auto-generated if omitted"),
+    routeAction: z
+      .enum(["pickup", "delivery", "both", "quantum"])
+      .describe(
+        "What this checklist row does on the route (pickup / delivery / both / quantum). Legacy alias: legKind.",
+      ),
+    location: z
+      .string()
+      .describe("Star Citizen location name or fixture slug (e.g. Area18)"),
+    quantumToLocation: z
+      .string()
+      .optional()
+      .describe(
+        "Required when routeAction is quantum: destination location name or slug.",
+      ),
+    reasonShop: z
+      .string()
+      .optional()
+      .describe(
+        "Optional shop reason for quantum travel (name or slug, e.g. Platinum Bay, cargo-center). Prefer list_location_shops for the destination.",
+      ),
+    cargo: z.array(cargoLineSchema).optional().default([]),
+    shipStorageLocation: shipStorageSchema
+      .optional()
+      .default("front")
+      .describe(
+        "Default cargo bay zone for the stop (used when cargo lines omit shipStorageLocation). Defaults to front for quantum travel.",
+      ),
+    distanceToNext: z
+      .object({
+        value: z.number(),
+        unit: distanceUnitSchema,
+      })
+      .nullable()
+      .optional(),
+    isCompleted: z.boolean().optional().default(false),
+  }),
+);
 
 const handler = createMcpHandler(
   (server) => {

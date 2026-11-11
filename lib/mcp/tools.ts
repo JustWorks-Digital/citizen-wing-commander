@@ -209,7 +209,7 @@ function presentSession(session: SessionChecklistModel) {
     totalTime: formatSessionDuration(getSessionElapsedMs(session)),
     rows: session.rows.map((row) => ({
       id: row.id,
-      legKind: row.legKind,
+      routeAction: row.routeAction,
       locationSlug: row.locationSlug,
       locationName: getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug,
       quantumToLocationSlug: row.quantumToLocationSlug ?? null,
@@ -224,8 +224,8 @@ function presentSession(session: SessionChecklistModel) {
         : null,
       cargo: formatCargoDeliveries(
         row.cargoDeliveries,
-        row.legKind === "pickup" || row.legKind === "delivery"
-          ? row.legKind
+        row.routeAction === "pickup" || row.routeAction === "delivery"
+          ? row.routeAction
           : null,
       ),
       cargoDeliveries: row.cargoDeliveries.map((line) => ({
@@ -1047,8 +1047,8 @@ export async function toolSetMissionScuBoxSplits(input: {
             (cargo) =>
               cargo.missionId === missionId &&
               (cargo.role === "pickup" ||
-                row.legKind === "pickup" ||
-                row.legKind === "both"),
+                row.routeAction === "pickup" ||
+                row.routeAction === "both"),
           )
           .map((cargo) => ({
             locationSlug: row.locationSlug,
@@ -1842,7 +1842,7 @@ export async function toolInsertQuantumTravel(input: {
     const next = await saveChecklistSession({ ...session, rows });
     const inserted = next.rows.find(
       (row) =>
-        row.legKind === "quantum" &&
+        row.routeAction === "quantum" &&
         row.locationSlug === fromSlug &&
         row.quantumToLocationSlug === toSlug &&
         row.reasonShopSlug === reasonShopSlug,
@@ -1882,7 +1882,7 @@ export async function toolSetQuantumTravelReason(input: {
         knownRowIds: session.rows.map((entry) => entry.id),
       });
     }
-    if (row.legKind !== "quantum") {
+    if (row.routeAction !== "quantum") {
       return textResult({
         error: `Row ${input.rowId} is not a quantum travel leg`,
       });

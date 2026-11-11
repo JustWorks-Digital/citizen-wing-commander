@@ -16,7 +16,10 @@ import {
   MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
   MIN_CARGO_BAY_LAYOUT_WIDTH_PX,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
-import { CargoBayLayout } from "./CargoBayLayout";
+import {
+  CargoBayLayout,
+  type CargoBayStopScope,
+} from "./CargoBayLayout";
 
 export type SessionCargoLayoutModalProps = {
   open: boolean;
@@ -46,6 +49,7 @@ export function SessionCargoLayoutModal({
   const titleId = useId();
   const { widthPx, setWidthPx, resetWidthPx } =
     useSessionCargoBayLayoutWidth(sessionId);
+  const [stopScope, setStopScope] = useState<CargoBayStopScope>("current");
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
@@ -183,6 +187,8 @@ export function SessionCargoLayoutModal({
             rows={rows}
             shipSlug={shipSlug}
             focusedStopId={focusedStopId}
+            stopScope={stopScope}
+            onStopScopeChange={setStopScope}
             sessionId={sessionId}
             headerAside={headerAside}
             className="max-h-[min(85vh,52rem)] overflow-y-auto overscroll-contain"

@@ -13,6 +13,7 @@ import {
 import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
+import { peakOnboardStopId } from "@/lib/missions/cargoInventory";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
   MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
@@ -46,12 +47,21 @@ import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 type SortingMode = CargoBayPackMode | "manual";
 
+/** Which stop drives bay occupancy in the cargo grid. */
+export type CargoBayStopScope = "current" | "all";
+
 export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
   /** Active session ship — drives which cargo grid to show. */
   shipSlug?: string | null;
   /** Checklist stop to preview (completed or not). Defaults to next incomplete. */
   focusedStopId?: string | null;
+  /**
+   * `current` = focused / next stop. `all` = peak-onboard stop (fullest load).
+   * Toggle UI shows when `onStopScopeChange` is set.
+   */
+  stopScope?: CargoBayStopScope;
+  onStopScopeChange?: (scope: CargoBayStopScope) => void;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
   /** Optional session stats — right of the Cargo bays title. */
@@ -67,6 +77,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   rows,
   shipSlug = null,
   focusedStopId = null,
+  stopScope = "current",
+  onStopScopeChange,
   sessionId = null,
   headerAside = null,
   className,
@@ -124,12 +136,19 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     !isManual && packMode === "by-cargo-type" && supportsPrioritized;
 
   const activeRow = useMemo(() => {
+    if (stopScope === "all") {
+      const peakId = peakOnboardStopId(rows);
+      if (peakId) {
+        const peakRow = rows.find((row) => row.id === peakId);
+        if (peakRow) return peakRow;
+      }
+    }
     if (focusedStopId) {
       const hit = rows.find((row) => row.id === focusedStopId);
       if (hit) return hit;
     }
     return rows.find((row) => !row.isCompleted) ?? rows[rows.length - 1] ?? null;
-  }, [rows, focusedStopId]);
+  }, [rows, focusedStopId, stopScope]);
 
   const stopId = activeRow?.id ?? null;
   const manualStop = useMemo(
@@ -445,6 +464,39 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
             ) : null}
+            {onStopScopeChange ? (
+              <div
+                role="tablist"
+                aria-label="Cargo stop scope"
+                className="mt-2 inline-flex w-fit rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 p-0.5"
+              >
+                {(
+                  [
+                    { id: "all", label: "All stops" },
+                    { id: "current", label: "Current stop" },
+                  ] as const
+                ).map((option) => {
+                  const selected = stopScope === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => onStopScopeChange(option.id)}
+                      className={[
+                        "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                        selected
+                          ? "bg-rsi-accent-muted/50 text-rsi-accent"
+                          : "text-rsi-text-muted hover:text-rsi-text",
+                      ].join(" ")}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
           {headerAside ? (
             <div className="ml-auto min-w-0 shrink">{headerAside}</div>
@@ -499,7 +551,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 <button
                   type="button"
                   aria-pressed={!sortingHidden}
-                  aria-label={sortingHidden ? "Show sorting" : "Hide sorting"}
+                  aria-label={sortingHidden ? "Show packing" : "Hide packing"}
                   onClick={() => setSortingHidden(!sortingHidden)}
                   className={[
                     "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
@@ -508,7 +560,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                       : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
                   ].join(" ")}
                 >
-                  Sorting
+                  Packing
                 </button>
                 {showPeelToggle ? (
                   <button
@@ -544,7 +596,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               {!sortingHidden ? (
                 <div
                   role="region"
-                  aria-label="Cargo sorting"
+                  aria-label="Cargo packing"
                   className="pointer-events-auto absolute top-8 left-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
                 >
                   <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">

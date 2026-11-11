@@ -125,7 +125,7 @@ Optimize **geography**, not contract order.
 
 1. Cluster by body: moon outposts (Arial) → Hurston surface HDPCs → Everus (orbit) → remaining surface drops → city spaceport last when it only receives.
 2. Visit a stop **once** when possible. If a site both supplies and receives different cargo at different times (need cargo from Everus first), allow a second visit.
-3. At hubs (e.g. Everus), use `legKind: "both"` with per-line `role: "pickup" | "delivery"`.
+3. At hubs (e.g. Everus), use `routeAction: "both"` with per-line `role: "pickup" | "delivery"`.
 4. Merge same-stop same-direction cargo from multiple contracts into one row’s `cargo[]`.
 5. Multi-site pickups that share a total SCU (e.g. Lathan + Bezdek for 4 SCU iron): split totals across sites when exact per-site amounts are unknown; note the split in the session name or tool message.
 6. `shipStorageLocation` (and per-cargo overrides on `both` stops): group by destination bay — e.g. city drops `front`, HDPC drops `middle`, moon/small `rear`.
@@ -139,7 +139,7 @@ Optimize **geography**, not contract order.
   "ships": ["C2 Hercules"],
   "legs": [
     {
-      "legKind": "pickup",
+      "routeAction": "pickup",
       "location": "HDMS-Lathan",
       "shipStorageLocation": "rear",
       "cargo": [{ "commodity": "Iron (Ore)", "scu": 2 }],
@@ -147,7 +147,7 @@ Optimize **geography**, not contract order.
       "isCompleted": false
     },
     {
-      "legKind": "both",
+      "routeAction": "both",
       "location": "Everus Harbor",
       "shipStorageLocation": "front",
       "cargo": [
@@ -173,7 +173,7 @@ Optimize **geography**, not contract order.
 Rules:
 
 - `legs` currently requires **≥ 1** row (empty clear is via checklist API / future clear tool).
-- On `legKind: "both"`, every cargo line needs `role`.
+- On `routeAction: "both"`, every cargo line needs `role`.
 - Prefer different `shipStorageLocation` on pickup vs delivery lines so the table shows separate colored bay lines.
 - After write: `get_hauling_checklist` and sanity-check stop order, SCU totals, and fixture names.
 

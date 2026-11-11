@@ -10,8 +10,8 @@ function applyCargoToOnboard(
   let peak = Math.max(0, current);
   for (const row of rows) {
     if (options?.stopAfterIncomplete && !row.isCompleted) break;
-    if (row.legKind === "quantum") continue;
-    const fallback = row.legKind === "both" ? null : row.legKind;
+    if (row.routeAction === "quantum") continue;
+    const fallback = row.routeAction === "both" ? null : row.routeAction;
     for (const cargo of row.cargoDeliveries) {
       const role = cargo.role ?? fallback;
       if (role === "pickup") current += cargo.scu;
@@ -54,8 +54,8 @@ export function estimateOnboardScuByStop(
   for (const row of rows) {
     let pickup = 0;
     let delivery = 0;
-    if (row.legKind !== "quantum") {
-      const fallback = row.legKind === "both" ? null : row.legKind;
+    if (row.routeAction !== "quantum") {
+      const fallback = row.routeAction === "both" ? null : row.routeAction;
       for (const cargo of row.cargoDeliveries) {
         const role = cargo.role ?? fallback;
         if (role === "pickup") pickup += cargo.scu;
@@ -83,6 +83,27 @@ export function estimateOnboardScuByStop(
  */
 export function estimatePeakOnboardScu(rows: HaulingChecklistRow[]): number {
   return applyCargoToOnboard(0, rows).peak;
+}
+
+/**
+ * Stop id where planned onboard SCU peaks (after pickups, before unload).
+ * Used for cargo-bay “All stops” scope so the grid shows the fullest load.
+ */
+export function peakOnboardStopId(
+  rows: HaulingChecklistRow[],
+): string | null {
+  const byStop = estimateOnboardScuByStop(rows);
+  let bestId: string | null = null;
+  let bestScu = -1;
+  for (const row of rows) {
+    if (row.routeAction === "quantum") continue;
+    const scu = byStop.get(row.id)?.beforeDelivery ?? 0;
+    if (scu > bestScu) {
+      bestScu = scu;
+      bestId = row.id;
+    }
+  }
+  return bestId;
 }
 
 export type MissionScuBreakdownItem = {
@@ -129,7 +150,7 @@ export function estimateMissionsTotalScu(
 
   let pickupTotal = 0;
   for (const row of rows) {
-    const fallback = row.legKind === "both" ? null : row.legKind;
+    const fallback = row.routeAction === "both" ? null : row.routeAction;
     for (const cargo of row.cargoDeliveries) {
       const role = cargo.role ?? fallback;
       if (role === "pickup") pickupTotal += cargo.scu;

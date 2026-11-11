@@ -25,8 +25,8 @@ export type CargoDelivery = {
   commoditySlug: string;
   scu: number;
   /**
-   * For `legKind: "both"` stops, mark each line as pickup or delivery.
-   * Optional on pure pickup/delivery legs.
+   * For `routeAction: "both"` stops, mark each line as pickup or delivery.
+   * Optional on pure pickup/delivery stops.
    */
   role?: "pickup" | "delivery";
   /**
@@ -53,8 +53,11 @@ export type CargoDelivery = {
   isHandled?: boolean;
 };
 
-/** Stop role for the location badge. */
-export type LegKind = "pickup" | "delivery" | "both" | "quantum";
+/**
+ * What this checklist row does on the route:
+ * pickup / delivery / both at a location, or quantum travel.
+ */
+export type RouteAction = "pickup" | "delivery" | "both" | "quantum";
 
 /**
  * Cargo bay zone on the ship (front / mid / aft).
@@ -77,11 +80,11 @@ export const shipStorageLocationLabels: Record<ShipStorageLocation, string> = {
 /** One hauling checklist row (UI model until API wiring). */
 export type HaulingChecklistRow = {
   id: string;
-  legKind: LegKind;
+  routeAction: RouteAction;
   /** Slug from `lib/fixtures/locations.json` (Star Citizen Wiki starmap). */
   locationSlug: string;
   /**
-   * Destination for `legKind: "quantum"` travel rows (from = `locationSlug`).
+   * Destination for `routeAction: "quantum"` travel rows (from = `locationSlug`).
    * Null/omitted on pickup/delivery stops.
    */
   quantumToLocationSlug?: string | null;
@@ -99,13 +102,13 @@ export type HaulingChecklistRow = {
 };
 
 export function isQuantumTravelRow(row: HaulingChecklistRow): boolean {
-  return row.legKind === "quantum";
+  return row.routeAction === "quantum";
 }
 
 /** Where the crew is after finishing this row (quantum → destination). */
 export function rowPresenceLocationSlug(row: HaulingChecklistRow): string {
   if (
-    row.legKind === "quantum" &&
+    row.routeAction === "quantum" &&
     row.quantumToLocationSlug?.trim()
   ) {
     return row.quantumToLocationSlug.trim();
@@ -218,13 +221,13 @@ export type ShipStorageLineDisplay = {
 export function describeShipStorageLines(
   row: Pick<
     HaulingChecklistRow,
-    "legKind" | "cargoDeliveries" | "shipStorageLocation"
+    "routeAction" | "cargoDeliveries" | "shipStorageLocation"
   >,
 ): ShipStorageLineDisplay[] {
-  if (row.legKind === "quantum") return [];
+  if (row.routeAction === "quantum") return [];
   const fallbackRole =
-    row.legKind === "pickup" || row.legKind === "delivery"
-      ? row.legKind
+    row.routeAction === "pickup" || row.routeAction === "delivery"
+      ? row.routeAction
       : null;
   const lines: ShipStorageLineDisplay[] = [];
   const seen = new Set<string>();
@@ -241,7 +244,7 @@ export function describeShipStorageLines(
       role,
       location,
       label:
-        role && row.legKind === "both"
+        role && row.routeAction === "both"
           ? `${role === "pickup" ? "Pickup" : "Delivery"} · ${zone}`
           : zone,
     });
@@ -318,7 +321,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
   rows: [
     {
       id: "leg-1",
-      legKind: "pickup",
+      routeAction: "pickup",
       locationSlug: "area18",
       cargoDeliveries: [
         {
@@ -338,7 +341,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
     },
     {
       id: "leg-2",
-      legKind: "delivery",
+      routeAction: "delivery",
       locationSlug: "baijini-point",
       cargoDeliveries: [
         {
@@ -353,7 +356,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
     },
     {
       id: "leg-3",
-      legKind: "both",
+      routeAction: "both",
       locationSlug: "orison",
       cargoDeliveries: [
         {
@@ -375,7 +378,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
     },
     {
       id: "leg-4",
-      legKind: "delivery",
+      routeAction: "delivery",
       locationSlug: "port-tressler",
       cargoDeliveries: [],
       shipStorageLocation: "rear",

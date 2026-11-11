@@ -92,6 +92,8 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `Player` | `User` (until auth exists), `Member` alone |
 | `Mission` | `Job`, `Quest`, `Task` (task = checklist step) |
 | `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |
+| `route checklist` (stacked stop cards; code `HaulingChecklistTable`; sticky bar is the checklist toolbar) | contracts table, missions table, jobs list |
+| `routeAction` (`pickup` / `delivery` / `both` / `quantum`) | `legKind`, `stopKind`, `LegKind` (temporary read/MCP aliases — remove after migrate) |
 | `Hauling` / `hauling` | `Delivery` as the type name (delivery can be a checklist group) |
 | `scuTotal` / `scuSplits` / `scuLocationSplits` / `scuBoxSplits` / `scuBoxSplitsAutoSelected` / `scuMaxContainerSize` (catalog hauling) | `totalScu`, `boxBreakdown`, `autoBoxSplits`, `originalBoxSplits`, `maxContainerScu`, `size1`; `legs` for per-stop cargo inside a catalog mission |
 | `rank` (hauling career level: Trainee…Master; no “Rank” suffix in the value) | `repLevel`, `reputationRank`, `Junior Rank` as a stored value |

@@ -72,7 +72,6 @@ import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
-import { SessionControlsHelp } from "./SessionControlsHelp";
 import {
   SessionInventoryStat,
   SessionRouteProgressStats,
@@ -422,7 +421,6 @@ export function SessionChecklistView({
         onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
         cargoBayCount={cargoBayCount}
-        trailing={<SessionControlsHelp />}
       />
     ),
     [

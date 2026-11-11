@@ -6,7 +6,7 @@ import { getLocationImageSrc } from "@/lib/fixtures";
 import {
   formatDistanceToNext,
   type HaulingChecklistRow,
-  type LegKind,
+  type RouteAction,
 } from "@/lib/missions/mockSession";
 import { buildRouteStopTimeline } from "@/lib/missions/routeStopTimeline";
 
@@ -17,7 +17,7 @@ export type SessionStopsTimelineModalProps = {
   onClose: () => void;
 };
 
-function legKindLabel(kind: LegKind | null): string | null {
+function routeActionLabel(kind: RouteAction | null): string | null {
   if (kind === "pickup") return "Pickup";
   if (kind === "delivery") return "Delivery";
   if (kind === "both") return "Pickup · Delivery";
@@ -105,7 +105,7 @@ export function SessionStopsTimelineModal({
             >
               {timeline.nodes.map((node, index) => {
                 const isLast = index === timeline.nodes.length - 1;
-                const role = legKindLabel(node.legKind);
+                const role = routeActionLabel(node.routeAction);
                 const meta =
                   node.kind === "start"
                     ? "Start"

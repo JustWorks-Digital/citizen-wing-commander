@@ -1,10 +1,39 @@
 import {
   applySessionCompletionTiming,
   type HaulingChecklistRow,
+  type RouteAction,
   type SessionChecklistModel,
   type SessionMission,
 } from "@/lib/missions/mockSession";
 import { restampAllMissionBoxSizes } from "@/lib/missions/rebuildSessionRoute";
+
+const ROUTE_ACTIONS = new Set<RouteAction>([
+  "pickup",
+  "delivery",
+  "both",
+  "quantum",
+]);
+
+/**
+ * Map legacy `legKind` on stored rows to `routeAction`.
+ * TODO: remove once all delivery_sessions checklist JSON uses routeAction only.
+ */
+function normalizeChecklistRow(raw: unknown): HaulingChecklistRow {
+  const row = (raw ?? {}) as Record<string, unknown>;
+  const legacy = row.legKind;
+  const next = row.routeAction;
+  const routeAction =
+    typeof next === "string" && ROUTE_ACTIONS.has(next as RouteAction)
+      ? (next as RouteAction)
+      : typeof legacy === "string" && ROUTE_ACTIONS.has(legacy as RouteAction)
+        ? (legacy as RouteAction)
+        : "pickup";
+  const { legKind: _legacy, ...rest } = row;
+  return {
+    ...(rest as Omit<HaulingChecklistRow, "routeAction">),
+    routeAction,
+  };
+}
 
 export type SessionTabSummary = {
   id: string;
@@ -112,7 +141,9 @@ export function normalizeSessionChecklist(
       completedAt:
         typeof raw.completedAt === "string" ? raw.completedAt : null,
       updatedAt,
-      rows: Array.isArray(raw.rows) ? raw.rows : [],
+      rows: Array.isArray(raw.rows)
+        ? raw.rows.map((row) => normalizeChecklistRow(row))
+        : [],
     }),
   );
 }

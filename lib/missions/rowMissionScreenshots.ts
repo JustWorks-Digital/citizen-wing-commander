@@ -91,16 +91,16 @@ function missionDeliversAt(
 }
 
 function rowHasPickupCargo(row: HaulingChecklistRow): boolean {
-  if (row.legKind === "pickup") return true;
-  if (row.legKind === "delivery") return false;
+  if (row.routeAction === "pickup") return true;
+  if (row.routeAction === "delivery") return false;
   return row.cargoDeliveries.some(
     (cargo) => cargo.role === "pickup" || cargo.role == null,
   );
 }
 
 function rowHasDeliveryCargo(row: HaulingChecklistRow): boolean {
-  if (row.legKind === "delivery") return true;
-  if (row.legKind === "pickup") return false;
+  if (row.routeAction === "delivery") return true;
+  if (row.routeAction === "pickup") return false;
   return row.cargoDeliveries.some(
     (cargo) => cargo.role === "delivery" || cargo.role == null,
   );
