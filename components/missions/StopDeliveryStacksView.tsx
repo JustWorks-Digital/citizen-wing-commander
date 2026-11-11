@@ -10,6 +10,7 @@ import {
   type StopCargoStacksPlan,
 } from "@/lib/missions/stopDeliveryBoxes";
 import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type StopDeliveryStacksViewProps = {
   plan: StopCargoStacksPlan;
@@ -650,7 +651,7 @@ export function StopDeliveryStacksView({
               return (
                 <g key={`pile-${pile.id}`}>
                   <title>
-                    {pile.locationName} pile · {pile.scu} SCU
+                    {pile.locationName} pile · {pile.scu} {SCU_TITLE}
                   </title>
                   <text
                     x={midX}
@@ -665,6 +666,7 @@ export function StopDeliveryStacksView({
                       textTransform: "uppercase",
                     }}
                   >
+                    <title>{pile.locationName}</title>
                     {pile.abbrev} · {pile.scu}
                   </text>
                 </g>
@@ -681,8 +683,8 @@ export function StopDeliveryStacksView({
               );
               const scuTitle =
                 displayPlan.action === "pickup"
-                  ? `${label.scu} SCU collect · ${label.commodityName}`
-                  : `${label.scu} SCU drop off · ${label.commodityName}`;
+                  ? `${label.scu} ${SCU_TITLE} collect · ${label.commodityName}`
+                  : `${label.scu} ${SCU_TITLE} drop off · ${label.commodityName}`;
               const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
               const scuSize = Math.max(9, Math.round(renderCellPx * 0.65));
               const padX = renderCellPx * 0.45;
@@ -728,6 +730,7 @@ export function StopDeliveryStacksView({
                       textTransform: "uppercase",
                     }}
                   >
+                    <title>{label.commodityName}</title>
                     {label.abbrev}
                   </text>
                   <text
@@ -743,6 +746,7 @@ export function StopDeliveryStacksView({
                       letterSpacing: "0.04em",
                     }}
                   >
+                    <title>{SCU_TITLE}</title>
                     {label.scu}
                   </text>
                 </g>
@@ -781,7 +785,10 @@ export function StopDeliveryStacksView({
             </p>
             <p className="mt-0.5 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
               Pile {safePileIndex + 1}/{allPileLabels.length}
-              <span className="ml-1.5 tabular-nums">{activePile.scu} SCU</span>
+              <span className="ml-1.5 tabular-nums">
+                {activePile.scu}{" "}
+                <span title={SCU_TITLE}>SCU</span>
+              </span>
             </p>
           </div>
           <button

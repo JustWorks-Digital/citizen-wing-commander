@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Ship's capacity (checklist toolbar), Inventory (ship layout).",
+          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay (checklist toolbar — opens Cargo layout modal), Inventory (inside Cargo layout modal, including per-contract SCU).",
       },
     },
   },
@@ -34,7 +34,25 @@ export const RouteProgress: Story = {
       missionCount={2}
       onboardScu={24}
       totalCapacity={96}
+      cargoBayCount={2}
       onStopsClick={() => {}}
+      onCapacityClick={() => {}}
+    />
+  ),
+};
+
+export const RouteProgressSingleBay: Story = {
+  render: () => (
+    <SessionRouteProgressStats
+      completedLegs={1}
+      totalLegs={3}
+      missionsCompleted={0}
+      missionCount={2}
+      onboardScu={24}
+      totalCapacity={96}
+      cargoBayCount={1}
+      onStopsClick={() => {}}
+      onCapacityClick={() => {}}
     />
   ),
 };
@@ -45,6 +63,21 @@ export const Inventory: Story = {
       onboardScu={24}
       peakScu={72}
       missionsTotalScu={144}
+      missionScuBreakdown={[
+        {
+          missionId: "m1",
+          title: "Member Rank — Stims",
+          scu: 96,
+          screenshots: ["demo/stims.png"],
+        },
+        {
+          missionId: "m2",
+          title: "Junior Rank — Quartz",
+          scu: 48,
+          screenshots: [],
+        },
+      ]}
+      sessionId="demo-session"
       totalCapacity={96}
       availableScu={24}
     />
@@ -57,6 +90,21 @@ export const InventoryOverCapacity: Story = {
       onboardScu={110}
       peakScu={120}
       missionsTotalScu={280}
+      missionScuBreakdown={[
+        {
+          missionId: "m1",
+          title: "Senior Rank — Waste",
+          scu: 160,
+          screenshots: ["demo/waste.png"],
+        },
+        {
+          missionId: "m2",
+          title: "Member Rank — Ice",
+          scu: 120,
+          screenshots: [],
+        },
+      ]}
+      sessionId="demo-session"
       totalCapacity={96}
       availableScu={-24}
       isOverCapacity
@@ -80,6 +128,21 @@ export const AllPieces: Story = {
         onboardScu={24}
         peakScu={72}
         missionsTotalScu={144}
+        missionScuBreakdown={[
+          {
+            missionId: "m1",
+            title: "Member Rank — Stims",
+            scu: 96,
+            screenshots: ["demo/stims.png"],
+          },
+          {
+            missionId: "m2",
+            title: "Junior Rank — Quartz",
+            scu: 48,
+            screenshots: [],
+          },
+        ]}
+        sessionId="demo-session"
         totalCapacity={96}
         availableScu={24}
       />

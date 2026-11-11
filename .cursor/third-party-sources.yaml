@@ -237,6 +237,22 @@ sources:
     added: "2026-11-09"
     last_verified: "2026-11-09"
 
+  - id: dystopian-dynasty-covalex
+    status: trial
+    purpose:
+      - hauling-reputation-xp
+      - covalex-ranks
+    label: Dystopian Dynasty — Covalex reputation guide
+    url: https://www.dystopiandynasty.org/guides/covalex
+    used_by:
+      - lib/missions/haulingRepXp.ts
+    notes: >
+      Community tables of typical hauling-contract reputation (XP) by rank
+      for standard Cargo Haul jobs. Used only as an approximator in the
+      checklist Exp column — not an official CIG formula.
+    added: "2026-11-11"
+    last_verified: "2026-11-11"
+
   - id: citizenhq-positions
     status: trial
     purpose:

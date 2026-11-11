@@ -6,19 +6,22 @@ import {
   readCargoBayChromePrefs,
   writeCargoBayChromePrefs,
   type CargoBayChromePrefs,
+  type CargoBayViewTab,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 
 /**
- * Per-session Legend / Sorting panel visibility in `localStorage`.
- * New sessions default to both hidden until the user opens them.
+ * Per-session Legend / Sorting visibility and 2D/Split/3D view in
+ * `localStorage`. Defaults: both panels hidden, Split view.
  */
 export function useSessionCargoBayChrome(
   sessionId: string | null | undefined,
 ): {
   legendHidden: boolean;
   sortingHidden: boolean;
+  viewTab: CargoBayViewTab;
   setLegendHidden: (hidden: boolean) => void;
   setSortingHidden: (hidden: boolean) => void;
+  setViewTab: (tab: CargoBayViewTab) => void;
 } {
   const [prefs, setPrefs] = useState<CargoBayChromePrefs>(
     DEFAULT_CARGO_BAY_CHROME_PREFS,
@@ -50,10 +53,23 @@ export function useSessionCargoBayChrome(
     [sessionId],
   );
 
+  const setViewTab = useCallback(
+    (tab: CargoBayViewTab) => {
+      setPrefs((prev) => {
+        const next = { ...prev, viewTab: tab };
+        writeCargoBayChromePrefs(sessionId, next);
+        return next;
+      });
+    },
+    [sessionId],
+  );
+
   return {
     legendHidden: prefs.legendHidden,
     sortingHidden: prefs.sortingHidden,
+    viewTab: prefs.viewTab,
     setLegendHidden,
     setSortingHidden,
+    setViewTab,
   };
 }

@@ -156,6 +156,48 @@ export function missionsRelevantToRow(
   });
 }
 
+function pushMissionScreenshotRef(
+  byPath: Map<string, RowMissionScreenshotRef>,
+  mission: SessionMission,
+  logicalPath: string,
+  sessionId: string,
+): void {
+  const trimmed = logicalPath.trim();
+  if (!trimmed) return;
+  const caption = sessionMissionSourceCaption(mission);
+  const existing = byPath.get(trimmed);
+  if (existing) {
+    if (!existing.missionTitles.includes(mission.title)) {
+      existing.missionTitles.push(mission.title);
+    }
+    if (!existing.captions.includes(caption)) {
+      existing.captions.push(caption);
+    }
+    return;
+  }
+  const filename = filenameFromLogicalPath(trimmed);
+  byPath.set(trimmed, {
+    logicalPath: trimmed,
+    filename,
+    label: labelFromFilename(filename),
+    missionTitles: [mission.title],
+    captions: [caption],
+    url: screenshotUrlForSession(trimmed, sessionId),
+  });
+}
+
+/** Screenshot refs for a single session mission (cargo-layout source icon). */
+export function screenshotRefsForMission(
+  mission: SessionMission,
+  sessionId: string,
+): RowMissionScreenshotRef[] {
+  const byPath = new Map<string, RowMissionScreenshotRef>();
+  for (const logicalPath of mission.screenshots) {
+    pushMissionScreenshotRef(byPath, mission, logicalPath, sessionId);
+  }
+  return [...byPath.values()];
+}
+
 /** Unique screenshot refs for missions relevant to a checklist stop. */
 export function screenshotRefsForRow(
   missions: SessionMission[],
@@ -167,28 +209,7 @@ export function screenshotRefsForRow(
 
   for (const mission of relevant) {
     for (const logicalPath of mission.screenshots) {
-      const trimmed = logicalPath.trim();
-      if (!trimmed) continue;
-      const caption = sessionMissionSourceCaption(mission);
-      const existing = byPath.get(trimmed);
-      if (existing) {
-        if (!existing.missionTitles.includes(mission.title)) {
-          existing.missionTitles.push(mission.title);
-        }
-        if (!existing.captions.includes(caption)) {
-          existing.captions.push(caption);
-        }
-        continue;
-      }
-      const filename = filenameFromLogicalPath(trimmed);
-      byPath.set(trimmed, {
-        logicalPath: trimmed,
-        filename,
-        label: labelFromFilename(filename),
-        missionTitles: [mission.title],
-        captions: [caption],
-        url: screenshotUrlForSession(trimmed, sessionId),
-      });
+      pushMissionScreenshotRef(byPath, mission, logicalPath, sessionId);
     }
   }
 

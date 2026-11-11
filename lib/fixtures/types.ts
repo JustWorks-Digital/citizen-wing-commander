@@ -3,6 +3,11 @@ export type FixtureLocation = {
   id: string;
   slug: string;
   name: string;
+  /**
+   * Unique one-word label after stripping catalog-common words
+   * (Station, Port, Clinic, …). Shown under location thumbnails.
+   */
+  shortName: string;
   type: string | null;
   classification: string | null;
   system: string | null;

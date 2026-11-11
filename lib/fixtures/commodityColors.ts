@@ -5,6 +5,8 @@ import commodityCrateColorsFixture from "@/lib/fixtures/commodityCrateColors.jso
 const NAMED_COLOR_HEX: Record<string, string> = {
   red: "#e25555",
   blue: "#54adf7",
+  sky: "#87ceeb",
+  navy: "#1f4e8c",
   green: "#3dbf8f",
   yellow: "#e0a63a",
   orange: "#e07a3a",
@@ -48,6 +50,8 @@ const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   silicon: "#2f6b48", // deeper green
   "silicone-raw": "#25563a",
   stims: "#f3f6f9", // white
+  // Sky blue (#87CEEB) + dark blue (#1F4E8C).
+  "pressurized-ice": "#538ebc",
 };
 
 type CrateColorRow = {

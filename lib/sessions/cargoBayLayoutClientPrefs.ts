@@ -3,19 +3,29 @@ export const DEFAULT_CARGO_BAY_LAYOUT_HEIGHT_PX = 26 * 16;
 export const MIN_CARGO_BAY_LAYOUT_HEIGHT_PX = 16 * 16;
 export const MAX_CARGO_BAY_LAYOUT_HEIGHT_PX = 48 * 16;
 
+/** 2D / Split / 3D projection for the cargo layout modal. */
+export type CargoBayViewTab = "top" | "iso" | "split";
+
 /**
- * New sessions start with Legend + Sorting collapsed.
+ * New sessions start with Legend + Sorting collapsed and Split view.
  * After the user toggles, prefs persist per session in `localStorage`.
  */
 export type CargoBayChromePrefs = {
   legendHidden: boolean;
   sortingHidden: boolean;
+  /** Cargo layout projection — default Split; survives modal close/reopen. */
+  viewTab: CargoBayViewTab;
 };
 
 export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   legendHidden: true,
   sortingHidden: true,
+  viewTab: "split",
 };
+
+function isCargoBayViewTab(value: unknown): value is CargoBayViewTab {
+  return value === "top" || value === "iso" || value === "split";
+}
 
 const STORAGE_PREFIX = "cwc:session:";
 const STORAGE_SUFFIX = ":cargoBayLayoutHeightPx";
@@ -83,6 +93,9 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
       typeof record.sortingHidden === "boolean"
         ? record.sortingHidden
         : DEFAULT_CARGO_BAY_CHROME_PREFS.sortingHidden,
+    viewTab: isCargoBayViewTab(record.viewTab)
+      ? record.viewTab
+      : DEFAULT_CARGO_BAY_CHROME_PREFS.viewTab,
   };
 }
 

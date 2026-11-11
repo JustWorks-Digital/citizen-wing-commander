@@ -1,6 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  ImageLightbox,
+  type ImageLightboxItem,
+} from "@/components/ui/ImageLightbox";
+import { SourceIcon } from "@/components/ui/SourceIcon";
+import type { MissionScuBreakdownItem } from "@/lib/missions/cargoInventory";
+import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { stripRankFromTitle } from "@/lib/missions/missionRank";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 function StatLabel({ children }: { children: string }) {
   return (
@@ -121,10 +130,17 @@ export type SessionRouteProgressStatsProps = {
   onMissionsClick?: () => void;
   /** Opens the route stops timeline modal. */
   onStopsClick?: () => void;
+  /** Opens the Cargo layout modal. */
+  onCapacityClick?: () => void;
+  /**
+   * Physical cargo holds on the selected ship (from the grid sketch).
+   * Drives singular / plural “Cargo bay(s)” label. Defaults to 1.
+   */
+  cargoBayCount?: number;
   className?: string;
 };
 
-/** Contracts + Stops + Ship's capacity telemetry for the checklist toolbar. */
+/** Contracts + Stops + Cargo bay telemetry for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -135,15 +151,30 @@ export function SessionRouteProgressStats({
   isOverCapacity = false,
   onMissionsClick,
   onStopsClick,
+  onCapacityClick,
+  cargoBayCount = 1,
   className,
 }: SessionRouteProgressStatsProps) {
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
+  const cargoBayLabel = cargoBayCount === 1 ? "Cargo bay" : "Cargo bays";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const stopsBody = (
     <>
       <StatLabel>{stopsLabel}</StatLabel>
       <StatValue>
         <Fraction current={completedLegs} total={totalLegs} />
+      </StatValue>
+    </>
+  );
+  const capacityBody = (
+    <>
+      <StatLabel>{cargoBayLabel}</StatLabel>
+      <StatValue>
+        <Fraction
+          current={onboardScu}
+          total={capacityLabel}
+          currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
+        />
       </StatValue>
     </>
   );
@@ -175,16 +206,19 @@ export function SessionRouteProgressStats({
       ) : (
         <div className={cellClass}>{stopsBody}</div>
       )}
-      <div className={cellClass}>
-        <StatLabel>Ship&apos;s capacity</StatLabel>
-        <StatValue>
-          <Fraction
-            current={onboardScu}
-            total={capacityLabel}
-            currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
-          />
-        </StatValue>
-      </div>
+      {onCapacityClick ? (
+        <button
+          type="button"
+          onClick={onCapacityClick}
+          className={interactiveCellClass}
+          title={`Open ${cargoBayLabel.toLowerCase()}`}
+          aria-label={`Open ${cargoBayLabel.toLowerCase()}`}
+        >
+          {capacityBody}
+        </button>
+      ) : (
+        <div className={cellClass}>{capacityBody}</div>
+      )}
     </div>
   );
 }
@@ -196,6 +230,10 @@ export type SessionInventoryStatProps = {
   peakScu: number;
   /** Sum of cargo SCU across agreed contracts. */
   missionsTotalScu: number;
+  /** Per-mission / per-contract SCU rows — shown left of Contracts total. */
+  missionScuBreakdown?: MissionScuBreakdownItem[];
+  /** Session UUID — resolves contract screenshot URLs for the source icon. */
+  sessionId?: string | null;
   totalCapacity: number;
   /**
    * Bay headroom for more mission cargo (`capacity − peak`).
@@ -205,6 +243,92 @@ export type SessionInventoryStatProps = {
   isOverCapacity?: boolean;
   className?: string;
 };
+
+function resolveSessionScreenshotUrl(
+  logicalPath: string,
+  sessionId: string,
+): string | null {
+  const parts = logicalPath.trim().split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) {
+    return screenshotUrlFromLogicalPath(`${sessionId}/${parts[0]}`);
+  }
+  return screenshotUrlFromLogicalPath(logicalPath);
+}
+
+function ContractSourceButton({
+  item,
+  sessionId,
+}: {
+  item: MissionScuBreakdownItem;
+  sessionId: string;
+}) {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  const galleryItems = useMemo((): ImageLightboxItem[] => {
+    const caption = `${item.title}\n${item.scu} SCU`;
+    const items: ImageLightboxItem[] = [];
+    for (const logicalPath of item.screenshots) {
+      const url = resolveSessionScreenshotUrl(logicalPath, sessionId);
+      if (!url) continue;
+      const filename =
+        logicalPath.split("/").filter(Boolean).at(-1) ?? logicalPath;
+      items.push({
+        src: url,
+        alt: filename,
+        title: filename,
+        caption,
+      });
+    }
+    return items;
+  }, [item, sessionId]);
+
+  const canOpen = galleryItems.length > 0;
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={!canOpen}
+        title={
+          canOpen
+            ? galleryItems.length > 1
+              ? `View ${galleryItems.length} source screenshots`
+              : "View source screenshot"
+            : "No source screenshot on file"
+        }
+        aria-label="View source"
+        onClick={() => {
+          if (!canOpen) return;
+          setGalleryIndex(0);
+          setGalleryOpen(true);
+        }}
+        className={[
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-rsi border transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+          canOpen
+            ? "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent"
+            : "cursor-not-allowed border-rsi-border/50 text-rsi-text-muted opacity-40",
+        ].join(" ")}
+      >
+        <SourceIcon className="size-2.5" />
+      </button>
+      {galleryOpen && galleryItems.length > 0 ? (
+        <ImageLightbox
+          src={galleryItems[galleryIndex]?.src ?? galleryItems[0]!.src}
+          alt={galleryItems[galleryIndex]?.alt}
+          title={galleryItems[galleryIndex]?.title}
+          caption={galleryItems[galleryIndex]?.caption}
+          items={galleryItems}
+          index={galleryIndex}
+          onIndexChange={setGalleryIndex}
+          onClose={() => setGalleryOpen(false)}
+        />
+      ) : null}
+    </>
+  );
+}
 
 function InventoryLine({
   value,
@@ -225,11 +349,13 @@ function InventoryLine({
   );
 }
 
-/** Inventory telemetry for the cargo-layout header (contracts total + bay load). */
+/** Inventory telemetry for the cargo-layout header (contracts + bay load). */
 export function SessionInventoryStat({
   onboardScu,
   peakScu,
   missionsTotalScu,
+  missionScuBreakdown = [],
+  sessionId = null,
   totalCapacity,
   availableScu,
   isOverCapacity = false,
@@ -247,6 +373,53 @@ export function SessionInventoryStat({
         .filter(Boolean)
         .join(" ")}
     >
+      {missionScuBreakdown.length > 0 ? (
+        <div
+          className={stripClass}
+          role="group"
+          aria-label="Per-contract SCU"
+        >
+          <div className="flex max-w-[min(100%,22rem)] flex-col justify-center gap-1 px-2.5 py-1.5 text-right">
+            <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+              Contracts
+            </p>
+            <ul className="flex flex-col gap-0.5">
+              {missionScuBreakdown.map((item) => {
+                const { title, rank } = stripRankFromTitle(item.title);
+                const label = [rank, title || item.title]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <li
+                    key={item.missionId}
+                    className="flex min-w-0 items-center justify-end gap-1.5"
+                    title={item.title}
+                  >
+                    <span className="min-w-0 truncate text-left text-[0.65rem] leading-none text-rsi-text-secondary">
+                      {label}
+                    </span>
+                    <span className="shrink-0 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-text">
+                      {item.scu}
+                      <span
+                        className="ml-1 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+                        title={SCU_TITLE}
+                      >
+                        SCU
+                      </span>
+                    </span>
+                    {sessionId ? (
+                      <ContractSourceButton
+                        item={item}
+                        sessionId={sessionId}
+                      />
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      ) : null}
       <div
         className={stripClass}
         role="group"
@@ -258,7 +431,10 @@ export function SessionInventoryStat({
           </p>
           <p className="font-mono text-sm leading-none tabular-nums tracking-wide text-rsi-text">
             {missionsTotalScu}
-            <span className="ml-1.5 text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+            <span
+              className="ml-1.5 text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+              title={SCU_TITLE}
+            >
               SCU
             </span>
           </p>

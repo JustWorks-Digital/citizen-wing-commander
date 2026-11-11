@@ -31,11 +31,13 @@ import {
   getShipBySlug,
   sumShipCargoScu,
 } from "@/lib/fixtures";
+import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import {
   applySessionCompletionTiming,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import {
+  estimateMissionScuBreakdown,
   estimateMissionsTotalScu,
   estimateOnboardScu,
   estimatePeakOnboardScu,
@@ -51,7 +53,6 @@ import {
   emptySessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
-import { CargoBayLayout } from "./CargoBayLayout";
 import { insertQuantumTravelAfter } from "@/lib/missions/quantumTravel";
 import {
   defaultFocusedStopId,
@@ -63,6 +64,7 @@ import { SessionCatalogMissionsPanel } from "./SessionCatalogMissionsPanel";
 import { SessionMissionsModal } from "./SessionMissionsModal";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
+import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 import {
   SessionInventoryStat,
@@ -116,6 +118,7 @@ export function SessionChecklistView({
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [stopsOpen, setStopsOpen] = useState(false);
+  const [cargoLayoutOpen, setCargoLayoutOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
@@ -293,6 +296,12 @@ export function SessionChecklistView({
       ? shipBySlug.get(selectedShipSlug)?.name ??
         getShipBySlug(selectedShipSlug)?.name
       : null) ?? null;
+  const cargoBayCount = useMemo(() => {
+    const sketch = getCargoGridSketchBySlug(selectedShipSlug);
+    if (!sketch) return 1;
+    const holds = sketch.zones.filter((zone) => zone.kind === "cargo").length;
+    return Math.max(1, holds);
+  }, [selectedShipSlug]);
   const totalCapacity =
     session.shipSlugs?.reduce((total, slug) => {
       const fromCatalog = shipBySlug.get(slug)?.cargoScu;
@@ -301,6 +310,7 @@ export function SessionChecklistView({
     }, 0) ?? sumShipCargoScu(session.shipSlugs ?? []);
   const onboardScu = estimateOnboardScu(session.rows);
   const peakScu = estimatePeakOnboardScu(session.rows);
+  const missionScuBreakdown = estimateMissionScuBreakdown(session.missions);
   const missionsTotalScu = estimateMissionsTotalScu(
     session.missions,
     session.rows,
@@ -353,6 +363,8 @@ export function SessionChecklistView({
   const closeMissions = useCallback(() => setMissionsOpen(false), []);
   const openStops = useCallback(() => setStopsOpen(true), []);
   const closeStops = useCallback(() => setStopsOpen(false), []);
+  const openCargoLayout = useCallback(() => setCargoLayoutOpen(true), []);
+  const closeCargoLayout = useCallback(() => setCargoLayoutOpen(false), []);
 
   const inventoryAside = useMemo(
     () => (
@@ -360,6 +372,8 @@ export function SessionChecklistView({
         onboardScu={onboardScu}
         peakScu={peakScu}
         missionsTotalScu={missionsTotalScu}
+        missionScuBreakdown={missionScuBreakdown}
+        sessionId={session.id}
         totalCapacity={totalCapacity}
         availableScu={availableScu}
         isOverCapacity={isOverCapacity}
@@ -369,6 +383,8 @@ export function SessionChecklistView({
       onboardScu,
       peakScu,
       missionsTotalScu,
+      missionScuBreakdown,
+      session.id,
       totalCapacity,
       availableScu,
       isOverCapacity,
@@ -387,6 +403,8 @@ export function SessionChecklistView({
         isOverCapacity={isOverCapacity}
         onMissionsClick={openMissions}
         onStopsClick={openStops}
+        onCapacityClick={openCargoLayout}
+        cargoBayCount={cargoBayCount}
       />
     ),
     [
@@ -399,6 +417,8 @@ export function SessionChecklistView({
       isOverCapacity,
       openMissions,
       openStops,
+      openCargoLayout,
+      cargoBayCount,
     ],
   );
 
@@ -671,14 +691,6 @@ export function SessionChecklistView({
         ) : null}
       </div>
 
-      <CargoBayLayout
-        rows={session.rows}
-        shipSlug={selectedShipSlug}
-        focusedStopId={resolvedFocusedStopId}
-        sessionId={session.id}
-        headerAside={inventoryAside}
-      />
-
       <HaulingChecklistTable
         rows={session.rows}
         focusedStopId={resolvedFocusedStopId}
@@ -732,6 +744,16 @@ export function SessionChecklistView({
         rows={session.rows}
         startLocationSlug={session.startLocationSlug ?? null}
         onClose={closeStops}
+      />
+
+      <SessionCargoLayoutModal
+        open={cargoLayoutOpen}
+        rows={session.rows}
+        shipSlug={selectedShipSlug}
+        focusedStopId={resolvedFocusedStopId}
+        sessionId={session.id}
+        headerAside={inventoryAside}
+        onClose={closeCargoLayout}
       />
 
       <SessionMissionsModal

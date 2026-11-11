@@ -10,10 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import {
-  CargoGridSketch,
-  type CargoGridViewTab,
-} from "@/components/ships/CargoGridSketch";
+import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
@@ -57,7 +54,7 @@ export type CargoBayLayoutProps = {
   focusedStopId?: string | null;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
-  /** Optional session stats — right of the Ship layout title. */
+  /** Optional session stats — right of the Cargo layout title. */
   headerAside?: ReactNode;
   className?: string;
 };
@@ -78,9 +75,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     () => getCargoGridSketchBySlug(shipSlug),
     [shipSlug],
   );
-  const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
-  const { legendHidden, sortingHidden, setLegendHidden, setSortingHidden } =
-    useSessionCargoBayChrome(sessionId);
+  const {
+    legendHidden,
+    sortingHidden,
+    viewTab,
+    setLegendHidden,
+    setSortingHidden,
+    setViewTab,
+  } = useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
   const [sortingMode, setSortingMode] =
     useState<SortingMode>(defaultCargoBayPackMode);
@@ -438,7 +440,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-              Ship layout
+              Cargo layout
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
@@ -726,7 +728,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             <button
               type="button"
               role="slider"
-              aria-label="Ship layout height"
+              aria-label="Cargo layout height"
               aria-orientation="vertical"
               aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
               aria-valuemax={MAX_CARGO_BAY_LAYOUT_HEIGHT_PX}

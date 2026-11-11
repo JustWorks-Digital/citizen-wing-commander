@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo } from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+import { getLocationImageSrc } from "@/lib/fixtures";
 import {
   formatDistanceToNext,
   type HaulingChecklistRow,
@@ -104,39 +105,43 @@ export function SessionStopsTimelineModal({
                   node.kind === "start"
                     ? "Start"
                     : [`#${node.stopNumber}`, role].filter(Boolean).join(" · ");
+                const imageSrc = getLocationImageSrc(node.locationSlug);
+                const thumbClass = isDense
+                  ? "h-8 w-12"
+                  : isCompact
+                    ? "h-9 w-14"
+                    : "h-11 w-16";
                 return (
                   <li
                     key={node.id}
                     className={[
-                      "relative flex min-h-0 gap-2",
+                      "relative flex min-h-0 items-center gap-2.5",
                       nodeCount >= 4 ? "flex-1" : "",
-                      isCompact ? "py-0.5" : "py-1",
+                      isDense ? "py-0.5" : isCompact ? "py-1" : "py-1.5",
                     ].join(" ")}
                   >
-                    <div className="flex w-3.5 shrink-0 flex-col items-center">
-                      <span
-                        className={[
-                          "relative z-10 flex shrink-0 items-center justify-center rounded-full border-2",
-                          isDense ? "size-2.5" : "size-3",
-                          node.isCompleted
-                            ? "border-rsi-success bg-rsi-success"
-                            : node.isNext
-                              ? "border-rsi-accent bg-rsi-accent-muted/50"
-                              : "border-rsi-border-strong bg-rsi-bg-deep",
-                        ].join(" ")}
-                        aria-hidden
-                      />
-                      {!isLast ? (
-                        <span
-                          className={[
-                            "mt-0.5 w-px min-h-[0.5rem] flex-1",
-                            node.isCompleted
-                              ? "bg-rsi-success/45"
-                              : "bg-rsi-border",
-                          ].join(" ")}
-                          aria-hidden
+                    <div
+                      className={[
+                        "relative shrink-0 overflow-hidden rounded-md border border-rsi-border/80 bg-rsi-bg-deep/60",
+                        thumbClass,
+                        node.isCompleted ? "opacity-70" : "",
+                        node.isNext
+                          ? "ring-1 ring-rsi-accent/55"
+                          : "",
+                      ].join(" ")}
+                    >
+                      {imageSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
+                        <img
+                          src={imageSrc}
+                          alt=""
+                          className="size-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
-                      ) : null}
+                      ) : (
+                        <div className="size-full bg-rsi-bg-deep/40" aria-hidden />
+                      )}
                     </div>
 
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center gap-0.5">

@@ -25,7 +25,8 @@
     "fixtures:fetch-starmap": "node scripts/fetch-starmap.mjs",
     "fixtures:fetch-location-positions": "node scripts/fetch-location-positions.mjs",
     "fixtures:fetch-location-images": "node scripts/fetch-location-images.mjs",
-    "fixtures:fetch-location-shops": "node scripts/fetch-location-shops.mjs"
+    "fixtures:fetch-location-shops": "node scripts/fetch-location-shops.mjs",
+    "fixtures:apply-location-short-names": "node scripts/apply-location-short-names.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

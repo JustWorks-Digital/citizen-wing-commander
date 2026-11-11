@@ -12,6 +12,7 @@ import {
 } from "@/lib/missions/catalogMissionDisplay";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type MissionCatalogDetailProps = {
   mission: CatalogMission;
@@ -19,10 +20,21 @@ export type MissionCatalogDetailProps = {
   onViewSource?: (mission: CatalogMission) => void;
 };
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  labelTitle,
+}: {
+  label: string;
+  value: string;
+  labelTitle?: string;
+}) {
   return (
     <div className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
-      <dt className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+      <dt
+        className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+        title={labelTitle}
+      >
         {label}
       </dt>
       <dd className="text-rsi-text-secondary">{value}</dd>
@@ -86,10 +98,15 @@ export function MissionCatalogDetail({
             />
             <MetaRow label="To" value={route.to.join(" · ") || "—"} />
             <MetaRow label="Cargo" value={catalogCargoSummary(mission)} />
-            <MetaRow label="SCU total" value={`${mission.scuTotal}`} />
+            <MetaRow
+              label="SCU total"
+              labelTitle={SCU_TITLE}
+              value={`${mission.scuTotal}`}
+            />
             {mission.scuMaxContainerSize ? (
               <MetaRow
                 label="SCU max container"
+                labelTitle={SCU_TITLE}
                 value={`${mission.scuMaxContainerSize}`}
               />
             ) : null}

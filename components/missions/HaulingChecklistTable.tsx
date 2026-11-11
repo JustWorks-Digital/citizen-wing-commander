@@ -16,6 +16,7 @@ import {
   getCommodityIconSrc,
   getLocationBySlug,
   getLocationImageSrc,
+  getLocationShortName,
 } from "@/lib/fixtures";
 import {
   getLocationShopBySlug,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/fixtures/commodityColors";
 import { formatAuecAmount } from "@/lib/missions/catalogMission";
 import { missionsExpectedToCompleteAtStop } from "@/lib/missions/expectedCompletions";
+import { estimateMissionsHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
   formatDistanceToNext,
   isQuantumTravelRow,
@@ -48,6 +50,7 @@ import {
 import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
+import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 import { SessionMissionDetailModal } from "./SessionMissionDetailModal";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
@@ -403,7 +406,7 @@ function CargoGroups({
               ? "text-rsi-gold"
               : "text-rsi-text-muted";
         const doneClass = row.isCompleted
-          ? "line-through opacity-70 decoration-rsi-success/40"
+          ? "opacity-70"
           : "";
         const prevRole = groups[groupIndex - 1]?.role;
         const showRoleDivider =
@@ -520,7 +523,10 @@ function CargoGroups({
                     <span className="text-[0.7rem] font-semibold leading-none">
                       {line.scu}
                     </span>
-                    <span className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90">
+                    <span
+                      className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90"
+                      title={line.commodityName ?? line.commoditySlug}
+                    >
                       {abbrev}
                     </span>
                     {cleared ? (
@@ -537,7 +543,6 @@ function CargoGroups({
   );
 }
 
-const LOCATION_TITLE_MAX_CHARS = 48;
 
 function LocationHeader({
   row,
@@ -555,87 +560,105 @@ function LocationHeader({
   isCopied: boolean;
   onCopy: () => void;
   align?: "start" | "end";
-  /** Image + title only (no badges) — height matches the thumbnail. */
+  /** Skip pickup/delivery badges; still shows location amenity tags. */
   compact?: boolean;
   /** Double chevron after the copy control (quantum origin row). */
   showTravelChevron?: boolean;
 }) {
-  const locationLabel =
-    location.length > LOCATION_TITLE_MAX_CHARS
-      ? `${location.slice(0, LOCATION_TITLE_MAX_CHARS - 1)}…`
-      : location;
   const imageSrc = getLocationImageSrc(row.locationSlug);
+  const shortName = getLocationShortName(row.locationSlug);
+
+  const showLegKind = !compact;
+  const showLocationTags = hasOutdoorFreightElevator;
 
   return (
     <div
       className={[
-        "flex gap-3",
-        compact ? "h-14 items-center" : "",
-        align === "end" ? "w-full flex-row-reverse" : compact ? "" : "items-start",
+        "flex gap-3 items-start",
+        align === "end" ? "w-full flex-row-reverse" : "",
       ].join(" ")}
     >
-      {imageSrc ? (
-        <div
-          className={[
-            "relative h-14 w-24 shrink-0 overflow-hidden rounded-lg border border-rsi-border/80 bg-rsi-bg-deep/60",
-            row.isCompleted ? "opacity-70" : "",
-          ].join(" ")}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- fixture static assets */}
-          <img
-            src={imageSrc}
-            alt=""
-            className="size-full object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-      ) : null}
       <div
         className={[
-          "flex min-w-0 flex-1 flex-col",
-          compact ? "justify-center gap-0" : "gap-2",
-          align === "end" ? "items-stretch" : "",
+          "flex w-24 shrink-0 flex-col gap-1",
+          align === "end" ? "items-end" : "items-stretch",
+          row.isCompleted ? "opacity-70" : "",
         ].join(" ")}
       >
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span
+        {imageSrc ? (
+          <div className="relative h-14 w-24 overflow-hidden rounded-lg border border-rsi-border/80 bg-rsi-bg-deep/60">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixture static assets */}
+            <img
+              src={imageSrc}
+              alt=""
+              className="size-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        ) : (
+          <div
+            className="flex h-14 w-24 items-center justify-center rounded-lg border border-dashed border-rsi-border/70 bg-rsi-bg-deep/40"
+            aria-hidden
+          />
+        )}
+        <div className="flex w-full items-center justify-center gap-0.5">
+          <p
             className={[
-              "min-w-0 truncate text-left text-lg font-semibold tracking-wide sm:text-xl",
+              "min-w-0 text-center font-mono text-[0.55rem] uppercase leading-tight tracking-[0.14em]",
               row.isCompleted
-                ? "text-rsi-text-muted line-through decoration-rsi-success/60"
-                : "text-rsi-text",
+                ? "text-rsi-text-muted"
+                : "text-rsi-text-secondary",
             ].join(" ")}
             title={location}
           >
-            {locationLabel}
-          </span>
+            {shortName}
+          </p>
           <button
             type="button"
             aria-label={
-              isCopied ? `Copied ${location}` : `Copy starmap name: ${location}`
+              isCopied ? `Copied ${shortName}` : `Copy short name: ${shortName}`
             }
-            title={isCopied ? "Copied" : "Copy for starmap"}
+            title={isCopied ? "Copied" : "Copy short name"}
             onClick={(event) => {
               event.stopPropagation();
               onCopy();
             }}
             className={[
-              // Slight drop so the icon sits on the title’s optical center
-              // without changing title metrics (keeps title ↔ image alignment).
-              "inline-flex size-5 shrink-0 translate-y-0.5 items-center justify-center rounded-rsi border transition-colors",
+              "inline-flex size-4 shrink-0 items-center justify-center rounded-rsi border transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
               isCopied
                 ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
                 : "border-transparent text-rsi-text-muted hover:border-rsi-border hover:bg-rsi-bg-deep/40 hover:text-rsi-accent",
             ].join(" ")}
           >
-            <CopyIcon className="size-3" />
+            <CopyIcon className="size-2.5" />
           </button>
+        </div>
+      </div>
+      <div
+        className={[
+          "flex min-w-0 flex-1 flex-col gap-1",
+          align === "end" ? "items-stretch" : "",
+        ].join(" ")}
+      >
+        {/* Match thumbnail height so the title centers against the image. */}
+        <div className="flex h-14 min-w-0 items-center gap-1.5">
+          <span
+            className={[
+              "min-w-0 flex-1 truncate text-left text-lg font-semibold tracking-wide sm:text-xl",
+              row.isCompleted
+                ? "text-rsi-text-muted"
+                : "text-rsi-text",
+            ].join(" ")}
+            title={location}
+          >
+            {location}
+          </span>
           {showTravelChevron ? (
             <span
               aria-hidden
-              className="inline-flex shrink-0 translate-y-0.5 items-center text-rsi-text-muted"
+              className="inline-flex shrink-0 items-center pl-2 text-rsi-text-muted sm:pl-3"
               title="Travel"
             >
               <svg
@@ -662,23 +685,25 @@ function LocationHeader({
             </span>
           ) : null}
         </div>
-        {compact ? null : (
+        {showLegKind || showLocationTags ? (
           <div
             className={[
               "flex flex-wrap items-center gap-2",
               align === "end" ? "justify-end" : "",
             ].join(" ")}
           >
-            {legKindBadges(row.legKind).map((badge) => (
-              <Badge key={badge.label} variant={badge.variant} size="sm">
-                {badge.label}
-              </Badge>
-            ))}
+            {showLegKind
+              ? legKindBadges(row.legKind).map((badge) => (
+                  <Badge key={badge.label} variant={badge.variant} size="sm">
+                    {badge.label}
+                  </Badge>
+                ))
+              : null}
             {hasOutdoorFreightElevator ? (
               <OutdoorFreightBadge locationSlug={row.locationSlug} />
             ) : null}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -796,12 +821,14 @@ function QuantumTravelRow({
             onToggle={onToggle}
           />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-start md:gap-6">
           <div className="min-w-0 flex-1">
             <LocationHeader
               row={stubRow}
               location={location}
-              hasOutdoorFreightElevator={false}
+              hasOutdoorFreightElevator={Boolean(
+                locationFixture?.hasOutdoorFreightElevator,
+              )}
               isCopied={isCopied}
               onCopy={onCopy}
               compact
@@ -816,27 +843,25 @@ function QuantumTravelRow({
               />
             </div>
           </div>
-          <div className="flex w-full min-w-0 flex-col justify-center gap-0.5 md:w-1/2 md:shrink-0">
+          <div className="flex w-full min-w-0 flex-col gap-1 pl-2 md:w-1/2 md:shrink-0 md:pl-4">
+            {/* Match thumbnail / origin title row so destination + chevron share the same vertical center. */}
             <p
               className={[
-                "min-w-0 text-base tracking-wide sm:text-lg",
+                "flex h-14 min-w-0 items-center text-base tracking-wide sm:text-lg",
                 isCompleted
-                  ? "text-rsi-text-muted line-through decoration-rsi-success/60"
+                  ? "text-rsi-text-muted"
                   : "text-rsi-text",
               ].join(" ")}
             >
-              Quantum to{" "}
-              <span className={isCompleted ? "" : "text-rsi-text-secondary"}>
-                {destinationName}
+              <span className="min-w-0 truncate">
+                Quantum to{" "}
+                <span className={isCompleted ? "" : "text-rsi-text-secondary"}>
+                  {destinationName}
+                </span>
               </span>
             </p>
             {reasonLabel ? (
-              <p
-                className={[
-                  "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
-                  isCompleted ? "text-rsi-text-muted" : "text-rsi-text-muted",
-                ].join(" ")}
-              >
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Reason · {reasonLabel}
               </p>
             ) : null}
@@ -860,7 +885,8 @@ function QuantumTravelComposer({
 }) {
   const [toSlug, setToSlug] = useState<string | null>(null);
   const [reasonShopSlug, setReasonShopSlug] = useState<string>("");
-  const location = getLocationBySlug(fromSlug)?.name ?? fromSlug;
+  const locationFixture = getLocationBySlug(fromSlug);
+  const location = locationFixture?.name ?? fromSlug;
   const shops = toSlug ? listLocationShops(toSlug) : [];
   const stubRow: HaulingChecklistRow = {
     id: "quantum-draft",
@@ -884,7 +910,9 @@ function QuantumTravelComposer({
             <LocationHeader
               row={stubRow}
               location={location}
-              hasOutdoorFreightElevator={false}
+              hasOutdoorFreightElevator={Boolean(
+                locationFixture?.hasOutdoorFreightElevator,
+              )}
               isCopied={false}
               onCopy={() => undefined}
               compact
@@ -1002,7 +1030,7 @@ function transferToneClasses(isDone: boolean): {
   mute: string;
 } {
   return {
-    strike: isDone ? "line-through" : "",
+    strike: "",
     mute: isDone ? "text-rsi-text-muted" : "",
   };
 }
@@ -1067,7 +1095,14 @@ function TransferScuLine({
           isDone ? "" : "text-rsi-text-muted",
         ].join(" ")}
       >
-        {suffix}
+        {suffix.startsWith("SCU") ? (
+          <>
+            <span title={SCU_TITLE}>SCU</span>
+            {suffix.slice(3)}
+          </>
+        ) : (
+          suffix
+        )}
       </span>
     </p>
   );
@@ -1330,22 +1365,17 @@ function PayoutMeta({
 
   return (
     <div
-      className="py-5 text-sm"
+      className="min-w-0 py-5 text-sm"
       title={
         completionAuec > 0
           ? `Payout ${formatAuecAmount(completionAuec)}`
-          : "aUEC not available"
+          : `${AUEC_TITLE} not available`
       }
     >
       <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Payout
       </p>
-      <p
-        className={[
-          "text-sm font-medium leading-snug text-rsi-text-muted",
-          row.isCompleted ? "line-through" : "",
-        ].join(" ")}
-      >
+      <p className="text-sm font-medium leading-snug text-rsi-text-muted">
         {completingMissionCount === 1
           ? "Contract reward"
           : `${completingMissionCount} contract rewards`}
@@ -1355,11 +1385,12 @@ function PayoutMeta({
           className={[
             "mt-1 font-mono text-sm tabular-nums tracking-wide",
             row.isCompleted
-              ? "text-rsi-text-muted line-through"
+              ? "text-rsi-text-muted"
               : "text-rsi-success",
           ].join(" ")}
         >
-          +{formatAuecAmount(completionAuec)}
+          +{Math.floor(completionAuec).toLocaleString("en-US")}{" "}
+          <span title={AUEC_TITLE}>aUEC</span>
           <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
             paid
           </span>
@@ -1368,10 +1399,60 @@ function PayoutMeta({
         <p
           className={[
             "mt-1 font-mono text-sm tabular-nums tracking-wide",
-            row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-warn",
+            row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
           ].join(" ")}
         >
-          aUEC not available
+          <span title={AUEC_TITLE}>aUEC</span> not available
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ExpMeta({
+  row,
+  approxXp,
+  completingMissionCount,
+}: {
+  row: HaulingChecklistRow;
+  approxXp: number;
+  completingMissionCount: number;
+}) {
+  if (completingMissionCount <= 0) return null;
+
+  return (
+    <div
+      className="min-w-0 py-5 pl-12 text-sm"
+      title="Approximate Covalex hauling reputation for standard ranked cargo hauls (community estimates; recover / special jobs may differ)"
+    >
+      <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Exp
+      </p>
+      <p className="text-sm font-medium leading-snug text-rsi-text-muted">
+        {completingMissionCount === 1
+          ? "1 contract"
+          : `${completingMissionCount} contracts`}
+      </p>
+      {approxXp > 0 ? (
+        <p
+          className={[
+            "mt-1 font-mono text-sm tabular-nums tracking-wide",
+            row.isCompleted
+              ? "text-rsi-text-muted"
+              : "text-rsi-accent",
+          ].join(" ")}
+        >
+          ~{approxXp.toLocaleString("en-US")}{" "}
+          <span title="Hauling reputation / experience points">XP</span>
+        </p>
+      ) : (
+        <p
+          className={[
+            "mt-1 font-mono text-sm tabular-nums tracking-wide",
+            row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
+          ].join(" ")}
+        >
+          XP unknown
         </p>
       )}
     </div>
@@ -1428,7 +1509,7 @@ function ExpectedCompletionsMeta({
                   className={[
                     "truncate font-mono text-[0.5rem] uppercase tracking-[0.14em]",
                     mission.isCompleted
-                      ? "text-rsi-text-muted line-through"
+                      ? "text-rsi-text-muted"
                       : "text-rsi-accent",
                   ].join(" ")}
                 >
@@ -1438,7 +1519,7 @@ function ExpectedCompletionsMeta({
                   className={[
                     "truncate text-[0.6rem] font-semibold tracking-wide",
                     mission.isCompleted
-                      ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                      ? "text-rsi-text-muted"
                       : "text-rsi-text",
                   ].join(" ")}
                 >
@@ -1447,7 +1528,7 @@ function ExpectedCompletionsMeta({
                 <p
                   className={[
                     "truncate text-[0.5rem] leading-snug text-rsi-text-secondary",
-                    mission.isCompleted ? "line-through opacity-80" : "",
+                    mission.isCompleted ? "opacity-80" : "",
                   ].join(" ")}
                 >
                   {scuItems}
@@ -1483,7 +1564,7 @@ function NextDistanceMeta({
         <p
           className={[
             "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
-            row.isCompleted ? "text-rsi-text-muted line-through" : "text-rsi-success",
+            row.isCompleted ? "text-rsi-text-muted" : "text-rsi-success",
           ].join(" ")}
         >
           Session complete
@@ -1509,7 +1590,7 @@ function NextDistanceMeta({
         className={[
           "mt-0.5 text-sm",
           row.isCompleted
-            ? "text-rsi-text-muted line-through"
+            ? "text-rsi-text-muted"
             : "text-rsi-text-secondary",
         ].join(" ")}
       >
@@ -1722,9 +1803,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               isFocused={activeRowId === QUANTUM_ORIGIN_ROW_ID}
               isCopied={copiedRowId === QUANTUM_ORIGIN_ROW_ID}
               onCopy={() => {
-                const name =
-                  getLocationBySlug(startSlugTrimmed)?.name ?? startSlugTrimmed;
-                void copyStarmapName(QUANTUM_ORIGIN_ROW_ID, name);
+                void copyStarmapName(
+                  QUANTUM_ORIGIN_ROW_ID,
+                  getLocationShortName(startSlugTrimmed),
+                );
               }}
               onFocus={() => onFocusStop?.(QUANTUM_ORIGIN_ROW_ID)}
               onToggle={() => {
@@ -1787,7 +1869,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   isFocused={isFocused}
                   isCopied={isCopied}
                   onCopy={() => {
-                    void copyStarmapName(row.id, location);
+                    void copyStarmapName(
+                      row.id,
+                      getLocationShortName(row.locationSlug),
+                    );
                   }}
                   onFocus={() => onFocusStop?.(row.id)}
                   onToggle={toggleStopDone}
@@ -1822,6 +1907,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             }
             return sum;
           }, 0);
+          const completionXp =
+            estimateMissionsHaulingRepXp(expectedCompletions);
 
           return (
             <Fragment key={row.id}>
@@ -1860,7 +1947,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         )}
                         isCopied={isCopied}
                         onCopy={() => {
-                          void copyStarmapName(row.id, location);
+                          void copyStarmapName(
+                            row.id,
+                            getLocationShortName(row.locationSlug),
+                          );
                         }}
                       />
                       <div className="mt-5 pb-5">
@@ -1895,11 +1985,18 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   </div>
                   <div className="min-w-0">
                     <ExpectedCompletionsMeta missions={expectedCompletions} />
-                    <PayoutMeta
-                      row={row}
-                      completionAuec={completionAuec}
-                      completingMissionCount={expectedCompletions.length}
-                    />
+                    <div className="flex flex-wrap items-start gap-x-8 gap-y-1">
+                      <PayoutMeta
+                        row={row}
+                        completionAuec={completionAuec}
+                        completingMissionCount={expectedCompletions.length}
+                      />
+                      <ExpMeta
+                        row={row}
+                        approxXp={completionXp}
+                        completingMissionCount={expectedCompletions.length}
+                      />
+                    </div>
                     <div className="flex justify-start py-3 md:hidden">
                       <DoneStopButton
                         location={location}

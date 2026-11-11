@@ -42,6 +42,12 @@ export function getLocationBySlug(slug: string): FixtureLocation | undefined {
   return locationsBySlug.get(slug);
 }
 
+/** Unique one-word location label; falls back to slug when missing. */
+export function getLocationShortName(slug: string): string {
+  const location = getLocationBySlug(slug);
+  return location?.shortName || location?.name || slug;
+}
+
 export function listCommodities(): FixtureCommodity[] {
   return commodities.items;
 }

@@ -37,6 +37,7 @@ import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { CargoBoxCountIcons } from "./CargoBoxSizeIcon";
 import { CargoLegendSection } from "./CargoLegendSection";
 import {
@@ -797,7 +798,7 @@ export function CargoGridSketch({
         ) : null}
         {showScuSizeFilters ? (
           <CargoLegendSection
-            title="SCU sizes"
+            title={`${SCU_TITLE} sizes`}
             sectionId="scu-sizes"
             isExpanded={isLegendSectionExpanded("scuSizes")}
             onToggle={() => toggleLegendSection("scuSizes")}
@@ -1004,7 +1005,7 @@ export function CargoGridSketch({
               <div>
                 <dt className="inline text-rsi-text-muted">Total </dt>
                 <dd className="inline tabular-nums text-rsi-text">
-                  {totalScu} SCU
+                  {totalScu} <span title={SCU_TITLE}>SCU</span>
                 </dd>
               </div>
             </dl>
@@ -1525,7 +1526,7 @@ export function CargoGridSketch({
                       return (
                         <div
                           key={box.id}
-                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} SCU · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`}
+                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`}
                           role={manualEdit ? "button" : undefined}
                           aria-hidden={manualEdit ? undefined : true}
                           aria-label={
@@ -1545,9 +1546,11 @@ export function CargoGridSketch({
                           }
                           className={[
                             "absolute z-[5] box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
+                            // Keep pointer events so crate `title` (full commodity
+                            // name) works on hover — not only in Manual drag mode.
                             manualEdit
                               ? "pointer-events-auto cursor-grab touch-none active:cursor-grabbing"
-                              : "pointer-events-none",
+                              : "pointer-events-auto",
                           ].join(" ")}
                           style={{
                             left,
@@ -1604,7 +1607,7 @@ export function CargoGridSketch({
                           {scuSizeBadges.has(box.size as CargoBoxScu) ? (
                             <span
                               className="pointer-events-none absolute right-0.5 bottom-0.5 inline-flex min-w-[0.85rem] items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 px-0.5 font-mono text-[0.5rem] font-bold tabular-nums leading-none text-rsi-text"
-                              title={`${box.size} SCU`}
+                              title={`${box.size} ${SCU_TITLE}`}
                             >
                               {box.size}
                             </span>

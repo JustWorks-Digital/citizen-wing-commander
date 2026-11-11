@@ -1405,12 +1405,12 @@
     },
     {
       "slug": "pressurized-ice",
-      "colorHex": "#8a93a0",
-      "colorHex2": "#e0a63a",
+      "colorHex": "#87ceeb",
+      "colorHex2": "#1f4e8c",
       "image": "crates/cargo_-_minerals.png",
       "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
       "sharedWith": [],
-      "colorSource": "kind-crate-image"
+      "colorSource": "manual"
     },
     {
       "slug": "processed-food",

@@ -15,6 +15,7 @@ import {
 } from "@/lib/missions/catalogMissionTableQuery";
 import { SourceIcon } from "@/components/ui/SourceIcon";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type MissionCatalogTableProps = {
   missions: CatalogMission[];
@@ -46,6 +47,7 @@ const COLUMNS: Array<{
   label: string;
   className: string;
   align?: "left" | "right";
+  title?: string;
 }> = [
   { key: "id", label: "ID", className: "w-[5.5rem]" },
   { key: "title", label: "Title", className: "w-[24%] min-w-0" },
@@ -56,7 +58,13 @@ const COLUMNS: Array<{
     className: "w-[5.5rem]",
     align: "right",
   },
-  { key: "scu", label: "SCU", className: "w-[3rem]", align: "right" },
+  {
+    key: "scu",
+    label: "SCU",
+    className: "w-[3rem]",
+    align: "right",
+    title: SCU_TITLE,
+  },
   { key: "from", label: "From", className: "w-[14%] min-w-0" },
   { key: "to", label: "To", className: "w-[14%] min-w-0" },
   { key: "cargo", label: "Cargo", className: "w-[12%] min-w-0" },
@@ -228,7 +236,7 @@ export function MissionCatalogTable({
               const alignRight = column.align === "right";
               const headerInner = (
                 <>
-                  <span>{column.label}</span>
+                  <span title={column.title}>{column.label}</span>
                   {canSort ? (
                     <SortGlyph
                       active={Boolean(isActive)}

@@ -12,6 +12,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scWikiApi, uexApi } from "../lib/api/externalEndpoints.mjs";
+import { withLocationShortNames } from "../lib/fixtures/locationShortNames.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -291,12 +292,17 @@ async function main() {
     fetchShips(),
     fetchOutdoorFreightElevatorPlaceKeys(),
   ]);
-  const locations = withOutdoorFreightElevators(locationsRaw, outdoorKeys);
+  const locations = withLocationShortNames(
+    withOutdoorFreightElevators(locationsRaw, outdoorKeys),
+  );
   const outdoorCount = locations.filter(
     (location) => location.hasOutdoorFreightElevator,
   ).length;
   console.log(
     `outdoor freight elevators: ${outdoorCount} location(s) from UEX has_loading_dock`,
+  );
+  console.log(
+    `location short names: ${new Set(locations.map((row) => row.shortName.toLowerCase())).size} unique`,
   );
 
   await writeFixture("locations.json", {

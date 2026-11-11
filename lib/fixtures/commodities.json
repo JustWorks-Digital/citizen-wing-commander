@@ -1617,9 +1617,9 @@
       "slug": "pressurized-ice",
       "name": "Pressurized Ice",
       "kind": "Raw Materials",
-      "color": "gray",
-      "color2": "yellow",
-      "colorSource": "kind-fallback",
+      "color": "sky",
+      "color2": "navy",
+      "colorSource": "manual",
       "isAvailableLive": true,
       "isIllegal": false
     },

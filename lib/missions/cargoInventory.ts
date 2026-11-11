@@ -85,6 +85,35 @@ export function estimatePeakOnboardScu(rows: HaulingChecklistRow[]): number {
   return applyCargoToOnboard(0, rows).peak;
 }
 
+export type MissionScuBreakdownItem = {
+  missionId: string;
+  title: string;
+  scu: number;
+  /** Logical screenshot paths for the source icon / lightbox. */
+  screenshots: string[];
+};
+
+function missionCargoScu(mission: SessionMission): number {
+  return mission.cargo.reduce((sum, line) => sum + line.scu, 0);
+}
+
+/**
+ * Per-contract SCU for visible (non-hidden) session missions.
+ * Empty when the mission list is missing — callers may fall back to route totals.
+ */
+export function estimateMissionScuBreakdown(
+  missions: SessionMission[] | undefined,
+): MissionScuBreakdownItem[] {
+  return (missions ?? [])
+    .filter((mission) => !mission.isHidden)
+    .map((mission) => ({
+      missionId: mission.id,
+      title: mission.title,
+      scu: missionCargoScu(mission),
+      screenshots: [...(mission.screenshots ?? [])],
+    }));
+}
+
 /**
  * Total SCU across agreed (visible) missions.
  * Falls back to route pickup totals when the mission list is empty.
@@ -93,13 +122,9 @@ export function estimateMissionsTotalScu(
   missions: SessionMission[] | undefined,
   rows: HaulingChecklistRow[],
 ): number {
-  const agreed = (missions ?? []).filter((mission) => !mission.isHidden);
-  if (agreed.length > 0) {
-    return agreed.reduce(
-      (sum, mission) =>
-        sum + mission.cargo.reduce((lineSum, line) => lineSum + line.scu, 0),
-      0,
-    );
+  const breakdown = estimateMissionScuBreakdown(missions);
+  if (breakdown.length > 0) {
+    return breakdown.reduce((sum, item) => sum + item.scu, 0);
   }
 
   let pickupTotal = 0;

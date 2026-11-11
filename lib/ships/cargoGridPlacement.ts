@@ -1111,6 +1111,11 @@ export type PlaceCargoInZoneOptions = {
    * cluster reordering and place in list order (still clusterByKey affinity).
    */
   itemsPreordered?: boolean;
+  /**
+   * Prefix for crate ids so successive place calls (route simulation) do not
+   * collide when zone/index/size/commodity repeat.
+   */
+  idNamespace?: string;
 };
 
 function sizesForSegment(segment: CargoPlacementSegment): CargoBoxScu[] {
@@ -1356,8 +1361,9 @@ export function placeCargoItemsInZone(
         occupiedClusters.set(key, clusterKey);
         if (regionKey) occupiedRegions.set(key, regionKey);
       }
+      const idRoot = options?.idNamespace ?? zone;
       boxes.push({
-        id: `${zone}-${index}-${item.size}-${clusterKey}`,
+        id: `${idRoot}-${index}-${item.size}-${clusterKey}`,
         size: item.size,
         origin,
         footprint,
@@ -1661,6 +1667,7 @@ export function planZoneOccupancyAtStop(
   const occupied = new Set<string>();
   const lotsByKey = new Map<string, OnboardLot[]>();
   const gapRanges = gapXRangesForSketch(sketch);
+  let pickupSeq = 0;
 
   const occupiedCoords = (): CargoGridCoord[] =>
     [...occupied].map((key) => {
@@ -1723,6 +1730,7 @@ export function planZoneOccupancyAtStop(
     const segment = segmentFromCargo(cargo);
     const plan = placeCargoInZone(sketch, storage, [segment], {
       occupied: occupiedCoords(),
+      idNamespace: `onboard-${pickupSeq++}`,
     });
     for (const box of plan.boxes) {
       for (const cell of box.cells) occupied.add(cargoGridCoordKey(cell));
@@ -1817,6 +1825,36 @@ export function planZoneOccupancyAtStop(
     }
 
     if (isTarget) {
+      // Also show cargo still aboard from earlier pickups (not just this
+      // stop’s load/unload actions). Dedupes boxes already pushed above.
+      if (locationGroups && pickupDeliveryPool) {
+        for (const [, queue] of lotsByKey) {
+          for (const lot of queue) {
+            if (zone != null && lot.zone !== zone) continue;
+            const stayBoxes = lot.boxes.filter(
+              (box) => !seenBoxIds.has(box.id),
+            );
+            if (stayBoxes.length === 0) continue;
+            const stayScu = stayBoxes.reduce((sum, box) => sum + box.size, 0);
+            const stayCargo: CargoDelivery = {
+              commoditySlug: lot.commoditySlug,
+              scu: stayScu,
+            };
+            const splits = takeDeliveryLocationScuSplits(
+              pickupDeliveryPool,
+              stayCargo,
+              stayScu,
+            );
+            pushUniqueBoxes(
+              applyDeliveryLocationSplitsToBoxes(
+                stayBoxes,
+                splits,
+                locationGroups,
+              ),
+            );
+          }
+        }
+      }
       return {
         zone: zone ?? "front",
         boxes: viewBoxes,
@@ -2213,15 +2251,21 @@ function applyDeliveryLocationSplitsToBoxes(
   boxes: PlacedCargoBox[],
   splits: DeliveryLocationScuSplit[],
   locationGroups: Map<string, number>,
-  action: CargoGridBoxAction,
+  action?: CargoGridBoxAction,
 ): PlacedCargoBox[] {
+  const withAction = (
+    box: PlacedCargoBox,
+    meta: ReturnType<typeof locationMetaForSlug> = {},
+  ): PlacedCargoBox =>
+    action != null ? { ...box, action, ...meta } : { ...box, ...meta };
+
   if (boxes.length === 0) return boxes;
   if (splits.length === 0) {
-    return boxes.map((box) => ({ ...box, action }));
+    return boxes.map((box) => withAction(box));
   }
   if (splits.length === 1) {
     const meta = locationMetaForSlug(splits[0]!.locationSlug, locationGroups);
-    return boxes.map((box) => ({ ...box, action, ...meta }));
+    return boxes.map((box) => withAction(box, meta));
   }
 
   const pending = boxes
@@ -2248,7 +2292,7 @@ function applyDeliveryLocationSplitsToBoxes(
       if (!fit) break;
       fit.assigned = true;
       need -= fit.box.size;
-      tagged.push({ ...fit.box, action, ...meta });
+      tagged.push(withAction(fit.box, meta));
     }
     needBySlug.set(split.locationSlug, need);
   }
@@ -2268,7 +2312,7 @@ function applyDeliveryLocationSplitsToBoxes(
     const meta = locationMetaForSlug(bestSlug, locationGroups);
     const need = needBySlug.get(bestSlug) ?? 0;
     needBySlug.set(bestSlug, Math.max(0, need - entry.box.size));
-    tagged.push({ ...entry.box, action, ...meta });
+    tagged.push(withAction(entry.box, meta));
   }
 
   return tagged;

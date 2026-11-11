@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
   cargoGridMaxWidth,
   cargoGridTotalLength,
@@ -1613,7 +1614,7 @@ export function CargoGridIsoView({
             >
               <title>
                 {cube.kind === "cargo"
-                  ? `${cube.locationGroupIndex != null ? `Loc ${cube.locationGroupIndex} · ` : ""}${actionLabel ? `${actionLabel} · ` : ""}${commodityName ? `${commodityName} · ` : ""}${cube.footprint.dx * cube.footprint.dy * cube.footprint.dz} SCU · ${formatCargoGridCoord(cube.coord)}`
+                  ? `${cube.locationGroupIndex != null ? `Loc ${cube.locationGroupIndex} · ` : ""}${actionLabel ? `${actionLabel} · ` : ""}${commodityName ? `${commodityName} · ` : ""}${cube.footprint.dx * cube.footprint.dy * cube.footprint.dz} ${SCU_TITLE} · ${formatCargoGridCoord(cube.coord)}`
                   : cube.kind === "placeholder"
                     ? `Support · ${formatCargoGridCoord(cube.coord)}`
                     : `Floor ${formatCargoGridCoord(cube.coord)}`}
