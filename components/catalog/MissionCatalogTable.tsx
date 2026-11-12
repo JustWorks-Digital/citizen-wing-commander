@@ -399,7 +399,7 @@ export function MissionCatalogTable({
                   <td
                     className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-accent`}
                   >
-                    {catalogRewardLabel(mission)}
+                    {catalogRewardLabel(mission, { includeAuecUnit: false })}
                   </td>
                   <td
                     className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}

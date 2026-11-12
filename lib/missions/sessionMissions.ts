@@ -2,6 +2,7 @@ import {
   formatAuecAmount,
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
+import type { ScuCargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import type {
   HaulingIntakeCargoLine,
   HaulingIntakeContract,
@@ -36,13 +37,21 @@ export type SessionMission = {
   }>;
   maxContainerScu?: number;
   /**
-   * Selected physical crate mix for this mission’s total SCU.
-   * Drives 2D/3D bay packing when stamped onto route cargo lines.
+   * Selected crate mix per commodity slug (source of truth for restamp).
+   * Aggregate `scuBoxSplits` is the sum of these maps.
+   */
+  scuCargoBoxSplits?: ScuCargoBoxSplits;
+  /**
+   * Auto / greedy default mix per commodity (before user correction).
+   */
+  scuCargoBoxSplitsAutoSelected?: ScuCargoBoxSplits;
+  /**
+   * Aggregate crate mix (sum of `scuCargoBoxSplits`). Kept for catalog column,
+   * compact icons, and legacy single-mix callers.
    */
   scuBoxSplits?: ScuBoxSplits;
   /**
-   * Auto / greedy default mix (capped by `maxContainerScu`) captured before
-   * any user correction. Kept so we can compare against `scuBoxSplits`.
+   * Aggregate auto mix (sum of `scuCargoBoxSplitsAutoSelected`).
    */
   scuBoxSplitsAutoSelected?: ScuBoxSplits;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */

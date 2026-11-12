@@ -27,24 +27,36 @@ export function contractorDisplayName(
   return getContractorBySlug(slugOrName)?.name ?? slugOrName;
 }
 
-function formatRewardLine(reward: CatalogMissionReward): string {
+function formatRewardLine(
+  reward: CatalogMissionReward,
+  options?: { includeAuecUnit?: boolean },
+): string {
   if (reward.kind === "auec") {
     if (reward.amount <= 0) return "";
-    return formatAuecAmount(reward.amount);
+    return formatAuecAmount(reward.amount, {
+      includeUnit: options?.includeAuecUnit,
+    });
   }
   return reward.name;
 }
 
 /** Compact table/detail label for catalog rewards (aUEC + other kinds). */
-export function catalogRewardLabel(mission: CatalogMission): string {
+export function catalogRewardLabel(
+  mission: CatalogMission,
+  options?: { includeAuecUnit?: boolean },
+): string {
   const rewards =
     mission.rewards?.length
       ? mission.rewards
       : catalogPayload(mission)?.rewards ?? [];
-  const parts = rewards.map(formatRewardLine).filter(Boolean);
+  const parts = rewards
+    .map((reward) => formatRewardLine(reward, options))
+    .filter(Boolean);
   if (parts.length === 0) {
     const auec = auecFromRewards(rewards);
-    return auec > 0 ? formatRewardLine({ kind: "auec", amount: auec }) : "—";
+    return auec > 0
+      ? formatRewardLine({ kind: "auec", amount: auec }, options)
+      : "—";
   }
   return parts.join(" · ");
 }

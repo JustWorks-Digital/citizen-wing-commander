@@ -968,6 +968,11 @@ function resolveScuBoxSplitsInput(input: {
 export async function toolSetMissionScuBoxSplits(input: {
   missionId: string;
   sessionId?: string | null;
+  /**
+   * Commodity name or slug when the mission has multiple cargo types.
+   * Optional when there is only one cargo line.
+   */
+  commodity?: string | null;
   /** Preferred: terminal-style counts, e.g. [{ size: 16, count: 18 }, { size: 1, count: 1 }]. */
   boxes?: Array<{ size: number; count: number }> | null;
   /** Alternate: explicit scuOne…scuThirtyTwo counts. */
@@ -997,21 +1002,54 @@ export async function toolSetMissionScuBoxSplits(input: {
     }
     const scuBoxSplits = resolved;
 
-    const missionScu = mission.cargo.reduce(
-      (sum, line) => sum + (Number(line.scu) || 0),
-      0,
-    );
+    const commodityHint = input.commodity?.trim() || null;
+    const lineScu = (() => {
+      if (!commodityHint) {
+        return mission.cargo.reduce(
+          (sum, line) => sum + (Number(line.scu) || 0),
+          0,
+        );
+      }
+      const slug =
+        resolveCommoditySlug(commodityHint) ??
+        commodityHint.trim().toLowerCase();
+      const line = mission.cargo.find((entry) => {
+        const entrySlug =
+          resolveCommoditySlug(entry.commodity) ??
+          entry.commodity.trim().toLowerCase();
+        return (
+          entrySlug === slug ||
+          entry.commodity.trim().toLowerCase() ===
+            commodityHint.trim().toLowerCase()
+        );
+      });
+      return line ? Number(line.scu) || 0 : null;
+    })();
+
     const boxScu = scuTotalFromSplits(scuBoxSplits);
-    if (missionScu > 0 && boxScu !== missionScu) {
+    if (lineScu == null) {
       return textResult({
-        error: `Box mix totals ${boxScu} SCU but mission cargo is ${missionScu} SCU. Counts must sum to the mission total.`,
-        missionScu,
+        error: `Unknown commodity for mission ${missionId}: ${commodityHint}`,
+        knownCommodities: mission.cargo.map((line) => line.commodity),
+      });
+    }
+    if (lineScu > 0 && boxScu !== lineScu) {
+      return textResult({
+        error: commodityHint
+          ? `Box mix totals ${boxScu} SCU but ${commodityHint} is ${lineScu} SCU. Counts must sum to that commodity’s SCU.`
+          : `Box mix totals ${boxScu} SCU but mission cargo is ${lineScu} SCU. Counts must sum to the mission total.`,
+        missionScu: lineScu,
         boxScu,
         label: formatBreakdownLabel(scuBoxSplits),
       });
     }
 
-    const result = setMissionScuBoxSplits(session, missionId, scuBoxSplits);
+    const result = setMissionScuBoxSplits(
+      session,
+      missionId,
+      scuBoxSplits,
+      commodityHint,
+    );
     if (!result.ok) {
       return textResult({ error: result.error });
     }
@@ -1025,11 +1063,12 @@ export async function toolSetMissionScuBoxSplits(input: {
     let catalogError: string | null = null;
     const catalogId = updated?.catalogMissionId ?? null;
     const shouldUpdateCatalog = input.updateCatalog !== false;
-    if (shouldUpdateCatalog && catalogId) {
+    if (shouldUpdateCatalog && catalogId && updated?.scuBoxSplits) {
       try {
         await updateCatalogMissionScuBoxSplits({
           missionId: catalogId,
-          scuBoxSplits,
+          scuBoxSplits: updated.scuBoxSplits,
+          scuCargoBoxSplits: updated.scuCargoBoxSplits,
         });
         catalogUpdated = catalogId;
       } catch (error) {
@@ -1063,10 +1102,12 @@ export async function toolSetMissionScuBoxSplits(input: {
       ok: true,
       sessionId: next.id,
       missionId,
+      commodity: commodityHint,
       label: formatBreakdownLabel(scuBoxSplits),
-      scuBoxSplits,
+      scuBoxSplits: updated?.scuBoxSplits ?? scuBoxSplits,
+      scuCargoBoxSplits: updated?.scuCargoBoxSplits ?? null,
       boxScu,
-      missionScu,
+      missionScu: lineScu,
       catalogUpdated,
       catalogError,
       stampedPickup,

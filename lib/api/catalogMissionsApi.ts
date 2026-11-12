@@ -91,6 +91,7 @@ export async function addCatalogMissionsToSession(
 export async function updateCatalogMissionScuBoxSplits(input: {
   missionId: string;
   scuBoxSplits: ScuBoxSplits;
+  scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
 }): Promise<CatalogMission> {
   const res = await fetch(appApi.catalogMissionsScuBoxSplits, {
     method: "POST",

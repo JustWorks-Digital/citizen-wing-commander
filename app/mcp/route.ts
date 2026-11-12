@@ -352,13 +352,20 @@ const handler = createMcpHandler(
       {
         title: "Set mission crate mix",
         description:
-          "Use this when the player is at a freight elevator / hangar and the in-game UI shows the real crate sizes (1/2/4/8/16/32 SCU). Corrects the session mission’s scuBoxSplits, restamps boxSizes onto pickup/delivery cargo for Collect pads and bay packing, and updates the linked catalog default when present. Prefer boxes: [{ size, count }, …] matching the terminal list (counts must sum to the mission SCU total).",
+          "Use this when the player is at a freight elevator / hangar and the in-game UI shows the real crate sizes (1/2/4/8/16/32 SCU). Corrects per-commodity scuCargoBoxSplits (and aggregate scuBoxSplits), restamps boxSizes onto pickup/delivery cargo for Collect pads and bay packing, and updates the linked catalog default when present. Prefer boxes: [{ size, count }, …] matching the terminal list. For multi-cargo missions pass commodity; counts must sum to that commodity’s SCU (or the mission total when single-cargo).",
         inputSchema: z.object({
           missionId: z
             .string()
             .min(1)
             .describe(
               "Session mission id from get_hauling_checklist (e.g. experienced-ice-289)",
+            ),
+          commodity: z
+            .string()
+            .min(1)
+            .optional()
+            .describe(
+              "Commodity name or slug when the mission has multiple cargo types (required then). Omit for single-cargo missions.",
             ),
           boxes: z
             .array(
@@ -1133,7 +1140,7 @@ const handler = createMcpHandler(
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
-      "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32; totals must match mission SCU).",
+      "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32). For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo).",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
       "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it; imageBase64 remains a fallback. ChatGPT /mnt/data paths are not reachable by remote MCP — do not pass them. Pass sessionId (= batch). Optional missionId stores+attaches in one call. Otherwise put returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath / set_mission_screenshots. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",

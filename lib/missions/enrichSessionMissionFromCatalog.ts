@@ -5,6 +5,11 @@ import {
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
+import {
+  normalizeMissionRank,
+  parseRankFromTitle,
+  stripRankFromTitle,
+} from "@/lib/missions/missionRank";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -74,10 +79,19 @@ export function enrichSessionMissionFromCatalog(
   const category =
     normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;
 
+  // Catalog stores rank separately and titles without "X Rank - …". Recompose
+  // so session UI that parses rank from title still shows it.
+  const rank =
+    normalizeMissionRank(catalog.rank) ?? parseRankFromTitle(mission.title);
+  const baseTitle =
+    (catalog.title?.trim() || stripRankFromTitle(mission.title).title).trim() ||
+    mission.title;
+  const titleWithRank = rank ? `${rank} Rank - ${baseTitle}` : baseTitle;
+
   return {
     ...mission,
     catalogMissionId: catalog.id,
-    title: catalog.title || mission.title,
+    title: titleWithRank,
     contractor: catalog.contractorSlug
       ? (getContractorBySlug(catalog.contractorSlug)?.name ??
         catalog.contractorSlug)
@@ -101,6 +115,9 @@ export function enrichSessionMissionFromCatalog(
       .join(" · "),
     maxContainerScu:
       catalog.scuMaxContainerSize ?? mission.maxContainerScu,
+    scuCargoBoxSplits:
+      payload.scuCargoBoxSplits ?? mission.scuCargoBoxSplits,
+    scuBoxSplits: catalog.scuBoxSplits ?? mission.scuBoxSplits,
     deliverySplits,
     screenshots: payload.latestScreenshotPath
       ? [payload.latestScreenshotPath]
@@ -108,7 +125,7 @@ export function enrichSessionMissionFromCatalog(
     mobiglas: {
       ...mission.mobiglas,
       category,
-      title: catalog.title || mission.mobiglas.title || mission.title,
+      title: titleWithRank,
     },
   };
 }

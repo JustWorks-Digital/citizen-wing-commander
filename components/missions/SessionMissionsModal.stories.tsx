@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session contracts as tiles: box icons open quick box-type edit, Details expands Collect/Deliver, ⋯ menu for complete/hide/delete.",
+          "Session contracts table: Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions. Footer totals show earned/total for aUEC, SCU, and EXP. Boxes open the crate-mix modal; ⋯ menu for complete/hide/delete.",
       },
     },
   },
@@ -29,8 +29,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Tile grid; Boxes opens the crate-mix modal; Details toggles Collect/Deliver on all tiles. */
-export const BlockList: Story = {};
+/** Table of session contracts; Boxes opens the crate-mix modal. */
+export const Table: Story = {};
+
+/** Opened from a stop Contracts tile — focused row is highlighted. */
+export const FocusedRow: Story = {
+  args: {
+    focusMissionId: mockSessionChecklist.missions[0]?.id ?? null,
+  },
+};
 
 export const Empty: Story = {
   args: {

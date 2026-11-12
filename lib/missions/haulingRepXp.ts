@@ -31,6 +31,15 @@ export function estimateMissionHaulingRepXp(
   return HAULING_CONTRACT_REP_XP_BY_RANK[rank];
 }
 
+/** Compact EXP for table cells — `500`, `1k`, `11k`. */
+export function formatHaulingRepXp(amount: number): string {
+  const n = Math.floor(Math.max(0, amount));
+  if (n < 1000) return String(n);
+  if (n % 1000 === 0) return `${n / 1000}k`;
+  const tenths = Math.round(n / 100) / 10;
+  return `${String(tenths).replace(/\.0$/, "")}k`;
+}
+
 /**
  * Sum of approximate hauling XP for missions expected to complete
  * (unknown-rank contracts contribute 0).

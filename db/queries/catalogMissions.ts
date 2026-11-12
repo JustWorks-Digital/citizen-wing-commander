@@ -366,6 +366,8 @@ export async function updateCatalogMissionRouteFlags(input: {
 export async function updateCatalogMissionScuBoxSplits(input: {
   missionId: string;
   scuBoxSplits: ScuBoxSplits;
+  /** Per-commodity mixes; written onto payload when provided. */
+  scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
 }): Promise<CatalogMission> {
   const existing = await getCatalogMission(input.missionId);
   if (!existing) {
@@ -373,9 +375,18 @@ export async function updateCatalogMissionScuBoxSplits(input: {
   }
   const scuBoxSplits = normalizeScuBoxSplits(input.scuBoxSplits);
   const existingPayload = existing.payload as HaulingCatalogMissionPayload;
+  const scuCargoBoxSplits = input.scuCargoBoxSplits
+    ? Object.fromEntries(
+        Object.entries(input.scuCargoBoxSplits).map(([slug, splits]) => [
+          slug,
+          normalizeScuBoxSplits(splits),
+        ]),
+      )
+    : existingPayload.scuCargoBoxSplits;
   const payload = buildHaulingCatalogMissionPayload({
     ...existingPayload,
     scuBoxSplits,
+    scuCargoBoxSplits,
   });
   const db = getDb();
   const [row] = await db

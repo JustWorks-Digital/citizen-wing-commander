@@ -120,6 +120,7 @@ export function SessionChecklistView({
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
+  const [missionsFocusId, setMissionsFocusId] = useState<string | null>(null);
   const [stopsOpen, setStopsOpen] = useState(false);
   const [cargoLayoutOpen, setCargoLayoutOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -364,8 +365,14 @@ export function SessionChecklistView({
       });
   }, []);
 
-  const openMissions = useCallback(() => setMissionsOpen(true), []);
-  const closeMissions = useCallback(() => setMissionsOpen(false), []);
+  const openMissions = useCallback((missionId?: string) => {
+    setMissionsFocusId(typeof missionId === "string" ? missionId : null);
+    setMissionsOpen(true);
+  }, []);
+  const closeMissions = useCallback(() => {
+    setMissionsOpen(false);
+    setMissionsFocusId(null);
+  }, []);
   const openStops = useCallback(() => setStopsOpen(true), []);
   const closeStops = useCallback(() => setStopsOpen(false), []);
   const openCargoLayout = useCallback(() => setCargoLayoutOpen(true), []);
@@ -414,6 +421,7 @@ export function SessionChecklistView({
     setStopsOpen((open) => !open);
   }, []);
   const toggleMissions = useCallback(() => {
+    setMissionsFocusId(null);
     setMissionsOpen((open) => !open);
   }, []);
 
@@ -619,21 +627,34 @@ export function SessionChecklistView({
 
   const applyBoxBreakdown = (
     missionId: string,
+    commoditySlug: string,
     breakdown: ScuBoxSplits,
+    options?: {
+      applyPreferredMaxToRemaining?: boolean;
+      onlyUncorrected?: boolean;
+    },
   ) => {
-    const result = setMissionScuBoxSplits(session, missionId, breakdown);
+    const result = setMissionScuBoxSplits(
+      session,
+      missionId,
+      breakdown,
+      commoditySlug,
+      options,
+    );
     if (!result.ok) {
       setLoadError(result.error);
       return;
     }
     persistSession(result.session);
-    const catalogId =
-      result.session.missions?.find((mission) => mission.id === missionId)
-        ?.catalogMissionId ?? null;
-    if (!catalogId) return;
+    const updatedMission =
+      result.session.missions?.find((mission) => mission.id === missionId) ??
+      null;
+    const catalogId = updatedMission?.catalogMissionId ?? null;
+    if (!catalogId || !updatedMission?.scuBoxSplits) return;
     void updateCatalogMissionScuBoxSplits({
       missionId: catalogId,
-      scuBoxSplits: breakdown,
+      scuBoxSplits: updatedMission.scuBoxSplits,
+      scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
     }).catch(() => {
       setLoadError("Saved on session, but failed to update catalog default");
     });
@@ -817,7 +838,10 @@ export function SessionChecklistView({
         onUpdateQuantumTravel={onUpdateQuantumTravel}
         onOpenCargoBays={toggleCargoLayout}
         onOpenStops={toggleStops}
-        onOpenContracts={toggleMissions}
+        onOpenContracts={(missionId) => {
+          if (missionId) openMissions(missionId);
+          else toggleMissions();
+        }}
         onSelectBoxBreakdown={applyBoxBreakdown}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
@@ -879,6 +903,7 @@ export function SessionChecklistView({
         open={missionsOpen}
         missions={session.missions ?? []}
         rows={session.rows}
+        focusMissionId={missionsFocusId}
         onClose={closeMissions}
         onToggleHidden={(missionId, isHidden) => {
           const result = setMissionHiddenAndRebuildRoute(

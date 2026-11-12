@@ -11,6 +11,7 @@ import {
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { fetchCatalogMissionsByIds } from "@/lib/api/catalogMissionsApi";
+import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import {
   boxCountsFromBreakdown,
 } from "@/lib/missions/boxBreakdownOptions";
@@ -20,11 +21,16 @@ import {
 } from "@/lib/missions/catalogMission";
 import { enrichSessionMissionFromCatalog } from "@/lib/missions/enrichSessionMissionFromCatalog";
 import { stripRankFromTitle } from "@/lib/missions/missionRank";
-import { autoSelectedMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import {
+  estimateMissionHaulingRepXp,
+  formatHaulingRepXp,
+} from "@/lib/missions/haulingRepXp";
+import {
+  isMissionLocationCompleted,
+  missionAuecAmount,
   missionCollectObjectives,
   missionDeliverObjectives,
-  missionRewardLabel,
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
@@ -36,44 +42,22 @@ export type SessionMissionsModalProps = {
   missions: SessionMission[];
   /** Route rows — used to resolve per-stop SCU splits for Collect/Deliver. */
   rows?: HaulingChecklistRow[];
+  /** When set, scroll to and highlight this contract row. */
+  focusMissionId?: string | null;
   onClose: () => void;
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
   onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
   onRemoveMission: (missionId: string) => void;
   onSelectBoxBreakdown: (
     missionId: string,
+    commoditySlug: string,
     breakdown: ScuBoxSplits,
+    options?: {
+      applyPreferredMaxToRemaining?: boolean;
+      onlyUncorrected?: boolean;
+    },
   ) => void;
 };
-
-function ExpandChevronIcon({
-  open,
-  className,
-}: {
-  open: boolean;
-  className?: string;
-}) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      className={[
-        "h-3 w-3 transition-transform",
-        open ? "rotate-180" : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 function EllipsisIcon() {
   return (
@@ -151,43 +135,57 @@ function CompleteIcon({ isCompleted }: { isCompleted: boolean }) {
   );
 }
 
-function ObjectiveGroup({
-  label,
-  lines,
+function LocationList({
+  items,
 }: {
-  label: string;
-  lines: Array<{ locationLabel: string; cargoItems: string[] }>;
+  items: Array<{ label: string; isCompleted: boolean }>;
 }) {
-  if (lines.length === 0) return null;
+  if (items.length === 0) return <span>—</span>;
+  if (items.length === 1) {
+    const item = items[0]!;
+    return (
+      <span
+        className={[
+          "break-words",
+          item.isCompleted
+            ? "text-rsi-text-muted line-through decoration-rsi-success/50"
+            : "",
+        ].join(" ")}
+      >
+        {item.label}
+      </span>
+    );
+  }
   return (
-    <div>
-      <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        {label}
-      </p>
-      <div className="mt-1 space-y-1.5">
-        {lines.map((line) => (
-          <div key={`${label}-${line.locationLabel}`}>
-            <p className="text-[0.65rem] leading-snug text-rsi-text">
-              {line.locationLabel}
-            </p>
-            {line.cargoItems.length > 0 ? (
-              <ul className="mt-0.5 list-disc space-y-0.5 pl-4 marker:text-rsi-text-muted">
-                {line.cargoItems.map((item) => (
-                  <li
-                    key={`${line.locationLabel}-${item}`}
-                    className="font-mono text-[0.6rem] tabular-nums leading-snug text-rsi-text-secondary"
-                  >
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </div>
+    <ul className="list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug">
+      {items.map((item, index) => (
+        <li
+          key={`${item.label}-${index}`}
+          className={[
+            "break-words",
+            item.isCompleted
+              ? "text-rsi-text-muted line-through decoration-rsi-success/50"
+              : "",
+          ].join(" ")}
+        >
+          {item.label}
+        </li>
+      ))}
+    </ul>
   );
 }
+
+function formatRewardCell(mission: SessionMission): string {
+  const amount = missionAuecAmount(mission);
+  if (amount <= 0) return "—";
+  return Math.floor(amount).toLocaleString("en-US");
+}
+
+const thClass =
+  "px-2.5 py-2 text-left font-mono text-[0.55rem] font-medium uppercase tracking-[0.16em] text-rsi-text-muted sm:px-3";
+
+const tdClass =
+  "px-2.5 py-2 align-top text-xs leading-snug text-rsi-text-secondary sm:px-3";
 
 function MissionActionsMenu({
   mission,
@@ -319,20 +317,44 @@ function MissionActionsMenu({
 }
 
 function resolvedBoxSplits(mission: SessionMission): ScuBoxSplits {
-  const totalScu = missionTotalScu(mission);
+  const ready = cargoBoxSplits.withDefaults(mission);
   return (
-    mission.scuBoxSplits ??
-    mission.scuBoxSplitsAutoSelected ??
-    autoSelectedMissionScuBoxSplits(mission) ??
-    scuBoxSplitsForScu(totalScu, mission.maxContainerScu)
+    ready.scuBoxSplits ??
+    cargoBoxSplits.aggregate(
+      cargoBoxSplits.autoSelectedForMission(mission),
+    ) ??
+    scuBoxSplitsForScu(missionTotalScu(mission), mission.maxContainerScu)
   );
 }
 
-function MissionContractTile({
+function missionBoxCount(mission: SessionMission): number {
+  const ready = cargoBoxSplits.withDefaults(mission);
+  const lines = cargoBoxSplits.commodityLines(ready);
+  if (lines.length === 0) {
+    return boxCountsFromBreakdown(resolvedBoxSplits(mission)).reduce(
+      (sum, entry) => sum + entry.count,
+      0,
+    );
+  }
+  return lines.reduce((sum, line) => {
+    const splits =
+      ready.scuCargoBoxSplits?.[line.commoditySlug] ??
+      resolvedBoxSplits(mission);
+    return (
+      sum +
+      boxCountsFromBreakdown(splits).reduce(
+        (lineSum, entry) => lineSum + entry.count,
+        0,
+      )
+    );
+  }, 0);
+}
+
+function MissionContractRow({
   mission,
   rows,
-  isExpanded,
-  onToggleExpanded,
+  isFocused = false,
+  onToggleSelect,
   onToggleHidden,
   onToggleCompleted,
   onRemoveMission,
@@ -340,8 +362,8 @@ function MissionContractTile({
 }: {
   mission: SessionMission;
   rows: HaulingChecklistRow[];
-  isExpanded: boolean;
-  onToggleExpanded: () => void;
+  isFocused?: boolean;
+  onToggleSelect: () => void;
   onToggleHidden: (isHidden: boolean) => void;
   onToggleCompleted: (isCompleted: boolean) => void;
   onRemoveMission: () => void;
@@ -351,12 +373,30 @@ function MissionContractTile({
   const isCompleted = Boolean(mission.isCompleted);
   const { rank, title } = stripRankFromTitle(mission.title);
   const totalScu = missionTotalScu(mission);
-  const reward = missionRewardLabel(mission);
+  const reward = formatRewardCell(mission);
+  const exp = estimateMissionHaulingRepXp(mission);
   const collect = missionCollectObjectives(mission, rows);
   const deliver = missionDeliverObjectives(mission, rows);
-  const detailsId = `mission-details-${mission.id}`;
-  const boxSplits = resolvedBoxSplits(mission);
-  const boxCounts = boxCountsFromBreakdown(boxSplits);
+  const readyBoxes = cargoBoxSplits.withDefaults(mission);
+  const cargoBoxLines = cargoBoxSplits.commodityLines(readyBoxes);
+  const fromLocations = collect.map((line) => ({
+    label: line.locationLabel,
+    isCompleted: isMissionLocationCompleted(
+      mission,
+      rows,
+      line.locationLabel,
+      "pickup",
+    ),
+  }));
+  const toLocations = deliver.map((line) => ({
+    label: line.locationLabel,
+    isCompleted: isMissionLocationCompleted(
+      mission,
+      rows,
+      line.locationLabel,
+      "delivery",
+    ),
+  }));
 
   let statusBadge: ReactNode = null;
   if (isCompleted) {
@@ -374,139 +414,172 @@ function MissionContractTile({
   }
 
   return (
-    <article
+    <tr
+      data-mission-id={mission.id}
+      aria-selected={isFocused}
+      onClick={(event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("button, a, [role='menu']")) return;
+        onToggleSelect();
+      }}
       className={[
-        "rounded-rsi border px-3 pb-0.5 pt-3",
-        isHidden
-          ? "border-rsi-border/60 bg-rsi-bg-deep/30 opacity-55"
+        "cursor-pointer border-b border-rsi-border/50 last:border-b-0",
+        isHidden ? "opacity-55" : "",
+        isFocused
+          ? "bg-rsi-accent-muted/35 ring-1 ring-inset ring-rsi-accent/70"
           : isCompleted
-            ? "border-rsi-success/40 bg-rsi-bg-deep/40"
-            : "border-rsi-border/80 bg-rsi-bg-deep/40",
+            ? "bg-rsi-success/5"
+            : "hover:bg-rsi-bg-deep/35",
       ].join(" ")}
     >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p
-                className={[
-                  "truncate font-mono text-[0.5rem] uppercase tracking-[0.14em]",
-                  isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
-                ].join(" ")}
-              >
-                {rank ?? "—"}
-              </p>
-              <h3
-                className={[
-                  "mt-0.5 truncate text-sm font-semibold tracking-wide",
-                  isCompleted
-                    ? "text-rsi-text-muted line-through decoration-rsi-success/40"
-                    : "text-rsi-text",
-                ].join(" ")}
-                title={mission.title}
-              >
-                {title || mission.title}
-              </h3>
-            </div>
-            <MissionActionsMenu
-              mission={mission}
-              onToggleCompleted={onToggleCompleted}
-              onToggleHidden={onToggleHidden}
-              onRemoveMission={onRemoveMission}
-            />
-          </div>
-
-          <p
-            className={[
-              "mt-1 truncate text-[0.65rem] leading-snug text-rsi-text-secondary",
-              isCompleted ? "line-through opacity-80" : "",
-            ].join(" ")}
-          >
-            {mission.cargoSummary || `${totalScu} SCU`}
-          </p>
-
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p
-                className={[
-                  "font-mono text-[0.55rem] tabular-nums tracking-wide",
-                  isCompleted ? "text-rsi-success" : "text-rsi-accent",
-                ].join(" ")}
-              >
-                {totalScu} SCU
-              </p>
-              {reward !== "—" ? (
-                <p className="mt-0.5 font-mono text-[0.55rem] tabular-nums tracking-wide text-rsi-text">
-                  {reward}
-                </p>
-              ) : null}
-              {statusBadge ? <div className="mt-0.5">{statusBadge}</div> : null}
-            </div>
-
-            <button
-              type="button"
-              disabled={isCompleted}
-              title={
-                isCompleted
-                  ? "Box types locked on completed contracts"
-                  : "Edit box types"
-              }
-              aria-label={`Edit box types for ${mission.title}`}
-              onClick={onEditBoxTypes}
-              className={[
-                "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1",
-                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                isCompleted
-                  ? "cursor-not-allowed border-rsi-border/50 opacity-60"
-                  : "border-rsi-border bg-rsi-surface/80 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
-              ].join(" ")}
-            >
-              <CargoBoxCountIcons
-                boxCounts={boxCounts}
-                color={
-                  isCompleted ? "var(--rsi-text-muted)" : "var(--rsi-accent)"
-                }
-                className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.6rem]"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isExpanded ? (
-        <div id={detailsId} className="mt-3 space-y-3 border-t border-rsi-border/60 pt-3">
-          <ObjectiveGroup label="Collect" lines={collect} />
-          <ObjectiveGroup label="Deliver" lines={deliver} />
-          {collect.length === 0 && deliver.length === 0 ? (
-            <p className="text-sm text-rsi-text-muted">No route details.</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="mt-2 flex items-center justify-center">
-        <button
-          type="button"
-          aria-expanded={isExpanded}
-          aria-controls={detailsId}
-          aria-label={
-            isExpanded
-              ? `Hide details for ${mission.title}`
-              : `Show details for ${mission.title}`
-          }
-          title={isExpanded ? "Hide details" : "Show details"}
-          onClick={onToggleExpanded}
+      <td className={tdClass}>
+        <span
           className={[
-            "flex items-center justify-center gap-1 rounded-rsi px-1.5 py-0.5",
-            "font-mono text-[0.5rem] uppercase tracking-[0.16em] text-rsi-text-muted",
-            "transition-colors hover:text-rsi-text",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+            "font-mono text-[0.5rem] tracking-[0.08em]",
+            isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
           ].join(" ")}
         >
-          <span>Details</span>
-          <ExpandChevronIcon open={isExpanded} />
+          {rank ?? "—"}
+        </span>
+      </td>
+      <td className={`${tdClass} w-[9.5rem] max-w-[9.5rem]`}>
+        <p
+          className={[
+            "text-[0.7rem] font-semibold tracking-wide break-words hyphens-auto",
+            isCompleted
+              ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+              : "text-rsi-text",
+          ].join(" ")}
+        >
+          {title || mission.title}
+        </p>
+        <ul
+          className={[
+            "mt-0.5 list-disc space-y-0.5 pl-3 text-[0.65rem] leading-snug text-rsi-text-muted",
+            isCompleted ? "line-through opacity-80" : "",
+          ].join(" ")}
+        >
+          {(cargoBoxLines.length > 0
+            ? cargoBoxLines
+            : [
+                {
+                  commoditySlug: "_",
+                  commodity: "Cargo",
+                  scu: totalScu,
+                },
+              ]
+          ).map((line) => (
+            <li key={line.commoditySlug} className="break-words">
+              {line.scu} SCU {line.commodity}
+            </li>
+          ))}
+        </ul>
+        {statusBadge ? <div className="mt-0.5">{statusBadge}</div> : null}
+      </td>
+      <td
+        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-accent`}
+      >
+        {reward}
+      </td>
+      <td
+        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
+      >
+        {totalScu}
+      </td>
+      <td
+        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
+        title={
+          exp != null
+            ? `Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`
+            : "Approximate Covalex hauling reputation XP"
+        }
+      >
+        {exp != null ? formatHaulingRepXp(exp) : "—"}
+      </td>
+      <td className={tdClass}>
+        <LocationList items={fromLocations} />
+      </td>
+      <td className={tdClass}>
+        <LocationList items={toLocations} />
+      </td>
+      <td className={tdClass}>
+        <button
+          type="button"
+          disabled={isCompleted}
+          title={
+            isCompleted
+              ? "Box types locked on completed contracts"
+              : "Edit box types"
+          }
+          aria-label={`Edit box types for ${mission.title}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEditBoxTypes();
+          }}
+          className={[
+            "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1",
+            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            isCompleted
+              ? "cursor-not-allowed border-rsi-border/50 opacity-60"
+              : "border-rsi-border bg-rsi-surface/80 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
+          ].join(" ")}
+        >
+          <span className="flex flex-col items-start gap-1">
+            {(cargoBoxLines.length > 0
+              ? cargoBoxLines
+              : [
+                  {
+                    commoditySlug: "_",
+                    commodity: "Cargo",
+                    scu: totalScu,
+                  },
+                ]
+            ).map((line) => {
+              const splits =
+                readyBoxes.scuCargoBoxSplits?.[line.commoditySlug] ??
+                resolvedBoxSplits(mission);
+              const cargoColor =
+                resolveCommodityColorHex(null, null, line.commoditySlug) ??
+                "var(--rsi-accent)";
+              return (
+                <span
+                  key={line.commoditySlug}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  {cargoBoxLines.length > 1 ? (
+                    <span
+                      className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
+                      style={{
+                        color: isCompleted
+                          ? "var(--rsi-text-muted)"
+                          : cargoColor,
+                      }}
+                    >
+                      {line.commodity}
+                    </span>
+                  ) : null}
+                  <CargoBoxCountIcons
+                    boxCounts={boxCountsFromBreakdown(splits)}
+                    color={
+                      isCompleted ? "var(--rsi-text-muted)" : cargoColor
+                    }
+                    className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.6rem]"
+                  />
+                </span>
+              );
+            })}
+          </span>
         </button>
-      </div>
-    </article>
+      </td>
+      <td className={`${tdClass} w-10`}>
+        <MissionActionsMenu
+          mission={mission}
+          onToggleCompleted={onToggleCompleted}
+          onToggleHidden={onToggleHidden}
+          onRemoveMission={onRemoveMission}
+        />
+      </td>
+    </tr>
   );
 }
 
@@ -514,6 +587,7 @@ export function SessionMissionsModal({
   open,
   missions,
   rows = [],
+  focusMissionId = null,
   onClose,
   onToggleHidden,
   onToggleCompleted,
@@ -521,8 +595,11 @@ export function SessionMissionsModal({
   onSelectBoxBreakdown,
 }: SessionMissionsModalProps) {
   const [enriched, setEnriched] = useState<SessionMission[]>(missions);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
+    null,
+  );
+  const tableScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -535,9 +612,16 @@ export function SessionMissionsModal({
 
   useEffect(() => {
     if (!open) {
-      setEnriched(missions);
-      setDetailsExpanded(false);
+      setSelectedMissionId(null);
       setBoxEditMissionId(null);
+      return;
+    }
+    setSelectedMissionId(focusMissionId ?? null);
+  }, [open, focusMissionId]);
+
+  useEffect(() => {
+    if (!open) {
+      setEnriched(missions);
       return;
     }
     let cancelled = false;
@@ -548,9 +632,9 @@ export function SessionMissionsModal({
     if (ids.length === 0) return;
 
     void fetchCatalogMissionsByIds(ids)
-      .then((rows) => {
+      .then((catalogRows) => {
         if (cancelled) return;
-        const byId = new Map(rows.map((row) => [row.id, row]));
+        const byId = new Map(catalogRows.map((row) => [row.id, row]));
         setEnriched(
           missions.map((mission) =>
             enrichSessionMissionFromCatalog(
@@ -578,9 +662,44 @@ export function SessionMissionsModal({
       : (displayMissions.find((mission) => mission.id === boxEditMissionId) ??
         null);
 
-  const toggleDetailsExpanded = () => {
-    setDetailsExpanded((value) => !value);
-  };
+  const columnTotals = useMemo(() => {
+    let rewardAuec = 0;
+    let rewardEarned = 0;
+    let scu = 0;
+    let scuEarned = 0;
+    let exp = 0;
+    let expEarned = 0;
+    let boxes = 0;
+    for (const mission of displayMissions) {
+      const missionScu = missionTotalScu(mission);
+      const missionReward = missionAuecAmount(mission);
+      const missionExp = estimateMissionHaulingRepXp(mission) ?? 0;
+      rewardAuec += missionReward;
+      scu += missionScu;
+      exp += missionExp;
+      boxes += missionBoxCount(mission);
+      if (mission.isCompleted) {
+        rewardEarned += missionReward;
+        scuEarned += missionScu;
+        expEarned += missionExp;
+      }
+    }
+    return { rewardAuec, rewardEarned, scu, scuEarned, exp, expEarned, boxes };
+  }, [displayMissions]);
+
+  useEffect(() => {
+    if (!open || !selectedMissionId) return;
+    // Only auto-scroll for the initial focus from a stop tile.
+    if (selectedMissionId !== focusMissionId) return;
+    const id = window.requestAnimationFrame(() => {
+      const row = tableScrollRef.current?.querySelector(
+        `[data-mission-id="${CSS.escape(selectedMissionId)}"]`,
+      );
+      if (!(row instanceof HTMLElement)) return;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open, focusMissionId, selectedMissionId, displayMissions]);
 
   if (!open) return null;
 
@@ -602,31 +721,125 @@ export function SessionMissionsModal({
           </h2>
         </header>
 
-        <div className="overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
+        <div
+          ref={tableScrollRef}
+          className="min-h-0 flex-1 overflow-auto overscroll-contain"
+        >
           {displayMissions.length === 0 ? (
-            <p className="text-sm text-rsi-text-muted">
+            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:px-5 sm:py-5">
               No contracts in this session.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-4">
-              {displayMissions.map((mission) => (
-                <MissionContractTile
-                  key={mission.id}
-                  mission={mission}
-                  rows={rows}
-                  isExpanded={detailsExpanded}
-                  onToggleExpanded={toggleDetailsExpanded}
-                  onToggleHidden={(isHidden) =>
-                    onToggleHidden(mission.id, isHidden)
-                  }
-                  onToggleCompleted={(isCompleted) =>
-                    onToggleCompleted(mission.id, isCompleted)
-                  }
-                  onRemoveMission={() => onRemoveMission(mission.id)}
-                  onEditBoxTypes={() => setBoxEditMissionId(mission.id)}
-                />
-              ))}
-            </div>
+            <table className="w-full min-w-[58rem] border-collapse text-left">
+              <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
+                <tr>
+                  <th className={`${thClass} w-[5.25rem]`}>Rank</th>
+                  <th className={`${thClass} w-[9.5rem]`}>Title</th>
+                  <th className={`${thClass} w-[9.5rem] text-right`}>Reward</th>
+                  <th className={`${thClass} w-[7.5rem] text-right`}>SCU</th>
+                  <th
+                    className={`${thClass} w-[7.5rem] text-right`}
+                    title="Approximate Covalex hauling reputation XP"
+                  >
+                    EXP
+                  </th>
+                  <th className={`${thClass} w-[12%] min-w-0`}>From</th>
+                  <th className={`${thClass} w-[12%] min-w-0`}>To</th>
+                  <th className={`${thClass} min-w-[8rem] w-[14%]`}>Boxes</th>
+                  <th className={`${thClass} w-10`}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayMissions.map((mission) => (
+                  <MissionContractRow
+                    key={mission.id}
+                    mission={mission}
+                    rows={rows}
+                    isFocused={mission.id === selectedMissionId}
+                    onToggleSelect={() => {
+                      setSelectedMissionId((current) =>
+                        current === mission.id ? null : mission.id,
+                      );
+                    }}
+                    onToggleHidden={(isHidden) =>
+                      onToggleHidden(mission.id, isHidden)
+                    }
+                    onToggleCompleted={(isCompleted) =>
+                      onToggleCompleted(mission.id, isCompleted)
+                    }
+                    onRemoveMission={() => onRemoveMission(mission.id)}
+                    onEditBoxTypes={() => setBoxEditMissionId(mission.id)}
+                  />
+                ))}
+              </tbody>
+              <tfoot className="sticky bottom-0 border-t border-rsi-border bg-rsi-surface">
+                <tr className="whitespace-nowrap">
+                  <td className={`${tdClass} py-2.5`}>
+                    <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                      Total
+                    </span>
+                  </td>
+                  <td
+                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                    colSpan={2}
+                    title="Earned / session total aUEC"
+                  >
+                    {columnTotals.rewardAuec > 0 ? (
+                      <>
+                        <span className="text-rsi-success">
+                          {Math.floor(
+                            columnTotals.rewardEarned,
+                          ).toLocaleString("en-US")}
+                        </span>
+                        {" / "}
+                        {Math.floor(columnTotals.rewardAuec).toLocaleString(
+                          "en-US",
+                        )}{" "}
+                        aUEC
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td
+                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                    title="Completed contract SCU / session total SCU"
+                  >
+                    <span className="text-rsi-success">
+                      {columnTotals.scuEarned}
+                    </span>
+                    {" / "}
+                    {columnTotals.scu} SCU
+                  </td>
+                  <td
+                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                    title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
+                  >
+                    {columnTotals.exp > 0 ? (
+                      <>
+                        <span className="text-rsi-success">
+                          {formatHaulingRepXp(columnTotals.expEarned)}
+                        </span>
+                        {" / "}
+                        {formatHaulingRepXp(columnTotals.exp)} EXP
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className={`${tdClass} py-2.5`} />
+                  <td className={`${tdClass} py-2.5`} />
+                  <td
+                    className={`${tdClass} py-2.5 font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                  >
+                    {columnTotals.boxes} boxes
+                  </td>
+                  <td className={`${tdClass} py-2.5`} />
+                </tr>
+              </tfoot>
+            </table>
           )}
         </div>
       </div>
@@ -635,9 +848,15 @@ export function SessionMissionsModal({
         <StopMissionBoxConfigModal
           mission={boxEditMission}
           onClose={() => setBoxEditMissionId(null)}
-          onSelectBoxBreakdown={(breakdown) => {
-            onSelectBoxBreakdown(boxEditMission.id, breakdown);
-            setBoxEditMissionId(null);
+          onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
+            onSelectBoxBreakdown(
+              boxEditMission.id,
+              commoditySlug,
+              breakdown,
+              options,
+            );
+            const lines = cargoBoxSplits.commodityLines(boxEditMission);
+            if (lines.length <= 1) setBoxEditMissionId(null);
           }}
         />
       ) : null}

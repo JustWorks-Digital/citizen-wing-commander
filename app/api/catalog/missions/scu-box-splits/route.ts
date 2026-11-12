@@ -8,6 +8,7 @@ import {
 type Body = {
   missionId?: string;
   scuBoxSplits?: ScuBoxSplits;
+  scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
 };
 
 /** POST /api/catalog/missions/scu-box-splits — set durable crate-mix default. */
@@ -31,6 +32,14 @@ export async function POST(request: Request) {
     const row = await updateCatalogMissionScuBoxSplits({
       missionId,
       scuBoxSplits: normalizeScuBoxSplits(body.scuBoxSplits),
+      scuCargoBoxSplits: body.scuCargoBoxSplits
+        ? Object.fromEntries(
+            Object.entries(body.scuCargoBoxSplits).map(([slug, splits]) => [
+              slug,
+              normalizeScuBoxSplits(splits),
+            ]),
+          )
+        : null,
     });
     return NextResponse.json({ ok: true, mission: row });
   } catch (error) {

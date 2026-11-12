@@ -7,6 +7,7 @@ import {
   updateQuantumTravelEndpoints,
 } from "@/lib/missions/quantumTravel";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
@@ -119,11 +120,11 @@ function InteractiveTable(args: {
           );
         });
       }}
-      onSelectBoxBreakdown={(missionId, breakdown: ScuBoxSplits) => {
+      onSelectBoxBreakdown={(missionId, commoditySlug, breakdown: ScuBoxSplits) => {
         setMissions((prev) =>
           prev.map((mission) =>
             mission.id === missionId
-              ? { ...mission, scuBoxSplits: breakdown }
+              ? cargoBoxSplits.setCommodity(mission, commoditySlug, breakdown)
               : mission,
           ),
         );

@@ -64,7 +64,6 @@ import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
-import { SessionMissionDetailModal } from "./SessionMissionDetailModal";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 import { StopMissionScreenshots } from "./StopMissionScreenshots";
@@ -115,11 +114,17 @@ export type HaulingChecklistTableProps = {
   /** Keyboard shortcuts: B cargo bays, S stops, C contracts. */
   onOpenCargoBays?: () => void;
   onOpenStops?: () => void;
-  onOpenContracts?: () => void;
+  /** Open contracts table; pass a mission id to highlight that row. */
+  onOpenContracts?: (missionId?: string) => void;
   /** Persist crate mix for a session mission (Collect / Drop off double-click). */
   onSelectBoxBreakdown?: (
     missionId: string,
+    commoditySlug: string,
     breakdown: ScuBoxSplits,
+    options?: {
+      applyPreferredMaxToRemaining?: boolean;
+      onlyUncorrected?: boolean;
+    },
   ) => void;
 };
 
@@ -1595,16 +1600,13 @@ function missionScuItemsLabel(mission: SessionMission): string {
 function RelevantMissionsMeta({
   missions,
   row,
+  onOpenContract,
 }: {
   missions: SessionMission[];
   row: HaulingChecklistRow;
+  onOpenContract?: (missionId: string) => void;
 }) {
-  const [detailMissionId, setDetailMissionId] = useState<string | null>(null);
   const relevant = missionsRelevantToRow(missions, row);
-  const detailMission =
-    detailMissionId == null
-      ? null
-      : (relevant.find((mission) => mission.id === detailMissionId) ?? null);
 
   if (relevant.length === 0) return null;
 
@@ -1613,22 +1615,25 @@ function RelevantMissionsMeta({
       <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Contracts
       </p>
-      <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
+      <ul className="flex flex-wrap gap-1.5">
         {relevant.map((mission) => {
           const { rank, title } = stripRankFromTitle(mission.title);
           const scuItems = missionScuItemsLabel(mission);
           const reward = missionRewardLabel(mission);
           return (
-            <li key={mission.id} className="min-w-0">
+            <li
+              key={mission.id}
+              className="min-w-0 w-full sm:w-[23.333%] md:w-[15.555%]"
+            >
               <button
                 type="button"
-                title={`View details for ${mission.title}`}
+                title={`Open ${mission.title} in contracts`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMissionId(mission.id);
+                  onOpenContract?.(mission.id);
                 }}
                 className={[
-                  "flex w-full min-w-0 flex-col items-stretch gap-0.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-2 py-1.5 text-left transition-colors",
+                  "flex w-full min-w-0 flex-col items-stretch gap-0 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-2 py-1 text-left transition-colors",
                   "hover:border-rsi-border-strong hover:bg-rsi-bg-deep/60",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
                   mission.isCompleted ? "opacity-70" : "",
@@ -1636,7 +1641,7 @@ function RelevantMissionsMeta({
               >
                 <p
                   className={[
-                    "truncate font-mono text-[0.5rem] uppercase tracking-[0.14em]",
+                    "truncate font-mono text-[0.5rem] tracking-[0.14em]",
                     mission.isCompleted
                       ? "text-rsi-text-muted"
                       : "text-rsi-accent",
@@ -1679,12 +1684,6 @@ function RelevantMissionsMeta({
           );
         })}
       </ul>
-      {detailMission ? (
-        <SessionMissionDetailModal
-          mission={detailMission}
-          onClose={() => setDetailMissionId(null)}
-        />
-      ) : null}
     </div>
   );
 }
@@ -2252,7 +2251,11 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <RelevantMissionsMeta missions={missions} row={row} />
+                    <RelevantMissionsMeta
+                      missions={missions}
+                      row={row}
+                      onOpenContract={onOpenContracts}
+                    />
                     <div className="flex flex-wrap items-start gap-x-8 gap-y-1">
                       <PayoutMeta
                         row={row}
@@ -2298,9 +2301,19 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
         <StopMissionBoxConfigModal
           mission={boxEditMission}
           onClose={() => setBoxEditMissionId(null)}
-          onSelectBoxBreakdown={(breakdown) => {
-            onSelectBoxBreakdown(boxEditMission.id, breakdown);
-            setBoxEditMissionId(null);
+          onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
+            onSelectBoxBreakdown(
+              boxEditMission.id,
+              commoditySlug,
+              breakdown,
+              options,
+            );
+            const lines =
+              boxEditMission.cargo?.filter((line) => (line.scu ?? 0) > 0) ??
+              [];
+            if (lines.length <= 1) {
+              setBoxEditMissionId(null);
+            }
           }}
         />
       ) : null}

@@ -126,8 +126,16 @@ export type HaulingCatalogMissionPayload = {
   category?: HaulingCategory | null;
   /** Largest allowed crate size in SCU (from contract text). */
   scuMaxContainerSize?: number | null;
-  /** Crate-size counts for the contract total (1/2/4/8/16/32 SCU). */
+  /**
+   * Aggregate crate-size counts for the contract total (1/2/4/8/16/32 SCU).
+   * Prefer `scuCargoBoxSplits` when cargo has multiple commodities.
+   */
   scuBoxSplits: ScuBoxSplits;
+  /**
+   * Selected crate mixes keyed by commodity slug.
+   * Aggregate `scuBoxSplits` should match the sum of these maps.
+   */
+  scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
   /** Logical screenshot path under `.data/mcp-screenshots`. */
   latestScreenshotPath?: string | null;
   /** Free-form extras from intake / OCR. */
@@ -245,8 +253,12 @@ export function rewardsFromAuec(amount?: number | null): CatalogMissionReward[] 
 }
 
 /** Exact aUEC for UI — never abbreviate to “Nk”. */
-export function formatAuecAmount(amount: number): string {
-  return `${Math.floor(amount).toLocaleString("en-US")} aUEC`;
+export function formatAuecAmount(
+  amount: number,
+  options?: { includeUnit?: boolean },
+): string {
+  const value = Math.floor(amount).toLocaleString("en-US");
+  return options?.includeUnit === false ? value : `${value} aUEC`;
 }
 
 /** Sum of aUEC reward lines (0 when none). */
@@ -480,6 +492,7 @@ export function buildHaulingCatalogMissionPayload(
     scuBoxSplits?: ScuBoxSplits;
     /** @deprecated Prefer scuBoxSplits */
     boxBreakdown?: ScuBoxSplits;
+    scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
   },
 ): HaulingCatalogMissionPayload {
   const scuTotal =
@@ -489,6 +502,14 @@ export function buildHaulingCatalogMissionPayload(
   const scuMaxContainerSize =
     partial.scuMaxContainerSize ?? partial.maxContainerScu ?? null;
   const rawSplits = partial.scuBoxSplits ?? partial.boxBreakdown;
+  const scuCargoBoxSplits = partial.scuCargoBoxSplits
+    ? Object.fromEntries(
+        Object.entries(partial.scuCargoBoxSplits).map(([slug, splits]) => [
+          slug,
+          normalizeScuBoxSplits(splits),
+        ]),
+      )
+    : undefined;
   const scuLocationSplits = resolveScuLocationSplits({
     scuLocationSplits: partial.scuLocationSplits,
     scuSplits: partial.scuSplits,
@@ -522,6 +543,7 @@ export function buildHaulingCatalogMissionPayload(
     scuBoxSplits: rawSplits
       ? normalizeScuBoxSplits(rawSplits)
       : scuBoxSplitsForScu(scuTotal, scuMaxContainerSize),
+    scuCargoBoxSplits,
     latestScreenshotPath: partial.latestScreenshotPath ?? null,
     extras: partial.extras,
   };

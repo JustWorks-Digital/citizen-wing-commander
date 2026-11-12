@@ -3,14 +3,9 @@ import {
   resolveCommoditySlug,
   resolveIncomingLeg,
 } from "@/lib/sessions/resolveRefs";
-import {
-  assignBoxSizesFromBreakdown,
-  partitionBoxSizesAcrossScuAmounts,
-} from "@/lib/missions/boxBreakdownOptions";
-import {
-  scuBoxSplitsForScu,
-  type ScuBoxSplits,
-} from "@/lib/missions/catalogMission";
+import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   intakeContractFromSessionMission,
   type SessionMission,
@@ -23,10 +18,7 @@ import type {
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
 import { mergePreservedQuantumRows } from "@/lib/missions/quantumTravel";
-import {
-  decomposeScuIntoBoxes,
-  type CargoBoxScu,
-} from "@/lib/ships/cargoBoxSizes";
+import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 
 function resolveCargoRole(
   routeAction: RouteAction,
@@ -183,73 +175,50 @@ export function removeMissionAndRebuildRoute(
   return rebuildRowsFromMissions(session, missions);
 }
 
-/** Capped greedy default for a mission (picker DEFAULT / auto-selected). */
+/** Aggregate auto mix for icons / legacy callers. */
 export function autoSelectedMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {
-  if (
-    typeof mission.maxContainerScu !== "number" ||
-    mission.maxContainerScu <= 0
-  ) {
-    // Still allow uncapped greedy when total SCU is known.
-    const scuTotal = mission.cargo.reduce(
-      (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
-      0,
-    );
-    if (scuTotal <= 0) return null;
-    return scuBoxSplitsForScu(scuTotal, null);
-  }
-  const scuTotal = mission.cargo.reduce(
-    (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
-    0,
-  );
-  if (scuTotal <= 0) return null;
-  return scuBoxSplitsForScu(scuTotal, mission.maxContainerScu);
+  const map = cargoBoxSplits.autoSelectedForMission(mission);
+  if (Object.keys(map).length === 0) return null;
+  return cargoBoxSplits.aggregate(map);
 }
 
-/**
- * Explicit override, else auto-selected / greedy mix capped by max container
- * (matches the box-type picker's DEFAULT).
- */
+/** Aggregate selected (or auto) mix for icons / legacy callers. */
 export function effectiveMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {
-  if (mission.scuBoxSplits) return mission.scuBoxSplits;
-  return (
-    mission.scuBoxSplitsAutoSelected ?? autoSelectedMissionScuBoxSplits(mission)
-  );
+  const withDefaults = cargoBoxSplits.withDefaults(mission);
+  if (!withDefaults.scuBoxSplits) return null;
+  const total =
+    withDefaults.scuBoxSplits.scuOne +
+    withDefaults.scuBoxSplits.scuTwo +
+    withDefaults.scuBoxSplits.scuFour +
+    withDefaults.scuBoxSplits.scuEight +
+    withDefaults.scuBoxSplits.scuSixteen +
+    withDefaults.scuBoxSplits.scuThirtyTwo;
+  return total > 0 ? withDefaults.scuBoxSplits : null;
 }
 
-/** Ensure auto-selected is captured; fill selected from auto when missing. */
+/** Ensure per-cargo maps + aggregates exist. */
 export function withMissionBoxSplitDefaults(
   mission: SessionMission,
 ): SessionMission {
-  const auto =
-    mission.scuBoxSplitsAutoSelected ?? autoSelectedMissionScuBoxSplits(mission);
-  if (!auto) return mission;
-  return {
-    ...mission,
-    scuBoxSplitsAutoSelected: auto,
-    scuBoxSplits: mission.scuBoxSplits ?? auto,
-  };
+  return cargoBoxSplits.withDefaults(mission);
 }
 
 /**
- * Stamp selected crate sizes onto route cargo lines that match this mission.
- * Pickup lines get the full mix; delivery lines get the same crates partitioned
- * across unload amounts (so per-stop pads match the bay / mission override).
+ * Stamp per-commodity crate sizes onto route cargo lines for this mission.
+ * Pickup lines get that commodity’s mix; deliveries partition across unload amounts.
  */
 function stampMissionBoxSizesOntoRows(
   rows: HaulingChecklistRow[],
   mission: SessionMission,
 ): HaulingChecklistRow[] {
-  const breakdown = effectiveMissionScuBoxSplits(mission);
+  const ready = cargoBoxSplits.withDefaults(mission);
+  const lines = cargoBoxSplits.commodityLines(ready);
   const missionCommoditySlugs = new Set(
-    mission.cargo.map(
-      (line) =>
-        resolveCommoditySlug(line.commodity) ??
-        line.commodity.trim().toLowerCase(),
-    ),
+    lines.map((line) => line.commoditySlug),
   );
 
   const cleared: HaulingChecklistRow[] = rows.map((row) => ({
@@ -264,17 +233,7 @@ function stampMissionBoxSizesOntoRows(
     }),
   }));
 
-  if (!breakdown) return cleared;
-
-  const assignments = assignBoxSizesFromBreakdown(
-    mission.cargo.map((line) => ({
-      commoditySlug:
-        resolveCommoditySlug(line.commodity) ??
-        line.commodity.trim().toLowerCase(),
-      scu: line.scu,
-    })),
-    breakdown,
-  );
+  if (lines.length === 0) return cleared;
 
   const nextRows: HaulingChecklistRow[] = cleared.map((row) => ({
     ...row,
@@ -287,15 +246,7 @@ function stampMissionBoxSizesOntoRows(
     return true;
   };
 
-  const maxBox =
-    typeof mission.maxContainerScu === "number" && mission.maxContainerScu > 0
-      ? (mission.maxContainerScu as CargoBoxScu)
-      : undefined;
-
-  const greedyBoxes = (scu: number): CargoBoxScu[] =>
-    decomposeScuIntoBoxes(scu, maxBox);
-
-  for (const assignment of assignments) {
+  for (const line of lines) {
     type Hit = {
       rowIndex: number;
       cargoIndex: number;
@@ -307,7 +258,7 @@ function stampMissionBoxSizesOntoRows(
 
     for (const [rowIndex, row] of nextRows.entries()) {
       for (const [cargoIndex, cargo] of row.cargoDeliveries.entries()) {
-        if (!cargoBelongs(cargo, assignment.commoditySlug)) continue;
+        if (!cargoBelongs(cargo, line.commoditySlug)) continue;
         const role = resolveCargoRole(row.routeAction, cargo.role);
         if (role !== "pickup" && role !== "delivery") continue;
         const hit = {
@@ -321,31 +272,44 @@ function stampMissionBoxSizesOntoRows(
       }
     }
 
-    const stamp = (hit: Hit, boxSizes: CargoBoxScu[]) => {
+    const boxSizes = cargoBoxSplits.boxSizesForLine(
+      ready,
+      line.commoditySlug,
+      line.scu,
+    );
+
+    const stamp = (hit: Hit, sizes: CargoBoxScu[]) => {
       const cargo = nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex]!;
       nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex] = {
         ...cargo,
         missionId: mission.id,
-        boxSizes: [...boxSizes],
+        boxSizes: [...sizes],
       };
     };
 
     const stampGreedy = (hits: Hit[]) => {
       for (const hit of hits) {
-        stamp(hit, greedyBoxes(hit.scu));
+        stamp(
+          hit,
+          cargoBoxSplits.boxSizesForLine(
+            ready,
+            line.commoditySlug,
+            hit.scu,
+          ),
+        );
       }
     };
 
-    if (assignment.boxSizes.length === 0) {
+    if (boxSizes.length === 0) {
       stampGreedy([...pickups, ...deliveries]);
       continue;
     }
 
-    if (pickups.length === 1 && pickups[0]!.scu === assignment.scu) {
-      stamp(pickups[0]!, assignment.boxSizes);
+    if (pickups.length === 1 && pickups[0]!.scu === line.scu) {
+      stamp(pickups[0]!, boxSizes);
     } else if (pickups.length > 0) {
       const taken = partitionBoxSizesAcrossScuAmounts(
-        assignment.boxSizes,
+        boxSizes,
         pickups.map((entry) => entry.scu),
       );
       if (taken) {
@@ -357,7 +321,7 @@ function stampMissionBoxSizesOntoRows(
       }
     }
 
-    let remainingScu = assignment.scu;
+    let remainingScu = line.scu;
     const deliveryHits: Hit[] = [];
     for (const hit of deliveries) {
       if (remainingScu <= 0) break;
@@ -368,7 +332,7 @@ function stampMissionBoxSizesOntoRows(
     if (deliveryHits.length === 0) continue;
 
     const partitioned = partitionBoxSizesAcrossScuAmounts(
-      assignment.boxSizes,
+      boxSizes,
       deliveryHits.map((hit) => hit.scu),
     );
     if (partitioned) {
@@ -396,23 +360,81 @@ export function restampAllMissionBoxSizes(
   return { ...session, missions, rows };
 }
 
-/** Persist a crate-mix choice and restamp bay packing sizes onto the route. */
+/**
+ * Persist a per-commodity crate-mix choice and restamp bay packing sizes.
+ * When `commoditySlug` is omitted and the mission has exactly one cargo type,
+ * that commodity is inferred.
+ */
+export type SetMissionScuBoxSplitsOptions = {
+  /**
+   * After saving this commodity’s mix, re-greedy other cargo lines with the
+   * same preferred max crate size (Simple mode uses this).
+   */
+  applyPreferredMaxToRemaining?: boolean;
+  /**
+   * When propagating, skip lines the user already corrected (default true).
+   * Simple mode passes false so one pick restyles every cargo type.
+   */
+  onlyUncorrected?: boolean;
+};
+
 export function setMissionScuBoxSplits(
   session: SessionChecklistModel,
   missionId: string,
   scuBoxSplits: ScuBoxSplits,
+  commoditySlug?: string | null,
+  options?: SetMissionScuBoxSplitsOptions,
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
-  const missions = (session.missions ?? []).map((mission) => {
-    if (mission.id !== missionId) return mission;
-    const withAuto = withMissionBoxSplitDefaults(mission);
-    return { ...withAuto, scuBoxSplits };
-  });
-  const mission = missions.find((entry) => entry.id === missionId);
-  if (!mission) {
+  const existing = (session.missions ?? []).find(
+    (entry) => entry.id === missionId,
+  );
+  if (!existing) {
     return { ok: false, error: `Unknown mission: ${missionId}` };
   }
 
-  const rows = stampMissionBoxSizesOntoRows(session.rows, mission);
+  const withAuto = cargoBoxSplits.withDefaults(existing);
+  const lines = cargoBoxSplits.commodityLines(withAuto);
+  let slug = commoditySlug?.trim() || null;
+  if (!slug) {
+    if (lines.length === 1) {
+      slug = lines[0]!.commoditySlug;
+    } else if (lines.length === 0) {
+      return { ok: false, error: `Mission ${missionId} has no cargo lines` };
+    } else {
+      return {
+        ok: false,
+        error: `Mission ${missionId} has multiple cargo types; pass commodity (slug or name). Known: ${lines
+          .map((line) => line.commoditySlug)
+          .join(", ")}.`,
+      };
+    }
+  }
+
+  const resolvedSlug =
+    resolveCommoditySlug(slug) ?? slug.trim().toLowerCase();
+  if (!lines.some((line) => line.commoditySlug === resolvedSlug)) {
+    return {
+      ok: false,
+      error: `Unknown commodity for mission ${missionId}: ${slug}`,
+    };
+  }
+
+  let nextMission = cargoBoxSplits.setCommodity(
+    withAuto,
+    resolvedSlug,
+    scuBoxSplits,
+  );
+  if (options?.applyPreferredMaxToRemaining) {
+    nextMission = cargoBoxSplits.propagatePreferredMax(
+      nextMission,
+      resolvedSlug,
+      { onlyUncorrected: options.onlyUncorrected !== false },
+    );
+  }
+  const missions = (session.missions ?? []).map((mission) =>
+    mission.id === missionId ? nextMission : mission,
+  );
+  const rows = stampMissionBoxSizesOntoRows(session.rows, nextMission);
   return {
     ok: true,
     session: {

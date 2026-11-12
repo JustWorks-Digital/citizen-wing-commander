@@ -42,7 +42,7 @@ export function AppShell({ children, activeNav }: AppShellProps) {
               className={navLinkClass(activeNav === "sessions")}
               aria-current={activeNav === "sessions" ? "page" : undefined}
             >
-              Sessions
+              Trips
             </Link>
             <Link
               href={appPaths.missionsCatalog}

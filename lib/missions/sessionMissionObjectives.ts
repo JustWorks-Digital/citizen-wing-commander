@@ -324,3 +324,62 @@ export function missionDeliverObjectives(
     cargoItems,
   }));
 }
+
+/**
+ * True when every checklist stop for this mission at `locationLabel`
+ * (pickup or delivery) is completed — or the whole contract is done.
+ */
+export function isMissionLocationCompleted(
+  mission: SessionMission,
+  rows: HaulingChecklistRow[],
+  locationNameOrSlug: string,
+  role: "pickup" | "delivery",
+): boolean {
+  if (mission.isCompleted) return true;
+
+  const matching = rows.filter((row) => {
+    if (!locationMatchesRow(locationNameOrSlug, row.locationSlug)) {
+      const name =
+        getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug;
+      if (
+        name.trim().toLowerCase() !==
+        locationNameOrSlug.trim().toLowerCase()
+      ) {
+        return false;
+      }
+    }
+    const cargos = rowCargoForRole(row, role);
+    if (cargos.some((cargo) => cargoBelongsToMission(mission, cargo))) {
+      return true;
+    }
+    // Fallback when cargo isn’t mission-tagged: honor from/to / splits.
+    if (role === "pickup") {
+      if (
+        mission.from.some((loc) =>
+          locationMatchesRow(loc, row.locationSlug),
+        )
+      ) {
+        return row.routeAction === "pickup" || row.routeAction === "both";
+      }
+      return Boolean(
+        mission.deliverySplits?.some((split) =>
+          locationMatchesRow(split.from, row.locationSlug),
+        ) &&
+          (row.routeAction === "pickup" || row.routeAction === "both"),
+      );
+    }
+    if (
+      mission.to.some((loc) => locationMatchesRow(loc, row.locationSlug))
+    ) {
+      return row.routeAction === "delivery" || row.routeAction === "both";
+    }
+    return Boolean(
+      mission.deliverySplits?.some((split) =>
+        locationMatchesRow(split.to, row.locationSlug),
+      ) &&
+        (row.routeAction === "delivery" || row.routeAction === "both"),
+    );
+  });
+
+  return matching.length > 0 && matching.every((row) => row.isCompleted);
+}
