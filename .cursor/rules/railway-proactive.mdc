@@ -7,9 +7,11 @@ alwaysApply: true
 
 Railway **auto-deploys** from `main`. Do **not** watch / poll deployments (`list-deployments`, status loops, AwaitShell waits) after a routine commit/push — that burns credits for no gain.
 
+**Exception:** user said **“commit, push, and deploy”** (or clearly asked to track/wait on the deploy) — see [`commit-push-deploy.mdc`](./commit-push-deploy.mdc). Still do **not** manually redeploy; only track the auto-deploy from the push.
+
 ## After push
 
-- Stop at push confirmation unless the user asks about deploy status or the next step **requires** live production (MCP tool that only exists after deploy, re-seed `.data`, production health check they requested).
+- Stop at push confirmation unless the user asks about deploy status, used the “and deploy” phrase, or the next step **requires** live production (MCP tool that only exists after deploy, re-seed `.data`, production health check they requested).
 - Do **not** narrate “watching Railway” or sit on BUILDING/DEPLOYING for ordinary UI/lib commits.
 
 ## When production work is actually needed

@@ -20,6 +20,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`concise-answers.mdc`](./concise-answers.mdc) | Short answers by default; no verbose Q&A |
 | [`readable-code-and-tests.mdc`](./readable-code-and-tests.mdc) | Principle-based naming, exact asserts, no jargon — for any new domain, not just cargo |
 | [`railway-proactive.mdc`](./railway-proactive.mdc) | Trust Railway auto-deploy — don’t poll deploys after every push; only follow through when production work is needed |
+| [`commit-push-deploy.mdc`](./commit-push-deploy.mdc) | “Commit and push” vs “commit, push, and deploy” — push to origin; track Railway only when “and deploy” (no manual redeploy) |
 | [`cargo-placement.mdc`](./cargo-placement.mdc) | Ship bay packer rules (`cargoGridPlacementRules.ts`) |
 
 Also see:

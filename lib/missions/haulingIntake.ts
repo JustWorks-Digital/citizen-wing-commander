@@ -21,7 +21,11 @@ export type HaulingIntakeContract = {
   /** Delivery locations. */
   to: string[];
   cargo: HaulingIntakeCargoLine[];
-  /** Max container size from contract text, when known. */
+  /**
+   * Max crate size from contract Details (e.g. “Containers at most 8 SCU”).
+   * Record whenever visible — drives default box splits / bay packing.
+   * Allowed sizes: 1 / 2 / 4 / 8 / 16 / 32. Catalog field: `scuMaxContainerSize`.
+   */
   maxContainerScu?: number;
   /**
    * Optional per-site cargo split when totals are shared across pickups

@@ -1,0 +1,35 @@
+---
+description: Phrase triggers for commit/push vs commit/push/deploy (Railway track only)
+alwaysApply: true
+---
+
+# Commit / push / deploy phrases
+
+Match the user’s wording. Do not invent a deploy step unless they asked for it.
+
+## “Commit and push” (or “commit & push”)
+
+1. Create the git commit (user’s commit protocol / safety rules).
+2. `git push` to the repo **`origin`** (current branch).
+3. **Stop** after push confirmation.
+4. Do **not** open Railway, list deployments, or wait on BUILDING/DEPLOYING.
+
+Railway auto-deploys from `main` on its own — a plain push already triggers that. Watching it is out of scope for this phrase.
+
+## “Commit, push, and deploy” (or “commit push and deploy” / “commit, push, deploy”)
+
+1. Commit, then push to **`origin`** (same as above).
+2. **Trust auto-deploy** — do **not** manually `redeploy`, `create-deployment`, force a second deploy, or change Railway auto-deploy settings. The push to `main` is the deploy trigger.
+3. **Track** the Railway deployment that auto-started from that push until it reaches a terminal state (`SUCCESS` or `FAILED`).
+4. On `SUCCESS`, report done (brief). On `FAILED`, diagnose (logs / diagnosis), fix if straightforward, and report — do not leave a failed deploy unexplained.
+5. If the branch is not `main` / not what Railway auto-deploys, say so and do not pretend a production deploy happened.
+
+## Ambiguous “deploy”
+
+- If they only say “deploy” after a push already happened: check status once (or track if they clearly want to wait it out).
+- If they say “redeploy” / “force deploy”: that is different — confirm before calling Railway redeploy APIs, since it can conflict with an in-flight auto-deploy.
+
+## Related
+
+- Routine pushes without “and deploy”: [`railway-proactive.mdc`](./railway-proactive.mdc).
+- This rule **overrides** the “don’t poll deploys” guidance **only** when the user used an “and deploy” phrase (or explicitly asked to track/wait on the current deploy).

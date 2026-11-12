@@ -16,4 +16,4 @@ alwaysApply: true
 - Abstract API URLs behind named domains in `lib/api/` (see `api-endpoints.mdc`) — no hardcoded `/api/…` or third-party hosts at call sites.
 - Keep agent replies very short/concise unless the user asks for detail (see `concise-answers.mdc`).
 - On bug fixes for things that already existed or should have worked: 1–2 sentences covering root cause + fix.
-- Railway: auto-deploys from `main` — do not poll deploy status after every push (see `railway-proactive.mdc`).
+- Railway: auto-deploys from `main` — do not poll after every push (`railway-proactive.mdc`); “commit and push” vs “commit, push, and deploy” in `commit-push-deploy.mdc`.
