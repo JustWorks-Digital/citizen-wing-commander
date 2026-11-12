@@ -128,7 +128,8 @@ export function MissionBoxBreakdownPicker({
     () => enumerateBoxBreakdowns(totalScu, maxContainerScu, optionLimit),
     [totalScu, maxContainerScu, optionLimit],
   );
-  const options = optionsProp ?? enumerated;
+  // Enumerated rows are valid picker options (`value` optional).
+  const options: BoxBreakdownPickerOption[] = optionsProp ?? enumerated;
 
   const filteredOptions = useMemo(() => {
     const matched = options.filter((option) =>

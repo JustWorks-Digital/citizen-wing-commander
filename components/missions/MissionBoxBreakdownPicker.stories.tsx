@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Compact box-mix picker. Marks auto-selected vs user-corrected (`scuBoxSplitsAutoSelected`).",
+          "Compact box-mix picker. Marks auto-selected vs user-corrected (`scuBoxSplitsAutoSelected`). Enumerated and override options share `BoxBreakdownPickerOption` (optional `value`).",
       },
     },
   },
