@@ -23,88 +23,25 @@ function applyCargoToOnboard(
   return { onboard: current, peak };
 }
 
-/**
- * Estimate SCU currently aboard from completed legs only
- * (pickups add, deliveries subtract), in route order.
- */
-export function estimateOnboardScu(rows: HaulingChecklistRow[]): number {
-  return applyCargoToOnboard(0, rows, { stopAfterIncomplete: true }).onboard;
-}
-
-export type StopOnboardScuReceipt = {
-  /** Onboard before this stop’s pickups. */
-  beforePickup: number;
-  /** Onboard after this stop’s pickups, before unload. */
-  beforeDelivery: number;
-  /** Onboard after this stop’s unload. */
+/** Onboard SCU around one load or unload transfer at a stop. */
+export type ScuTransfer = {
+  /** Aboard when this transfer starts. */
+  before: number;
+  /** SCU moved in this transfer. */
+  amount: number;
+  /** Aboard when this transfer ends. */
   after: number;
-  pickup: number;
-  delivery: number;
 };
 
 /**
- * Planned onboard SCU by stop (full route order).
- * Pickups apply before deliveries at each stop for clear load/unload receipts.
+ * SCU transfer ledger for one stop (full planned trip walk).
+ * Idle pickup/delivery are `false` (no load / no unload at this stop).
+ * When both run, `pickup.after` === `delivery.before`.
  */
-export function estimateOnboardScuByStop(
-  rows: HaulingChecklistRow[],
-): Map<string, StopOnboardScuReceipt> {
-  let current = 0;
-  const byStop = new Map<string, StopOnboardScuReceipt>();
-  for (const row of rows) {
-    let pickup = 0;
-    let delivery = 0;
-    if (row.routeAction !== "quantum") {
-      const fallback = row.routeAction === "both" ? null : row.routeAction;
-      for (const cargo of row.cargoDeliveries) {
-        const role = cargo.role ?? fallback;
-        if (role === "pickup") pickup += cargo.scu;
-        else if (role === "delivery") delivery += cargo.scu;
-      }
-    }
-    const beforePickup = current;
-    current += pickup;
-    const beforeDelivery = current;
-    current = Math.max(0, current - delivery);
-    byStop.set(row.id, {
-      beforePickup,
-      beforeDelivery,
-      after: current,
-      pickup,
-      delivery,
-    });
-  }
-  return byStop;
-}
-
-/**
- * Highest SCU aboard if the full route is flown as planned
- * (peak after each pickup/delivery in order).
- */
-export function estimatePeakOnboardScu(rows: HaulingChecklistRow[]): number {
-  return applyCargoToOnboard(0, rows).peak;
-}
-
-/**
- * Stop id where planned onboard SCU peaks (after pickups, before unload).
- * Used for cargo-bay “All stops” scope so the grid shows the fullest load.
- */
-export function peakOnboardStopId(
-  rows: HaulingChecklistRow[],
-): string | null {
-  const byStop = estimateOnboardScuByStop(rows);
-  let bestId: string | null = null;
-  let bestScu = -1;
-  for (const row of rows) {
-    if (row.routeAction === "quantum") continue;
-    const scu = byStop.get(row.id)?.beforeDelivery ?? 0;
-    if (scu > bestScu) {
-      bestScu = scu;
-      bestId = row.id;
-    }
-  }
-  return bestId;
-}
+export type StopTransferLedger = {
+  pickup: ScuTransfer | false;
+  delivery: ScuTransfer | false;
+};
 
 export type MissionScuBreakdownItem = {
   missionId: string;
@@ -119,42 +56,138 @@ function missionCargoScu(mission: SessionMission): number {
 }
 
 /**
- * Per-contract SCU for visible (non-hidden) session missions.
- * Empty when the mission list is missing — callers may fall back to route totals.
+ * Cargo helpers (transfer ledger, onboard estimates, mission SCU).
+ *
+ * Prefer `cargoInventory.transferLedgerByStop(tripStops)` over long flat names.
  */
-export function estimateMissionScuBreakdown(
-  missions: SessionMission[] | undefined,
-): MissionScuBreakdownItem[] {
-  return (missions ?? [])
-    .filter((mission) => !mission.isHidden)
-    .map((mission) => ({
-      missionId: mission.id,
-      title: mission.title,
-      scu: missionCargoScu(mission),
-      screenshots: [...(mission.screenshots ?? [])],
-    }));
-}
-
-/**
- * Total SCU across agreed (visible) missions.
- * Falls back to route pickup totals when the mission list is empty.
- */
-export function estimateMissionsTotalScu(
-  missions: SessionMission[] | undefined,
-  rows: HaulingChecklistRow[],
-): number {
-  const breakdown = estimateMissionScuBreakdown(missions);
-  if (breakdown.length > 0) {
-    return breakdown.reduce((sum, item) => sum + item.scu, 0);
-  }
-
-  let pickupTotal = 0;
-  for (const row of rows) {
-    const fallback = row.routeAction === "both" ? null : row.routeAction;
-    for (const cargo of row.cargoDeliveries) {
-      const role = cargo.role ?? fallback;
-      if (role === "pickup") pickupTotal += cargo.scu;
+export const cargoInventory = {
+  /**
+   * SCU transfer ledger by stop id for the full planned trip.
+   * Pickups apply before deliveries at each stop.
+   */
+  transferLedgerByStop(
+    rows: HaulingChecklistRow[],
+  ): Map<string, StopTransferLedger> {
+    let current = 0;
+    const byStop = new Map<string, StopTransferLedger>();
+    for (const row of rows) {
+      let pickupAmount = 0;
+      let deliveryAmount = 0;
+      if (row.routeAction !== "quantum") {
+        const fallback = row.routeAction === "both" ? null : row.routeAction;
+        for (const cargo of row.cargoDeliveries) {
+          const role = cargo.role ?? fallback;
+          if (role === "pickup") pickupAmount += cargo.scu;
+          else if (role === "delivery") deliveryAmount += cargo.scu;
+        }
+      }
+      const beforePickup = current;
+      current += pickupAmount;
+      const afterPickup = current;
+      current = Math.max(0, current - deliveryAmount);
+      byStop.set(row.id, {
+        pickup:
+          pickupAmount > 0
+            ? {
+                before: beforePickup,
+                amount: pickupAmount,
+                after: afterPickup,
+              }
+            : false,
+        delivery:
+          deliveryAmount > 0
+            ? {
+                before: afterPickup,
+                amount: deliveryAmount,
+                after: current,
+              }
+            : false,
+      });
     }
-  }
-  return pickupTotal;
-}
+    return byStop;
+  },
+
+  /** Peak aboard SCU at a stop (after pickup, else before deliver). */
+  peakScuAtStop(ledger: StopTransferLedger): number {
+    if (ledger.pickup) return ledger.pickup.after;
+    if (ledger.delivery) return ledger.delivery.before;
+    return 0;
+  },
+
+  /**
+   * Stop id where aboard SCU peaks (after pickups, before unload).
+   * Used for cargo-bay “All stops” scope so the grid shows the fullest load.
+   */
+  peakStopId(rows: HaulingChecklistRow[]): string | null {
+    const ledgerByStop = cargoInventory.transferLedgerByStop(rows);
+    let bestId: string | null = null;
+    let bestScu = -1;
+    for (const row of rows) {
+      if (row.routeAction === "quantum") continue;
+      const ledger = ledgerByStop.get(row.id);
+      const scu = ledger ? cargoInventory.peakScuAtStop(ledger) : 0;
+      if (scu > bestScu) {
+        bestScu = scu;
+        bestId = row.id;
+      }
+    }
+    return bestId;
+  },
+
+  /**
+   * SCU currently aboard from completed stops only
+   * (pickups add, deliveries subtract), in trip order.
+   */
+  fromCompleted(rows: HaulingChecklistRow[]): number {
+    return applyCargoToOnboard(0, rows, { stopAfterIncomplete: true }).onboard;
+  },
+
+  /**
+   * Highest SCU aboard if the full trip is flown as planned
+   * (peak after each pickup/delivery in order).
+   */
+  peakOnboard(rows: HaulingChecklistRow[]): number {
+    return applyCargoToOnboard(0, rows).peak;
+  },
+
+  /**
+   * Per-contract SCU for visible (non-hidden) session missions.
+   * Empty when the mission list is missing — callers may fall back to trip totals.
+   */
+  missionBreakdown(
+    missions: SessionMission[] | undefined,
+  ): MissionScuBreakdownItem[] {
+    return (missions ?? [])
+      .filter((mission) => !mission.isHidden)
+      .map((mission) => ({
+        missionId: mission.id,
+        title: mission.title,
+        scu: missionCargoScu(mission),
+        screenshots: [...(mission.screenshots ?? [])],
+      }));
+  },
+
+  /**
+   * Total SCU across agreed (visible) missions.
+   * Falls back to trip pickup totals when the mission list is empty.
+   */
+  missionsTotal(
+    missions: SessionMission[] | undefined,
+    rows: HaulingChecklistRow[],
+  ): number {
+    const breakdown = cargoInventory.missionBreakdown(missions);
+    if (breakdown.length > 0) {
+      return breakdown.reduce((sum, item) => sum + item.scu, 0);
+    }
+
+    let pickupTotal = 0;
+    for (const row of rows) {
+      const fallback = row.routeAction === "both" ? null : row.routeAction;
+      for (const cargo of row.cargoDeliveries) {
+        const role = cargo.role ?? fallback;
+        if (role === "pickup") pickupTotal += cargo.scu;
+      }
+    }
+    return pickupTotal;
+  },
+};

@@ -13,9 +13,12 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |
 | [`naming.mdc`](./naming.mdc) | TypeScript/React/DB/token naming conventions |
 | [`field-namespaces.mdc`](./field-namespaces.mdc) | Prefix related DB/JSON fields (`scuTotal`, `scuSplits`, …) so they group together |
+| [`optional-transfers.mdc`](./optional-transfers.mdc) | Optional sibling actions as `T \| false` (e.g. `ScuTransfer` pickup/delivery) — not null or zero stubs |
+| [`helper-namespaces.mdc`](./helper-namespaces.mdc) | Group related helpers under a namespace object (`cargoInventory.transferLedgerByStop`) instead of long flat names |
 | [`general.mdc`](./general.mdc) | Catch-all project conventions |
 | [`api-endpoints.mdc`](./api-endpoints.mdc) | Named API domains — no hardcoded URL strings at call sites |
 | [`concise-answers.mdc`](./concise-answers.mdc) | Short answers by default; no verbose Q&A |
+| [`readable-code-and-tests.mdc`](./readable-code-and-tests.mdc) | Principle-based naming, exact asserts, no jargon — for any new domain, not just cargo |
 | [`railway-proactive.mdc`](./railway-proactive.mdc) | After push: watch Railway deploy, then finish production/MCP follow-through |
 | [`cargo-placement.mdc`](./cargo-placement.mdc) | Ship bay packer rules (`cargoGridPlacementRules.ts`) |
 

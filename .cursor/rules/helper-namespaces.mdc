@@ -1,0 +1,40 @@
+---
+description: Group related domain helpers under a namespace object (cargoInventory.transferLedgerByStop) instead of long flat names
+alwaysApply: true
+---
+
+# Helper namespaces
+
+When several functions share a domain (inventory, trip fixtures, packing, …), export a **namespace object** with short method names instead of long flat exports that repeat the domain in every name. Same idea for bay placement: `cargoBay.packAtStop` (not `planStopOccupancyAtStop`).
+
+## Prefer
+
+```ts
+export const cargoInventory = {
+  transferLedgerByStop(rows: HaulingChecklistRow[]): Map<string, StopTransferLedger> { ... },
+  peakScuAtStop(ledger: StopTransferLedger): number { ... },
+  peakStopId(rows: HaulingChecklistRow[]): string | null { ... },
+};
+
+// call sites
+cargoInventory.transferLedgerByStop(stops);
+cargoInventory.peakStopId(stops);
+```
+
+## Avoid
+
+```ts
+export function cargoBayInventoryByStop(...) { ... }
+export function peakScuInStopInventory(...) { ... }
+export function peakCargoBayStopId(...) { ... }
+```
+
+## Guidelines
+
+1. **Noun object, verb methods** — `cargoInventory.transferLedgerByStop`, `cargoInventory.peakStopId` (not `cargoInventoryGetByStop`).
+2. **Keep types as named exports** beside the object (`ScuTransfer`, `StopTransferLedger`) — do not bury types only inside the object unless they are truly private.
+3. **Same file** — put the namespace in the domain module (`lib/missions/cargoInventory.ts`); call sites import `{ cargoInventory }`.
+4. **Existing pattern** — same idea as `appApi` / `appPaths` for URL maps; use it for **behavior** helpers too when names would otherwise stack prefixes.
+5. **Don’t force it** — a single standalone helper can stay a flat `export function`. Reach for a namespace when you have (or will have) a family of related operations.
+
+Canonical example: `lib/missions/cargoInventory.ts` (`cargoInventory`).

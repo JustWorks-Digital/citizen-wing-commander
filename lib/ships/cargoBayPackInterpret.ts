@@ -5,9 +5,9 @@ import {
   type CargoBayPackProgram,
 } from "@/lib/ships/cargoBayPackProgram";
 import {
-  planOccupancyByCargoTypeAtStop,
-  planOccupancyByMissionLocationAtStop,
-  planZoneOccupancyAtStop,
+  packByCargoTypeAtStop,
+  packDeliveriesFromStop,
+  packSuggestedAtStop,
   type CargoGridPlacementPlan,
 } from "@/lib/ships/cargoGridPlacement";
 import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
@@ -18,11 +18,12 @@ import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
  *
  * Expands / prioritizes primitive calls, derives item-construction strategy,
  * then places with pack-program slot policy + group/order item sequencing.
+ * `stopId` is first (entity the call is about).
  */
 export function interpretCargoBayPackProgram(
+  stopId: string,
   sketch: ShipCargoGridSketch,
-  rows: HaulingChecklistRow[],
-  rowId: string,
+  stops: HaulingChecklistRow[],
   program: CargoBayPackProgram,
 ): CargoGridPlacementPlan {
   expandPackProgram(program);
@@ -32,15 +33,15 @@ export function interpretCargoBayPackProgram(
   switch (strategy.kind) {
     case "suggested":
       // Route-authored chronological placement (no cluster reordering).
-      return planZoneOccupancyAtStop(sketch, rows, rowId, null);
+      return packSuggestedAtStop(stopId, sketch, stops, null);
     case "by-cargo-type":
-      return planOccupancyByCargoTypeAtStop(sketch, rows, rowId, {
+      return packByCargoTypeAtStop(stopId, sketch, stops, {
         missionPrioritized: strategy.missionPrioritized,
         packProgram: program,
         packSlotPolicy,
       });
     case "by-mission-location":
-      return planOccupancyByMissionLocationAtStop(sketch, rows, rowId, {
+      return packDeliveriesFromStop(stopId, sketch, stops, {
         priorityLocationCount: strategy.priorityLocationCount,
         packProgram: program,
         packSlotPolicy,

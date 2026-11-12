@@ -10,7 +10,7 @@ import {
   getCargoGridSketchBySlug,
 } from "../lib/ships/cargoGrids";
 import { placementPlanLegend } from "../lib/ships/cargoGridPlacement";
-import { planStopOccupancyAtStop } from "../lib/ships/planStopOccupancy";
+import { cargoBay } from "../lib/ships/cargoBay";
 import type { HaulingChecklistRow } from "../lib/missions/mockSession";
 import type { PlacedCargoBox } from "../lib/ships/cargoGridPlacement";
 
@@ -40,7 +40,7 @@ const activeRow =
   session.rows[session.rows.length - 1];
 if (!activeRow) throw new Error("no checklist rows");
 
-const plan = planStopOccupancyAtStop(sketch, session.rows, activeRow.id, {
+const plan = cargoBay.packAtStop(activeRow.id, sketch, session.rows, {
   packMode: "by-cargo-type",
   missionPrioritized: false,
 });

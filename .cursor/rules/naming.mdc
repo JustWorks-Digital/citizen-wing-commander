@@ -94,6 +94,9 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |
 | `route checklist` (stacked stop cards; code `HaulingChecklistTable`; sticky bar is the checklist toolbar) | contracts table, missions table, jobs list |
 | `routeAction` (`pickup` / `delivery` / `both` / `quantum`) | `legKind`, `stopKind`, `LegKind` (temporary read/MCP aliases — remove after migrate) |
+| `cargoInventory.transferLedgerByStop` / `StopTransferLedger` / `ScuTransfer` (`pickup` / `delivery` as `ScuTransfer \| false`; see [`optional-transfers.mdc`](./optional-transfers.mdc), [`helper-namespaces.mdc`](./helper-namespaces.mdc)) | “inventory” / `CargoBayStopInventory` / `onboardReceipt` for transfer amounts; zero stubs / `null` for idle |
+| `cargoBay.packAtStop(stopId, …)` / `packSuggestedAtStop` / `packByCargoTypeAtStop` / `packDeliveriesFromStop` (entity id first; no `Id` on the method name) | id-last pack args, `packDeliveriesFromStopId`, `plan*Occupancy*`, “mission location” packing jargon |
+| aboard cargo / `aboardCargo` (still on the ship from earlier stops) | stay cargo, `stayCargo` |
 | `Hauling` / `hauling` | `Delivery` as the type name (delivery can be a checklist group) |
 | `scuTotal` / `scuSplits` / `scuLocationSplits` / `scuBoxSplits` / `scuBoxSplitsAutoSelected` / `scuMaxContainerSize` (catalog hauling) | `totalScu`, `boxBreakdown`, `autoBoxSplits`, `originalBoxSplits`, `maxContainerScu`, `size1`; `legs` for per-stop cargo inside a catalog mission |
 | `rank` (hauling career level: Trainee…Master; no “Rank” suffix in the value) | `repLevel`, `reputationRank`, `Junior Rank` as a stored value |

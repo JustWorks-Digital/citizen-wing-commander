@@ -1,0 +1,41 @@
+---
+description: Readable names, exact asserts, no jargon — habits that survive new domains
+alwaysApply: true
+---
+
+# Readable code and tests
+
+Domain word lists go stale. These habits apply to **any** new feature, vocabulary, or test suite.
+
+## Name what the thing is
+
+- Prefer the **domain noun/verb the reader already uses** over leftover tech words (`rows` when they are stops, `route` when it is a trip, `phase` when it is a transfer).
+- Fixture / key names describe **shape or scenario**, not filler materials or opaque indexes (`pickupThenDeliver`, not `iceTrip` / `caseA`).
+- Method and variable names should read at the call site without a glossary. If you need a comment to decode the name, rename.
+- Do **not** invent metaphors or cute failure jargon (“phantom”, “ghost”, “zombie”) for ordinary clamp / mismatch / empty cases — say what the code actually does.
+- Match **part of speech** when it matters (verb vs noun). Do not blur them for brevity.
+- **Do not rename** existing public APIs, fixture keys, or types without explicit user approval. Propose first.
+
+## Entity id first
+
+- When a call is **about** one entity, put that entity’s id **first** in the parameter list: `packAtStop(stopId, sketch, stops)`, `packByCargoTypeAtStop(stopId, sketch, stops)`, `packDeliveriesFromStop(stopId, sketch, stops)`.
+- Do **not** bury the id at the end after context bags (`sketch`, `stops`, options).
+- Do **not** put `Id` in the function name when the first param is already `stopId` / `sessionId` / etc. (`packDeliveriesFromStop`, not `…FromStopId`).
+- Do not reuse grid terms like `origin` (box min cell) for trip stops.
+- Apply this to **new and touched** APIs across the project; when editing a call site, prefer fixing arg order rather than copying the old shape.
+
+## Assert the outcome you know
+
+- With fixed inputs, expect the **concrete value** (id, count, shape), not merely that something is truthy / defined / non-empty.
+- Do not re-implement the system under test in the assertion (e.g. recompute “first max” to “prove” `peakX`). Lock the expected result from the fixture.
+- `it()` / `describe()` titles should state the behavior in plain language; avoid punctuation noise and opaque codes.
+- In comments and test titles only: when two actions happen **at the same stop**, join them with a slash (`pickup/transfer`, `pickup/deliver`). Do not put slashes in identifiers (`pickupTransferMix` is fine). Use “then” for sequential stops (`pickup then deliver`).
+
+## Explain only the non-obvious
+
+- Comments on expects: why this value, or what rule is under test — not a restatement of the matcher.
+- When a scenario is subtle, name the fixture/test so a stranger can reconstruct the story without reading production code.
+
+## New domains
+
+When introducing new language, apply the same bar: pick clear words once, keep related helpers namespaced (`helper-namespaces.mdc`), optional siblings as `T | false` when that pattern fits (`optional-transfers.mdc`), and field families clustered (`field-namespaces.mdc`). Do not fall back to generic scaffolding names just because the domain is unfamiliar.

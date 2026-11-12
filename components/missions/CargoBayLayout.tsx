@@ -13,7 +13,7 @@ import {
 import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
-import { peakOnboardStopId } from "@/lib/missions/cargoInventory";
+import { cargoInventory } from "@/lib/missions/cargoInventory";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
   MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
@@ -42,7 +42,7 @@ import {
 } from "@/lib/ships/cargoGridPlacement";
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import { tryMoveManualBayBox } from "@/lib/ships/manualBayMove";
-import { planStopOccupancyAtStop } from "@/lib/ships/planStopOccupancy";
+import { cargoBay } from "@/lib/ships/cargoBay";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 type SortingMode = CargoBayPackMode | "manual";
@@ -137,7 +137,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const activeRow = useMemo(() => {
     if (stopScope === "all") {
-      const peakId = peakOnboardStopId(rows);
+      const peakId = cargoInventory.peakStopId(rows);
       if (peakId) {
         const peakRow = rows.find((row) => row.id === peakId);
         if (peakRow) return peakRow;
@@ -193,7 +193,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const basePlan = useMemo(() => {
     if (!sketch || !activeRow) return null;
-    return planStopOccupancyAtStop(sketch, rows, activeRow.id, {
+    return cargoBay.packAtStop(activeRow.id, sketch, rows, {
       packMode,
       missionPrioritized:
         packMode === "by-cargo-type" && supportsPrioritized && prioritized,

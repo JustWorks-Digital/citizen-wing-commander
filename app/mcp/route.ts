@@ -15,7 +15,7 @@ import {
   toolCompileCargoBayPackProgram,
   toolGetSessionCargoGrid,
   toolGetShipBayPreferences,
-  toolPlanStopOccupancyWithPackProgram,
+  toolPackCargoBayAtStop,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
   toolListMissions,
@@ -741,7 +741,7 @@ const handler = createMcpHandler(
       {
         title: "Compile cargo bay pack program",
         description:
-          "Use this to get the JSON pack-program DSL for a Sorting preset (suggested / by-cargo-type / by-mission-location). The program is explicit group/order/stack/require/reserve/bias-xy primitives with priorities — not opaque mode names. Pass the result (or a custom equivalent) to plan_stop_occupancy_with_pack_program.",
+          "Use this to get the JSON pack-program DSL for a Sorting preset (suggested / by-cargo-type / by-mission-location). The program is explicit group/order/stack/require/reserve/bias-xy primitives with priorities — not opaque mode names. Pass the result (or a custom equivalent) to pack_cargo_bay_at_stop.",
         inputSchema: z.object({
           sessionId: sessionIdSchema,
           ship: z
@@ -764,17 +764,17 @@ const handler = createMcpHandler(
     );
 
     server.registerTool(
-      "plan_stop_occupancy_with_pack_program",
+      "pack_cargo_bay_at_stop",
       {
-        title: "Plan stop occupancy with pack program",
+        title: "Pack cargo bay at stop",
         description:
-          "Use this to pack the focused (or given) checklist stop using a pack-program DSL document. Omit program to compile from mode. Returns placed boxes/cells for comparison with the UI bay grid.",
+          "Use this to pack the bay grid for the focused (or given) checklist stop using a pack-program DSL document. Omit program to compile from mode. Returns placed boxes/cells for comparison with the UI bay grid. Amounts/transfers are cargoInventory; this is placement only.",
         inputSchema: z.object({
           sessionId: sessionIdSchema,
           rowId: z
             .string()
             .optional()
-            .describe("Checklist row id; omit for next incomplete stop."),
+            .describe("Checklist stop id; omit for next incomplete stop."),
           mode: z
             .enum(["suggested", "by-cargo-type", "by-mission-location"])
             .optional()
@@ -790,7 +790,7 @@ const handler = createMcpHandler(
         annotations: { readOnlyHint: true },
       },
       async (input) =>
-        toolPlanStopOccupancyWithPackProgram({
+        toolPackCargoBayAtStop({
           ...input,
           program: input.program as
             | import("@/lib/ships/cargoBayPackProgram").CargoBayPackProgram
@@ -1142,7 +1142,7 @@ const handler = createMcpHandler(
       "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and the user had images, fix immediately: store_hauling_screenshot with sessionId + missionId (fileUrl preferred) or set_mission_screenshots / re-create_mission with latestScreenshotPath. Prefer attach-after over rebuilding the route.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
-      "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids. For Sorting DSL: compile_cargo_bay_pack_program (preset→JSON primitives) then plan_stop_occupancy_with_pack_program (optional custom program).",
+      "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids. For Sorting DSL: compile_cargo_bay_pack_program (preset→JSON primitives) then pack_cargo_bay_at_stop (optional custom program).",
       "To save missions for later planning (not the live checklist), call create_mission (type=hauling today) with offerLocation + from/to/cargo (+ latestScreenshotPath when an image existed); use add_mission_note and record_mission_run for notes and timing. Browse with list_missions / get_mission.",
       "Location, commodity, and ship names must match fixtures. Prefer fixture names over inventing labels.",
       "shipStorageLocation must be front, middle, or rear. On both stops, set per-cargo shipStorageLocation so pickup/delivery bay zones can differ and render as separate colored lines.",

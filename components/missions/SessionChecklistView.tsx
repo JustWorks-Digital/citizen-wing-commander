@@ -36,12 +36,7 @@ import {
   applySessionCompletionTiming,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
-import {
-  estimateMissionScuBreakdown,
-  estimateMissionsTotalScu,
-  estimateOnboardScu,
-  estimatePeakOnboardScu,
-} from "@/lib/missions/cargoInventory";
+import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
   removeMissionAndRebuildRoute,
   setMissionScuBoxSplits,
@@ -314,10 +309,12 @@ export function SessionChecklistView({
       if (typeof fromCatalog === "number") return total + fromCatalog;
       return total + (getShipBySlug(slug)?.cargoScu ?? 0);
     }, 0) ?? sumShipCargoScu(session.shipSlugs ?? []);
-  const onboardScu = estimateOnboardScu(session.rows);
-  const peakScu = estimatePeakOnboardScu(session.rows);
-  const missionScuBreakdown = estimateMissionScuBreakdown(session.missions);
-  const missionsTotalScu = estimateMissionsTotalScu(
+  const onboardScu = cargoInventory.fromCompleted(session.rows);
+  const peakScu = cargoInventory.peakOnboard(session.rows);
+  const missionScuBreakdown = cargoInventory.missionBreakdown(
+    session.missions,
+  );
+  const missionsTotalScu = cargoInventory.missionsTotal(
     session.missions,
     session.rows,
   );

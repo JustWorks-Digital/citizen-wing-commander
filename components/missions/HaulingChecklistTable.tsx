@@ -40,8 +40,9 @@ import {
 } from "@/lib/missions/mockSession";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import {
-  estimateOnboardScuByStop,
-  type StopOnboardScuReceipt,
+  cargoInventory,
+  type ScuTransfer,
+  type StopTransferLedger,
 } from "@/lib/missions/cargoInventory";
 import { stripRankFromTitle } from "@/lib/missions/missionRank";
 import {
@@ -1219,20 +1220,19 @@ function TransferScuLine({
 function PickupTransferBlock({
   location,
   shipName,
-  receipt,
+  transfer,
   isDone,
 }: {
   location: string;
   shipName: string;
-  receipt: StopOnboardScuReceipt;
+  transfer: ScuTransfer;
   isDone: boolean;
 }) {
   const { strike, mute } = transferToneClasses(isDone);
-  const afterPickup = receipt.beforeDelivery;
 
   return (
     <TransferBlockFrame
-      title={`Load ${receipt.pickup} SCU from ${location}`}
+      title={`Load ${transfer.amount} SCU from ${location}`}
       isDone={isDone}
     >
       <TransferColumnLabel>Station</TransferColumnLabel>
@@ -1266,7 +1266,7 @@ function PickupTransferBlock({
       <span aria-hidden className="col-start-1" />
       <div className="col-start-3">
         <TransferScuLine
-          amount={String(receipt.beforePickup)}
+          amount={String(transfer.before)}
           suffix="aboard"
           tone="text-rsi-text-muted"
           strike={strike}
@@ -1277,7 +1277,7 @@ function PickupTransferBlock({
 
       <div className="col-start-1">
         <TransferScuLine
-          amount={`−${receipt.pickup}`}
+          amount={`−${transfer.amount}`}
           suffix="loading"
           tone="text-rsi-danger"
           strike={strike}
@@ -1287,7 +1287,7 @@ function PickupTransferBlock({
       </div>
       <div className="col-start-3">
         <TransferScuLine
-          amount={`+${receipt.pickup}`}
+          amount={`+${transfer.amount}`}
           suffix="receiving"
           tone="text-rsi-success"
           strike={strike}
@@ -1306,7 +1306,7 @@ function PickupTransferBlock({
           ].join(" ")}
         />
         <TransferScuLine
-          amount={String(afterPickup)}
+          amount={String(transfer.after)}
           suffix="SCU aboard"
           tone="text-rsi-text"
           strike={strike}
@@ -1321,19 +1321,19 @@ function PickupTransferBlock({
 function DeliveryTransferBlock({
   location,
   shipName,
-  receipt,
+  transfer,
   isDone,
 }: {
   location: string;
   shipName: string;
-  receipt: StopOnboardScuReceipt;
+  transfer: ScuTransfer;
   isDone: boolean;
 }) {
   const { strike, mute } = transferToneClasses(isDone);
 
   return (
     <TransferBlockFrame
-      title={`Transfer ${receipt.delivery} SCU to ${location}`}
+      title={`Transfer ${transfer.amount} SCU to ${location}`}
       isDone={isDone}
     >
       <TransferColumnLabel>Ship</TransferColumnLabel>
@@ -1366,7 +1366,7 @@ function DeliveryTransferBlock({
 
       <div className="col-start-1">
         <TransferScuLine
-          amount={String(receipt.beforeDelivery)}
+          amount={String(transfer.before)}
           suffix="aboard"
           tone="text-rsi-text-muted"
           strike={strike}
@@ -1378,7 +1378,7 @@ function DeliveryTransferBlock({
 
       <div className="col-start-1">
         <TransferScuLine
-          amount={`−${receipt.delivery}`}
+          amount={`−${transfer.amount}`}
           suffix="delivering"
           tone="text-rsi-danger"
           strike={strike}
@@ -1388,7 +1388,7 @@ function DeliveryTransferBlock({
       </div>
       <div className="col-start-3">
         <TransferScuLine
-          amount={`+${receipt.delivery}`}
+          amount={`+${transfer.amount}`}
           suffix="receiving"
           tone="text-rsi-success"
           strike={strike}
@@ -1406,7 +1406,7 @@ function DeliveryTransferBlock({
           ].join(" ")}
         />
         <TransferScuLine
-          amount={String(receipt.after)}
+          amount={String(transfer.after)}
           suffix="SCU remaining"
           tone="text-rsi-text"
           strike={strike}
@@ -1422,37 +1422,38 @@ function TotalMeta({
   row,
   location,
   shipName,
-  onboardReceipt,
+  transferLedger,
 }: {
   row: HaulingChecklistRow;
   /** Station for this stop (load source or unload destination). */
   location: string;
   /** Session ship display name for pickup transfers. */
   shipName: string;
-  /** Planned bay load before/after this stop. */
-  onboardReceipt?: StopOnboardScuReceipt | null;
+  /** Planned SCU transfers at this stop. */
+  transferLedger?: StopTransferLedger | null;
 }) {
-  const showPickup = onboardReceipt != null && onboardReceipt.pickup > 0;
+  const showPickup =
+    transferLedger != null && transferLedger.pickup !== false;
   const showDelivering =
-    onboardReceipt != null && onboardReceipt.delivery > 0;
+    transferLedger != null && transferLedger.delivery !== false;
 
   if (!showPickup && !showDelivering) return null;
 
   return (
     <div className="space-y-0 text-sm">
-      {showPickup ? (
+      {showPickup && transferLedger.pickup ? (
         <PickupTransferBlock
           location={location}
           shipName={shipName}
-          receipt={onboardReceipt!}
+          transfer={transferLedger.pickup}
           isDone={row.isCompleted}
         />
       ) : null}
-      {showDelivering ? (
+      {showDelivering && transferLedger.delivery ? (
         <DeliveryTransferBlock
           location={location}
           shipName={shipName}
-          receipt={onboardReceipt!}
+          transfer={transferLedger.delivery}
           isDone={row.isCompleted}
         />
       ) : null}
@@ -1805,7 +1806,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       : "All contracts complete — show history to review";
 
   const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
-  const onboardByStop = estimateOnboardScuByStop(rows);
+  const transferLedgerByStop = cargoInventory.transferLedgerByStop(rows);
   const focusTargetsQuantum =
     focusedStopId === QUANTUM_ORIGIN_ROW_ID && showQuantumOrigin;
   const activeRowId =
@@ -2183,7 +2184,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         row={row}
                         location={location}
                         shipName={transferShipName}
-                        onboardReceipt={onboardByStop.get(row.id) ?? null}
+                        transferLedger={
+                          transferLedgerByStop.get(row.id) ?? null
+                        }
                       />
                       <div className="mt-auto">
                         <NextDistanceMeta

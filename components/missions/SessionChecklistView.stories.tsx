@@ -7,6 +7,12 @@ const meta = {
   component: SessionChecklistView,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Session shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown).",
+      },
+    },
   },
   args: {
     initial: mockSessionChecklist,

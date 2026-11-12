@@ -1,0 +1,61 @@
+---
+description: Optional sibling actions use T | false (not null or zero stubs) — e.g. ScuTransfer pickup/delivery
+alwaysApply: true
+---
+
+# Optional transfers (`T | false`)
+
+When a value can be either a **real transfer object** or **this action did not happen**, use `Type | false` — not `null`, not `undefined`, and not a fake zero-amount object.
+
+## Why
+
+- Call sites read as `if (receipt.pickup)` / `pickup === false`.
+- Idle stops stay honest: a pickup-only stop has `delivery: false`, not `{ before, amount: 0, after }`.
+- Pickup and delivery share one transfer shape so both circumstances stay symmetric.
+
+## Transfer shape (load / unload)
+
+```ts
+type ScuTransfer = {
+  before: number; // aboard when this transfer starts
+  amount: number; // SCU moved in this transfer
+  after: number;  // aboard when this transfer ends
+};
+
+type StopTransferLedger = {
+  pickup: ScuTransfer | false;
+  delivery: ScuTransfer | false;
+};
+```
+
+Canonical implementation: `lib/missions/cargoInventory.ts` (`cargoInventory.transferLedgerByStop`, `cargoInventory.peakScuAtStop`).
+
+## Examples
+
+```ts
+// ✅ Pickup only
+{ pickup: { before: 0, amount: 16, after: 16 }, delivery: false }
+
+// ✅ Delivery only
+{ pickup: false, delivery: { before: 16, amount: 16, after: 0 } }
+
+// ✅ Both (pickup.after === delivery.before)
+{
+  pickup: { before: 10, amount: 20, after: 30 },
+  delivery: { before: 30, amount: 10, after: 20 },
+}
+
+// ❌ Zero stub for an idle transfer
+{ pickup: { before: 0, amount: 16, after: 16 }, delivery: { before: 16, amount: 0, after: 16 } }
+
+// ❌ Prefer false over null for “did not happen”
+{ pickup: { before: 0, amount: 16, after: 16 }, delivery: null }
+```
+
+## When adding similar APIs
+
+1. Define one shared object type for the active case (`ScuTransfer`, etc.).
+2. Type each optional sibling as `ThatType | false`.
+3. Emit `false` when amount / action is absent; emit the object only when something actually runs.
+4. Narrow before use (`if (transfer)`, or pass `transfer` into UI after a truthy guard).
+5. Peak / aggregate helpers must handle `false` (see `cargoInventory.peakScuAtStop`) — do not assume `pickup.after` always exists.

@@ -1655,15 +1655,18 @@ function splitRowCargo(row: HaulingChecklistRow): {
  * matching FIFO lots so later pickups can reuse those coordinates.
  * At `both` stops, deliveries run before pickups.
  *
- * View plan for `rowId`: cargo delivered / picked up at this stop.
+ * View plan for `stopId`: cargo delivered / picked up at this stop.
  * Pass `zone` to limit to one bay; omit for the whole location (all bays).
+ * `stopId` is first (entity the call is about).
  */
-export function planZoneOccupancyAtStop(
+export function packSuggestedAtStop(
+  stopId: string,
   sketch: ShipCargoGridSketch,
-  rows: HaulingChecklistRow[],
-  rowId: string,
+  stops: HaulingChecklistRow[],
   zone?: CargoGridStorageLocation | null,
 ): CargoGridPlacementPlan {
+  const rows = stops;
+  const rowId = stopId;
   const occupied = new Set<string>();
   const lotsByKey = new Map<string, OnboardLot[]>();
   const gapRanges = gapXRangesForSketch(sketch);
@@ -1831,23 +1834,26 @@ export function planZoneOccupancyAtStop(
         for (const [, queue] of lotsByKey) {
           for (const lot of queue) {
             if (zone != null && lot.zone !== zone) continue;
-            const stayBoxes = lot.boxes.filter(
+            const aboardBoxes = lot.boxes.filter(
               (box) => !seenBoxIds.has(box.id),
             );
-            if (stayBoxes.length === 0) continue;
-            const stayScu = stayBoxes.reduce((sum, box) => sum + box.size, 0);
-            const stayCargo: CargoDelivery = {
+            if (aboardBoxes.length === 0) continue;
+            const aboardScu = aboardBoxes.reduce(
+              (sum, box) => sum + box.size,
+              0,
+            );
+            const aboardCargo: CargoDelivery = {
               commoditySlug: lot.commoditySlug,
-              scu: stayScu,
+              scu: aboardScu,
             };
             const splits = takeDeliveryLocationScuSplits(
               pickupDeliveryPool,
-              stayCargo,
-              stayScu,
+              aboardCargo,
+              aboardScu,
             );
             pushUniqueBoxes(
               applyDeliveryLocationSplitsToBoxes(
-                stayBoxes,
+                aboardBoxes,
                 splits,
                 locationGroups,
               ),
@@ -2448,7 +2454,7 @@ function consumeSoftOnboardLot(
 
 /**
  * Cargo visible in the bay at `rowId` (Suggested parity):
- * aboard deliveries leaving + this stop’s pickups + stay from earlier pickups.
+ * aboard deliveries leaving + this stop’s pickups + cargo still aboard from earlier pickups.
  * Returns null when `rowId` is missing.
  */
 function collectSoftVisibleCargoAtStop(
@@ -2508,13 +2514,14 @@ function collectSoftVisibleCargoAtStop(
  * same cargo type clusters together (missions merged), using configured
  * `boxSizes` when present, and fitting against the ship grid rules.
  *
- * Includes stay cargo from earlier pickups (not only this stop’s lines),
+ * Includes cargo still aboard from earlier pickups (not only the current stop’s cargo),
  * matching Suggested’s before-delivery inventory.
+ * `stopId` is first (entity the call is about).
  */
-export function planOccupancyByCargoTypeAtStop(
+export function packByCargoTypeAtStop(
+  stopId: string,
   sketch: ShipCargoGridSketch,
-  rows: HaulingChecklistRow[],
-  rowId: string,
+  stops: HaulingChecklistRow[],
   options?: {
     missionPrioritized?: boolean;
     /** When set, order + slot pick come from the pack program. */
@@ -2522,6 +2529,8 @@ export function planOccupancyByCargoTypeAtStop(
     packSlotPolicy?: PackSlotPolicy | null;
   },
 ): CargoGridPlacementPlan {
+  const rows = stops;
+  const rowId = stopId;
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
   const visible = collectSoftVisibleCargoAtStop(rows, rowId);
   if (rowIndex < 0 || !visible) {
@@ -2626,27 +2635,31 @@ export function planOccupancyByCargoTypeAtStop(
 const MISSION_PRIORITY_LOCATION_COUNT = 2;
 
 /**
- * Pack crates aboard at this stop for easy unload by delivery location:
+ * Pack deliveries from a trip stop id (bay plan for when you are at that stop).
+ * Groups for easy unload by upcoming destinations:
  * 1) First delivery location — one tight pile, nothing else on top
  * 2) Second location — same
  * 3) Everything else — group by cargo type (not location)
  *
- * Uses the same aboard inventory as Suggested / Cargo type (stay + pickups +
- * deliveries that are actually loaded) — never packs future deliveries that
- * are not yet aboard.
+ * Uses the same aboard inventory as Suggested / Cargo type (earlier pickups +
+ * this stop’s pickups + deliveries that are actually loaded) — never packs
+ * future deliveries that are not yet aboard.
+ *
+ * `stopId` is first: the stop the plan is for (not a grid-cell “origin”).
  */
-export function planOccupancyByMissionLocationAtStop(
+export function packDeliveriesFromStop(
+  stopId: string,
   sketch: ShipCargoGridSketch,
-  rows: HaulingChecklistRow[],
-  rowId: string,
+  stops: HaulingChecklistRow[],
   options?: {
     priorityLocationCount?: number;
     packProgram?: CargoBayPackProgram;
     packSlotPolicy?: PackSlotPolicy | null;
   },
 ): CargoGridPlacementPlan {
-  const from = rows.findIndex((row) => row.id === rowId);
-  const visible = collectSoftVisibleCargoAtStop(rows, rowId);
+  const rows = stops;
+  const from = rows.findIndex((row) => row.id === stopId);
+  const visible = collectSoftVisibleCargoAtStop(rows, stopId);
   if (from < 0 || !visible) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
@@ -2656,7 +2669,7 @@ export function planOccupancyByMissionLocationAtStop(
   const packSlotPolicy = options?.packSlotPolicy ?? null;
   const packProgram = options?.packProgram ?? null;
 
-  const locationOrder = upcomingDeliveryLocationSlugs(rows, rowId);
+  const locationOrder = upcomingDeliveryLocationSlugs(rows, stopId);
   const locationGroups = locationGroupIndexMap(locationOrder);
   const defaultRank = locationOrder.length;
   const deliveryPool = buildDeliveryScuPool(rows, from);

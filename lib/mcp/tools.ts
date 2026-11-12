@@ -123,7 +123,7 @@ import {
   type CargoBayPackProgram,
 } from "@/lib/ships/cargoBayPackProgram";
 import { packBaysFromSketch } from "@/lib/ships/packBaysFromSketch";
-import { planStopOccupancyAtStop } from "@/lib/ships/planStopOccupancy";
+import { cargoBay } from "@/lib/ships/cargoBay";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 import { placementPlanLegend } from "@/lib/ships/cargoGridPlacement";
 
@@ -1702,15 +1702,15 @@ export async function toolCompileCargoBayPackProgram(input: {
     mode,
     strategy: derivePackStrategy(program),
     program,
-    note: "Pass program to plan_stop_occupancy_with_pack_program, or emit an equivalent custom program of group/order/stack/require/reserve/bias-xy calls.",
+    note: "Pass program to pack_cargo_bay_at_stop, or emit an equivalent custom program of group/order/stack/require/reserve/bias-xy calls.",
   });
 }
 
 /**
- * Plan bay occupancy for the active (or given) stop using a pack-program DSL
+ * Pack the bay grid for the active (or given) stop using a pack-program DSL
  * document, or compile from a Sorting preset when program is omitted.
  */
-export async function toolPlanStopOccupancyWithPackProgram(input: {
+export async function toolPackCargoBayAtStop(input: {
   sessionId?: string;
   rowId?: string;
   mode?: "suggested" | "by-cargo-type" | "by-mission-location";
@@ -1738,7 +1738,7 @@ export async function toolPlanStopOccupancyWithPackProgram(input: {
     return textResult({ error: "Session has no checklist rows." });
   }
 
-  const plan = planStopOccupancyAtStop(sketch, session.rows, activeRow.id, {
+  const plan = cargoBay.packAtStop(activeRow.id, sketch, session.rows, {
     packMode: input.mode ?? "by-cargo-type",
     missionPrioritized: Boolean(input.missionPrioritized),
     packProgram: input.program,

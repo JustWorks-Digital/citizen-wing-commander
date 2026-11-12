@@ -20,7 +20,7 @@ alwaysApply: false
 - **Primitives** (engine verbs, not business nicknames): `group`, `order`, `stack`, `require`, `reserve`, `bias-xy`. Each call has `priority` (lower = higher precedence; fall through when a call does not apply).
 - **Bays:** numeric `id` + human `alias` (`front`/`middle`/`rear`) + `size` + `orientation` (`towardShipFront` / `towardShipRear`). Built from the sketch via `packBaysFromSketch`.
 - **Presets compile to programs** (`compilePackProgramForMode` / `compileCargoTypePackProgram` / …). UI Sorting toggles and MCP `compile_cargo_bay_pack_program` emit the same JSON.
-- **Interpret:** `interpretCargoBayPackProgram` / `planStopOccupancyAtStop` (`lib/ships/planStopOccupancy.ts`) derive strategy from primitives and place cargo. Optional `packProgram` overrides preset compilation.
+- **Interpret:** `interpretCargoBayPackProgram` / `cargoBay.packAtStop` (`lib/ships/cargoBay.ts`) derive strategy from primitives and place cargo. Optional `packProgram` overrides preset compilation. Placement only — SCU amounts/transfers stay on `cargoInventory`.
 - **Explicit params:** e.g. `order` uses `target` + `by` + `direction: ascending|descending` — not opaque labels like `flat-layers`.
-- MCP: `compile_cargo_bay_pack_program`, `plan_stop_occupancy_with_pack_program`.
+- MCP: `compile_cargo_bay_pack_program`, `pack_cargo_bay_at_stop`.
 - Baseline compare fixture (local): `.ai-progress/pack-baseline-6ec5cb16/` (gitignored).
