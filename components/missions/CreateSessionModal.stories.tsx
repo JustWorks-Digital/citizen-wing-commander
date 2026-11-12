@@ -10,6 +10,12 @@ const meta = {
   component: CreateSessionModal,
   parameters: {
     layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Name prompt before creating a trip tab. Draft resets only when the modal opens (not on parent re-renders). Random fills a hauling-flavored name.",
+      },
+    },
   },
 } satisfies Meta<typeof CreateSessionModal>;
 

@@ -11,6 +11,56 @@ export type CreateSessionModalProps = {
   onCreate: (sessionName: string) => void;
 };
 
+const DEFAULT_TRIP_NAME = "New trip";
+
+const RANDOM_PREFIXES = [
+  "Covalex",
+  "Hurston",
+  "Stanton",
+  "MicroTech",
+  "ArcCorp",
+  "Crusader",
+  "Pyro",
+  "Everus",
+  "Tressler",
+  "Lorville",
+] as const;
+
+const RANDOM_ROLES = [
+  "haul",
+  "run",
+  "relay",
+  "loop",
+  "circuit",
+  "freight",
+  "drop",
+  "pickup",
+  "route",
+  "leg",
+] as const;
+
+const RANDOM_TAGS = [
+  "ice",
+  "waste",
+  "stims",
+  "ore",
+  "food",
+  "fuel",
+  "ammo",
+  "local",
+  "stellar",
+  "planetary",
+] as const;
+
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+/** Short hauling-flavored trip name for the create modal. */
+export function randomTripName(): string {
+  return `${pickRandom(RANDOM_PREFIXES)} ${pickRandom(RANDOM_ROLES)} — ${pickRandom(RANDOM_TAGS)}`;
+}
+
 /** Name prompt before creating a new hauling trip tab. */
 export function CreateSessionModal({
   open,
@@ -20,11 +70,17 @@ export function CreateSessionModal({
 }: CreateSessionModalProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [draft, setDraft] = useState("New trip");
+  const [draft, setDraft] = useState(DEFAULT_TRIP_NAME);
+
+  // Reset draft only when the modal opens — not on parent re-renders
+  // (inline onClose / isBusy flips were wiping typed names mid-edit).
+  useEffect(() => {
+    if (!open) return;
+    setDraft(DEFAULT_TRIP_NAME);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    setDraft("New trip");
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isBusy) onClose();
     };
@@ -43,8 +99,19 @@ export function CreateSessionModal({
   if (!open) return null;
 
   const submit = () => {
-    const next = draft.trim() || "New trip";
+    const next = draft.trim() || DEFAULT_TRIP_NAME;
     onCreate(next);
+  };
+
+  const applyRandomName = () => {
+    const next = randomTripName();
+    setDraft(next);
+    requestAnimationFrame(() => {
+      const node = inputRef.current;
+      if (!node) return;
+      node.focus();
+      node.select();
+    });
   };
 
   return (
@@ -75,12 +142,27 @@ export function CreateSessionModal({
         <p className="mt-2 text-sm text-rsi-text-secondary">
           Give this tab a name you can find later. You can rename it anytime.
         </p>
-        <label
-          htmlFor={inputId}
-          className="mt-4 block font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
-        >
-          Trip name
-        </label>
+        <div className="mt-4 flex items-baseline justify-between gap-3">
+          <label
+            htmlFor={inputId}
+            className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+          >
+            Trip name
+          </label>
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={applyRandomName}
+            className={[
+              "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-accent",
+              "underline-offset-2 hover:underline",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+            ].join(" ")}
+          >
+            Random
+          </button>
+        </div>
         <input
           ref={inputRef}
           id={inputId}
