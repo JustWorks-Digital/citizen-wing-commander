@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session contracts table: Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions. Footer totals show earned/total for aUEC, SCU, and EXP. Boxes open the crate-mix modal; ⋯ menu for complete/hide/delete.",
+          "Session contracts table: Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions. Boxes always label the cargo type above the mix icons (single- or multi-cargo). Footer totals show earned/total for aUEC, SCU, and EXP; ⋯ menu for complete/hide/delete.",
       },
     },
   },

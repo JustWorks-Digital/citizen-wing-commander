@@ -442,7 +442,7 @@ function MissionContractRow({
           {rank ?? "—"}
         </span>
       </td>
-      <td className={`${tdClass} w-[9.5rem] max-w-[9.5rem]`}>
+      <td className={`${tdClass} w-[14rem] max-w-[14rem]`}>
         <p
           className={[
             "text-[0.7rem] font-semibold tracking-wide break-words hyphens-auto",
@@ -546,18 +546,16 @@ function MissionContractRow({
                   key={line.commoditySlug}
                   className="flex flex-col items-start gap-0.5"
                 >
-                  {cargoBoxLines.length > 1 ? (
-                    <span
-                      className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
-                      style={{
-                        color: isCompleted
-                          ? "var(--rsi-text-muted)"
-                          : cargoColor,
-                      }}
-                    >
-                      {line.commodity}
-                    </span>
-                  ) : null}
+                  <span
+                    className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
+                    style={{
+                      color: isCompleted
+                        ? "var(--rsi-text-muted)"
+                        : cargoColor,
+                    }}
+                  >
+                    {line.commodity}
+                  </span>
                   <CargoBoxCountIcons
                     boxCounts={boxCountsFromBreakdown(splits)}
                     color={
@@ -734,7 +732,7 @@ export function SessionMissionsModal({
               <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
                 <tr>
                   <th className={`${thClass} w-[5.25rem]`}>Rank</th>
-                  <th className={`${thClass} w-[9.5rem]`}>Title</th>
+                  <th className={`${thClass} w-[14rem]`}>Title</th>
                   <th className={`${thClass} w-[9.5rem] text-right`}>Reward</th>
                   <th className={`${thClass} w-[7.5rem] text-right`}>SCU</th>
                   <th
