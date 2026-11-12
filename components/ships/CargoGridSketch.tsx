@@ -485,6 +485,36 @@ export function CargoGridSketch({
     locationLegendItems.length,
   ]);
 
+  /** 0-based Z layers that currently have at least one visible (legend-filtered) box. */
+  const occupiedTopLayers = useMemo(() => {
+    const occupied = new Set<number>();
+    for (const box of visiblePlacementBoxes) {
+      const z0 = box.origin.z;
+      const z1 = box.origin.z + box.footprint.dz;
+      for (let layer = z0; layer < z1; layer += 1) {
+        if (layer >= 0 && layer < sketch.heightCells) occupied.add(layer);
+      }
+    }
+    return occupied;
+  }, [visiblePlacementBoxes, sketch.heightCells]);
+
+  const emptyTopLayers = useMemo(() => {
+    const empty = new Set<number>();
+    for (let layer = 0; layer < sketch.heightCells; layer += 1) {
+      if (!occupiedTopLayers.has(layer)) empty.add(layer);
+    }
+    return empty;
+  }, [occupiedTopLayers, sketch.heightCells]);
+
+  // If legend filters clear the active 2D layer, jump to the lowest occupied one.
+  useEffect(() => {
+    if (sketch.heightCells <= 0) return;
+    if (occupiedTopLayers.size === 0) return;
+    if (occupiedTopLayers.has(activeZ)) return;
+    const next = [...occupiedTopLayers].sort((a, b) => a - b)[0];
+    if (next != null) setActiveZ(next);
+  }, [activeZ, occupiedTopLayers, sketch.heightCells]);
+
   const locationOutlines = useMemo(
     () =>
       showLocationOutlines
@@ -839,19 +869,30 @@ export function CargoGridSketch({
                 >
                   {Array.from({ length: sketch.heightCells }, (_, layer) => {
                     const isActive = z === layer;
+                    const isEmpty = emptyTopLayers.has(layer);
                     return (
                       <button
                         key={layer}
                         type="button"
                         role="radio"
                         aria-checked={isActive}
-                        aria-label={`Layer ${layer + 1}`}
-                        onClick={() => setActiveZ(layer)}
+                        aria-label={
+                          isEmpty
+                            ? `Layer ${layer + 1} (empty)`
+                            : `Layer ${layer + 1}`
+                        }
+                        disabled={isEmpty}
+                        onClick={() => {
+                          if (isEmpty) return;
+                          setActiveZ(layer);
+                        }}
                         className={[
                           "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums transition-colors",
-                          isActive
-                            ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
-                            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
+                          isEmpty
+                            ? "cursor-not-allowed border-rsi-border/50 bg-rsi-bg-deep/20 text-rsi-text-muted/35"
+                            : isActive
+                              ? "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent"
+                              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text",
                         ].join(" ")}
                       >
                         {layer + 1}
@@ -1128,6 +1169,7 @@ export function CargoGridSketch({
                 )}
                 activeLayer={z}
                 onSelectLayer={setActiveZ}
+                emptyLayers={emptyTopLayers}
                 ariaLabel="2D Z layers"
               />
             ) : null}

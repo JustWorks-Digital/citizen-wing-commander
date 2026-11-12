@@ -25,7 +25,7 @@ export const Default: Story = {
     return (
       <div className="max-w-md">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-          Session
+          Trip
         </p>
         <SessionNameField
           name={name}
@@ -39,7 +39,7 @@ export const Default: Story = {
 
 export const Disabled: Story = {
   args: {
-    name: "Read-only session",
+    name: "Read-only trip",
     onRename: () => {},
     disabled: true,
   },

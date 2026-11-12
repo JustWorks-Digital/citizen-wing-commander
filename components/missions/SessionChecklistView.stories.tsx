@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown).",
+          "Trip shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown).",
       },
     },
   },
@@ -24,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** Inventory shows peak / negative available (red) when route peak exceeds ship bay SCU. */
+/** Inventory shows peak / negative free (red) when route peak exceeds ship bay SCU. */
 export const MissionCargoOverCapacity: Story = {
   args: {
     initial: {

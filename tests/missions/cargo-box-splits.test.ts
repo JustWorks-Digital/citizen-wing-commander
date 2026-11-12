@@ -201,6 +201,38 @@ describe("cargoBoxSplits.setCommodity", () => {
   });
 });
 
+describe("cargoBoxSplits.boxSizesForLine", () => {
+  it("does not stamp the full mission mix onto a smaller multi-stop pickup", () => {
+    const iron = cargoBoxSplits.withDefaults(
+      mission({
+        id: "iron",
+        from: ["HDMS-Pinewood", "HDMS-Thedus", "HDMS-Stanhope"],
+        to: ["HDPC-Farnesway"],
+        maxContainerScu: 8,
+        cargo: [{ commodity: "Iron (Ore)", scu: 20 }],
+        scuCargoBoxSplits: {
+          "iron-ore": {
+            scuOne: 0,
+            scuTwo: 0,
+            scuFour: 1,
+            scuEight: 2,
+            scuSixteen: 0,
+            scuThirtyTwo: 0,
+          },
+        },
+      }),
+    );
+    expect(cargoBoxSplits.boxSizesForLine(iron, "iron-ore", 20)).toEqual([
+      8, 8, 4,
+    ]);
+    // 8 SCU crates cannot fill a 7 SCU outpost pickup — rebuild for the line.
+    expect(cargoBoxSplits.boxSizesForLine(iron, "iron-ore", 7)).toEqual([
+      4, 2, 1,
+    ]);
+    expect(cargoBoxSplits.boxSizesForLine(iron, "iron-ore", 6)).toEqual([4, 2]);
+  });
+});
+
 describe("cargoBoxSplits.propagatePreferredMax", () => {
   it("re-greedies other lines from the source mix preferred max", () => {
     const base = cargoBoxSplits.withDefaults(
@@ -360,5 +392,68 @@ describe("setMissionScuBoxSplits restamp", () => {
           entry.commoditySlug === "titanium" && entry.role === "pickup",
       );
     expect(titaniumPickup?.boxSizes).toEqual([2, 2, 2, 2]);
+  });
+
+  it("does not stamp a delivery mission crate mix onto a same-commodity pickup at that hub", () => {
+    const deliverIce = mission({
+      id: "ice-in",
+      from: ["Port Tressler"],
+      to: ["Everus Harbor"],
+      maxContainerScu: 32,
+      cargo: [{ commodity: "Pressurized Ice", scu: 32 }],
+    });
+    const collectIce = mission({
+      id: "ice-out",
+      from: ["Everus Harbor"],
+      to: ["HDPC-Farnesway"],
+      maxContainerScu: 16,
+      cargo: [{ commodity: "Pressurized Ice", scu: 17 }],
+    });
+    const stamped = restampAllMissionBoxSizes({
+      id: "s-hub",
+      sessionName: "Hub",
+      shipSlugs: [],
+      startLocationSlug: "port-tressler",
+      missionCount: 2,
+      missionsCompleted: 0,
+      missions: [deliverIce, collectIce],
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      rows: [
+        makeStop({
+          id: "leg-tressler",
+          routeAction: "pickup",
+          locationSlug: "port-tressler",
+          cargo: [cargo("pressurized-ice", 32)],
+        }),
+        makeStop({
+          id: "leg-everus",
+          routeAction: "both",
+          locationSlug: "everus-harbor",
+          cargo: [
+            cargo("pressurized-ice", 32, {
+              role: "delivery",
+              shipStorageLocation: "front",
+            }),
+            cargo("pressurized-ice", 17, {
+              role: "pickup",
+              shipStorageLocation: "middle",
+            }),
+          ],
+        }),
+      ],
+    });
+
+    const everus = stamped.rows.find((row) => row.id === "leg-everus");
+    const delivery = everus?.cargoDeliveries.find((c) => c.role === "delivery");
+    const pickup = everus?.cargoDeliveries.find((c) => c.role === "pickup");
+    // Delivery uses the inbound mission (32-max → one 32 crate).
+    expect(delivery?.missionId).toBe("ice-in");
+    expect(delivery?.boxSizes).toEqual([32]);
+    // Collect must stay on the outbound mission (16-max → 16+1), not inherit 32s.
+    expect(pickup?.missionId).toBe("ice-out");
+    expect(pickup?.boxSizes).toEqual([16, 1]);
+    expect(pickup?.scu).toBe(17);
   });
 });

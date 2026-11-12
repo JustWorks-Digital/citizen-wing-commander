@@ -28,7 +28,7 @@ export const Open: Story = {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 bg-rsi-bg p-6">
         <Button type="button" onClick={() => setOpen(true)}>
-          New session
+          New trip
         </Button>
         {lastName ? (
           <p className="font-mono text-xs text-rsi-text-muted">

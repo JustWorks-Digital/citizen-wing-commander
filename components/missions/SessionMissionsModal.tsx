@@ -786,7 +786,13 @@ export function SessionMissionsModal({
                   >
                     {columnTotals.rewardAuec > 0 ? (
                       <>
-                        <span className="text-rsi-success">
+                        <span
+                          className={
+                            columnTotals.rewardEarned > 0
+                              ? "text-rsi-success"
+                              : undefined
+                          }
+                        >
                           {Math.floor(
                             columnTotals.rewardEarned,
                           ).toLocaleString("en-US")}
@@ -805,7 +811,13 @@ export function SessionMissionsModal({
                     className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
                     title="Completed contract SCU / session total SCU"
                   >
-                    <span className="text-rsi-success">
+                    <span
+                      className={
+                        columnTotals.scuEarned > 0
+                          ? "text-rsi-success"
+                          : undefined
+                      }
+                    >
                       {columnTotals.scuEarned}
                     </span>
                     {" / "}
@@ -817,7 +829,13 @@ export function SessionMissionsModal({
                   >
                     {columnTotals.exp > 0 ? (
                       <>
-                        <span className="text-rsi-success">
+                        <span
+                          className={
+                            columnTotals.expEarned > 0
+                              ? "text-rsi-success"
+                              : undefined
+                          }
+                        >
                           {formatHaulingRepXp(columnTotals.expEarned)}
                         </span>
                         {" / "}

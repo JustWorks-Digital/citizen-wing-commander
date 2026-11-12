@@ -77,7 +77,7 @@ export async function createDeliverySession(input?: {
   select?: boolean;
 }) {
   const db = getDb();
-  const name = input?.name?.trim() || "New session";
+  const name = input?.name?.trim() || "New trip";
   const checklist = normalizeSessionChecklist(
     input?.checklist ?? emptySessionChecklist({ sessionName: name }),
     { touchUpdatedAt: true },

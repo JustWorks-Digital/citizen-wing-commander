@@ -4,7 +4,10 @@ import {
   scuBoxSplitsForScu,
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
-import { expandBreakdownToBoxSizes } from "@/lib/missions/boxBreakdownOptions";
+import {
+  expandBreakdownToBoxSizes,
+  takeBoxesForScu,
+} from "@/lib/missions/boxBreakdownOptions";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { resolveCommoditySlug } from "@/lib/sessions/resolveRefs";
 import {
@@ -111,16 +114,29 @@ export const cargoBoxSplits = {
     commoditySlug: string,
     scu: number,
   ): CargoBoxScu[] {
-    const splits = cargoBoxSplits.forCommodity(mission, commoditySlug);
-    if (splits) {
-      const boxes = expandBreakdownToBoxSizes(splits);
-      if (boxes.length > 0) return boxes;
-    }
+    const need = Math.max(0, Math.floor(scu));
     const max =
       typeof mission.maxContainerScu === "number" && mission.maxContainerScu > 0
         ? (mission.maxContainerScu as CargoBoxScu)
         : undefined;
-    return decomposeScuIntoBoxes(scu, max);
+    if (need === 0) return [];
+
+    const splits = cargoBoxSplits.forCommodity(mission, commoditySlug);
+    if (splits) {
+      const boxes = expandBreakdownToBoxSizes(splits);
+      const total = boxes.reduce((sum, size) => sum + size, 0);
+      // Full mission mix only when the line is the whole commodity amount.
+      if (total === need && boxes.length > 0) return boxes;
+      // Multi-stop split: take a subset when crates fit (e.g. 4 from 8+8+4).
+      if (total > need && boxes.length > 0) {
+        const pool = [...boxes];
+        const taken = takeBoxesForScu(pool, need);
+        if (taken) return taken;
+        // e.g. 8 SCU crates cannot fill a 7 SCU outpost pickup — rebuild for the line.
+        return decomposeScuIntoBoxes(need, max);
+      }
+    }
+    return decomposeScuIntoBoxes(need, max);
   },
 
   withDefaults(mission: SessionMission): SessionMission {

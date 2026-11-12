@@ -36,7 +36,9 @@ export type ScuTransfer = {
 /**
  * SCU transfer ledger for one stop (full planned trip walk).
  * Idle pickup/delivery are `false` (no load / no unload at this stop).
- * When both run, `pickup.after` === `delivery.before`.
+ * When both run, phase order follows the first cargo line’s role at that stop
+ * (pickup-then-delivery or delivery-then-pickup); the later phase’s `before`
+ * equals the earlier phase’s `after`.
  */
 export type StopTransferLedger = {
   pickup: ScuTransfer | false;
@@ -51,6 +53,17 @@ export type MissionScuBreakdownItem = {
   screenshots: string[];
 };
 
+/** Pickup SCU for one commodity at a stop (aggregated). */
+export type StopPickupCommodityScu = {
+  commoditySlug: string;
+  scu: number;
+};
+
+/** Pickup or delivery SCU for one commodity at a stop (aggregated). */
+export type StopTransferCommodityScu = StopPickupCommodityScu & {
+  action: "pickup" | "delivery";
+};
+
 function missionCargoScu(mission: SessionMission): number {
   return mission.cargo.reduce((sum, line) => sum + line.scu, 0);
 }
@@ -63,7 +76,8 @@ function missionCargoScu(mission: SessionMission): number {
 export const cargoInventory = {
   /**
    * SCU transfer ledger by stop id for the full planned trip.
-   * Pickups apply before deliveries at each stop.
+   * At `both` stops, phase order follows the first cargo line’s role so
+   * unload-then-load hubs (delivery lines first) do not double-count aboard.
    */
   transferLedgerByStop(
     rows: HaulingChecklistRow[],
@@ -73,50 +87,72 @@ export const cargoInventory = {
     for (const row of rows) {
       let pickupAmount = 0;
       let deliveryAmount = 0;
+      let firstRole: "pickup" | "delivery" | null = null;
       if (row.routeAction !== "quantum") {
         const fallback = row.routeAction === "both" ? null : row.routeAction;
         for (const cargo of row.cargoDeliveries) {
           const role = cargo.role ?? fallback;
+          if (role !== "pickup" && role !== "delivery") continue;
+          if (!firstRole) firstRole = role;
           if (role === "pickup") pickupAmount += cargo.scu;
-          else if (role === "delivery") deliveryAmount += cargo.scu;
+          else deliveryAmount += cargo.scu;
         }
       }
-      const beforePickup = current;
-      current += pickupAmount;
-      const afterPickup = current;
-      current = Math.max(0, current - deliveryAmount);
-      byStop.set(row.id, {
-        pickup:
-          pickupAmount > 0
-            ? {
-                before: beforePickup,
-                amount: pickupAmount,
-                after: afterPickup,
-              }
-            : false,
-        delivery:
-          deliveryAmount > 0
-            ? {
-                before: afterPickup,
-                amount: deliveryAmount,
-                after: current,
-              }
-            : false,
-      });
+
+      const deliverFirst =
+        firstRole === "delivery" ||
+        (firstRole == null && deliveryAmount > 0 && pickupAmount === 0);
+
+      let pickup: ScuTransfer | false = false;
+      let delivery: ScuTransfer | false = false;
+
+      if (deliverFirst) {
+        if (deliveryAmount > 0) {
+          const before = current;
+          current = Math.max(0, current - deliveryAmount);
+          delivery = { before, amount: deliveryAmount, after: current };
+        }
+        if (pickupAmount > 0) {
+          const before = current;
+          current += pickupAmount;
+          pickup = { before, amount: pickupAmount, after: current };
+        }
+      } else {
+        if (pickupAmount > 0) {
+          const before = current;
+          current += pickupAmount;
+          pickup = { before, amount: pickupAmount, after: current };
+        }
+        if (deliveryAmount > 0) {
+          const before = current;
+          current = Math.max(0, current - deliveryAmount);
+          delivery = { before, amount: deliveryAmount, after: current };
+        }
+      }
+
+      byStop.set(row.id, { pickup, delivery });
     }
     return byStop;
   },
 
-  /** Peak aboard SCU at a stop (after pickup, else before deliver). */
+  /**
+   * Peak aboard SCU at a stop across its transfer phases
+   * (handles pickup-then-delivery and delivery-then-pickup).
+   */
   peakScuAtStop(ledger: StopTransferLedger): number {
-    if (ledger.pickup) return ledger.pickup.after;
-    if (ledger.delivery) return ledger.delivery.before;
-    return 0;
+    let peak = 0;
+    if (ledger.pickup) {
+      peak = Math.max(peak, ledger.pickup.before, ledger.pickup.after);
+    }
+    if (ledger.delivery) {
+      peak = Math.max(peak, ledger.delivery.before, ledger.delivery.after);
+    }
+    return peak;
   },
 
   /**
-   * Stop id where aboard SCU peaks (after pickups, before unload).
-   * Used for cargo-bay “All stops” scope so the grid shows the fullest load.
+   * Stop id where aboard SCU peaks during the planned trip
+   * (fullest planned bay load along the route).
    */
   peakStopId(rows: HaulingChecklistRow[]): string | null {
     const ledgerByStop = cargoInventory.transferLedgerByStop(rows);
@@ -148,6 +184,52 @@ export const cargoInventory = {
    */
   peakOnboard(rows: HaulingChecklistRow[]): number {
     return applyCargoToOnboard(0, rows).peak;
+  },
+
+  /**
+   * Pickup SCU by commodity at one stop (aggregated).
+   * Empty for quantum / delivery-only stops.
+   */
+  pickupByCommodityAtStop(
+    row: HaulingChecklistRow | null | undefined,
+  ): StopPickupCommodityScu[] {
+    return cargoInventory
+      .transferByCommodityAtStop(row)
+      .filter((item) => item.action === "pickup")
+      .map(({ commoditySlug, scu }) => ({ commoditySlug, scu }));
+  },
+
+  /**
+   * Pickup + delivery SCU by commodity at one stop (aggregated).
+   * Empty for quantum stops / stops with no cargo lines.
+   */
+  transferByCommodityAtStop(
+    row: HaulingChecklistRow | null | undefined,
+  ): StopTransferCommodityScu[] {
+    if (!row || row.routeAction === "quantum") return [];
+    const fallback = row.routeAction === "both" ? null : row.routeAction;
+    const byKey = new Map<string, StopTransferCommodityScu>();
+    for (const cargo of row.cargoDeliveries) {
+      const role = cargo.role ?? fallback;
+      if (role !== "pickup" && role !== "delivery") continue;
+      const key = `${role}:${cargo.commoditySlug}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.scu += cargo.scu;
+      } else {
+        byKey.set(key, {
+          action: role,
+          commoditySlug: cargo.commoditySlug,
+          scu: cargo.scu,
+        });
+      }
+    }
+    return [...byKey.values()].sort((a, b) => {
+      if (a.action !== b.action) {
+        return a.action === "pickup" ? -1 : 1;
+      }
+      return a.commoditySlug.localeCompare(b.commoditySlug);
+    });
   },
 
   /**

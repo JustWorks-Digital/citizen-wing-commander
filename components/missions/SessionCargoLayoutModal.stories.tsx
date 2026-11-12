@@ -29,7 +29,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All stops / Current stop scope toggle; left edge resizes width (persisted per session). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total + bay load; footer shows per-contract SCU as a 4-per-column grid.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; left edge resizes width (persisted per trip). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total + bay load; footer shows stop transfer SCU + per-contract SCU.",
       },
     },
   },

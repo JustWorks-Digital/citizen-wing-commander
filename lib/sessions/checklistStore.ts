@@ -36,8 +36,8 @@ async function ensureAtLeastOneSession(): Promise<SessionChecklistModel> {
     return rowToChecklist(selected);
   }
   const created = await createDeliverySession({
-    name: "New session",
-    checklist: emptySessionChecklist({ sessionName: "New session" }),
+    name: "New trip",
+    checklist: emptySessionChecklist({ sessionName: "New trip" }),
     select: true,
   });
   return rowToChecklist(created);
@@ -89,7 +89,7 @@ export async function createChecklistSession(input?: {
   sessionName?: string;
   activate?: boolean;
 }): Promise<SessionChecklistModel> {
-  const sessionName = input?.sessionName?.trim() || "New session";
+  const sessionName = input?.sessionName?.trim() || "New trip";
   const row = await createDeliverySession({
     name: sessionName,
     checklist: emptySessionChecklist({ sessionName }),

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
   SessionContractScuGrid,
+  SessionCurrentStopPickupGrid,
   SessionInventoryStat,
   SessionRouteProgressStats,
   SessionSourceStat,
@@ -13,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, per-contract SCU as a 4-per-column grid in the modal footer.",
+          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Cargo bay/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU + per-contract SCU in the modal footer.",
       },
     },
   },
@@ -102,25 +103,43 @@ export const ContractScuFourPerColumn: Story = {
         availableScu={36}
         showContractBreakdown={false}
       />
-      <SessionContractScuGrid
-        missionScuBreakdown={Array.from({ length: 9 }, (_, index) => ({
-          missionId: `m${index + 1}`,
-          title: [
-            "Trainee Rank — Medical Supplies",
-            "Junior Rank — Quartz",
-            "Member Rank — Stims",
-            "Senior Rank — Waste",
-            "Master Rank — Agricium",
-            "Junior Rank — Pressurized Ice",
-            "Member Rank — Processed Food",
-            "Senior Rank — Scrap",
-            "Trainee Rank — Distilled Spirits",
-          ][index]!,
-          scu: [16, 24, 48, 64, 80, 32, 40, 56, 72][index]!,
-          screenshots: index % 2 === 0 ? [`demo/c${index + 1}.png`] : [],
-        }))}
-        sessionId="demo-session"
-      />
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <SessionCurrentStopPickupGrid
+          stopLabel="Everus Harbor"
+          transfers={[
+            {
+              action: "pickup",
+              commoditySlug: "pressurized-ice",
+              scu: 32,
+            },
+            {
+              action: "pickup",
+              commoditySlug: "processed-food",
+              scu: 24,
+            },
+            { action: "pickup", commoditySlug: "agricium", scu: 40 },
+          ]}
+        />
+        <SessionContractScuGrid
+          missionScuBreakdown={Array.from({ length: 9 }, (_, index) => ({
+            missionId: `m${index + 1}`,
+            title: [
+              "Trainee Rank — Medical Supplies",
+              "Junior Rank — Quartz",
+              "Member Rank — Stims",
+              "Senior Rank — Waste",
+              "Master Rank — Agricium",
+              "Junior Rank — Pressurized Ice",
+              "Member Rank — Processed Food",
+              "Senior Rank — Scrap",
+              "Trainee Rank — Distilled Spirits",
+            ][index]!,
+            scu: [16, 24, 48, 64, 80, 32, 40, 56, 72][index]!,
+            screenshots: index % 2 === 0 ? [`demo/c${index + 1}.png`] : [],
+          }))}
+          sessionId="demo-session"
+        />
+      </div>
     </div>
   ),
 };

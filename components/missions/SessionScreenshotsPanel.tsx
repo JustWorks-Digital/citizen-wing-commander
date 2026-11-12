@@ -131,7 +131,7 @@ function ClipboardIcon({ className }: { className?: string }) {
   );
 }
 
-/** Modal: upload + browse contract screenshots for a hauling session. */
+/** Modal: upload + browse contract screenshots for a hauling trip. */
 export function SessionScreenshotsPanel({
   open,
   sessionId,
@@ -314,7 +314,7 @@ export function SessionScreenshotsPanel({
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Session screenshots"
+      aria-label="Trip screenshots"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

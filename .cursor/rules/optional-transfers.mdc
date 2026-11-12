@@ -39,10 +39,16 @@ Canonical implementation: `lib/missions/cargoInventory.ts` (`cargoInventory.tran
 // ✅ Delivery only
 { pickup: false, delivery: { before: 16, amount: 16, after: 0 } }
 
-// ✅ Both (pickup.after === delivery.before)
+// ✅ Both — pickup then delivery (later.before === earlier.after)
 {
-  pickup: { before: 10, amount: 20, after: 30 },
-  delivery: { before: 30, amount: 10, after: 20 },
+ pickup: { before: 10, amount: 20, after: 30 },
+ delivery: { before: 30, amount: 10, after: 20 },
+}
+
+// ✅ Both — delivery then pickup (unload-then-load hub; same chaining rule)
+{
+ delivery: { before: 323, amount: 323, after: 0 },
+ pickup: { before: 0, amount: 412, after: 412 },
 }
 
 // ❌ Zero stub for an idle transfer

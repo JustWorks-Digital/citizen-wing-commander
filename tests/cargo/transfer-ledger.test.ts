@@ -8,7 +8,7 @@ import { getTripStops } from "./fixtures";
  * Public API: cargoInventory.transferLedgerByStop
  * - pickup: ScuTransfer | false
  * - delivery: ScuTransfer | false
- * (when both run, pickup.after === delivery.before)
+ * (when both run, phase order follows the first cargo line’s role)
  */
 describe("transfer ledger (cargoInventory.transferLedgerByStop)", () => {
   it("tracks pickup and delivery transfers across stop shapes", () => {
@@ -37,6 +37,18 @@ describe("transfer ledger (cargoInventory.transferLedgerByStop)", () => {
       pickup: { before: 10, amount: 20, after: 30 },
       delivery: { before: 30, amount: 10, after: 20 },
     });
+  });
+
+  it("unloads before loading when delivery lines are listed first on a both stop", () => {
+    const ledger = cargoInventory.transferLedgerByStop(
+      getTripStops("aboardCargo"),
+    );
+    // stop-1 loads 17; stop-2 lists scrap delivery then agricium pickup
+    expect(ledger.get("stop-2")).toEqual({
+      pickup: { before: 0, amount: 40, after: 40 },
+      delivery: { before: 17, amount: 24, after: 0 },
+    });
+    expect(cargoInventory.peakScuAtStop(ledger.get("stop-2")!)).toBe(40);
   });
 
   it("does not let aboard SCU go below zero", () => {

@@ -52,7 +52,7 @@ export function SessionNameField({
     return (
       <div className={["min-w-0", className].filter(Boolean).join(" ")}>
         <label htmlFor={inputId} className="sr-only">
-          Session name
+          Trip name
         </label>
         <input
           ref={inputRef}
@@ -94,8 +94,8 @@ export function SessionNameField({
       <button
         type="button"
         disabled={disabled}
-        title="Rename session"
-        aria-label={`Rename session ${name}`}
+        title="Rename trip"
+        aria-label={`Rename trip ${name}`}
         onClick={() => {
           if (disabled) return;
           setDraft(name);
@@ -113,8 +113,8 @@ export function SessionNameField({
       <button
         type="button"
         disabled={disabled}
-        title="Rename session"
-        aria-label="Edit session name"
+        title="Rename trip"
+        aria-label="Edit trip name"
         onClick={() => {
           if (disabled) return;
           setDraft(name);

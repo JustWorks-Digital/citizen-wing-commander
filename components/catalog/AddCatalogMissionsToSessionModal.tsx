@@ -21,7 +21,7 @@ export type AddCatalogMissionsToSessionModalProps = {
 type Mode = "existing" | "new";
 
 /**
- * Pick an open hauling session (or create one) and append catalog contracts.
+ * Pick an open hauling trip (or create one) and append catalog contracts.
  */
 export function AddCatalogMissionsToSessionModal({
   catalogMissionIds,
@@ -48,7 +48,7 @@ export function AddCatalogMissionsToSessionModal({
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load sessions",
+            err instanceof Error ? err.message : "Failed to load trips",
           );
         }
       } finally {
@@ -98,7 +98,7 @@ export function AddCatalogMissionsToSessionModal({
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Add contracts to session"
+      aria-label="Add contracts to trip"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -107,7 +107,7 @@ export function AddCatalogMissionsToSessionModal({
         <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
           <ModalCloseButton onClick={onClose} />
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
-            Catalog · Session
+            Catalog · Trip
           </p>
           <h2 className="mt-1 text-base font-semibold tracking-wide text-rsi-text">
             Add {count} contract{count === 1 ? "" : "s"}
@@ -126,7 +126,7 @@ export function AddCatalogMissionsToSessionModal({
                   : "border-rsi-border text-rsi-text-muted hover:text-rsi-text",
               ].join(" ")}
             >
-              Existing session
+              Existing trip
             </button>
             <button
               type="button"
@@ -138,14 +138,14 @@ export function AddCatalogMissionsToSessionModal({
                   : "border-rsi-border text-rsi-text-muted hover:text-rsi-text",
               ].join(" ")}
             >
-              New session
+              New trip
             </button>
           </div>
 
           {mode === "existing" ? (
             <label className="block">
               <span className="mb-1 block font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                Session
+                Trip
               </span>
               {isLoading ? (
                 <p className="text-xs text-rsi-text-muted">Loading…</p>
@@ -171,13 +171,13 @@ export function AddCatalogMissionsToSessionModal({
           ) : (
             <label className="block">
               <span className="mb-1 block font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                Session name
+                Trip name
               </span>
               <input
                 type="text"
                 value={sessionName}
                 onChange={(event) => setSessionName(event.target.value)}
-                placeholder="New session"
+                placeholder="New trip"
                 className="w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2.5 py-2 text-xs text-rsi-text placeholder:text-rsi-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
               />
             </label>
@@ -194,7 +194,7 @@ export function AddCatalogMissionsToSessionModal({
               onClick={() => void submit()}
               disabled={!canSubmit}
             >
-              {isSaving ? "Adding…" : "Add to session"}
+              {isSaving ? "Adding…" : "Add to trip"}
             </Button>
           </div>
         </div>

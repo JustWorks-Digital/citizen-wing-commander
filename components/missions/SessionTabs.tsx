@@ -119,7 +119,7 @@ export function SessionTabs({
     <>
       <div
         role="tablist"
-        aria-label="Hauling sessions"
+        aria-label="Hauling trips"
         className="flex min-w-0 flex-wrap items-stretch gap-1"
       >
         {shown.map((tab) => {
@@ -160,8 +160,8 @@ export function SessionTabs({
               {onClose ? (
                 <button
                   type="button"
-                  aria-label={`Close session ${tab.sessionName}`}
-                  title="Close session"
+                  aria-label={`Close trip ${tab.sessionName}`}
+                  title="Close trip"
                   disabled={isBusy}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -199,8 +199,8 @@ export function SessionTabs({
             aria-expanded={expanded}
             aria-label={
               expanded
-                ? "Show fewer sessions"
-                : `Show ${hiddenCount} more sessions`
+                ? "Show fewer trips"
+                : `Show ${hiddenCount} more trips`
             }
             title={expanded ? "Show less" : `Show ${hiddenCount} more`}
             disabled={isBusy}
@@ -232,8 +232,8 @@ export function SessionTabs({
         ) : null}
         <button
           type="button"
-          aria-label="Add session"
-          title="Add session"
+          aria-label="Add trip"
+          title="Add trip"
           disabled={isBusy}
           onClick={onCreate}
           className={[
@@ -277,13 +277,13 @@ export function SessionTabs({
               disabled={isBusy}
             />
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
-              Close session
+              Close trip
             </p>
             <h2
               id="close-session-title"
               className="mt-2 text-base font-semibold tracking-wide text-rsi-text"
             >
-              Delete this session?
+              Delete this trip?
             </h2>
             <p className="mt-2 text-sm text-rsi-text-secondary">
               <span className="font-medium text-rsi-text">

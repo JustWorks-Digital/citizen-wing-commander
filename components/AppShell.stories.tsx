@@ -16,7 +16,7 @@ export const Default: Story = {
   args: {
     activeNav: "sessions",
     children: (
-      <p className="text-sm text-rsi-text-secondary">Session content</p>
+      <p className="text-sm text-rsi-text-secondary">Trip content</p>
     ),
   },
 };

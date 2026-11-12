@@ -1661,14 +1661,25 @@ function splitRowCargo(row: HaulingChecklistRow): {
  * Pass `zone` to limit to one bay; omit for the whole location (all bays).
  * `stopId` is first (entity the call is about).
  */
+export type PackSuggestedAtStopOptions = {
+  /**
+   * When false, only this stop’s pickup/delivery crates are placed for the
+   * view (stay cargo is simulated then cleared so transfers can fit).
+   * Default true = full bay including stay cargo.
+   */
+  includeAboardCargo?: boolean;
+};
+
 export function packSuggestedAtStop(
   stopId: string,
   sketch: ShipCargoGridSketch,
   stops: HaulingChecklistRow[],
   zone?: CargoGridStorageLocation | null,
+  options?: PackSuggestedAtStopOptions,
 ): CargoGridPlacementPlan {
   const rows = stops;
   const rowId = stopId;
+  const includeAboardCargo = options?.includeAboardCargo !== false;
   const occupied = new Set<string>();
   const lotsByKey = new Map<string, OnboardLot[]>();
   const gapRanges = gapXRangesForSketch(sketch);
@@ -1809,6 +1820,20 @@ export function packSuggestedAtStop(
       deliver(cargo, storage);
     }
 
+    // Transfer-only view: free stay cells so this stop’s pickups can place
+    // even when chronological stay cargo has fragmented the preferred bay.
+    if (isTarget && !includeAboardCargo) {
+      for (const [, queue] of lotsByKey) {
+        for (const lot of queue) {
+          for (const box of lot.boxes) {
+            for (const cell of box.cells) {
+              occupied.delete(cargoGridCoordKey(cell));
+            }
+          }
+        }
+      }
+    }
+
     for (const { cargo, storage } of pickups) {
       const plan = pickup(cargo, storage);
       if (isTarget && inViewZone(storage) && locationGroups && pickupDeliveryPool) {
@@ -1830,9 +1855,9 @@ export function packSuggestedAtStop(
     }
 
     if (isTarget) {
-      // Also show cargo still aboard from earlier pickups (not just this
-      // stop’s load/unload actions). Dedupes boxes already pushed above.
-      if (locationGroups && pickupDeliveryPool) {
+      // Stay cargo (still aboard from earlier pickups). No `action` so
+      // Transfer UI can hide them when packing with aboard included.
+      if (includeAboardCargo && locationGroups && pickupDeliveryPool) {
         for (const [, queue] of lotsByKey) {
           for (const lot of queue) {
             if (zone != null && lot.zone !== zone) continue;
@@ -2368,7 +2393,11 @@ type SoftOnboardLot = {
 type SoftVisibleCargo = {
   cargo: CargoDelivery;
   storage: ShipStorageLocation;
-  action: CargoGridBoxAction;
+  /**
+   * Set for this stop’s pickup / delivery only.
+   * Omitted for cargo still aboard from earlier stops (stay cargo).
+   */
+  action?: CargoGridBoxAction;
 };
 
 function softLotKey(
@@ -2456,15 +2485,18 @@ function consumeSoftOnboardLot(
 
 /**
  * Cargo visible in the bay at `rowId` (Suggested parity):
- * aboard deliveries leaving + this stop’s pickups + cargo still aboard from earlier pickups.
+ * deliveries leaving + this stop’s pickups + cargo still aboard from earlier pickups.
+ * Stay cargo (still aboard) has no `action`; transfer lines are tagged pickup/delivery.
  * Returns null when `rowId` is missing.
  */
 function collectSoftVisibleCargoAtStop(
   rows: HaulingChecklistRow[],
   rowId: string,
+  options?: { includeAboardCargo?: boolean },
 ): SoftVisibleCargo[] | null {
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
   if (rowIndex < 0) return null;
+  const includeAboardCargo = options?.includeAboardCargo !== false;
 
   const softLots = new Map<string, SoftOnboardLot>();
   const visible: SoftVisibleCargo[] = [];
@@ -2498,13 +2530,15 @@ function collectSoftVisibleCargoAtStop(
     for (const { cargo, storage } of pickups) {
       visible.push({ cargo, storage, action: "pickup" });
     }
-    for (const lot of softLots.values()) {
-      if (lot.cargo.scu <= 0) continue;
-      visible.push({
-        cargo: lot.cargo,
-        storage: lot.storage,
-        action: "pickup",
-      });
+    if (includeAboardCargo) {
+      for (const lot of softLots.values()) {
+        if (lot.cargo.scu <= 0) continue;
+        // Stay cargo: still aboard, not a transfer at this stop.
+        visible.push({
+          cargo: lot.cargo,
+          storage: lot.storage,
+        });
+      }
     }
   }
 
@@ -2529,12 +2563,16 @@ export function packByCargoTypeAtStop(
     /** When set, order + slot pick come from the pack program. */
     packProgram?: CargoBayPackProgram;
     packSlotPolicy?: PackSlotPolicy | null;
+    /** When false, pack only this stop’s pickup/delivery (no stay cargo). */
+    includeAboardCargo?: boolean;
   },
 ): CargoGridPlacementPlan {
   const rows = stops;
   const rowId = stopId;
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
-  const visible = collectSoftVisibleCargoAtStop(rows, rowId);
+  const visible = collectSoftVisibleCargoAtStop(rows, rowId, {
+    includeAboardCargo: options?.includeAboardCargo,
+  });
   if (rowIndex < 0 || !visible) {
     return { zone: "front", boxes: [], unplaced: [] };
   }
@@ -2657,11 +2695,15 @@ export function packDeliveriesFromStop(
     priorityLocationCount?: number;
     packProgram?: CargoBayPackProgram;
     packSlotPolicy?: PackSlotPolicy | null;
+    /** When false, pack only this stop’s pickup/delivery (no stay cargo). */
+    includeAboardCargo?: boolean;
   },
 ): CargoGridPlacementPlan {
   const rows = stops;
   const from = rows.findIndex((row) => row.id === stopId);
-  const visible = collectSoftVisibleCargoAtStop(rows, stopId);
+  const visible = collectSoftVisibleCargoAtStop(rows, stopId, {
+    includeAboardCargo: options?.includeAboardCargo,
+  });
   if (from < 0 || !visible) {
     return { zone: "front", boxes: [], unplaced: [] };
   }

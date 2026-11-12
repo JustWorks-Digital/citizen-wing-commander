@@ -18,6 +18,50 @@ export type StopDeliveryBayPreviewProps = {
   onEditMissionBoxes?: (missionId: string) => void;
 };
 
+function GraphCompletedStamp() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none inline-flex rotate-[-22deg] select-none"
+    >
+      <svg
+        viewBox="0 0 120 120"
+        className="size-[5.5rem] text-rsi-success sm:size-[6.5rem]"
+        role="img"
+      >
+        <circle
+          cx="60"
+          cy="60"
+          r="54"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          opacity="0.75"
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r="46"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeDasharray="3 2.5"
+          opacity="0.55"
+        />
+        <path
+          d="M36 64 L52 78 L86 44"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.7"
+        />
+      </svg>
+    </span>
+  );
+}
+
 type PickupPadMode = "cargo" | "piles";
 
 const padToggleClass = [
@@ -100,7 +144,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
       onClick={(event) => event.stopPropagation()}
     >
       {deliveryPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
               Drop off
@@ -112,7 +156,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               />
             ) : null}
           </div>
-          <div className="p-1.5">
+          <div className="relative p-1.5">
             <StopDeliveryStacksView
               plan={deliveryPlan}
               peelStack={deliveryPeel}
@@ -120,14 +164,19 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               hidePeel
               onEditMissionBoxes={onEditMissionBoxes}
             />
+            {row.isCompleted ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <GraphCompletedStamp />
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
       {pickupPlan ? (
-        <section className="min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-              Collect
+              Pickup
             </p>
             {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -140,7 +189,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 {showPickupModes ? (
                   <div
                     role="tablist"
-                    aria-label="Collect pad grouping"
+                    aria-label="Pickup pad grouping"
                     className="inline-flex rounded-rsi border border-rsi-border bg-rsi-bg-deep/70 p-0.5"
                   >
                     {(
@@ -173,7 +222,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               </div>
             ) : null}
           </div>
-          <div className="p-1.5">
+          <div className="relative p-1.5">
             <StopDeliveryStacksView
               plan={pickupPlan}
               peelStack={pickupPeel}
@@ -181,6 +230,11 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               hidePeel
               onEditMissionBoxes={onEditMissionBoxes}
             />
+            {row.isCompleted ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <GraphCompletedStamp />
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

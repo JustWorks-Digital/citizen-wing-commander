@@ -20,6 +20,11 @@ export type CargoGridLayerPadProps = {
   /** Hidden 0-based layers when `mode="toggle"`. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (layer: number) => void;
+  /**
+   * Layers with no visible cargo (after legend filters). Disabled in 2D select;
+   * still listed so empty Z slots stay visible in the pad.
+   */
+  emptyLayers?: ReadonlySet<number>;
   ariaLabel?: string;
   className?: string;
 };
@@ -30,6 +35,8 @@ const BUTTON_ON =
   "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent";
 const BUTTON_OFF =
   "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text shadow-rsi-panel";
+const BUTTON_EMPTY =
+  "cursor-not-allowed border-rsi-border/50 bg-rsi-bg-deep/30 text-rsi-text-muted/35";
 
 export function CargoGridLayerPad({
   layers,
@@ -38,6 +45,7 @@ export function CargoGridLayerPad({
   onSelectLayer,
   hiddenLayers,
   onToggleLayer,
+  emptyLayers,
   ariaLabel = "Z layers",
   className,
 }: CargoGridLayerPadProps) {
@@ -56,6 +64,7 @@ export function CargoGridLayerPad({
     >
       {layers.map((layer) => {
         const label = layer + 1;
+        const isEmpty = emptyLayers?.has(layer) ?? false;
         if (mode === "select") {
           const isActive = activeLayer === layer;
           return (
@@ -64,11 +73,18 @@ export function CargoGridLayerPad({
               type="button"
               role="radio"
               aria-checked={isActive}
-              aria-label={`Layer ${label}`}
-              onClick={() => onSelectLayer?.(layer)}
-              className={[BUTTON_BASE, isActive ? BUTTON_ON : BUTTON_OFF].join(
-                " ",
-              )}
+              aria-label={
+                isEmpty ? `Layer ${label} (empty)` : `Layer ${label}`
+              }
+              disabled={isEmpty}
+              onClick={() => {
+                if (isEmpty) return;
+                onSelectLayer?.(layer);
+              }}
+              className={[
+                BUTTON_BASE,
+                isEmpty ? BUTTON_EMPTY : isActive ? BUTTON_ON : BUTTON_OFF,
+              ].join(" ")}
             >
               {label}
             </button>
@@ -80,9 +96,18 @@ export function CargoGridLayerPad({
             key={layer}
             type="button"
             aria-pressed={isOn}
-            aria-label={`Layer ${label}`}
-            onClick={() => onToggleLayer?.(layer)}
-            className={[BUTTON_BASE, isOn ? BUTTON_ON : BUTTON_OFF].join(" ")}
+            aria-label={
+              isEmpty ? `Layer ${label} (empty)` : `Layer ${label}`
+            }
+            disabled={isEmpty}
+            onClick={() => {
+              if (isEmpty) return;
+              onToggleLayer?.(layer);
+            }}
+            className={[
+              BUTTON_BASE,
+              isEmpty ? BUTTON_EMPTY : isOn ? BUTTON_ON : BUTTON_OFF,
+            ].join(" ")}
           >
             {label}
           </button>

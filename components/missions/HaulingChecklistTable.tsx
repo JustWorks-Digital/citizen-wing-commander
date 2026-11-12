@@ -5,6 +5,7 @@ import {
   memo,
   startTransition,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -73,7 +74,8 @@ export const QUANTUM_ORIGIN_ROW_ID = INSERT_AFTER_SESSION_START;
 
 export type HaulingChecklistTableProps = {
   rows: HaulingChecklistRow[];
-  onToggle: (rowId: string) => void;
+  /** Mark stop done/undone; return a Promise to show the checkbox spinner until save finishes. */
+  onToggle: (rowId: string) => void | Promise<void>;
   /** Stop shown in cargo layout — any stop, including completed. */
   focusedStopId?: string | null;
   /** Click a row (not checkbox / copy) to preview that stop. */
@@ -116,7 +118,7 @@ export type HaulingChecklistTableProps = {
   onOpenStops?: () => void;
   /** Open contracts table; pass a mission id to highlight that row. */
   onOpenContracts?: (missionId?: string) => void;
-  /** Persist crate mix for a session mission (Collect / Drop off double-click). */
+  /** Persist crate mix for a session mission (Pickup / Drop off double-click). */
   onSelectBoxBreakdown?: (
     missionId: string,
     commoditySlug: string,
@@ -179,50 +181,6 @@ function checklistRowToneClass(
     return "cursor-pointer bg-rsi-success-muted/40 shadow-[inset_3px_0_0_0_var(--rsi-success)] hover:bg-rsi-success-muted/55";
   }
   return "cursor-pointer hover:bg-rsi-surface-raised/35";
-}
-
-function CompletedStamp() {
-  return (
-    <span
-      aria-hidden
-      className="pointer-events-none inline-flex rotate-[-22deg] select-none"
-    >
-      <svg
-        viewBox="0 0 120 120"
-        className="size-[7.5rem] text-rsi-success"
-        role="img"
-      >
-        <circle
-          cx="60"
-          cy="60"
-          r="54"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3.5"
-          opacity="0.75"
-        />
-        <circle
-          cx="60"
-          cy="60"
-          r="46"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeDasharray="3 2.5"
-          opacity="0.55"
-        />
-        <path
-          d="M36 64 L52 78 L86 44"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.7"
-        />
-      </svg>
-    </span>
-  );
 }
 
 function CopyIcon({ className }: { className?: string }) {
@@ -290,17 +248,45 @@ function groupCargoLines(lines: CargoLine[]): {
   return groups;
 }
 
+function SpinnerIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={["animate-spin", className].filter(Boolean).join(" ")}
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="opacity-25"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function DoneCheckbox({
   location,
   step,
   isCompleted,
   isActive = false,
+  isPending = false,
   onToggle,
 }: {
   location: string;
   step: number | string;
   isCompleted: boolean;
   isActive?: boolean;
+  isPending?: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -308,22 +294,34 @@ function DoneCheckbox({
       type="button"
       role="checkbox"
       aria-checked={isCompleted}
-      aria-label={`Stop ${step}, mark done: ${location}`}
+      aria-busy={isPending}
+      disabled={isPending}
+      aria-label={
+        isPending
+          ? `Stop ${step}, updating: ${location}`
+          : `Stop ${step}, mark done: ${location}`
+      }
+      title={isPending ? "Updating stop…" : undefined}
       onClick={(event) => {
         event.stopPropagation();
+        if (isPending) return;
         onToggle();
       }}
       className={[
         "group inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-        isCompleted
-          ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
-          : isActive
-            ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-accent"
-            : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
+        isPending
+          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/40 text-rsi-accent"
+          : isCompleted
+            ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
+            : isActive
+              ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-accent"
+              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
       ].join(" ")}
     >
-      {isCompleted ? (
+      {isPending ? (
+        <SpinnerIcon className="size-4" />
+      ) : isCompleted ? (
         <span aria-hidden className="text-base leading-none">
           ✓
         </span>
@@ -355,35 +353,54 @@ function DoneStopButton({
   location,
   step,
   isCompleted,
+  isPending = false,
   onToggle,
 }: {
   location: string;
   step: number | string;
   isCompleted: boolean;
+  isPending?: boolean;
   onToggle: () => void;
 }) {
   return (
     <button
       type="button"
       aria-pressed={isCompleted}
+      aria-busy={isPending}
+      disabled={isPending}
       aria-label={
-        isCompleted
-          ? `Stop ${step}, mark incomplete: ${location}`
-          : `Stop ${step}, mark complete: ${location}`
+        isPending
+          ? `Stop ${step}, updating: ${location}`
+          : isCompleted
+            ? `Stop ${step}, mark incomplete: ${location}`
+            : `Stop ${step}, mark complete: ${location}`
       }
+      title={isPending ? "Updating stop…" : undefined}
       onClick={(event) => {
         event.stopPropagation();
+        if (isPending) return;
         onToggle();
       }}
       className={[
-        "inline-flex min-h-10 w-auto min-w-[8.5rem] items-center justify-center rounded-rsi border px-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+        "inline-flex min-h-10 w-auto min-w-[8.5rem] items-center justify-center gap-2 rounded-rsi border px-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-        isCompleted
-          ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
-          : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary active:border-rsi-accent/50 active:text-rsi-accent",
+        isPending
+          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/70 text-rsi-accent"
+          : isCompleted
+            ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
+            : "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary active:border-rsi-accent/50 active:text-rsi-accent",
       ].join(" ")}
     >
-      {isCompleted ? "Complete" : "Mark complete"}
+      {isPending ? (
+        <>
+          <SpinnerIcon className="size-3.5" />
+          Updating…
+        </>
+      ) : isCompleted ? (
+        "Complete"
+      ) : (
+        "Mark complete"
+      )}
     </button>
   );
 }
@@ -484,7 +501,7 @@ function CargoGroups({
                     : "border-rsi-gold/45",
                 ].join(" ")}
               >
-                {group.role === "pickup" ? "Collect" : "Drop off"}
+                {group.role === "pickup" ? "Pickup" : "Drop off"}
               </span>
             ) : null}
             <div className="grid max-w-[19rem] grid-cols-5 gap-1.5">
@@ -806,6 +823,7 @@ function QuantumTravelRow({
   reasonShopSlug = null,
   isCompleted,
   isFocused,
+  isPending = false,
   isCopied,
   onCopy,
   onFocus,
@@ -821,6 +839,7 @@ function QuantumTravelRow({
   reasonShopSlug?: string | null;
   isCompleted: boolean;
   isFocused: boolean;
+  isPending?: boolean;
   isCopied: boolean;
   onCopy: () => void;
   onFocus: () => void;
@@ -867,6 +886,7 @@ function QuantumTravelRow({
             step="QT"
             isCompleted={isCompleted}
             isActive={isFocused}
+            isPending={isPending}
             onToggle={onToggle}
           />
         </div>
@@ -929,6 +949,7 @@ function QuantumTravelRow({
                 location={location}
                 step="QT"
                 isCompleted={isCompleted}
+                isPending={isPending}
                 onToggle={onToggle}
               />
             </div>
@@ -1124,7 +1145,13 @@ function QuantumTravelComposer({
   );
 }
 
-function TransferArrow() {
+/** Station is always left, Ship always right — flip chevrons for direction. */
+function TransferArrow({
+  direction,
+}: {
+  /** `toShip` = Station → Ship (pickup); `toStation` = Ship → Station (delivery). */
+  direction: "toShip" | "toStation";
+}) {
   return (
     <span
       aria-hidden
@@ -1132,7 +1159,12 @@ function TransferArrow() {
     >
       <svg
         viewBox="0 0 30 20"
-        className="h-4 w-[1.35rem]"
+        className={[
+          "h-4 w-[1.35rem]",
+          direction === "toStation" ? "-scale-x-100" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -1185,7 +1217,9 @@ function TransferBlockFrame({
   return (
     <div
       className={[
-        "mr-auto grid w-fit grid-cols-[auto_auto_auto] items-start gap-x-2 py-5 sm:gap-x-4",
+        // Equal endpoint columns — Station always left, Ship always right.
+        // Arrow direction flips for pickup vs delivery. Text wraps; never truncates.
+        "mr-auto grid w-full max-w-[26rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 py-5 sm:gap-x-4",
         isDone ? "text-rsi-text-muted" : "",
       ].join(" ")}
       title={title}
@@ -1262,7 +1296,7 @@ function PickupTransferBlock({
 
       <p
         className={[
-          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
+          "mb-2.5 min-w-0 self-center break-words text-sm font-medium leading-5",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -1270,12 +1304,12 @@ function PickupTransferBlock({
       >
         {location}
       </p>
-      <div className="mb-2.5 flex items-center self-center">
-        <TransferArrow />
+      <div className="mb-2.5 flex items-center justify-center self-center">
+        <TransferArrow direction="toShip" />
       </div>
       <p
         className={[
-          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
+          "mb-2.5 min-w-0 self-center break-words text-sm font-medium leading-5",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -1285,7 +1319,7 @@ function PickupTransferBlock({
       </p>
 
       <span aria-hidden className="col-start-1" />
-      <div className="col-start-3">
+      <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={String(transfer.before)}
           suffix="aboard"
@@ -1296,7 +1330,7 @@ function PickupTransferBlock({
         />
       </div>
 
-      <div className="col-start-1">
+      <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={`−${transfer.amount}`}
           suffix="loading"
@@ -1306,7 +1340,7 @@ function PickupTransferBlock({
           isDone={isDone}
         />
       </div>
-      <div className="col-start-3">
+      <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={`+${transfer.amount}`}
           suffix="receiving"
@@ -1318,7 +1352,7 @@ function PickupTransferBlock({
       </div>
 
       <span aria-hidden className="col-start-1" />
-      <div className="col-start-3 w-fit">
+      <div className="col-start-3 min-w-0 w-fit">
         <div
           aria-hidden
           className={[
@@ -1357,26 +1391,13 @@ function DeliveryTransferBlock({
       title={`Transfer ${transfer.amount} SCU to ${location}`}
       isDone={isDone}
     >
-      <TransferColumnLabel>Ship</TransferColumnLabel>
-      <span aria-hidden className="col-start-2" />
       <TransferColumnLabel>Station</TransferColumnLabel>
+      <span aria-hidden className="col-start-2" />
+      <TransferColumnLabel>Ship</TransferColumnLabel>
 
       <p
         className={[
-          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
-          isDone ? mute : "text-rsi-text-muted",
-          strike,
-        ].join(" ")}
-        title={shipName}
-      >
-        {shipName}
-      </p>
-      <div className="mb-2.5 flex items-center self-center">
-        <TransferArrow />
-      </div>
-      <p
-        className={[
-          "mb-2.5 max-w-[20rem] self-center text-sm font-medium leading-5",
+          "mb-2.5 min-w-0 self-center break-words text-sm font-medium leading-5",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -1384,8 +1405,22 @@ function DeliveryTransferBlock({
       >
         {location}
       </p>
+      <div className="mb-2.5 flex items-center justify-center self-center">
+        <TransferArrow direction="toStation" />
+      </div>
+      <p
+        className={[
+          "mb-2.5 min-w-0 self-center break-words text-sm font-medium leading-5",
+          isDone ? mute : "text-rsi-text-muted",
+          strike,
+        ].join(" ")}
+        title={shipName}
+      >
+        {shipName}
+      </p>
 
-      <div className="col-start-1">
+      <span aria-hidden className="col-start-1" />
+      <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={String(transfer.before)}
           suffix="aboard"
@@ -1395,19 +1430,8 @@ function DeliveryTransferBlock({
           isDone={isDone}
         />
       </div>
-      <span aria-hidden className="col-start-3" />
 
-      <div className="col-start-1">
-        <TransferScuLine
-          amount={`−${transfer.amount}`}
-          suffix="delivering"
-          tone="text-rsi-danger"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-        />
-      </div>
-      <div className="col-start-3">
+      <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={`+${transfer.amount}`}
           suffix="receiving"
@@ -1417,8 +1441,19 @@ function DeliveryTransferBlock({
           isDone={isDone}
         />
       </div>
+      <div className="col-start-3 min-w-0">
+        <TransferScuLine
+          amount={`−${transfer.amount}`}
+          suffix="delivering"
+          tone="text-rsi-danger"
+          strike={strike}
+          mute={mute}
+          isDone={isDone}
+        />
+      </div>
 
-      <div className="col-start-1 w-fit">
+      <span aria-hidden className="col-start-1" />
+      <div className="col-start-3 min-w-0 w-fit">
         <div
           aria-hidden
           className={[
@@ -1461,7 +1496,7 @@ function TotalMeta({
   if (!showPickup && !showDelivering) return null;
 
   return (
-    <div className="space-y-0 text-sm">
+    <div className="w-full max-w-[26rem] space-y-0 text-sm">
       {showPickup && transferLedger.pickup ? (
         <PickupTransferBlock
           location={location}
@@ -1590,7 +1625,7 @@ function ExpMeta({
 }
 
 function missionScuItemsLabel(mission: SessionMission): string {
-  if (mission.cargoSummary.trim()) return mission.cargoSummary;
+  if (mission.cargoSummary?.trim()) return mission.cargoSummary;
   if (mission.cargo.length === 0) return "—";
   return mission.cargo
     .map((line) => `${line.scu} SCU ${line.commodity}`)
@@ -1707,7 +1742,7 @@ function NextDistanceMeta({
             row.isCompleted ? "text-rsi-text-muted" : "text-rsi-success",
           ].join(" ")}
         >
-          Session complete
+          Trip complete
         </p>
       </div>
     );
@@ -1764,6 +1799,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
 }: HaulingChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
+  const [pendingCompleteRowIds, setPendingCompleteRowIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
   /** Local-only: quantum depart marked before any stop is completed. */
   const [quantumDeparted, setQuantumDeparted] = useState(false);
@@ -1771,7 +1809,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   const [draftingAfterRowId, setDraftingAfterRowId] = useState<string | null>(
     null,
   );
-  /** Double-click Collect / Drop off crate → box mix modal. */
+  /** Double-click Pickup / Drop off crate → box mix modal. */
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
   const boxEditMission =
     boxEditMissionId == null
@@ -1779,15 +1817,20 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       : (missions.find((mission) => mission.id === boxEditMissionId) ?? null);
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
   const pendingScrollToIdRef = useRef<string | null>(null);
-  const showQuantumOrigin = needsQuantumOriginRow(rows, startLocationSlug);
+  const displayRows = rows;
+  const tripStarted = rows.some((row) => row.isCompleted);
+  const showQuantumOrigin = needsQuantumOriginRow(
+    displayRows,
+    startLocationSlug,
+  );
   const quantumCompleted =
     quantumDeparted || rows.some((row) => row.isCompleted);
   const completedCount =
     rows.filter((row) => row.isCompleted).length +
     (showQuantumOrigin && quantumCompleted ? 1 : 0);
   const visibleRows = hideCompleted
-    ? rows.filter((row) => !row.isCompleted)
-    : rows;
+    ? displayRows.filter((row) => !row.isCompleted)
+    : displayRows;
   const showQuantumInList =
     showQuantumOrigin && !(hideCompleted && quantumCompleted);
   const canAddStops = Boolean(onInsertQuantumTravel);
@@ -1795,6 +1838,11 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   useEffect(() => {
     setQuantumDeparted(false);
   }, [startLocationSlug, rows[0]?.id, rows[0]?.locationSlug]);
+
+  // Reset trip clears stop completion; also drop local QT-origin "departed".
+  useEffect(() => {
+    if (!tripStarted) setQuantumDeparted(false);
+  }, [tripStarted]);
 
   useEffect(() => {
     if (!draftingAfterRowId) return;
@@ -1843,16 +1891,19 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       ? "No contracts yet"
       : "All contracts complete — show history to review";
 
-  const stepById = new Map(rows.map((row, index) => [row.id, index + 1]));
-  const transferLedgerByStop = cargoInventory.transferLedgerByStop(rows);
+  const stepById = new Map(
+    displayRows.map((row, index) => [row.id, index + 1]),
+  );
+  const transferLedgerByStop =
+    cargoInventory.transferLedgerByStop(displayRows);
   const focusTargetsQuantum =
     focusedStopId === QUANTUM_ORIGIN_ROW_ID && showQuantumOrigin;
   const activeRowId =
     focusTargetsQuantum ||
-    (focusedStopId && rows.some((row) => row.id === focusedStopId))
+    (focusedStopId && displayRows.some((row) => row.id === focusedStopId))
       ? focusedStopId
-      : defaultFocusedStopId(rows, startLocationSlug);
-  const firstStop = rows[0] ?? null;
+      : defaultFocusedStopId(displayRows, startLocationSlug);
+  const firstStop = displayRows[0] ?? null;
   const quantumDestinationName = firstStop
     ? (getLocationBySlug(firstStop.locationSlug)?.name ??
       firstStop.locationSlug)
@@ -1922,8 +1973,20 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
         }
         const row = rows.find((entry) => entry.id === activeRowId);
         if (!row) return;
+        if (pendingCompleteRowIds.has(row.id)) return;
         const completing = !row.isCompleted;
-        onToggle(row.id);
+        setPendingCompleteRowIds((prev) => {
+          const next = new Set(prev);
+          next.add(row.id);
+          return next;
+        });
+        void Promise.resolve(onToggle(row.id)).finally(() => {
+          setPendingCompleteRowIds((prev) => {
+            const next = new Set(prev);
+            next.delete(row.id);
+            return next;
+          });
+        });
         if (completing) {
           const routeIndex = rows.findIndex((entry) => entry.id === row.id);
           const nextIncomplete = rows
@@ -1949,6 +2012,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
     onOpenContracts,
     onOpenStops,
     onToggle,
+    pendingCompleteRowIds,
     quantumCompleted,
     rows,
     showQuantumInList,
@@ -2062,9 +2126,11 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
         {visibleRows.map((row) => {
           const locationFixture = getLocationBySlug(row.locationSlug);
           const location = locationFixture?.name ?? row.locationSlug;
-          const routeIndex = rows.findIndex((entry) => entry.id === row.id);
+          const routeIndex = displayRows.findIndex(
+            (entry) => entry.id === row.id,
+          );
           const nextRow =
-            routeIndex >= 0 ? (rows[routeIndex + 1] ?? null) : null;
+            routeIndex >= 0 ? (displayRows[routeIndex + 1] ?? null) : null;
           const nextLocationSlug = nextRow?.locationSlug ?? null;
           const nextLocationName = nextLocationSlug
             ? (getLocationBySlug(nextLocationSlug)?.name ?? nextLocationSlug)
@@ -2072,15 +2138,27 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
           const isFocused = row.id === activeRowId;
-
+          const isPendingComplete = pendingCompleteRowIds.has(row.id);
           const toggleStopDone = () => {
+            if (pendingCompleteRowIds.has(row.id)) return;
             const completing = !row.isCompleted;
-            onToggle(row.id);
+            setPendingCompleteRowIds((prev) => {
+              const next = new Set(prev);
+              next.add(row.id);
+              return next;
+            });
+            void Promise.resolve(onToggle(row.id)).finally(() => {
+              setPendingCompleteRowIds((prev) => {
+                const next = new Set(prev);
+                next.delete(row.id);
+                return next;
+              });
+            });
             // Defer focus/scroll/bay replan so the checkbox paints first.
             // Always advance when completing — especially with history hidden,
             // the finished stop leaves the list and the next one should be active.
             if (completing) {
-              const nextIncomplete = rows
+              const nextIncomplete = displayRows
                 .slice(routeIndex + 1)
                 .find((entry) => !entry.isCompleted);
               if (nextIncomplete) {
@@ -2115,6 +2193,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     );
                   }}
                   onFocus={() => onFocusStop?.(row.id)}
+                  isPending={isPendingComplete}
                   onToggle={toggleStopDone}
                   onChangeFrom={
                     onUpdateQuantumTravel
@@ -2151,7 +2230,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           );
           const expectedCompletions = missionsExpectedToCompleteAtStop(
             missions,
-            rows,
+            displayRows,
             row.id,
           );
           const completionAuec = expectedCompletions.reduce(
@@ -2184,6 +2263,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     step={step}
                     isCompleted={row.isCompleted}
                     isActive={isFocused}
+                    isPending={isPendingComplete}
                     onToggle={toggleStopDone}
                   />
                 </div>
@@ -2227,7 +2307,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         />
                       </div>
                     </div>
-                    <div className="relative w-full min-w-0 md:w-1/2 md:shrink-0">
+                    <div className="w-full min-w-0 md:w-1/2 md:shrink-0">
                       <StopDeliveryBayPreview
                         row={row}
                         rows={rows}
@@ -2243,11 +2323,6 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                             : undefined
                         }
                       />
-                      {row.isCompleted ? (
-                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                          <CompletedStamp />
-                        </div>
-                      ) : null}
                     </div>
                   </div>
                   <div className="min-w-0">
@@ -2273,6 +2348,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         location={location}
                         step={step}
                         isCompleted={row.isCompleted}
+                        isPending={isPendingComplete}
                         onToggle={toggleStopDone}
                       />
                     </div>

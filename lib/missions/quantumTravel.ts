@@ -12,7 +12,10 @@ function sameSlug(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-function recomputeDistances(rows: HaulingChecklistRow[]): HaulingChecklistRow[] {
+/** Refresh adjacent `distanceToNext` after insert / reorder / location edits. */
+export function recomputeDistances(
+  rows: HaulingChecklistRow[],
+): HaulingChecklistRow[] {
   return rows.map((row, index) => {
     const next = rows[index + 1];
     if (!next) {

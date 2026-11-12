@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 const SHORTCUTS = [
-  { key: "B", action: "Cargo bays" },
+  { key: "B", action: "Storage bays" },
   { key: "S", action: "Stops" },
   { key: "C", action: "Contracts" },
   { key: "H", action: "Hide / show history" },

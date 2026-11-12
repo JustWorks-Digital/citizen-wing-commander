@@ -11,8 +11,10 @@ import {
   type ReactNode,
 } from "react";
 import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
+import { SessionCurrentStopPickupGrid } from "@/components/missions/SessionStatsStrip";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
+import { getLocationBySlug } from "@/lib/fixtures";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
@@ -48,8 +50,12 @@ import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 type SortingMode = CargoBayPackMode | "manual";
 
-/** Which stop drives bay occupancy in the cargo grid. */
-export type CargoBayStopScope = "current" | "all";
+/**
+ * What the cargo grid shows for the focused checklist stop.
+ * `all` = all crates aboard in the bay at that point (including transfer).
+ * `transfer` = only this stop’s pickup / delivery.
+ */
+export type CargoBayStopScope = "all" | "transfer";
 
 export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
@@ -58,14 +64,15 @@ export type CargoBayLayoutProps = {
   /** Checklist stop to preview (completed or not). Defaults to next incomplete. */
   focusedStopId?: string | null;
   /**
-   * `current` = focused / next stop. `all` = peak-onboard stop (fullest load).
+   * `all` = everything aboard at the focused stop (including transfer).
+   * `transfer` = only that stop’s pickup / delivery.
    * Toggle UI shows when `onStopScopeChange` is set.
    */
   stopScope?: CargoBayStopScope;
   onStopScopeChange?: (scope: CargoBayStopScope) => void;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
-  /** Optional session stats — right of the Cargo bays title. */
+  /** Optional session stats — right of the Storage bays title. */
   headerAside?: ReactNode;
   /** Optional contracts / inventory strip below the bay grid. */
   footerAside?: ReactNode;
@@ -80,7 +87,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   rows,
   shipSlug = null,
   focusedStopId = null,
-  stopScope = "current",
+  stopScope = "transfer",
   onStopScopeChange,
   sessionId = null,
   headerAside = null,
@@ -169,19 +176,23 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     !isManual && packMode === "by-cargo-type" && supportsPrioritized;
 
   const activeRow = useMemo(() => {
-    if (stopScope === "all") {
-      const peakId = cargoInventory.peakStopId(rows);
-      if (peakId) {
-        const peakRow = rows.find((row) => row.id === peakId);
-        if (peakRow) return peakRow;
-      }
-    }
     if (focusedStopId) {
       const hit = rows.find((row) => row.id === focusedStopId);
       if (hit) return hit;
     }
     return rows.find((row) => !row.isCompleted) ?? rows[rows.length - 1] ?? null;
-  }, [rows, focusedStopId, stopScope]);
+  }, [rows, focusedStopId]);
+
+  const thisStopTransfers = useMemo(
+    () => cargoInventory.transferByCommodityAtStop(activeRow),
+    [activeRow],
+  );
+  const thisStopLabel = useMemo(() => {
+    if (!activeRow) return null;
+    return (
+      getLocationBySlug(activeRow.locationSlug)?.name ?? activeRow.locationSlug
+    );
+  }, [activeRow]);
 
   const stopId = activeRow?.id ?? null;
   const manualStop = useMemo(
@@ -226,10 +237,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const basePlan = useMemo(() => {
     if (!sketch || !activeRow) return null;
+    // Always pack against full bay occupancy so Transfer crates sit in free
+    // cells (not on top of stay cargo). Transfer scope only hides stay.
     return cargoBay.packAtStop(activeRow.id, sketch, rows, {
       packMode,
       missionPrioritized:
         packMode === "by-cargo-type" && supportsPrioritized && prioritized,
+      includeAboardCargo: true,
     });
   }, [
     sketch,
@@ -242,16 +256,31 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const displayBoxes = useMemo(() => {
     if (!basePlan) return [];
-    if (!isManual) return basePlan.boxes;
-    if (manualLiveBoxes) return manualLiveBoxes;
-    return applyManualBayPoses(basePlan.boxes, activeManualPreset?.poses);
-  }, [basePlan, isManual, manualLiveBoxes, activeManualPreset]);
+    let boxes = basePlan.boxes;
+    if (isManual) {
+      boxes = manualLiveBoxes
+        ? manualLiveBoxes
+        : applyManualBayPoses(basePlan.boxes, activeManualPreset?.poses);
+    }
+    // Transfer: show only pickup / delivery; stay stays packed underneath.
+    if (stopScope === "transfer") {
+      boxes = boxes.filter(
+        (box) => box.action === "pickup" || box.action === "delivery",
+      );
+    }
+    return boxes;
+  }, [
+    basePlan,
+    isManual,
+    manualLiveBoxes,
+    activeManualPreset,
+    stopScope,
+  ]);
 
   const plan = useMemo(() => {
     if (!basePlan) return null;
-    if (!isManual) return basePlan;
     return { ...basePlan, boxes: displayBoxes };
-  }, [basePlan, isManual, displayBoxes]);
+  }, [basePlan, displayBoxes]);
 
   const baseBoxIdsKey = useMemo(
     () => basePlan?.boxes.map((box) => box.id).join("|") ?? "",
@@ -505,7 +534,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-              Cargo bays
+              Storage bays
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
@@ -513,13 +542,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             {onStopScopeChange ? (
               <div
                 role="tablist"
-                aria-label="Cargo stop scope"
+                aria-label="Bay cargo scope"
                 className="mt-2 inline-flex w-fit rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 p-0.5"
               >
                 {(
                   [
-                    { id: "all", label: "All stops" },
-                    { id: "current", label: "Current stop" },
+                    { id: "all", label: "All" },
+                    { id: "transfer", label: "Transfer" },
                   ] as const
                 ).map((option) => {
                   const selected = stopScope === option.id;
@@ -715,7 +744,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                       <button
                         type="button"
                         aria-pressed={isManual}
-                        title="Drag crates on the 2D grid. Positions also update 3D. Saved per session stop."
+                        title="Drag crates on the 2D grid. Positions also update 3D. Saved per trip stop."
                         onClick={() => enterManualMode()}
                         className={[
                           "flex w-full flex-col items-start gap-0.5 rounded-rsi border px-2 py-1.5 text-left transition-colors",
@@ -824,8 +853,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
-          {footerAside ? (
-            <div className="mt-2 flex min-w-0 items-center justify-end border-t border-rsi-border/80 pt-2">
+          {thisStopTransfers.length > 0 || footerAside ? (
+            <div className="mt-2 flex w-full min-w-0 flex-wrap items-start justify-between gap-3 border-t border-rsi-border/80 pt-2">
+              <SessionCurrentStopPickupGrid
+                transfers={thisStopTransfers}
+                stopLabel={thisStopLabel}
+              />
               {footerAside}
             </div>
           ) : null}
@@ -833,7 +866,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             <button
               type="button"
               role="slider"
-              aria-label="Cargo bays height"
+              aria-label="Storage bays height"
               aria-orientation="vertical"
               aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
               aria-valuemax={panelHeightMax}
@@ -881,8 +914,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 : "No cargo placed at this stop yet."
               : "No route stops yet."}
           </p>
-          {footerAside ? (
-            <div className="mt-2 flex min-w-0 items-center justify-end border-t border-rsi-border/80 pt-2 pb-3">
+          {thisStopTransfers.length > 0 || footerAside ? (
+            <div className="mt-2 flex w-full min-w-0 flex-wrap items-start justify-between gap-3 border-t border-rsi-border/80 pt-2 pb-3">
+              <SessionCurrentStopPickupGrid
+                transfers={thisStopTransfers}
+                stopLabel={thisStopLabel}
+              />
               {footerAside}
             </div>
           ) : null}

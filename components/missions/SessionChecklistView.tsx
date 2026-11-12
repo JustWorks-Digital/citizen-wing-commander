@@ -53,6 +53,10 @@ import {
   updateChecklistRowLocation,
   updateQuantumTravelEndpoints,
 } from "@/lib/missions/quantumTravel";
+import {
+  reorderChecklistStops,
+  resetTripProgress,
+} from "@/lib/missions/reorderStops";
 import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
@@ -99,6 +103,9 @@ export function SessionChecklistView({
       emptySessionChecklist({
         id: routeSessionId,
         sessionName: "Loading…",
+        // Epoch stamps so SSR/client match and poll staleness never prefers the placeholder.
+        startedAt: "1970-01-01T00:00:00.000Z",
+        updatedAt: "1970-01-01T00:00:00.000Z",
       }),
   );
   const [tabs, setTabs] = useState<SessionTabSummary[]>(
@@ -132,10 +139,14 @@ export function SessionChecklistView({
   const [shipsError, setShipsError] = useState<string | null>(null);
   const etagRef = useRef<string | null>(null);
   const savingRef = useRef(false);
+  /** False until the first successful GET for this route id (loading placeholder must not win the poll race). */
+  const hydratedFromServerRef = useRef(Boolean(initial));
   const sessionRef = useRef(session);
   const activeIdRef = useRef(activeSessionId);
+  const routerRef = useRef(router);
   sessionRef.current = session;
   activeIdRef.current = activeSessionId;
+  routerRef.current = router;
 
   useEffect(() => {
     let cancelled = false;
@@ -186,6 +197,19 @@ export function SessionChecklistView({
     setActiveSessionId(routeSessionId);
     activeIdRef.current = routeSessionId;
     etagRef.current = null;
+    // Only swap to a Loading placeholder when the route id changes — do not clear
+    // a just-applied remote body if this effect restarts for other reasons.
+    if (sessionRef.current.id !== routeSessionId) {
+      hydratedFromServerRef.current = false;
+      setSession(
+        emptySessionChecklist({
+          id: routeSessionId,
+          sessionName: "Loading…",
+          startedAt: "1970-01-01T00:00:00.000Z",
+          updatedAt: "1970-01-01T00:00:00.000Z",
+        }),
+      );
+    }
 
     let cancelled = false;
     let timer: number | null = null;
@@ -210,7 +234,7 @@ export function SessionChecklistView({
         (tab) => tab.id === routeSessionId,
       );
       if (!stillExists && list.activeSessionId) {
-        router.replace(appPaths.session(list.activeSessionId));
+        routerRef.current.replace(appPaths.session(list.activeSessionId));
       }
     };
 
@@ -218,13 +242,27 @@ export function SessionChecklistView({
       if (savingRef.current) return;
       if (next.id !== routeSessionId) return;
       const current = sessionRef.current;
+      // Skip until first hydrate — empty placeholder stamps updatedAt=now and would
+      // permanently drop a slightly older server body.
       if (
+        hydratedFromServerRef.current &&
         current.id === next.id &&
         current.updatedAt &&
-        next.updatedAt === current.updatedAt
+        next.updatedAt
       ) {
-        return;
+        if (next.updatedAt === current.updatedAt) return;
+        const remoteMs = Date.parse(next.updatedAt);
+        const localMs = Date.parse(current.updatedAt);
+        // Drop in-flight poll bodies that raced behind a local Reset / save.
+        if (
+          Number.isFinite(remoteMs) &&
+          Number.isFinite(localMs) &&
+          remoteMs < localMs
+        ) {
+          return;
+        }
       }
+      hydratedFromServerRef.current = true;
       setSession(next);
       setActiveSessionId(next.id);
       setLoadError(null);
@@ -267,7 +305,8 @@ export function SessionChecklistView({
       if (timer != null) window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [initial, routeSessionId, router]);
+    // router via routerRef — unstable identity must not cancel in-flight hydrate.
+  }, [initial, routeSessionId]);
 
   useEffect(() => {
     setFocusedStopId(null);
@@ -333,10 +372,19 @@ export function SessionChecklistView({
     : undefined;
 
   const persistSession = useCallback((next: SessionChecklistModel) => {
+    // Never PUT the Loading… placeholder — that would wipe a real trip.
+    if (!initial && !hydratedFromServerRef.current) {
+      return Promise.resolve();
+    }
     savingRef.current = true;
+    // Stamp locally so in-flight polls can't overwrite with a pre-save body.
+    const stamped: SessionChecklistModel = {
+      ...next,
+      updatedAt: new Date().toISOString(),
+    };
     // Optimistic UI first; defer server echo so packing / grid don't re-run twice urgently.
-    setSession(next);
-    void saveChecklist(next)
+    setSession(stamped);
+    return saveChecklist(stamped)
       .then((result) => {
         etagRef.current = result.etag;
         startTransition(() => {
@@ -363,7 +411,7 @@ export function SessionChecklistView({
       .finally(() => {
         savingRef.current = false;
       });
-  }, []);
+  }, [initial]);
 
   const openMissions = useCallback((missionId?: string) => {
     setMissionsFocusId(typeof missionId === "string" ? missionId : null);
@@ -505,7 +553,7 @@ export function SessionChecklistView({
     (rowId: string) => {
       const current = sessionRef.current;
       const target = current.rows.find((row) => row.id === rowId);
-      if (!target) return;
+      if (!target) return Promise.resolve();
       const stopIsCompleted = !target.isCompleted;
       const missions = syncMissionsForStopCompletion({
         missions: current.missions ?? [],
@@ -514,7 +562,7 @@ export function SessionChecklistView({
         stopIsCompleted,
       });
       const counted = missions.filter((mission) => !mission.isHidden);
-      persistSession(
+      return persistSession(
         applySessionCompletionTiming({
           ...current,
           shipSlugs: current.shipSlugs ?? [],
@@ -656,9 +704,31 @@ export function SessionChecklistView({
       scuBoxSplits: updatedMission.scuBoxSplits,
       scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
     }).catch(() => {
-      setLoadError("Saved on session, but failed to update catalog default");
+      setLoadError("Saved on trip, but failed to update catalog default");
     });
   };
+
+  const onReorderStops = useCallback(
+    (orderedIds: string[]) => {
+      const current = sessionRef.current;
+      const result = reorderChecklistStops(current.rows, orderedIds);
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          rows: result.rows,
+        }),
+      );
+    },
+    [persistSession],
+  );
+
+  const onResetTrip = useCallback(() => {
+    persistSession(resetTripProgress(sessionRef.current));
+  }, [persistSession]);
 
   const selectSession = async (nextSessionId: string) => {
     if (initial || nextSessionId === routeSessionId) return;
@@ -669,7 +739,7 @@ export function SessionChecklistView({
       setLoadError(null);
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : "Failed to switch session",
+        error instanceof Error ? error.message : "Failed to switch trip",
       );
     } finally {
       setTabsBusy(false);
@@ -681,14 +751,14 @@ export function SessionChecklistView({
     setTabsBusy(true);
     try {
       const next = await createChecklistSession({
-        sessionName: sessionName.trim() || "New session",
+        sessionName: sessionName.trim() || "New trip",
       });
       setCreateSessionOpen(false);
       router.push(appPaths.session(next.id));
       setLoadError(null);
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : "Failed to create session",
+        error instanceof Error ? error.message : "Failed to create trip",
       );
     } finally {
       setTabsBusy(false);
@@ -719,7 +789,7 @@ export function SessionChecklistView({
       }
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : "Failed to close session",
+        error instanceof Error ? error.message : "Failed to close trip",
       );
     } finally {
       setTabsBusy(false);
@@ -755,7 +825,7 @@ export function SessionChecklistView({
 
       <div className="min-w-0">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-          Session
+          Trip
         </p>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -874,7 +944,7 @@ export function SessionChecklistView({
               setLoadError(
                 error instanceof Error
                   ? error.message
-                  : "Failed to refresh session",
+                  : "Failed to refresh trip",
               );
             }
           })();
@@ -886,6 +956,8 @@ export function SessionChecklistView({
         rows={session.rows}
         startLocationSlug={session.startLocationSlug ?? null}
         onClose={closeStops}
+        onResetTrip={onResetTrip}
+        onReorderStops={onReorderStops}
       />
 
       <SessionCargoLayoutModal

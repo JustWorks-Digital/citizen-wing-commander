@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useId, useMemo } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type DragEvent,
+} from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { getLocationImageSrc } from "@/lib/fixtures";
 import {
@@ -8,6 +14,10 @@ import {
   type HaulingChecklistRow,
   type RouteAction,
 } from "@/lib/missions/mockSession";
+import {
+  isTripStarted,
+  moveStopIdBefore,
+} from "@/lib/missions/reorderStops";
 import { buildRouteStopTimeline } from "@/lib/missions/routeStopTimeline";
 
 export type SessionStopsTimelineModalProps = {
@@ -15,6 +25,13 @@ export type SessionStopsTimelineModalProps = {
   rows: HaulingChecklistRow[];
   startLocationSlug?: string | null;
   onClose: () => void;
+  /** Clear stop completion so the trip can be reordered again (contracts stay). */
+  onResetTrip?: () => void;
+  /**
+   * Persist a new stop order (row ids). Only offered before the trip starts
+   * (no stop completed yet). Caller should run `reorderChecklistStops`.
+   */
+  onReorderStops?: (orderedIds: string[]) => void;
 };
 
 function routeActionLabel(kind: RouteAction | null): string | null {
@@ -24,21 +41,90 @@ function routeActionLabel(kind: RouteAction | null): string | null {
   return null;
 }
 
+function StopReorderHandle({
+  rowId,
+  onDragStart,
+  onDragEnd,
+}: {
+  rowId: string;
+  onDragStart: (event: DragEvent<HTMLButtonElement>, rowId: string) => void;
+  onDragEnd: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      draggable
+      aria-label="Drag to reorder stop"
+      title="Drag to reorder"
+      onClick={(event) => event.stopPropagation()}
+      onDragStart={(event) => {
+        event.stopPropagation();
+        onDragStart(event, rowId);
+      }}
+      onDragEnd={(event) => {
+        event.stopPropagation();
+        onDragEnd();
+      }}
+      className="inline-flex h-7 w-4 shrink-0 cursor-grab items-center justify-center rounded-rsi text-rsi-text-muted transition-colors hover:text-rsi-text active:cursor-grabbing"
+    >
+      <svg
+        aria-hidden
+        viewBox="0 0 12 16"
+        className="h-3 w-2"
+        fill="currentColor"
+      >
+        <circle cx="3" cy="3" r="1.25" />
+        <circle cx="9" cy="3" r="1.25" />
+        <circle cx="3" cy="8" r="1.25" />
+        <circle cx="9" cy="8" r="1.25" />
+        <circle cx="3" cy="13" r="1.25" />
+        <circle cx="9" cy="13" r="1.25" />
+      </svg>
+    </button>
+  );
+}
+
 /**
  * Sticky-header Stops modal: compact route timeline with leg distances and
  * traveled / remaining / total. Density scales with stop count so typical
- * routes fit without scrolling.
+ * routes fit without scrolling. Before the trip starts, stops can be
+ * drag-reordered (Save / Cancel).
  */
 export function SessionStopsTimelineModal({
   open,
   rows,
   startLocationSlug = null,
   onClose,
+  onResetTrip,
+  onReorderStops,
 }: SessionStopsTimelineModalProps) {
   const titleId = useId();
+  const tripStarted = isTripStarted(rows);
+  const canReorder = Boolean(onReorderStops) && !tripStarted;
+  const savedOrderIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const [draftOrderIds, setDraftOrderIds] = useState<string[] | null>(null);
+  const [draggingStopId, setDraggingStopId] = useState<string | null>(null);
+  const [dragOverStopId, setDragOverStopId] = useState<string | null>(null);
+
+  const displayRows = useMemo(() => {
+    if (!draftOrderIds) return rows;
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const ordered: HaulingChecklistRow[] = [];
+    for (const id of draftOrderIds) {
+      const row = byId.get(id);
+      if (row) ordered.push(row);
+    }
+    if (ordered.length !== rows.length) return rows;
+    return ordered;
+  }, [rows, draftOrderIds]);
+
   const timeline = useMemo(
-    () => buildRouteStopTimeline({ rows, startLocationSlug }),
-    [rows, startLocationSlug],
+    () =>
+      buildRouteStopTimeline({
+        rows: displayRows,
+        startLocationSlug,
+      }),
+    [displayRows, startLocationSlug],
   );
   const nodeCount = timeline.nodes.length;
   const progressRatio =
@@ -48,15 +134,51 @@ export function SessionStopsTimelineModal({
   /** Tighter rows as the route grows so more stops fit in one screen. */
   const isDense = nodeCount >= 8;
   const isCompact = nodeCount >= 5;
+  const orderDirty =
+    draftOrderIds != null &&
+    draftOrderIds.length === savedOrderIds.length &&
+    draftOrderIds.some((id, index) => id !== savedOrderIds[index]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (orderDirty) {
+          setDraftOrderIds(null);
+          return;
+        }
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, orderDirty]);
+
+  useEffect(() => {
+    if (!open) {
+      setDraftOrderIds(null);
+      setDraggingStopId(null);
+      setDragOverStopId(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (tripStarted || !draftOrderIds) {
+      if (draftOrderIds) setDraftOrderIds(null);
+      return;
+    }
+    const sameIds =
+      draftOrderIds.length === savedOrderIds.length &&
+      draftOrderIds.every((id) => savedOrderIds.includes(id));
+    if (!sameIds) setDraftOrderIds(null);
+  }, [tripStarted, savedOrderIds, draftOrderIds]);
+
+  const beginOrUpdateDraftOrder = (fromId: string, toId: string) => {
+    setDraftOrderIds((current) => {
+      const base = current ?? savedOrderIds;
+      return moveStopIdBefore(base, fromId, toId);
+    });
+  };
 
   if (!open) return null;
 
@@ -71,23 +193,56 @@ export function SessionStopsTimelineModal({
       }}
     >
       <div className="relative flex max-h-[min(42rem,92vh)] w-full max-w-lg flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
-        <div className="relative flex shrink-0 items-baseline gap-3 border-b border-rsi-border px-4 py-2.5 pr-12 sm:px-5 sm:pr-14">
+        <div className="relative flex shrink-0 items-center gap-3 border-b border-rsi-border px-4 py-2.5 pr-12 sm:px-5 sm:pr-14">
           <ModalCloseButton label="Dismiss" onClick={onClose} />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-mono text-[0.55rem] uppercase tracking-[0.2em] text-rsi-accent">
-              Route
+              Trip
             </p>
-            <h2
-              id={titleId}
-              className="text-sm font-semibold tracking-wide text-rsi-text"
-            >
-              Stops
-              <span className="ml-1.5 font-mono text-[0.65rem] font-normal tabular-nums tracking-wide text-rsi-text-secondary">
-                - {timeline.completedStopCount}/{timeline.totalStopCount}{" "}
-                complete
-              </span>
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                id={titleId}
+                className="text-sm font-semibold tracking-wide text-rsi-text"
+              >
+                Stops
+                <span className="ml-1.5 font-mono text-[0.65rem] font-normal tabular-nums tracking-wide text-rsi-text-secondary">
+                  - {timeline.completedStopCount}/{timeline.totalStopCount}
+                </span>
+              </h2>
+              {onResetTrip ? (
+                <button
+                  type="button"
+                  onClick={onResetTrip}
+                  title="Reset trip — clear stop completion to unlock reorder (contracts stay)"
+                  className="rounded-rsi border border-rsi-border px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text"
+                >
+                  Reset trip
+                </button>
+              ) : null}
+            </div>
           </div>
+          {orderDirty ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDraftOrderIds(null)}
+                className="rounded-rsi border border-rsi-border px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!draftOrderIds || !onReorderStops) return;
+                  onReorderStops(draftOrderIds);
+                  setDraftOrderIds(null);
+                }}
+                className="rounded-rsi border border-rsi-accent/60 bg-rsi-accent-muted/40 px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-accent transition-colors hover:bg-rsi-accent-muted/60"
+              >
+                Save order
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-2 sm:px-4">
@@ -116,15 +271,66 @@ export function SessionStopsTimelineModal({
                   : isCompact
                     ? "h-9 w-14"
                     : "h-11 w-16";
+                const isStop = node.kind === "stop";
+                const isDragging = isStop && draggingStopId === node.id;
+                const isDragOver =
+                  isStop &&
+                  dragOverStopId === node.id &&
+                  draggingStopId !== node.id;
                 return (
                   <li
                     key={node.id}
+                    onDragOver={
+                      canReorder && isStop
+                        ? (event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            setDragOverStopId(node.id);
+                          }
+                        : undefined
+                    }
+                    onDrop={
+                      canReorder && isStop
+                        ? (event) => {
+                            event.preventDefault();
+                            const fromId =
+                              event.dataTransfer.getData("text/plain") ||
+                              draggingStopId;
+                            if (fromId) beginOrUpdateDraftOrder(fromId, node.id);
+                            setDraggingStopId(null);
+                            setDragOverStopId(null);
+                          }
+                        : undefined
+                    }
                     className={[
-                      "relative flex min-h-0 items-center gap-2.5",
+                      "relative flex min-h-0 items-center gap-2",
                       nodeCount >= 4 ? "flex-1" : "",
                       isDense ? "py-0.5" : isCompact ? "py-1" : "py-1.5",
+                      isDragging ? "opacity-50" : "",
+                      isDragOver ? "border-t-2 border-t-rsi-accent" : "",
                     ].join(" ")}
                   >
+                    {canReorder ? (
+                      <div className="flex w-4 shrink-0 items-center justify-center">
+                        {isStop ? (
+                          <StopReorderHandle
+                            rowId={node.id}
+                            onDragStart={(event, id) => {
+                              event.dataTransfer.effectAllowed = "move";
+                              event.dataTransfer.setData("text/plain", id);
+                              setDraggingStopId(id);
+                              if (!draftOrderIds) {
+                                setDraftOrderIds(savedOrderIds);
+                              }
+                            }}
+                            onDragEnd={() => {
+                              setDraggingStopId(null);
+                              setDragOverStopId(null);
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div
                       className={[
                         "relative shrink-0 overflow-hidden rounded-md border border-rsi-border/80 bg-rsi-bg-deep/60",

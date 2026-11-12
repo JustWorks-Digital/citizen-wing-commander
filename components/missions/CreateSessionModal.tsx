@@ -11,7 +11,7 @@ export type CreateSessionModalProps = {
   onCreate: (sessionName: string) => void;
 };
 
-/** Name prompt before creating a new hauling session tab. */
+/** Name prompt before creating a new hauling trip tab. */
 export function CreateSessionModal({
   open,
   isBusy = false,
@@ -20,11 +20,11 @@ export function CreateSessionModal({
 }: CreateSessionModalProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [draft, setDraft] = useState("New session");
+  const [draft, setDraft] = useState("New trip");
 
   useEffect(() => {
     if (!open) return;
-    setDraft("New session");
+    setDraft("New trip");
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isBusy) onClose();
     };
@@ -43,7 +43,7 @@ export function CreateSessionModal({
   if (!open) return null;
 
   const submit = () => {
-    const next = draft.trim() || "New session";
+    const next = draft.trim() || "New trip";
     onCreate(next);
   };
 
@@ -64,13 +64,13 @@ export function CreateSessionModal({
           disabled={isBusy}
         />
         <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
-          Sessions
+          Trips
         </p>
         <h2
           id="create-session-title"
           className="mt-2 text-base font-semibold tracking-wide text-rsi-text"
         >
-          New session
+          New trip
         </h2>
         <p className="mt-2 text-sm text-rsi-text-secondary">
           Give this tab a name you can find later. You can rename it anytime.
@@ -79,7 +79,7 @@ export function CreateSessionModal({
           htmlFor={inputId}
           className="mt-4 block font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
         >
-          Session name
+          Trip name
         </label>
         <input
           ref={inputRef}

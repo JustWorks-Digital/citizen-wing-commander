@@ -18,7 +18,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total + bay load; footer can show per-contract SCU as a 4-per-column grid. Optional All stops / Current stop scope, 2D/Split/3D tabs, Packing + Peel, Manual presets, height drag handle.",
+          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total + bay load; footer shows stop transfer SCU (left) + per-contract SCU (right). Optional All / Transfer scope, 2D/Split/3D tabs, Packing + Peel, Manual presets, height drag handle.",
       },
     },
   },
@@ -85,7 +85,7 @@ export const WithInventory: Story = {
 
 export const WithStopScope: Story = {
   render: function StopScopeDemo(args) {
-    const [stopScope, setStopScope] = useState<CargoBayStopScope>("current");
+    const [stopScope, setStopScope] = useState<CargoBayStopScope>("transfer");
     return (
       <CargoBayLayout
         {...args}

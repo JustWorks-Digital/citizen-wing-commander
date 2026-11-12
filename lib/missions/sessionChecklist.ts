@@ -54,7 +54,7 @@ export function emptySessionChecklist(
   const now = new Date().toISOString();
   return normalizeSessionChecklist({
     id: createSessionId(),
-    sessionName: "New session",
+    sessionName: "New trip",
     shipSlugs: [],
     startLocationSlug: null,
     missionCount: 0,
@@ -99,7 +99,7 @@ export function normalizeSessionChecklist(
   return restampAllMissionBoxSizes(
     applySessionCompletionTiming({
       id,
-      sessionName: raw.sessionName?.trim() || "New session",
+      sessionName: raw.sessionName?.trim() || "New trip",
       shipSlugs: Array.isArray(raw.shipSlugs) ? raw.shipSlugs : [],
       startLocationSlug:
         typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()

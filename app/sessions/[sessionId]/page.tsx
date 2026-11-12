@@ -21,7 +21,7 @@ export default function SessionPage({ params }: SessionPageProps) {
       <Suspense
         fallback={
           <p className="font-mono text-sm text-rsi-text-muted">
-            Opening session…
+            Opening trip…
           </p>
         }
       >

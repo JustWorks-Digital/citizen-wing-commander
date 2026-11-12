@@ -27,7 +27,7 @@ export type SessionCargoLayoutModalProps = {
   shipSlug?: string | null;
   focusedStopId?: string | null;
   sessionId?: string | null;
-  /** Inventory / capacity aside shown beside the Cargo bays title. */
+  /** Inventory / capacity aside shown beside the Storage bays title. */
   headerAside?: ReactNode;
   /** Contracts strip below the bay grid. */
   footerAside?: ReactNode;
@@ -35,8 +35,8 @@ export type SessionCargoLayoutModalProps = {
 };
 
 /**
- * Centered Cargo bays modal — CargoBayLayout panel opened from the sticky
- * Cargo bay control. Height follows content; left edge resizes width.
+ * Centered storage bays modal — CargoBayLayout panel opened from the sticky
+ * Storage bays control. Height follows content; left edge resizes width.
  * Close X sits in the backdrop above the panel so it does not steal bay width.
  */
 export function SessionCargoLayoutModal({
@@ -52,7 +52,7 @@ export function SessionCargoLayoutModal({
   const titleId = useId();
   const { widthPx, setWidthPx, resetWidthPx } =
     useSessionCargoBayLayoutWidth(sessionId);
-  const [stopScope, setStopScope] = useState<CargoBayStopScope>("current");
+  const [stopScope, setStopScope] = useState<CargoBayStopScope>("transfer");
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
@@ -146,13 +146,13 @@ export function SessionCargoLayoutModal({
           />
         </div>
         <h2 id={titleId} className="sr-only">
-          Cargo bays
+          Storage bays
         </h2>
         <div className="relative min-w-0">
           <button
             type="button"
             role="slider"
-            aria-label="Cargo bays width"
+            aria-label="Storage bays width"
             aria-orientation="horizontal"
             aria-valuemin={MIN_CARGO_BAY_LAYOUT_WIDTH_PX}
             aria-valuemax={MAX_CARGO_BAY_LAYOUT_WIDTH_PX}

@@ -54,6 +54,65 @@ describe.each(TEST_SHIP_SLUGS)("pack modes at a stop (%s)", (shipSlug) => {
     expect(by["scrap"]).toBeUndefined();
   });
 
+  it("keeps transfer crates off stay-cargo cells when packing the full bay", () => {
+    const stops = getTripStops("aboardCargo");
+    const grid = sketch(shipSlug);
+    const plan = cargoBay.packAtStop("stop-2", grid, stops, {
+      packMode: "by-cargo-type",
+      includeAboardCargo: true,
+    });
+    const transfer = plan.boxes.filter(
+      (box) => box.action === "pickup" || box.action === "delivery",
+    );
+    const stay = plan.boxes.filter((box) => box.action == null);
+    const stayKeys = new Set(
+      stay.flatMap((box) =>
+        box.cells.map((cell) => `${cell.x},${cell.y},${cell.z}`),
+      ),
+    );
+    for (const box of transfer) {
+      for (const cell of box.cells) {
+        expect(
+          stayKeys.has(`${cell.x},${cell.y},${cell.z}`),
+          `${box.commoditySlug} ${box.size} overlaps stay at ${cell.x},${cell.y},${cell.z}`,
+        ).toBe(false);
+      }
+    }
+    expect(totalScu({ ...plan, boxes: transfer })).toBe(40);
+  });
+
+  it("tags only this stop’s transfers with pickup/delivery (stay cargo has no action)", () => {
+    const stops = getTripStops("aboardCargo");
+    const grid = sketch(shipSlug);
+    const plans = [
+      ["suggested", cargoBay.packSuggestedAtStop("stop-2", grid, stops, null)],
+      ["cargo-type", cargoBay.packByCargoTypeAtStop("stop-2", grid, stops)],
+      ["contract", cargoBay.packDeliveriesFromStop("stop-2", grid, stops)],
+    ] as const;
+
+    for (const [label, plan] of plans) {
+      const transferBy = scuByCommodity({
+        zone: plan.zone,
+        boxes: plan.boxes.filter(
+          (box) => box.action === "pickup" || box.action === "delivery",
+        ),
+        unplaced: [],
+      });
+      const stayBy = scuByCommodity({
+        zone: plan.zone,
+        boxes: plan.boxes.filter((box) => box.action == null),
+        unplaced: [],
+      });
+
+      // Only the local pickup is a transfer at stop-2
+      expect(transferBy, label).toEqual({ agricium: 40 });
+      expect(stayBy, label).toEqual({
+        "pressurized-ice": 8,
+        "processed-food": 9,
+      });
+    }
+  });
+
   it("does not pack future deliveries that are not yet aboard (early stop)", () => {
     const stops = getTripStops("aboardCargo");
     const grid = sketch(shipSlug);

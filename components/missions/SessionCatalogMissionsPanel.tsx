@@ -14,7 +14,7 @@ export type SessionCatalogMissionsPanelProps = {
   onAdded?: (result: AddCatalogMissionsToSessionResult) => void;
 };
 
-/** Modal: browse the contracts catalog and add selections to this session. */
+/** Modal: browse the contracts catalog and add selections to this trip. */
 export function SessionCatalogMissionsPanel({
   open,
   sessionId,
@@ -50,8 +50,8 @@ export function SessionCatalogMissionsPanel({
             ) : null}
           </h2>
           <p className="mt-1 text-xs text-rsi-text-muted">
-            Select catalog rows, then Add to session — they apply to this
-            session.
+            Select catalog rows, then Add to trip — they apply to this
+            trip.
           </p>
         </header>
 

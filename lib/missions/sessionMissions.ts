@@ -54,8 +54,8 @@ export type SessionMission = {
    * Aggregate auto mix (sum of `scuCargoBoxSplitsAutoSelected`).
    */
   scuBoxSplitsAutoSelected?: ScuBoxSplits;
-  /** Short cargo summary for tiles (e.g. "96 SCU Stims"). */
-  cargoSummary: string;
+  /** Short cargo summary for tiles (e.g. "96 SCU Stims"). Optional on older session JSON. */
+  cargoSummary?: string;
   isCompleted: boolean;
   /** When true, mission stays in the list but is excluded from the route table. */
   isHidden?: boolean;

@@ -22,7 +22,7 @@ export default function Home() {
         let sessionId = list.activeSessionId;
         if (!sessionId || list.sessions.length === 0) {
           const created = await createChecklistSession({
-            sessionName: "New session",
+            sessionName: "New trip",
           });
           sessionId = created.id;
         }
@@ -33,7 +33,7 @@ export default function Home() {
         setError(
           err instanceof Error
             ? err.message
-            : "Failed to open a hauling session",
+            : "Failed to open a hauling trip",
         );
       }
     })();
@@ -47,7 +47,7 @@ export default function Home() {
       {error ? (
         <p className="text-sm text-rsi-warn">{error}</p>
       ) : (
-        <p className="font-mono text-sm text-rsi-text-muted">Opening session…</p>
+        <p className="font-mono text-sm text-rsi-text-muted">Opening trip…</p>
       )}
     </AppShell>
   );

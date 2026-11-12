@@ -33,7 +33,7 @@ export default function SponsorPage() {
             Now entering into beta
           </p>
           <p className="max-w-[22rem] text-[clamp(0.95rem,1.2vw,1.1rem)] leading-relaxed text-rsi-text-secondary motion-safe:animate-[sponsor-rise_1s_0.22s_cubic-bezier(0.22,1,0.36,1)_both]">
-            Plan hauling sessions with your crew — stop cargo, bay packing, and
+            Plan hauling trips with your crew — stop cargo, bay packing, and
             contract completions in one tactical view.
           </p>
         </section>

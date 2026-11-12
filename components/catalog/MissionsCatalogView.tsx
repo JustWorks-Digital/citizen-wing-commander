@@ -92,7 +92,7 @@ export function MissionsCatalogView({
     setAddError(null);
     setAddStatus(
       `Added ${result.added} to “${result.sessionName}”` +
-        (result.skipped ? ` (${result.skipped} already on session)` : ""),
+        (result.skipped ? ` (${result.skipped} already on trip)` : ""),
     );
     window.setTimeout(() => setAddStatus(null), 4000);
     onAdded?.(result);
@@ -269,7 +269,7 @@ export function MissionsCatalogView({
                       setIsAddToSessionOpen(true);
                     }}
                   >
-                    {isAdding ? "Adding…" : "Add to session"}
+                    {isAdding ? "Adding…" : "Add to trip"}
                   </Button>
                 </div>
               </div>

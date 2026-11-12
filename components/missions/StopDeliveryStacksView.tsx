@@ -31,7 +31,8 @@ export type StopDeliveryStacksViewProps = {
 
 type Point = { x: number; y: number };
 const FALLBACK_HEX = "#54a0f7";
-const ZOOM_MIN = 0.35;
+/** Low enough that tall hangar piles + under-stack labels still fit the frame. */
+const ZOOM_MIN = 0.22;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.25;
 /** Horizontal padding on the scroll viewport (`px-2.5` × 2). */
@@ -42,7 +43,7 @@ const VIEWPORT_PAD_Y = 14;
  * Cap graph frame height so tall piles zoom out instead of stretching the
  * stop card / introducing a default vertical scroll.
  */
-const MAX_VIEWPORT_HEIGHT_PX = 421;
+const MAX_VIEWPORT_HEIGHT_PX = 253;
 
 const FLOOR_TOP =
   "color-mix(in srgb, var(--rsi-surface) 70%, var(--rsi-bg-deep))";
@@ -172,6 +173,21 @@ function visualHz(hz: number, peelStack: boolean): number {
   return hz + hz * PEEL_GAP;
 }
 
+/**
+ * Bottom space for under-stack cargo labels. Must include the floored font
+ * sizes so zoomed-out tall piles still leave room for abbrev + SCU.
+ */
+function stackBottomLabelPad(cellSize: number): number {
+  const abbrevSize = Math.max(8, Math.round(cellSize * 0.55));
+  const scuSize = Math.max(9, Math.round(cellSize * 0.65));
+  const padTop = cellSize * 0.42;
+  const padBottom = cellSize * 0.22;
+  const boxH =
+    padTop + padBottom + abbrevSize + scuSize + cellSize * 0.35;
+  // Label box sits below the floor (`foot.y + 0.85 * cell`); keep a small margin.
+  return cellSize * 0.85 + boxH + cellSize * 0.25;
+}
+
 function stackViewBounds(
   lengthCells: number,
   widthCells: number,
@@ -180,7 +196,7 @@ function stackViewBounds(
   hasPileLabels: boolean,
 ): { minX: number; minY: number; width: number; height: number } {
   const pileHeaderPad = hasPileLabels ? cellSize * 2.1 : 0;
-  const labelPad = cellSize * 2.75 + pileHeaderPad;
+  const bottomLabelPad = stackBottomLabelPad(cellSize);
   const corners = [
     project(0, 0, 0, cellSize),
     project(lengthCells, 0, 0, cellSize),
@@ -205,9 +221,10 @@ function stackViewBounds(
   const padY = cellSize * 0.55;
   return {
     minX: minX - padX,
-    minY: minY - padY,
+    // Extra top room for pile headers when present.
+    minY: minY - padY - pileHeaderPad,
     width: maxX - minX + padX * 2,
-    height: maxY - minY + padY * 2 + labelPad,
+    height: maxY - minY + padY * 2 + pileHeaderPad + bottomLabelPad,
   };
 }
 
@@ -318,11 +335,34 @@ export function StopDeliveryStacksView({
     // zoom out instead of fighting a content-sized viewport feedback loop.
     const availableH = Math.max(0, MAX_VIEWPORT_HEIGHT_PX - VIEWPORT_PAD_Y);
     if (availableW <= 0 || baseBounds.width <= 0) return 1;
-    const zoomW = availableW / baseBounds.width;
-    const zoomH =
-      baseBounds.height > 0 ? availableH / baseBounds.height : zoomW;
-    return clampZoom(Math.min(zoomW, zoomH));
-  }, [viewportWidth, baseBounds.width, baseBounds.height]);
+    let zoom = Math.min(
+      availableW / baseBounds.width,
+      baseBounds.height > 0 ? availableH / baseBounds.height : 1,
+    );
+    // Under-stack labels use floored font sizes, so bounds height is not linear
+    // in zoom — iterate until the rendered frame actually fits (no y-scroll).
+    for (let i = 0; i < 10; i++) {
+      const renderedHeight = stackViewBounds(
+        frameLengthCells,
+        widthCells,
+        viewHeight,
+        cellPx * zoom,
+        hasPileLabels,
+      ).height;
+      if (renderedHeight <= availableH + 0.5 || renderedHeight <= 0) break;
+      zoom *= availableH / renderedHeight;
+    }
+    return clampZoom(zoom);
+  }, [
+    viewportWidth,
+    baseBounds.width,
+    baseBounds.height,
+    frameLengthCells,
+    widthCells,
+    viewHeight,
+    cellPx,
+    hasPileLabels,
+  ]);
 
   useEffect(() => {
     userZoomedRef.current = false;
@@ -574,7 +614,12 @@ export function StopDeliveryStacksView({
 
       <div
         ref={viewportRef}
-        className="relative min-w-0 overflow-auto px-2.5 pb-2.5 pt-1"
+        className={[
+          "relative min-w-0 px-2.5 pb-2.5 pt-1",
+          // Default fit zoom must not introduce a vertical scrollbar; allow it
+          // only after the user zooms in past the auto-fit scale.
+          zoom > fitZoom + 0.01 ? "overflow-auto" : "overflow-x-auto overflow-y-hidden",
+        ].join(" ")}
         style={{ maxHeight: MAX_VIEWPORT_HEIGHT_PX }}
       >
         <div className="flex w-max min-w-full items-start justify-center">
@@ -623,7 +668,7 @@ export function StopDeliveryStacksView({
                     {box.deliveryLocationName
                       ? `${box.deliveryLocationName} pile`
                       : isPickup
-                        ? "Collect"
+                        ? "Pickup"
                         : "Drop off"}{" "}
                     · {box.commodityName} · {box.size} SCU
                   </title>
@@ -748,12 +793,8 @@ export function StopDeliveryStacksView({
                     height={boxH}
                     rx={3}
                     fill="var(--rsi-bg-deep)"
-                    stroke={
-                      canEditBoxes
-                        ? "var(--rsi-accent)"
-                        : "var(--rsi-border-strong)"
-                    }
-                    strokeWidth={canEditBoxes ? 1.25 : 1}
+                    stroke="var(--rsi-border-strong)"
+                    strokeWidth={1}
                   />
                   <text
                     x={foot.x}

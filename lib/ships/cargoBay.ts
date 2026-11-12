@@ -25,6 +25,11 @@ export type CargoBayPackAtStopOptions = {
    * compilation — UI/MCP can pass a custom program.
    */
   packProgram?: CargoBayPackProgram;
+  /**
+   * When false, pack only this stop’s pickup/delivery (no stay cargo).
+   * Transfer bay scope can use false so only pickup/delivery crates are packed.
+   */
+  includeAboardCargo?: boolean;
 };
 
 /**
@@ -47,12 +52,15 @@ export const cargoBay = {
         ? { packMode: packModeOrOptions }
         : packModeOrOptions;
 
+    const includeAboardCargo = options.includeAboardCargo;
+
     if (options.packProgram) {
       return interpretCargoBayPackProgram(
         stopId,
         sketch,
         stops,
         options.packProgram,
+        { includeAboardCargo },
       );
     }
 
@@ -67,7 +75,9 @@ export const cargoBay = {
       missionPrioritized: options.missionPrioritized,
       biasXyMode,
     });
-    return interpretCargoBayPackProgram(stopId, sketch, stops, program);
+    return interpretCargoBayPackProgram(stopId, sketch, stops, program, {
+      includeAboardCargo,
+    });
   },
 
   /** Suggested: chronological route-authored placement. */

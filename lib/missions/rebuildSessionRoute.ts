@@ -2,6 +2,7 @@ import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
   resolveCommoditySlug,
   resolveIncomingLeg,
+  resolveLocationSlug,
 } from "@/lib/sessions/resolveRefs";
 import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
@@ -28,6 +29,31 @@ function resolveCargoRole(
   if (routeAction === "pickup") return "pickup";
   if (routeAction === "delivery") return "delivery";
   return null;
+}
+
+function locationMatchesRow(
+  locationNameOrSlug: string,
+  rowLocationSlug: string,
+): boolean {
+  const resolved = resolveLocationSlug(locationNameOrSlug);
+  if (resolved && resolved === rowLocationSlug) return true;
+  return (
+    locationNameOrSlug.trim().toLowerCase() === rowLocationSlug.toLowerCase()
+  );
+}
+
+/** Unlabeled cargo is claimed only at this mission’s from (pickup) / to (delivery). */
+function cargoBelongsToMissionAtStop(
+  cargo: CargoDelivery,
+  commoditySlug: string,
+  row: HaulingChecklistRow,
+  role: "pickup" | "delivery",
+  mission: SessionMission,
+): boolean {
+  if (cargo.commoditySlug !== commoditySlug) return false;
+  if (cargo.missionId) return cargo.missionId === mission.id;
+  const sites = role === "pickup" ? mission.from : mission.to;
+  return sites.some((loc) => locationMatchesRow(loc, row.locationSlug));
 }
 
 /** Still counted in N/M (unless hidden). */
@@ -224,10 +250,21 @@ function stampMissionBoxSizesOntoRows(
   const cleared: HaulingChecklistRow[] = rows.map((row) => ({
     ...row,
     cargoDeliveries: row.cargoDeliveries.map((cargo) => {
-      const belongs =
-        cargo.missionId === mission.id ||
-        (!cargo.missionId && missionCommoditySlugs.has(cargo.commoditySlug));
-      if (!belongs) return cargo;
+      if (!missionCommoditySlugs.has(cargo.commoditySlug)) return cargo;
+      const role = resolveCargoRole(row.routeAction, cargo.role);
+      if (!role) {
+        if (cargo.missionId !== mission.id) return cargo;
+      } else if (
+        !cargoBelongsToMissionAtStop(
+          cargo,
+          cargo.commoditySlug,
+          row,
+          role,
+          mission,
+        )
+      ) {
+        return cargo;
+      }
       const { boxSizes: _removed, ...rest } = cargo;
       return rest as CargoDelivery;
     }),
@@ -239,12 +276,6 @@ function stampMissionBoxSizesOntoRows(
     ...row,
     cargoDeliveries: row.cargoDeliveries.map((cargo) => ({ ...cargo })),
   }));
-
-  const cargoBelongs = (cargo: CargoDelivery, commoditySlug: string) => {
-    if (cargo.commoditySlug !== commoditySlug) return false;
-    if (cargo.missionId) return cargo.missionId === mission.id;
-    return true;
-  };
 
   for (const line of lines) {
     type Hit = {
@@ -258,9 +289,19 @@ function stampMissionBoxSizesOntoRows(
 
     for (const [rowIndex, row] of nextRows.entries()) {
       for (const [cargoIndex, cargo] of row.cargoDeliveries.entries()) {
-        if (!cargoBelongs(cargo, line.commoditySlug)) continue;
         const role = resolveCargoRole(row.routeAction, cargo.role);
         if (role !== "pickup" && role !== "delivery") continue;
+        if (
+          !cargoBelongsToMissionAtStop(
+            cargo,
+            line.commoditySlug,
+            row,
+            role,
+            mission,
+          )
+        ) {
+          continue;
+        }
         const hit = {
           rowIndex,
           cargoIndex,

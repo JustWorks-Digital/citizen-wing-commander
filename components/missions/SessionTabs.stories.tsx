@@ -82,7 +82,7 @@ export const Interactive: Story = {
           setSessions((prev) => [
             {
               id,
-              sessionName: "New session",
+              sessionName: "New trip",
               updatedAt: new Date().toISOString(),
               missionCount: 0,
               rowCount: 0,

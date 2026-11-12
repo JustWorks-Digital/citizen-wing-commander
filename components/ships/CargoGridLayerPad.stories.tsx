@@ -8,6 +8,7 @@ import {
 function SelectDemo() {
   const [active, setActive] = useState(0);
   const [onGrid, setOnGrid] = useState(true);
+  const emptyLayers = new Set([1, 3]);
   return (
     <div className="relative h-40 w-56 rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-2">
       <CargoGridLayerPadToggle
@@ -20,6 +21,7 @@ function SelectDemo() {
           layers={[0, 1, 2, 3]}
           activeLayer={active}
           onSelectLayer={setActive}
+          emptyLayers={emptyLayers}
           ariaLabel="2D layers"
         />
       ) : null}
@@ -64,7 +66,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Bottom-center Z-layer pad for 2D (select) and 3D (toggle). Legend “On grid” shows or hides the pad.",
+          "Bottom-center Z-layer pad for 2D (select) and 3D (toggle). Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
       },
     },
   },

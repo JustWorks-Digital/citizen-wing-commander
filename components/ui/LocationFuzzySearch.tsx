@@ -85,8 +85,17 @@ export function LocationFuzzySearch({
 
   const showClear = Boolean(valueSlug) || query.trim().length > 0;
 
+  const menuOpen = isOpen && (results.length > 0 || query.trim().length > 0);
+
   return (
-    <div ref={rootRef} className="relative w-full max-w-md">
+    <div
+      ref={rootRef}
+      className={[
+        "relative w-full max-w-md",
+        // Above HaulingChecklistTable sticky toolbar (z-20) while the menu is open.
+        menuOpen ? "z-30" : "z-0",
+      ].join(" ")}
+    >
       <label className="mb-1 block font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
         {label}
       </label>
@@ -154,7 +163,7 @@ export function LocationFuzzySearch({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel"
+          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel"
         >
           {results.map((loc, index) => (
             <li key={loc.slug} role="option" aria-selected={index === highlight}>
@@ -179,7 +188,7 @@ export function LocationFuzzySearch({
         </ul>
       ) : null}
       {isOpen && query.trim() && results.length === 0 ? (
-        <p className="absolute z-20 mt-1 w-full rounded-rsi border border-rsi-border bg-rsi-surface px-3 py-2 text-sm text-rsi-text-muted shadow-rsi-panel">
+        <p className="absolute z-30 mt-1 w-full rounded-rsi border border-rsi-border bg-rsi-surface px-3 py-2 text-sm text-rsi-text-muted shadow-rsi-panel">
           No locations match
         </p>
       ) : null}

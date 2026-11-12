@@ -6,7 +6,12 @@ import {
   type ImageLightboxItem,
 } from "@/components/ui/ImageLightbox";
 import { SourceIcon } from "@/components/ui/SourceIcon";
-import type { MissionScuBreakdownItem } from "@/lib/missions/cargoInventory";
+import { getCommodityBySlug } from "@/lib/fixtures";
+import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import type {
+  MissionScuBreakdownItem,
+  StopTransferCommodityScu,
+} from "@/lib/missions/cargoInventory";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { stripRankFromTitle } from "@/lib/missions/missionRank";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
@@ -96,7 +101,7 @@ export function SessionSourceStat({
     <div
       className={[stripClass, className].filter(Boolean).join(" ")}
       role="group"
-      aria-label="Session actions"
+      aria-label="Trip actions"
     >
       <button
         type="button"
@@ -146,14 +151,14 @@ export type SessionRouteProgressStatsProps = {
   onMissionsClick?: () => void;
   /** Opens the route stops timeline modal. */
   onStopsClick?: () => void;
-  /** Opens the Cargo layout modal. */
+  /** Opens the storage bays (cargo) modal. */
   onCapacityClick?: () => void;
   /**
    * Physical cargo holds on the selected ship (from the grid sketch).
-   * Drives singular / plural “Cargo bay(s)” label. Defaults to 1.
+   * Kept for callers; toolbar label is always “Storage bays”.
    */
   cargoBayCount?: number;
-  /** Optional control rendered just right of the Cargo bay / aUEC block. */
+  /** Optional control rendered just right of the Storage bays / aUEC block. */
   trailing?: ReactNode;
   className?: string;
 };
@@ -162,7 +167,7 @@ function formatToolbarAuec(amount: number): string {
   return Math.floor(amount).toLocaleString("en-US");
 }
 
-/** Contracts + Stops + Cargo bay + aUEC telemetry for the checklist toolbar. */
+/** Contracts + Stops + Storage bays + aUEC telemetry for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -176,12 +181,11 @@ export function SessionRouteProgressStats({
   onMissionsClick,
   onStopsClick,
   onCapacityClick,
-  cargoBayCount = 1,
+  cargoBayCount: _cargoBayCount = 1,
   trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
-  const cargoBayLabel = cargoBayCount === 1 ? "Cargo bay" : "Cargo bays";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const showAuec = auecProjected > 0 || auecEarned > 0;
   const stopsBody = (
@@ -194,7 +198,7 @@ export function SessionRouteProgressStats({
   );
   const capacityBody = (
     <>
-      <StatLabel>{cargoBayLabel}</StatLabel>
+      <StatLabel>Storage bays</StatLabel>
       <StatValue>
         <Fraction
           current={onboardScu}
@@ -260,8 +264,8 @@ export function SessionRouteProgressStats({
             type="button"
             onClick={onCapacityClick}
             className={interactiveCellClass}
-            title={`Open ${cargoBayLabel.toLowerCase()}`}
-            aria-label={`Open ${cargoBayLabel.toLowerCase()}`}
+            title="Open storage bays"
+            aria-label="Open storage bays"
           >
             {capacityBody}
           </button>
@@ -409,6 +413,96 @@ function InventoryLine({
   );
 }
 
+export type SessionCurrentStopPickupGridProps = {
+  /** Pickup / delivery SCU by cargo type at this stop. */
+  transfers: StopTransferCommodityScu[];
+  /** Location name used as the section title. */
+  stopLabel?: string | null;
+  className?: string;
+};
+
+/**
+ * Stop transfer SCU by cargo type — left of Contracts in the cargo-bays footer.
+ */
+export function SessionCurrentStopPickupGrid({
+  transfers,
+  stopLabel = null,
+  className,
+}: SessionCurrentStopPickupGridProps) {
+  if (transfers.length === 0) return null;
+
+  const rowsPerColumn = Math.min(4, transfers.length);
+  const title = stopLabel?.trim() || "Transfer";
+
+  return (
+    <div
+      className={["flex shrink-0 min-w-0 justify-start", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div
+        className={[stripClass, "h-auto w-max max-w-full items-center"].join(
+          " ",
+        )}
+        role="group"
+        aria-label={`${title} cargo`}
+      >
+        <div className="flex h-auto w-max max-w-full flex-col gap-1.5 px-2 pt-1.5 pb-2.5">
+          <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+            {title}
+          </p>
+          <ul
+            className="grid w-max grid-flow-col auto-cols-max gap-x-3 gap-y-1.5 overflow-x-auto"
+            style={{
+              gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
+            }}
+          >
+            {transfers.map((item) => {
+              const name =
+                getCommodityBySlug(item.commoditySlug)?.name ??
+                item.commoditySlug;
+              const cargoHex = resolveCommodityColorHex(
+                null,
+                null,
+                item.commoditySlug,
+              );
+              const actionLabel =
+                item.action === "pickup" ? "pickup" : "delivery";
+              return (
+                <li
+                  key={`${item.action}:${item.commoditySlug}`}
+                  className="flex min-w-0 max-w-[14rem] items-center gap-1"
+                  title={`${name} - ${item.scu} ${SCU_TITLE} ${actionLabel}`}
+                >
+                  <span
+                    aria-hidden
+                    className="size-2.5 shrink-0 rounded-[2px] border border-rsi-border/60"
+                    style={{
+                      backgroundColor: cargoHex ?? "var(--rsi-text-muted)",
+                    }}
+                  />
+                  <span className="min-w-0 truncate text-[0.7rem] leading-none text-rsi-text-secondary">
+                    {name}
+                  </span>
+                  <span className="shrink-0 font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text">
+                    {item.scu}
+                    <span
+                      className="ml-0.5 text-[0.5rem] uppercase tracking-[0.1em] text-rsi-text-muted"
+                      title={SCU_TITLE}
+                    >
+                      SCU
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export type SessionContractScuGridProps = {
   missionScuBreakdown: MissionScuBreakdownItem[];
   sessionId?: string | null;
@@ -430,7 +524,7 @@ export function SessionContractScuGrid({
 
   return (
     <div
-      className={["flex w-full min-w-0 justify-end", className]
+      className={["flex min-w-0 justify-end", className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -446,16 +540,14 @@ export function SessionContractScuGrid({
             Contracts
           </p>
           <ul
-            className="grid w-max grid-flow-col auto-cols-max gap-x-1 gap-y-0.5 overflow-x-auto"
+            className="grid w-max grid-flow-col auto-cols-max gap-x-4 gap-y-0.5 overflow-x-auto"
             style={{
               gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
             }}
           >
             {missionScuBreakdown.map((item) => {
-              const { title, rank } = stripRankFromTitle(item.title);
-              const label = [rank, title || item.title]
-                .filter(Boolean)
-                .join(" · ");
+              const { title } = stripRankFromTitle(item.title);
+              const label = title || item.title;
               return (
                 <li
                   key={item.missionId}
@@ -463,7 +555,7 @@ export function SessionContractScuGrid({
                   title={item.title}
                 >
                   <span className="min-w-0 truncate text-[0.7rem] leading-none text-rsi-text-secondary">
-                    {label}
+                    {label}:
                   </span>
                   <span className="shrink-0 font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text">
                     {item.scu}
@@ -543,9 +635,9 @@ export function SessionInventoryStat({
       <div
         className={stripClass}
         role="group"
-        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} available`}
+        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free`}
       >
-        <div className="flex w-fit flex-col justify-center gap-0.5 px-2 py-1 text-right">
+        <div className="flex w-fit flex-col justify-center gap-1 px-2 py-1 text-right">
           <InventoryLine
             value={
               <>
@@ -572,7 +664,7 @@ export function SessionInventoryStat({
           />
           <InventoryLine
             value={availableLabel}
-            label="available"
+            label="free"
             valueClassName={
               isOverAvailable ? "text-rsi-danger" : "text-rsi-text tabular-nums"
             }

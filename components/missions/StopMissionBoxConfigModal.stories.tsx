@@ -31,7 +31,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "One tile to correct crate mixes (Collect / Drop off double-click). Total dropdown applies a style to every cargo type; each commodity also has its own combination dropdown (`scuCargoBoxSplits`).",
+          "One tile to correct crate mixes (Pickup / Drop off double-click). Total dropdown applies a style to every cargo type; each commodity also has its own combination dropdown (`scuCargoBoxSplits`).",
       },
     },
   },
