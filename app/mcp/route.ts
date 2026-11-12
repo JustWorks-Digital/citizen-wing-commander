@@ -18,6 +18,9 @@ import {
   toolPackCargoBayAtStop,
   toolListHaulingScreenshots,
   toolListHaulingSessions,
+  toolListIntakeUploads,
+  toolGetIntakeUpload,
+  toolMarkIntakeUploadProcessed,
   toolListMissions,
   toolListShipBayPreferences,
   toolRecordMissionRun,
@@ -322,6 +325,57 @@ const handler = createMcpHandler(
         annotations: { destructiveHint: true },
       },
       async ({ batchId }) => toolClearHaulingScreenshots(batchId),
+    );
+
+    server.registerTool(
+      "list_intake_uploads",
+      {
+        title: "List intake uploads",
+        description:
+          "Use this to list contract/mission screenshots uploaded on the Intake page (/intake). Default status=pending (inbox). After extracting contracts into the catalog, call mark_intake_upload_processed.",
+        inputSchema: z.object({
+          status: z
+            .enum(["pending", "processed", "all"])
+            .optional()
+            .describe("Filter inbox vs processed; default pending"),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolListIntakeUploads(input),
+    );
+
+    server.registerTool(
+      "get_intake_upload",
+      {
+        title: "Get intake upload",
+        description:
+          "Use this to retrieve an Intake-page screenshot (base64 + data URL) so you can read the contract and call create_mission / apply_hauling_contracts_intake. Pass logicalPath from list_intake_uploads, or filename (+ optional status).",
+        inputSchema: z.object({
+          logicalPath: z
+            .string()
+            .optional()
+            .describe("e.g. intake-pending/<filename>"),
+          filename: z.string().optional(),
+          status: z.enum(["pending", "processed"]).optional(),
+        }),
+        annotations: { readOnlyHint: true },
+      },
+      async (input) => toolGetIntakeUpload(input),
+    );
+
+    server.registerTool(
+      "mark_intake_upload_processed",
+      {
+        title: "Mark intake upload processed",
+        description:
+          "Use this after you have extracted contracts from an Intake screenshot into the catalog. Moves the file from intake-pending/ to intake-processed/.",
+        inputSchema: z.object({
+          logicalPath: z.string().optional(),
+          filename: z.string().optional(),
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolMarkIntakeUploadProcessed(input),
     );
 
     server.registerTool(

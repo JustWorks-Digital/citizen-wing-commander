@@ -82,6 +82,11 @@ import {
   resolveHaulingScreenshotBytes,
   storeHaulingScreenshotBuffer,
 } from "@/lib/sessions/screenshotStore";
+import {
+  listIntakeUploads,
+  markIntakeUploadProcessed,
+  readIntakeUpload,
+} from "@/lib/sessions/intakeUploadStore";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import {
   resolveCommoditySlug,
@@ -1165,6 +1170,68 @@ export async function toolClearHaulingScreenshots(batchId?: string) {
     message: `Removed ${result.removed} screenshot(s) from batch ${result.batchId}.`,
     ...result,
   });
+}
+
+/** List contract/mission images uploaded on the Intake page. */
+export async function toolListIntakeUploads(input?: {
+  status?: "pending" | "processed" | "all";
+}) {
+  const status = input?.status ?? "pending";
+  const uploads = await listIntakeUploads(status);
+  return textResult({
+    status,
+    count: uploads.length,
+    uploads,
+    note:
+      "Pending shots live under intake-pending/; after you extract contracts into the catalog, call mark_intake_upload_processed. Prefer get_intake_upload for image bytes.",
+  });
+}
+
+/** Read an Intake-page upload (base64) for AI contract extraction. */
+export async function toolGetIntakeUpload(input: {
+  logicalPath?: string;
+  filename?: string;
+  status?: "pending" | "processed";
+}) {
+  try {
+    const shot = await readIntakeUpload(input);
+    return textResult({
+      ok: true,
+      status: shot.status,
+      logicalPath: shot.logicalPath,
+      filename: shot.filename,
+      bytes: shot.bytes,
+      contentType: shot.contentType,
+      imageBase64: shot.imageBase64,
+      dataUrl: `data:${shot.contentType};base64,${shot.imageBase64}`,
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error ? error.message : "Failed to read intake upload",
+    });
+  }
+}
+
+/** Move a pending Intake upload into the processed batch after AI intake. */
+export async function toolMarkIntakeUploadProcessed(input: {
+  logicalPath?: string;
+  filename?: string;
+}) {
+  try {
+    const result = await markIntakeUploadProcessed(input);
+    return textResult({
+      ...result,
+      note: "File moved to intake-processed/. Prefer create_mission / apply_hauling_contracts_intake before marking processed.",
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to mark intake upload processed",
+    });
+  }
 }
 
 function presentCatalogMissionVariantSummary(

@@ -26,6 +26,12 @@ export const appApi = {
   sessions: "/api/sessions",
   ships: "/api/ships",
   healthDb: "/api/health/db",
+  /** Contract/mission screenshot inbox for AI intake. */
+  intakeUploads: "/api/intake/uploads",
+  intakeUpload: (filename: string) =>
+    `/api/intake/uploads/${encodeURIComponent(filename)}`,
+  intakeUploadProcessed: (filename: string) =>
+    `/api/intake/uploads/${encodeURIComponent(filename)}/processed`,
 } as const;
 
 export type AppApiName = keyof typeof appApi;

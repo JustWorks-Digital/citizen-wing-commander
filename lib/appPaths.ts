@@ -8,6 +8,8 @@ export const appPaths = {
   sessions: "/",
   /** Planning catalog of observed missions. */
   missionsCatalog: "/missions",
+  /** Upload contract/mission screenshots for AI intake into the catalog. */
+  intake: "/intake",
   session: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}`,
 } as const;

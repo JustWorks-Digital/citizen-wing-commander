@@ -8,6 +8,11 @@ import {
   uploadSessionScreenshots,
   type ScreenshotListItem,
 } from "@/lib/api/screenshotsApi";
+import {
+  imageFilesFromClipboardApi,
+  imageFilesFromDataTransfer,
+  imageFilesFromList,
+} from "@/lib/ui/imagePasteFiles";
 import { Button } from "@/components/ui/Button";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
@@ -20,93 +25,10 @@ export type SessionScreenshotsPanelProps = {
   initialScreenshots?: ScreenshotListItem[];
 };
 
-const IMAGE_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/gif",
-]);
-
-const EXT_BY_MIME: Record<string, string> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/jpg": ".jpg",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-};
-
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function imageFilesFromList(list: FileList | File[] | null): File[] {
-  if (!list) return [];
-  return Array.from(list).filter(
-    (file) =>
-      IMAGE_TYPES.has(file.type.toLowerCase()) ||
-      /\.(png|jpe?g|webp|gif)$/i.test(file.name),
-  );
-}
-
-function imageFilesFromDataTransfer(data: DataTransfer | null): File[] {
-  if (!data) return [];
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const fromItems: File[] = [];
-  const seen = new Set<string>();
-
-  for (const item of Array.from(data.items)) {
-    if (item.kind !== "file") continue;
-    const type = item.type.toLowerCase();
-    if (!IMAGE_TYPES.has(type)) continue;
-    const file = item.getAsFile();
-    if (!file || file.size === 0) continue;
-    const fingerprint = `${file.size}:${type}:${file.name}`;
-    if (seen.has(fingerprint)) continue;
-    seen.add(fingerprint);
-    const ext = EXT_BY_MIME[type] ?? ".png";
-    const index = fromItems.length + 1;
-    const name =
-      file.name && file.name !== "image.png"
-        ? file.name
-        : `paste-${stamp}-${index}${ext}`;
-    fromItems.push(
-      new File([file], name, {
-        type: file.type || type,
-        lastModified: file.lastModified,
-      }),
-    );
-  }
-
-  if (fromItems.length) return fromItems;
-  return imageFilesFromList(data.files);
-}
-
-async function imageFilesFromClipboardApi(): Promise<File[]> {
-  if (!navigator.clipboard?.read) return [];
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const items = await navigator.clipboard.read();
-  const files: File[] = [];
-  let index = 0;
-  for (const item of items) {
-    for (const type of item.types) {
-      const mime = type.toLowerCase();
-      if (!IMAGE_TYPES.has(mime)) continue;
-      const blob = await item.getType(type);
-      if (!blob || blob.size === 0) continue;
-      index += 1;
-      const ext = EXT_BY_MIME[mime] ?? ".png";
-      files.push(
-        new File([blob], `paste-${stamp}-${index}${ext}`, {
-          type: blob.type || mime,
-          lastModified: Date.now(),
-        }),
-      );
-    }
-  }
-  return files;
 }
 
 /** Lucide-style clipboard (clearer clip + board silhouette). */

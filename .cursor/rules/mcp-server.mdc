@@ -21,6 +21,7 @@ alwaysApply: true
 - Crate mix correction (freight elevator / hangar UI): MCP **`set_mission_scu_box_splits`** with `missionId` + `boxes: [{ size, count }, …]` (1/2/4/8/16/32; must sum to mission SCU). Restamps session `boxSizes` for Collect pads / bay packing; updates linked catalog default unless `updateCatalog: false`.
 - Session start point (`startLocationSlug`) is set in the UI fuzzy search or via `set_session_start_location`.
 - Contract screenshots: web UI upload or MCP `store_hauling_screenshot` → `.data/mcp-screenshots/<batchId>/` (gitignored). UI uses `sessionId` as `batchId`. Retrieve with MCP `list_hauling_screenshots` / `get_hauling_screenshot`. Prefer a Railway volume on `.data` so files survive redeploy.
+- Site **Intake** page (`/intake`): paste/drop/upload contract shots into `intake-pending/` for AI catalog extraction. MCP `list_intake_uploads` / `get_intake_upload` / `mark_intake_upload_processed` (moves to `intake-processed/`).
 - When adding tools: action-oriented names, “Use this when…” descriptions, zod `inputSchema`, keep instructions on the handler updated.
 - Production MCP (Railway): `https://citizen-wing-commander-production.up.railway.app/mcp` — add to Cursor via `.cursor/mcp.json` as a remote `url` server (Streamable HTTP).
 - Local ChatGPT/Cursor testing can use that public HTTPS URL or a Secure MCP Tunnel pointing at `/mcp`. Do not invent locations/commodities/ships outside fixtures.

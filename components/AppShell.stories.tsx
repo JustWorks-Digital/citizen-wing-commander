@@ -29,3 +29,12 @@ export const MissionsNav: Story = {
     ),
   },
 };
+
+export const IntakeNav: Story = {
+  args: {
+    activeNav: "intake",
+    children: (
+      <p className="text-sm text-rsi-text-secondary">Intake uploads</p>
+    ),
+  },
+};
