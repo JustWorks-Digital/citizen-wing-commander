@@ -23,7 +23,10 @@ import type {
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
 import { mergePreservedQuantumRows } from "@/lib/missions/quantumTravel";
-import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
+import {
+  decomposeScuIntoBoxes,
+  type CargoBoxScu,
+} from "@/lib/ships/cargoBoxSizes";
 
 function resolveCargoRole(
   routeAction: RouteAction,
@@ -284,9 +287,15 @@ function stampMissionBoxSizesOntoRows(
     return true;
   };
 
-  for (const assignment of assignments) {
-    if (assignment.boxSizes.length === 0) continue;
+  const maxBox =
+    typeof mission.maxContainerScu === "number" && mission.maxContainerScu > 0
+      ? (mission.maxContainerScu as CargoBoxScu)
+      : undefined;
 
+  const greedyBoxes = (scu: number): CargoBoxScu[] =>
+    decomposeScuIntoBoxes(scu, maxBox);
+
+  for (const assignment of assignments) {
     type Hit = {
       rowIndex: number;
       cargoIndex: number;
@@ -312,10 +321,7 @@ function stampMissionBoxSizesOntoRows(
       }
     }
 
-    const stamp = (
-      hit: Hit,
-      boxSizes: CargoBoxScu[],
-    ) => {
+    const stamp = (hit: Hit, boxSizes: CargoBoxScu[]) => {
       const cargo = nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex]!;
       nextRows[hit.rowIndex]!.cargoDeliveries[hit.cargoIndex] = {
         ...cargo,
@@ -323,6 +329,17 @@ function stampMissionBoxSizesOntoRows(
         boxSizes: [...boxSizes],
       };
     };
+
+    const stampGreedy = (hits: Hit[]) => {
+      for (const hit of hits) {
+        stamp(hit, greedyBoxes(hit.scu));
+      }
+    };
+
+    if (assignment.boxSizes.length === 0) {
+      stampGreedy([...pickups, ...deliveries]);
+      continue;
+    }
 
     if (pickups.length === 1 && pickups[0]!.scu === assignment.scu) {
       stamp(pickups[0]!, assignment.boxSizes);
@@ -335,6 +352,8 @@ function stampMissionBoxSizesOntoRows(
         for (const [index, pickup] of pickups.entries()) {
           stamp(pickup, taken[index] ?? []);
         }
+      } else {
+        stampGreedy(pickups);
       }
     }
 
@@ -352,9 +371,12 @@ function stampMissionBoxSizesOntoRows(
       assignment.boxSizes,
       deliveryHits.map((hit) => hit.scu),
     );
-    if (!partitioned) continue;
-    for (const [index, hit] of deliveryHits.entries()) {
-      stamp(hit, partitioned[index] ?? []);
+    if (partitioned) {
+      for (const [index, hit] of deliveryHits.entries()) {
+        stamp(hit, partitioned[index] ?? []);
+      }
+    } else {
+      stampGreedy(deliveryHits);
     }
   }
 
