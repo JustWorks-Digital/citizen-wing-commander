@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
+  SessionContractScuGrid,
   SessionInventoryStat,
   SessionRouteProgressStats,
   SessionSourceStat,
@@ -12,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay (route checklist toolbar — opens Cargo bays modal), Inventory (inside Cargo bays modal, including per-contract SCU).",
+          "Split session telemetry: Contracts List/Source (session header), Contracts/Stops/Cargo bay/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, per-contract SCU as a 4-per-column grid in the modal footer.",
       },
     },
   },
@@ -35,6 +36,8 @@ export const RouteProgress: Story = {
       onboardScu={24}
       totalCapacity={96}
       cargoBayCount={2}
+      auecEarned={0}
+      auecProjected={128000}
       onStopsClick={() => {}}
       onCapacityClick={() => {}}
     />
@@ -46,11 +49,13 @@ export const RouteProgressSingleBay: Story = {
     <SessionRouteProgressStats
       completedLegs={1}
       totalLegs={3}
-      missionsCompleted={0}
+      missionsCompleted={1}
       missionCount={2}
       onboardScu={24}
       totalCapacity={96}
       cargoBayCount={1}
+      auecEarned={48000}
+      auecProjected={128000}
       onStopsClick={() => {}}
       onCapacityClick={() => {}}
     />
@@ -81,6 +86,42 @@ export const Inventory: Story = {
       totalCapacity={96}
       availableScu={24}
     />
+  ),
+};
+
+/** Four-per-column contract grid (footer of Cargo bays modal). */
+export const ContractScuFourPerColumn: Story = {
+  render: () => (
+    <div className="flex w-full max-w-3xl flex-col gap-3">
+      <SessionInventoryStat
+        onboardScu={40}
+        peakScu={180}
+        missionsTotalScu={432}
+        missionScuBreakdown={[]}
+        totalCapacity={216}
+        availableScu={36}
+        showContractBreakdown={false}
+      />
+      <SessionContractScuGrid
+        missionScuBreakdown={Array.from({ length: 9 }, (_, index) => ({
+          missionId: `m${index + 1}`,
+          title: [
+            "Trainee Rank — Medical Supplies",
+            "Junior Rank — Quartz",
+            "Member Rank — Stims",
+            "Senior Rank — Waste",
+            "Master Rank — Agricium",
+            "Junior Rank — Pressurized Ice",
+            "Member Rank — Processed Food",
+            "Senior Rank — Scrap",
+            "Trainee Rank — Distilled Spirits",
+          ][index]!,
+          scu: [16, 24, 48, 64, 80, 32, 40, 56, 72][index]!,
+          screenshots: index % 2 === 0 ? [`demo/c${index + 1}.png`] : [],
+        }))}
+        sessionId="demo-session"
+      />
+    </div>
   ),
 };
 
@@ -123,6 +164,8 @@ export const AllPieces: Story = {
         missionCount={2}
         onboardScu={24}
         totalCapacity={96}
+        auecEarned={0}
+        auecProjected={144000}
       />
       <SessionInventoryStat
         onboardScu={24}

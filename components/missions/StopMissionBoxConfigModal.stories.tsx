@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Correct crate mixes for a session contract. Shows auto-selected vs user-selected (`scuBoxSplitsAutoSelected` vs `scuBoxSplits`).",
+          "Large modal to correct crate mixes for a session contract (opened by double-clicking Collect / Drop off pad crates). Shows auto-selected vs user-selected (`scuBoxSplitsAutoSelected` vs `scuBoxSplits`).",
       },
     },
   },

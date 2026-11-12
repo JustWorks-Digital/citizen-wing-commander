@@ -48,7 +48,7 @@ export function StopMissionBoxConfigModal({
   const disabled = mission.isCompleted;
 
   const options = useMemo(
-    () => enumerateBoxBreakdowns(totalScu, mission.maxContainerScu, 12),
+    () => enumerateBoxBreakdowns(totalScu, mission.maxContainerScu, 24),
     [totalScu, mission.maxContainerScu],
   );
 
@@ -81,13 +81,13 @@ export function StopMissionBoxConfigModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:max-h-[90vh] sm:rounded-rsi sm:border">
-        <header className="relative shrink-0 border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
+      <div className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:max-h-[92vh] sm:rounded-rsi sm:border">
+        <header className="relative shrink-0 border-b border-rsi-divider px-4 py-3 pr-12 sm:px-6 sm:py-4 sm:pr-14">
           <ModalCloseButton onClick={onClose} />
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Box types
           </p>
-          <h2 className="mt-0.5 truncate text-base font-semibold tracking-wide text-rsi-text">
+          <h2 className="mt-0.5 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
             {mission.title}
           </h2>
           <p className="mt-1 truncate font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
@@ -101,7 +101,7 @@ export function StopMissionBoxConfigModal({
           ) : null}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-rsi-text-secondary">
             Tap the crate mix that matches the contract.
           </p>
@@ -151,7 +151,7 @@ export function StopMissionBoxConfigModal({
               No box options for this cargo total.
             </p>
           ) : (
-            <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
               {options.map((option) => {
                 const isSelected = option.id === selectedId;
                 const isAuto = autoId != null && option.id === autoId;
@@ -168,7 +168,7 @@ export function StopMissionBoxConfigModal({
                         onClose();
                       }}
                       className={[
-                        "flex w-full flex-col items-start gap-2 rounded-rsi border px-3 py-3 text-left transition-colors",
+                        "flex w-full flex-col items-start gap-2.5 rounded-rsi border px-3 py-3.5 text-left transition-colors",
                         isSelected
                           ? "border-rsi-accent bg-rsi-accent-muted/35"
                           : "border-rsi-border bg-rsi-bg-deep/40 hover:border-rsi-border-strong hover:bg-rsi-bg-deep/60",
@@ -185,7 +185,7 @@ export function StopMissionBoxConfigModal({
                             ? "var(--rsi-accent)"
                             : "var(--rsi-text-secondary)"
                         }
-                        className="gap-x-2.5 [&_svg]:size-7 [&_span]:text-sm"
+                        className="gap-x-2.5 [&_svg]:size-8 [&_span]:text-sm"
                       />
                       <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
                         {option.boxCount} boxes

@@ -121,6 +121,7 @@ type PlaceMaterialStackInput = {
   color: string | null;
   color2: string | null;
   action: CargoGridBoxAction;
+  missionId?: string | null;
   deliveryLocationSlug?: string;
   deliveryLocationName?: string;
   locationGroupIndex?: number;
@@ -170,6 +171,7 @@ function placeMaterialStackColumns(input: PlaceMaterialStackInput): {
       color2: input.color2,
       cells: cellsForBox(origin, footprint),
       action: input.action,
+      missionId: input.missionId ?? null,
       deliveryLocationSlug: input.deliveryLocationSlug,
       deliveryLocationName: input.deliveryLocationName,
       locationGroupIndex: input.locationGroupIndex,
@@ -311,6 +313,8 @@ export type StopCargoStackLabel = {
   scu: number;
   /** Tallest column height in cells. */
   heightCells: number;
+  /** Session mission this stack belongs to (for under-label box edit). */
+  missionId?: string | null;
 };
 
 export type StopCargoPileLabel = {
@@ -348,6 +352,7 @@ export type StopCargoStacksPlan = {
     scu: number;
     boxCounts: CargoBoxCountBySize[];
     isSplitMission: boolean;
+    missionId?: string | null;
     locationSlug?: string;
     locationName?: string;
   }>;
@@ -413,6 +418,7 @@ export function planStopCargoStacks(
       color: group.color,
       color2: group.color2,
       action,
+      missionId: group.missionId,
     });
     boxes.push(...placed.boxes);
     boxIndex = placed.nextBoxIndex;
@@ -428,6 +434,7 @@ export function planStopCargoStacks(
       abbrev: abbreviateCommodityName(group.commodityName),
       scu: group.scu,
       heightCells: placed.heightCells,
+      missionId: group.missionId,
     });
 
     cursorX = placed.endXExclusive + STACK_GAP_CELLS;
@@ -455,6 +462,7 @@ export function planStopCargoStacks(
     scu: group.scu,
     boxCounts: group.boxCounts,
     isSplitMission: group.isSplitMission,
+    missionId: group.missionId,
   }));
 
   return {
@@ -523,6 +531,7 @@ export function planPickupHangarStacks(
         color: segment.color,
         color2: segment.color2,
         action: "pickup",
+        missionId: segment.missionId,
         deliveryLocationSlug: segment.locationSlug,
         deliveryLocationName: segment.locationName,
         locationGroupIndex: segment.locationGroupIndex,
@@ -541,6 +550,7 @@ export function planPickupHangarStacks(
         abbrev: abbreviateCommodityName(segment.commodityName),
         scu: segment.scu,
         heightCells: placed.heightCells,
+        missionId: segment.missionId,
       });
       legendItems.push({
         id: stackId,
@@ -551,6 +561,7 @@ export function planPickupHangarStacks(
         scu: segment.scu,
         boxCounts: tallyBoxSizes(segment.sizes),
         isSplitMission: false,
+        missionId: segment.missionId,
         locationSlug: segment.locationSlug,
         locationName: segment.locationName,
       });

@@ -9,11 +9,20 @@ import { SourceIcon } from "@/components/ui/SourceIcon";
 import type { MissionScuBreakdownItem } from "@/lib/missions/cargoInventory";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { stripRankFromTitle } from "@/lib/missions/missionRank";
-import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
+import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
-function StatLabel({ children }: { children: string }) {
+function StatLabel({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title?: string;
+}) {
   return (
-    <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
+    <p
+      className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted"
+      title={title}
+    >
       {children}
     </p>
   );
@@ -127,6 +136,13 @@ export type SessionRouteProgressStatsProps = {
   /** Ship cargo bay capacity in SCU. */
   totalCapacity: number;
   isOverCapacity?: boolean;
+  /**
+   * aUEC from completed contracts so far.
+   * Shown with `auecProjected` as earned / total payout.
+   */
+  auecEarned?: number;
+  /** Sum of aUEC across visible (non-hidden) session contracts. */
+  auecProjected?: number;
   onMissionsClick?: () => void;
   /** Opens the route stops timeline modal. */
   onStopsClick?: () => void;
@@ -137,12 +153,16 @@ export type SessionRouteProgressStatsProps = {
    * Drives singular / plural “Cargo bay(s)” label. Defaults to 1.
    */
   cargoBayCount?: number;
-  /** Optional control rendered just right of the Cargo bay block. */
+  /** Optional control rendered just right of the Cargo bay / aUEC block. */
   trailing?: ReactNode;
   className?: string;
 };
 
-/** Contracts + Stops + Cargo bay telemetry for the checklist toolbar. */
+function formatToolbarAuec(amount: number): string {
+  return Math.floor(amount).toLocaleString("en-US");
+}
+
+/** Contracts + Stops + Cargo bay + aUEC telemetry for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -151,6 +171,8 @@ export function SessionRouteProgressStats({
   onboardScu,
   totalCapacity,
   isOverCapacity = false,
+  auecEarned = 0,
+  auecProjected = 0,
   onMissionsClick,
   onStopsClick,
   onCapacityClick,
@@ -161,6 +183,7 @@ export function SessionRouteProgressStats({
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
   const cargoBayLabel = cargoBayCount === 1 ? "Cargo bay" : "Cargo bays";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
+  const showAuec = auecProjected > 0 || auecEarned > 0;
   const stopsBody = (
     <>
       <StatLabel>{stopsLabel}</StatLabel>
@@ -184,6 +207,22 @@ export function SessionRouteProgressStats({
         >
           SCU
         </span>
+      </StatValue>
+    </>
+  );
+  const auecBody = (
+    <>
+      <StatLabel title={AUEC_TITLE}>aUEC</StatLabel>
+      <StatValue>
+        <Fraction
+          current={formatToolbarAuec(auecEarned)}
+          total={formatToolbarAuec(auecProjected)}
+          currentClassName={
+            auecEarned > 0 && auecEarned >= auecProjected
+              ? "text-rsi-success"
+              : undefined
+          }
+        />
       </StatValue>
     </>
   );
@@ -229,6 +268,15 @@ export function SessionRouteProgressStats({
         ) : (
           <div className={cellClass}>{capacityBody}</div>
         )}
+        {showAuec ? (
+          <div
+            className={cellClass}
+            title={`Projected payout ${formatToolbarAuec(auecProjected)} aUEC; earned ${formatToolbarAuec(auecEarned)} aUEC from completed contracts`}
+            aria-label={`aUEC ${formatToolbarAuec(auecEarned)} of ${formatToolbarAuec(auecProjected)}`}
+          >
+            {auecBody}
+          </div>
+        ) : null}
       </div>
       {trailing}
     </div>
@@ -317,14 +365,14 @@ function ContractSourceButton({
           setGalleryOpen(true);
         }}
         className={[
-          "inline-flex size-5 shrink-0 items-center justify-center rounded-rsi border transition-colors",
+          "inline-flex size-4 shrink-0 items-center justify-center rounded-rsi border transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
           canOpen
             ? "border-rsi-border bg-rsi-bg-deep/70 text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent"
             : "cursor-not-allowed border-rsi-border/50 text-rsi-text-muted opacity-40",
         ].join(" ")}
       >
-        <SourceIcon className="size-2.5" />
+        <SourceIcon className="size-2" />
       </button>
       {galleryOpen && galleryItems.length > 0 ? (
         <ImageLightbox
@@ -361,7 +409,85 @@ function InventoryLine({
   );
 }
 
-/** Inventory telemetry for the cargo-layout header (contracts + bay load). */
+export type SessionContractScuGridProps = {
+  missionScuBreakdown: MissionScuBreakdownItem[];
+  sessionId?: string | null;
+  className?: string;
+};
+
+/**
+ * Per-contract SCU grid: 4 per column, fills across columns.
+ * Used at the bottom of the cargo-bays modal.
+ */
+export function SessionContractScuGrid({
+  missionScuBreakdown,
+  sessionId = null,
+  className,
+}: SessionContractScuGridProps) {
+  if (missionScuBreakdown.length === 0) return null;
+
+  const rowsPerColumn = Math.min(4, missionScuBreakdown.length);
+
+  return (
+    <div
+      className={["flex w-full min-w-0 justify-end", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div
+        className={[stripClass, "h-auto w-max max-w-full items-center"].join(
+          " ",
+        )}
+        role="group"
+        aria-label="Per-contract SCU"
+      >
+        <div className="flex h-auto w-max max-w-full flex-col gap-0.5 px-2 py-1.5">
+          <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+            Contracts
+          </p>
+          <ul
+            className="grid w-max grid-flow-col auto-cols-max gap-x-1 gap-y-0.5 overflow-x-auto"
+            style={{
+              gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
+            }}
+          >
+            {missionScuBreakdown.map((item) => {
+              const { title, rank } = stripRankFromTitle(item.title);
+              const label = [rank, title || item.title]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li
+                  key={item.missionId}
+                  className="flex min-w-0 max-w-[13rem] items-center gap-1"
+                  title={item.title}
+                >
+                  <span className="min-w-0 truncate text-[0.7rem] leading-none text-rsi-text-secondary">
+                    {label}
+                  </span>
+                  <span className="shrink-0 font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text">
+                    {item.scu}
+                    <span
+                      className="ml-0.5 text-[0.5rem] uppercase tracking-[0.1em] text-rsi-text-muted"
+                      title={SCU_TITLE}
+                    >
+                      SCU
+                    </span>
+                  </span>
+                  {sessionId ? (
+                    <ContractSourceButton item={item} sessionId={sessionId} />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Inventory telemetry for the cargo-layout header (totals + bay load). */
 export function SessionInventoryStat({
   onboardScu,
   peakScu,
@@ -372,7 +498,9 @@ export function SessionInventoryStat({
   availableScu,
   isOverCapacity = false,
   className,
-}: SessionInventoryStatProps) {
+  /** When false, omit the per-contract grid (render it separately in the footer). */
+  showContractBreakdown = true,
+}: SessionInventoryStatProps & { showContractBreakdown?: boolean }) {
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const availableLabel = availableScu == null ? "—" : availableScu;
   const isPeakOverCapacity =
@@ -385,59 +513,19 @@ export function SessionInventoryStat({
         .filter(Boolean)
         .join(" ")}
     >
-      {missionScuBreakdown.length > 0 ? (
-        <div
-          className={stripClass}
-          role="group"
-          aria-label="Per-contract SCU"
-        >
-          <div className="flex max-w-[min(100%,22rem)] flex-col justify-center gap-1 px-2.5 py-1.5 text-right">
-            <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
-              Contracts
-            </p>
-            <ul className="flex flex-col gap-0.5">
-              {missionScuBreakdown.map((item) => {
-                const { title, rank } = stripRankFromTitle(item.title);
-                const label = [rank, title || item.title]
-                  .filter(Boolean)
-                  .join(" · ");
-                return (
-                  <li
-                    key={item.missionId}
-                    className="flex min-w-0 items-center justify-end gap-1.5"
-                    title={item.title}
-                  >
-                    <span className="min-w-0 truncate text-left text-[0.65rem] leading-none text-rsi-text-secondary">
-                      {label}
-                    </span>
-                    <span className="shrink-0 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-text">
-                      {item.scu}
-                      <span
-                        className="ml-1 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
-                        title={SCU_TITLE}
-                      >
-                        SCU
-                      </span>
-                    </span>
-                    {sessionId ? (
-                      <ContractSourceButton
-                        item={item}
-                        sessionId={sessionId}
-                      />
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
+      {showContractBreakdown && missionScuBreakdown.length > 0 ? (
+        <SessionContractScuGrid
+          missionScuBreakdown={missionScuBreakdown}
+          sessionId={sessionId}
+          className="max-w-[min(100%,28rem)]"
+        />
       ) : null}
       <div
         className={stripClass}
         role="group"
         aria-label={`Contracts total ${missionsTotalScu} SCU`}
       >
-        <div className="flex w-fit flex-col items-end justify-center gap-1 px-2.5 py-1.5 text-right">
+        <div className="flex w-fit flex-col items-end justify-center gap-0.5 px-2 py-1 text-right">
           <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
             Contracts total
           </p>
@@ -457,7 +545,7 @@ export function SessionInventoryStat({
         role="group"
         aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} available`}
       >
-        <div className="flex w-fit flex-col justify-center gap-1 px-2.5 py-1.5 text-right">
+        <div className="flex w-fit flex-col justify-center gap-0.5 px-2 py-1 text-right">
           <InventoryLine
             value={
               <>

@@ -6,6 +6,7 @@ import {
   updateChecklistRowLocation,
   updateQuantumTravelEndpoints,
 } from "@/lib/missions/quantumTravel";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
@@ -22,7 +23,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Cargo toolbar; ⋯ menu holds Hide / Show history and Controls. Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo). When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp centered on the Collect / Drop off pad. Station → Ship / Ship → Station transfer blocks (cargoInventory.transferLedgerByStop; pickup/delivery as ScuTransfer | false) sit under Collect in the left column; Next stop pins under that column. Contracts (rank / name / SCU; click for details) then Payout + approximate Exp (hauling XP by contract rank) under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless history is hidden; the ⋯ menu toggles Hide history / Show history.",
+          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Cargo bay / aUEC toolbar; ⋯ menu holds Hide / Show history and Controls. Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo). When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. Completed stops get an angled COMPLETED stamp centered on the Collect / Drop off pad. Station → Ship / Ship → Station transfer blocks (cargoInventory.transferLedgerByStop; pickup/delivery as ScuTransfer | false) sit under Collect in the left column; Next stop pins under that column. Collect / Drop off: double-click the under-stack cargo label (or Breakdown row) to open the large box-types modal. Relevant contracts (rank / name / SCU / reward; click for details) then Payout + approximate Exp (hauling XP by contract rank) under the cargo tiles. Commodity tiles under Pickup/Delivery: click to mark handled (persisted). Completing a stop scrolls the next one to the top unless history is hidden; the ⋯ menu toggles Hide history / Show history.",
       },
     },
   },
@@ -117,6 +118,15 @@ function InteractiveTable(args: {
               : row,
           );
         });
+      }}
+      onSelectBoxBreakdown={(missionId, breakdown: ScuBoxSplits) => {
+        setMissions((prev) =>
+          prev.map((mission) =>
+            mission.id === missionId
+              ? { ...mission, scuBoxSplits: breakdown }
+              : mission,
+          ),
+        );
       }}
     />
   );

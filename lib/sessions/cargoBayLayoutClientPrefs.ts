@@ -3,6 +3,19 @@ export const DEFAULT_CARGO_BAY_LAYOUT_HEIGHT_PX = 26 * 16;
 export const MIN_CARGO_BAY_LAYOUT_HEIGHT_PX = 16 * 16;
 export const MAX_CARGO_BAY_LAYOUT_HEIGHT_PX = 48 * 16;
 
+/** Matches cargo-bays modal shell: `max-h-[min(85vh,52rem)]`. */
+export const CARGO_BAY_MODAL_MAX_HEIGHT_VH = 0.85;
+export const CARGO_BAY_MODAL_MAX_HEIGHT_PX = 52 * 16;
+
+/** Absolute max height for the modal shell in the current viewport. */
+export function cargoBayModalShellMaxHeightPx(): number {
+  if (typeof window === "undefined") return CARGO_BAY_MODAL_MAX_HEIGHT_PX;
+  return Math.min(
+    window.innerHeight * CARGO_BAY_MODAL_MAX_HEIGHT_VH,
+    CARGO_BAY_MODAL_MAX_HEIGHT_PX,
+  );
+}
+
 /** Default cargo-base modal width (`72rem`). */
 export const DEFAULT_CARGO_BAY_LAYOUT_WIDTH_PX = 72 * 16;
 export const MIN_CARGO_BAY_LAYOUT_WIDTH_PX = 36 * 16;

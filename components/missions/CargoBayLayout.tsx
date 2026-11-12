@@ -16,6 +16,7 @@ import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayout
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
+  cargoBayModalShellMaxHeightPx,
   MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
   MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
@@ -66,6 +67,8 @@ export type CargoBayLayoutProps = {
   sessionId?: string | null;
   /** Optional session stats — right of the Cargo bays title. */
   headerAside?: ReactNode;
+  /** Optional contracts / inventory strip below the bay grid. */
+  footerAside?: ReactNode;
   className?: string;
 };
 
@@ -81,6 +84,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   onStopScopeChange,
   sessionId = null,
   headerAside = null,
+  footerAside = null,
   className,
 }: CargoBayLayoutProps) {
   const sketch = useMemo(
@@ -110,6 +114,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const manualDragBaseRef = useRef<PlacedCargoBox[] | null>(null);
   const { heightPx, setHeightPx, resetHeightPx } =
     useSessionCargoBayLayoutHeight(sessionId);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
@@ -117,11 +122,39 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     startHeight: number;
   } | null>(null);
 
+  /** Cap panel height so the modal shell never overflows into a scroll area. */
+  const maxPanelHeightPx = useCallback((): number => {
+    const shellMax = cargoBayModalShellMaxHeightPx();
+    const root = rootRef.current;
+    const panel = root?.querySelector("[data-cargo-bay-height-panel]");
+    if (!root || !(panel instanceof HTMLElement)) {
+      return Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax);
+    }
+    const rootHeight = root.getBoundingClientRect().height;
+    const panelHeight = panel.getBoundingClientRect().height;
+    const chrome = Math.max(0, rootHeight - panelHeight);
+    // Modal padding around the panel (`p-3` / `sm:p-6`).
+    const modalPad = typeof window !== "undefined" && window.innerWidth >= 640 ? 48 : 24;
+    return Math.max(
+      MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
+      Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax - chrome - modalPad),
+    );
+  }, []);
+
+  const setPanelHeightPx = useCallback(
+    (next: number, options?: { persist?: boolean }) => {
+      setHeightPx(Math.min(next, maxPanelHeightPx()), options);
+    },
+    [maxPanelHeightPx, setHeightPx],
+  );
+
+  const heightPxRef = useRef(heightPx);
+  heightPxRef.current = heightPx;
+
   useEffect(() => {
     setManualSession(readManualBayLayoutSession(sessionId));
     setManualLiveBoxes(null);
   }, [sessionId]);
-
   const shipBayPrefs = useMemo(
     () => getShipBayPreferenceFixture(shipSlug),
     [shipSlug],
@@ -247,6 +280,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const showLocationOutlines = packMode === "by-mission-location" && !isManual;
   const showViewTabs = Boolean(sketch && plan && plan.boxes.length > 0);
   const showGrid = Boolean(sketch && plan && plan.boxes.length > 0);
+
+  useEffect(() => {
+    const reclamp = () => {
+      const max = maxPanelHeightPx();
+      if (heightPxRef.current > max) setHeightPx(max);
+    };
+    reclamp();
+    window.addEventListener("resize", reclamp);
+    return () => window.removeEventListener("resize", reclamp);
+  }, [maxPanelHeightPx, setHeightPx, footerAside, showGrid]);
   const canPeel = useMemo(() => {
     if (!plan) return false;
     let maxZ = -1;
@@ -413,9 +456,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== event.pointerId) return;
       const delta = event.clientY - drag.startY;
-      setHeightPx(drag.startHeight + delta, { persist: false });
+      setPanelHeightPx(drag.startHeight + delta, { persist: false });
     },
-    [setHeightPx],
+    [setPanelHeightPx],
   );
 
   const endResize = useCallback(
@@ -425,12 +468,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       const finalHeight = drag.startHeight + (event.clientY - drag.startY);
       dragRef.current = null;
       setIsResizing(false);
-      setHeightPx(finalHeight);
+      setPanelHeightPx(finalHeight);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
     },
-    [setHeightPx],
+    [setPanelHeightPx],
   );
 
   useEffect(() => {
@@ -445,8 +488,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     };
   }, [isResizing]);
 
+  const panelHeightMax = maxPanelHeightPx();
+
   return (
     <div
+      ref={rootRef}
       className={[
         "min-w-0 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 px-4 pt-4 shadow-rsi-panel",
         showGrid ? "pb-0" : "pb-4",
@@ -749,33 +795,40 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               ) : null}
             </>
           ) : null}
-          <CargoGridSketch
-            sketch={sketch}
-            cellPx={14}
-            isoCellPx={16}
-            compact
-            views={viewTab}
-            inlineTopLegend={viewTab === "top" || viewTab === "split"}
-            hideLegend={legendHidden}
-            legendToggleAbove
-            hidePeel
-            peelStack={peelStack}
-            onPeelStackChange={setPeelStack}
-            panelHeightPx={heightPx}
-            placementTints={placementTints}
-            placementBoxes={plan!.boxes}
-            legendItems={legendItems}
-            locationLegendItems={locationLegendItems}
-            showLocationOutlines={showLocationOutlines}
-            manualEdit={isManual && (viewTab === "top" || viewTab === "split")}
-            onManualDragStart={onManualDragStart}
-            onManualDragDelta={onManualDragDelta}
-            onManualDragEnd={onManualDragEnd}
-          />
+          <div data-cargo-bay-height-panel>
+            <CargoGridSketch
+              sketch={sketch}
+              cellPx={14}
+              isoCellPx={16}
+              compact
+              views={viewTab}
+              inlineTopLegend={viewTab === "top" || viewTab === "split"}
+              hideLegend={legendHidden}
+              legendToggleAbove
+              hidePeel
+              peelStack={peelStack}
+              onPeelStackChange={setPeelStack}
+              panelHeightPx={heightPx}
+              placementTints={placementTints}
+              placementBoxes={plan!.boxes}
+              legendItems={legendItems}
+              locationLegendItems={locationLegendItems}
+              showLocationOutlines={showLocationOutlines}
+              manualEdit={isManual && (viewTab === "top" || viewTab === "split")}
+              onManualDragStart={onManualDragStart}
+              onManualDragDelta={onManualDragDelta}
+              onManualDragEnd={onManualDragEnd}
+            />
+          </div>
           <p className="sr-only">
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
+          {footerAside ? (
+            <div className="mt-2 flex min-w-0 items-center justify-end border-t border-rsi-border/80 pt-2">
+              {footerAside}
+            </div>
+          ) : null}
           <div className="-mx-4 mt-1">
             <button
               type="button"
@@ -783,7 +836,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               aria-label="Cargo bays height"
               aria-orientation="vertical"
               aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
-              aria-valuemax={MAX_CARGO_BAY_LAYOUT_HEIGHT_PX}
+              aria-valuemax={panelHeightMax}
               aria-valuenow={heightPx}
               title="Drag to resize · double-click to reset"
               onPointerDown={onResizePointerDown}
@@ -795,19 +848,19 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 const step = event.shiftKey ? 48 : 16;
                 if (event.key === "ArrowUp" || event.key === "ArrowRight") {
                   event.preventDefault();
-                  setHeightPx(heightPx + step);
+                  setPanelHeightPx(heightPx + step);
                 } else if (
                   event.key === "ArrowDown" ||
                   event.key === "ArrowLeft"
                 ) {
                   event.preventDefault();
-                  setHeightPx(heightPx - step);
+                  setPanelHeightPx(heightPx - step);
                 } else if (event.key === "Home") {
                   event.preventDefault();
-                  setHeightPx(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX);
+                  setPanelHeightPx(panelHeightMax);
                 } else if (event.key === "End") {
                   event.preventDefault();
-                  setHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
+                  setPanelHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
                 }
               }}
               className="group flex h-3 w-full cursor-ns-resize items-center justify-center"
@@ -820,13 +873,20 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           </div>
         </div>
       ) : (
-        <p className="py-6 text-center text-sm text-rsi-text-muted">
-          {activeRow
-            ? !isManual && packMode === "by-mission-location"
-              ? "No upcoming delivery cargo to group by location."
-              : "No cargo placed at this stop yet."
-            : "No route stops yet."}
-        </p>
+        <>
+          <p className="py-6 text-center text-sm text-rsi-text-muted">
+            {activeRow
+              ? !isManual && packMode === "by-mission-location"
+                ? "No upcoming delivery cargo to group by location."
+                : "No cargo placed at this stop yet."
+              : "No route stops yet."}
+          </p>
+          {footerAside ? (
+            <div className="mt-2 flex min-w-0 items-center justify-end border-t border-rsi-border/80 pt-2 pb-3">
+              {footerAside}
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

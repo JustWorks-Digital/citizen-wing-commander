@@ -39,10 +39,13 @@ const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   quartz: "#1f4e8c", // dark blue
   aluminum: "#6e7680", // gray, lighter than titanium
   "aluminum-ore": "#5a626c",
-  titanium: "#4a5058", // dark gray
+  titanium: "#4a5058", // cool dark gray
   "titanium-ore": "#383e46",
   tin: "#8b949e", // neutral mid gray (between cool Al and warm Ti)
   "tin-ore": "#6f7882",
+  // Warm graphite — distinct from cool titanium / mid aluminum grays.
+  iron: "#5a5652",
+  "iron-ore": "#3f3c39",
   waste: "#9a7a62", // rust brown mixed with gray
   tungsten: "#9a6a6a", // grayer red
   "tungsten-ore": "#7e5555",

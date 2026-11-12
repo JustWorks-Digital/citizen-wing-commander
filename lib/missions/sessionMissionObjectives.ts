@@ -56,12 +56,42 @@ export function missionTotalScu(mission: SessionMission): number {
   return mission.cargo.reduce((sum, line) => sum + Math.max(0, line.scu), 0);
 }
 
+/** Numeric aUEC from rewardAuec or rewardDisplay (0 when unknown). */
+export function missionAuecAmount(mission: SessionMission): number {
+  if (mission.rewardAuec > 0) return mission.rewardAuec;
+  const fromDisplay = mission.rewardDisplay?.match(/([\d,]+)\s*aUEC/i);
+  if (fromDisplay?.[1]) {
+    const parsed = Number(fromDisplay[1].replace(/,/g, ""));
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return 0;
+}
+
 export function missionRewardLabel(mission: SessionMission): string {
   if (mission.rewardDisplay?.trim()) return mission.rewardDisplay.trim();
   if (mission.rewardAuec > 0) {
     return formatAuecAmount(mission.rewardAuec);
   }
   return "—";
+}
+
+/**
+ * Session payout progress: earned from completed contracts vs projected
+ * total across visible (non-hidden) contracts.
+ */
+export function sessionMissionsAuecProgress(missions: SessionMission[]): {
+  auecEarned: number;
+  auecProjected: number;
+} {
+  let auecEarned = 0;
+  let auecProjected = 0;
+  for (const mission of missions) {
+    if (mission.isHidden) continue;
+    const amount = missionAuecAmount(mission);
+    auecProjected += amount;
+    if (mission.isCompleted) auecEarned += amount;
+  }
+  return { auecEarned, auecProjected };
 }
 
 function locationMatchesRow(

@@ -14,6 +14,8 @@ export type StopDeliveryBayPreviewProps = {
   /** Full route — required for pickup hangar piles by delivery location. */
   rows?: HaulingChecklistRow[];
   className?: string;
+  /** Double-click under-stack cargo label to edit that mission’s box mix. */
+  onEditMissionBoxes?: (missionId: string) => void;
 };
 
 type PickupPadMode = "cargo" | "piles";
@@ -59,6 +61,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   row,
   rows,
   className,
+  onEditMissionBoxes,
 }: StopDeliveryBayPreviewProps) {
   const [pickupMode, setPickupMode] = useState<PickupPadMode>("cargo");
   const [deliveryPeel, setDeliveryPeel] = useState(true);
@@ -115,6 +118,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               peelStack={deliveryPeel}
               onPeelStackChange={setDeliveryPeel}
               hidePeel
+              onEditMissionBoxes={onEditMissionBoxes}
             />
           </div>
         </section>
@@ -175,6 +179,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               peelStack={pickupPeel}
               onPeelStackChange={setPickupPeel}
               hidePeel
+              onEditMissionBoxes={onEditMissionBoxes}
             />
           </div>
         </section>

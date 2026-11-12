@@ -22,6 +22,11 @@ export type StopDeliveryStacksViewProps = {
   onPeelStackChange?: (value: boolean) => void;
   /** Hide the built-in Peel control (e.g. host it next to Cargo / Piles). */
   hidePeel?: boolean;
+  /**
+   * Double-click the under-stack cargo label (abbrev + SCU) — or a Breakdown
+   * row — to edit that mission’s crate mix.
+   */
+  onEditMissionBoxes?: (missionId: string) => void;
 };
 
 type Point = { x: number; y: number };
@@ -229,6 +234,7 @@ export function StopDeliveryStacksView({
   peelStack: peelStackProp,
   onPeelStackChange,
   hidePeel = false,
+  onEditMissionBoxes,
 }: StopDeliveryStacksViewProps) {
   const [legendCollapsed, setLegendCollapsed] = useState(true);
   const [peelStackInternal, setPeelStackInternal] = useState(true);
@@ -418,12 +424,25 @@ export function StopDeliveryStacksView({
                         item.commoditySlug,
                       ) ?? FALLBACK_HEX;
                     const isOn = !hiddenCommodities.has(item.commoditySlug);
+                    const canEditBoxes =
+                      Boolean(onEditMissionBoxes) && Boolean(item.missionId);
                     return (
                       <li key={item.id}>
                         <button
                           type="button"
                           aria-pressed={isOn}
+                          title={
+                            canEditBoxes
+                              ? "Click to toggle · double-click to edit box types"
+                              : undefined
+                          }
                           onClick={() => toggleCommodity(item.commoditySlug)}
+                          onDoubleClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (!canEditBoxes || !item.missionId) return;
+                            onEditMissionBoxes?.(item.missionId);
+                          }}
                           className="flex w-full cursor-pointer text-left"
                         >
                           <span
@@ -681,10 +700,15 @@ export function StopDeliveryStacksView({
                 0,
                 renderCellPx,
               );
+              const canEditBoxes =
+                Boolean(onEditMissionBoxes) && Boolean(label.missionId);
               const scuTitle =
                 displayPlan.action === "pickup"
                   ? `${label.scu} ${SCU_TITLE} collect · ${label.commodityName}`
                   : `${label.scu} ${SCU_TITLE} drop off · ${label.commodityName}`;
+              const editHint = canEditBoxes
+                ? " · Double-click to edit box types"
+                : "";
               const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
               const scuSize = Math.max(9, Math.round(renderCellPx * 0.65));
               const padX = renderCellPx * 0.45;
@@ -705,8 +729,18 @@ export function StopDeliveryStacksView({
               const abbrevY = boxY + padTop;
               const scuY = abbrevY + abbrevSize + renderCellPx * 0.2;
               return (
-                <g key={`label-${label.id}`} opacity={dimmed ? 0.35 : 1}>
-                  <title>{scuTitle}</title>
+                <g
+                  key={`label-${label.id}`}
+                  opacity={dimmed ? 0.35 : 1}
+                  style={canEditBoxes ? { cursor: "pointer" } : undefined}
+                  onDoubleClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (!canEditBoxes || !label.missionId) return;
+                    onEditMissionBoxes?.(label.missionId);
+                  }}
+                >
+                  <title>{`${scuTitle}${editHint}`}</title>
                   <rect
                     x={boxX}
                     y={boxY}
@@ -714,8 +748,12 @@ export function StopDeliveryStacksView({
                     height={boxH}
                     rx={3}
                     fill="var(--rsi-bg-deep)"
-                    stroke="var(--rsi-border-strong)"
-                    strokeWidth={1}
+                    stroke={
+                      canEditBoxes
+                        ? "var(--rsi-accent)"
+                        : "var(--rsi-border-strong)"
+                    }
+                    strokeWidth={canEditBoxes ? 1.25 : 1}
                   />
                   <text
                     x={foot.x}

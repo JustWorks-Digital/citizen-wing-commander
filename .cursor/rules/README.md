@@ -19,7 +19,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`api-endpoints.mdc`](./api-endpoints.mdc) | Named API domains — no hardcoded URL strings at call sites |
 | [`concise-answers.mdc`](./concise-answers.mdc) | Short answers by default; no verbose Q&A |
 | [`readable-code-and-tests.mdc`](./readable-code-and-tests.mdc) | Principle-based naming, exact asserts, no jargon — for any new domain, not just cargo |
-| [`railway-proactive.mdc`](./railway-proactive.mdc) | After push: watch Railway deploy, then finish production/MCP follow-through |
+| [`railway-proactive.mdc`](./railway-proactive.mdc) | Trust Railway auto-deploy — don’t poll deploys after every push; only follow through when production work is needed |
 | [`cargo-placement.mdc`](./cargo-placement.mdc) | Ship bay packer rules (`cargoGridPlacementRules.ts`) |
 
 Also see:

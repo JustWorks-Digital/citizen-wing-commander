@@ -69,6 +69,8 @@ export type PlacedCargoBox = {
   cells: CargoGridCoord[];
   /** Set when this box is shown for a stop: load vs unload. */
   action?: CargoGridBoxAction;
+  /** Session mission this crate belongs to (pad / hangar views). */
+  missionId?: string | null;
   /** Delivery stop this crate is packed for (from route location splits). */
   deliveryLocationSlug?: string;
   deliveryLocationName?: string;

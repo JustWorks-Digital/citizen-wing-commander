@@ -1,24 +1,24 @@
 ---
-description: Be proactive with Railway deploys and production follow-through
+description: Railway production follow-through — do not poll auto-deploys after every push
 alwaysApply: true
 ---
 
-# Railway — proactive follow-through
+# Railway — production follow-through
 
-Do **not** wait for the user to ask whether Railway is ready, whether a push deployed, or whether production was updated after a commit that should ship.
+Railway **auto-deploys** from `main`. Do **not** watch / poll deployments (`list-deployments`, status loops, AwaitShell waits) after a routine commit/push — that burns credits for no gain.
 
-## After commit / push to `main` (or the deploy branch)
+## After push
 
-1. **Watch the deploy** via Railway MCP (`list-deployments` / status) until **SUCCESS** or **FAILED** — do not stop at “pushed; Railway should auto-deploy.”
-2. On **SUCCESS**, finish the production work that motivated the push (MCP tools, checklist apply, screenshot upload, health check, etc.).
-3. On **FAILED**, diagnose (logs / deploy diagnosis) and fix or report the failure without waiting to be asked.
+- Stop at push confirmation unless the user asks about deploy status or the next step **requires** live production (MCP tool that only exists after deploy, re-seed `.data`, production health check they requested).
+- Do **not** narrate “watching Railway” or sit on BUILDING/DEPLOYING for ordinary UI/lib commits.
 
-## Production / MCP work
+## When production work is actually needed
 
-- Prefer verifying against the **live Railway app** when the change is meant for production.
-- If new MCP tools were deployed, use them on production once the deploy is green (reconnect/catalog lag is fine; call the tool or HTTP MCP endpoint).
-- Ephemeral `.data` (checklist, MCP screenshots) must be **re-seeded after deploy** when the user’s task needs that data — upload/apply yourself; do not leave “you’ll need to upload later” as the stopping point.
+- Prefer the **live Railway app** only when the user’s task needs production (new MCP tools, checklist apply on prod, screenshot upload to the volume, etc.).
+- If you must know deploy state for that follow-through, check **once**; if still building, do other work or ask the user — do not busy-poll.
+- On a **failed** deploy the user cares about, diagnose (logs / diagnosis) and fix or report.
+- Ephemeral `.data` must be **re-seeded after deploy** when the task needs that data — do that when production is ready, not by watching every push.
 
 ## Tone
 
-- Be proactive, not passive. Confirm deploy status and complete the Railway-side steps in the same task arc whenever practical.
+- Trust auto-deploy. Be proactive on **product** follow-through, not on deploy telemetry.

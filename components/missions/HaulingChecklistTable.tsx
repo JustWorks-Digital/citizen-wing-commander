@@ -29,7 +29,10 @@ import {
   commodityBadgeForeground,
   resolveCommodityColorHex,
 } from "@/lib/fixtures/commodityColors";
-import { formatAuecAmount } from "@/lib/missions/catalogMission";
+import {
+  formatAuecAmount,
+  type ScuBoxSplits,
+} from "@/lib/missions/catalogMission";
 import { missionsExpectedToCompleteAtStop } from "@/lib/missions/expectedCompletions";
 import { estimateMissionsHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
@@ -49,13 +52,21 @@ import {
   INSERT_AFTER_SESSION_START,
   quantumFromSlugAfter,
 } from "@/lib/missions/quantumTravel";
-import { screenshotRefsForRow } from "@/lib/missions/rowMissionScreenshots";
+import {
+  missionsRelevantToRow,
+  screenshotRefsForRow,
+} from "@/lib/missions/rowMissionScreenshots";
+import {
+  missionAuecAmount,
+  missionRewardLabel,
+} from "@/lib/missions/sessionMissionObjectives";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { OutdoorFreightBadge } from "./OutdoorFreightBadge";
 import { SessionMissionDetailModal } from "./SessionMissionDetailModal";
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
+import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 import { StopMissionScreenshots } from "./StopMissionScreenshots";
 
 /** Display-only origin row when start ≠ first stop (matches route timeline). */
@@ -105,6 +116,11 @@ export type HaulingChecklistTableProps = {
   onOpenCargoBays?: () => void;
   onOpenStops?: () => void;
   onOpenContracts?: () => void;
+  /** Persist crate mix for a session mission (Collect / Drop off double-click). */
+  onSelectBoxBreakdown?: (
+    missionId: string,
+    breakdown: ScuBoxSplits,
+  ) => void;
 };
 
 function sameLocationSlug(a: string, b: string): boolean {
@@ -1576,18 +1592,21 @@ function missionScuItemsLabel(mission: SessionMission): string {
     .join(" · ");
 }
 
-function ExpectedCompletionsMeta({
+function RelevantMissionsMeta({
   missions,
+  row,
 }: {
   missions: SessionMission[];
+  row: HaulingChecklistRow;
 }) {
   const [detailMissionId, setDetailMissionId] = useState<string | null>(null);
+  const relevant = missionsRelevantToRow(missions, row);
   const detailMission =
     detailMissionId == null
       ? null
-      : (missions.find((mission) => mission.id === detailMissionId) ?? null);
+      : (relevant.find((mission) => mission.id === detailMissionId) ?? null);
 
-  if (missions.length === 0) return null;
+  if (relevant.length === 0) return null;
 
   return (
     <div className="py-5 pr-4 text-sm md:pr-8">
@@ -1595,9 +1614,10 @@ function ExpectedCompletionsMeta({
         Contracts
       </p>
       <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
-        {missions.map((mission) => {
+        {relevant.map((mission) => {
           const { rank, title } = stripRankFromTitle(mission.title);
           const scuItems = missionScuItemsLabel(mission);
+          const reward = missionRewardLabel(mission);
           return (
             <li key={mission.id} className="min-w-0">
               <button
@@ -1642,6 +1662,18 @@ function ExpectedCompletionsMeta({
                 >
                   {scuItems}
                 </p>
+                {reward !== "—" ? (
+                  <p
+                    className={[
+                      "truncate font-mono text-[0.5rem] tabular-nums tracking-wide",
+                      mission.isCompleted
+                        ? "text-rsi-text-muted"
+                        : "text-rsi-text",
+                    ].join(" ")}
+                  >
+                    {reward}
+                  </p>
+                ) : null}
               </button>
             </li>
           );
@@ -1729,6 +1761,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   onOpenCargoBays,
   onOpenStops,
   onOpenContracts,
+  onSelectBoxBreakdown,
 }: HaulingChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
@@ -1739,6 +1772,12 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   const [draftingAfterRowId, setDraftingAfterRowId] = useState<string | null>(
     null,
   );
+  /** Double-click Collect / Drop off crate → box mix modal. */
+  const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
+  const boxEditMission =
+    boxEditMissionId == null
+      ? null
+      : (missions.find((mission) => mission.id === boxEditMissionId) ?? null);
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
   const pendingScrollToIdRef = useRef<string | null>(null);
   const showQuantumOrigin = needsQuantumOriginRow(rows, startLocationSlug);
@@ -2116,17 +2155,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             rows,
             row.id,
           );
-          const completionAuec = expectedCompletions.reduce((sum, mission) => {
-            if (mission.rewardAuec > 0) return sum + mission.rewardAuec;
-            const fromDisplay = mission.rewardDisplay?.match(
-              /([\d,]+)\s*aUEC/i,
-            );
-            if (fromDisplay?.[1]) {
-              const parsed = Number(fromDisplay[1].replace(/,/g, ""));
-              if (Number.isFinite(parsed) && parsed > 0) return sum + parsed;
-            }
-            return sum;
-          }, 0);
+          const completionAuec = expectedCompletions.reduce(
+            (sum, mission) => sum + missionAuecAmount(mission),
+            0,
+          );
           const completionXp =
             estimateMissionsHaulingRepXp(expectedCompletions);
 
@@ -2197,7 +2229,21 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                       </div>
                     </div>
                     <div className="relative w-full min-w-0 md:w-1/2 md:shrink-0">
-                      <StopDeliveryBayPreview row={row} rows={rows} />
+                      <StopDeliveryBayPreview
+                        row={row}
+                        rows={rows}
+                        onEditMissionBoxes={
+                          onSelectBoxBreakdown
+                            ? (missionId) => {
+                                const mission = missions.find(
+                                  (entry) => entry.id === missionId,
+                                );
+                                if (!mission || mission.isCompleted) return;
+                                setBoxEditMissionId(missionId);
+                              }
+                            : undefined
+                        }
+                      />
                       {row.isCompleted ? (
                         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                           <CompletedStamp />
@@ -2206,7 +2252,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <ExpectedCompletionsMeta missions={expectedCompletions} />
+                    <RelevantMissionsMeta missions={missions} row={row} />
                     <div className="flex flex-wrap items-start gap-x-8 gap-y-1">
                       <PayoutMeta
                         row={row}
@@ -2248,6 +2294,16 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           );
         })}
       </ul>
+      {boxEditMission && onSelectBoxBreakdown ? (
+        <StopMissionBoxConfigModal
+          mission={boxEditMission}
+          onClose={() => setBoxEditMissionId(null)}
+          onSelectBoxBreakdown={(breakdown) => {
+            onSelectBoxBreakdown(boxEditMission.id, breakdown);
+            setBoxEditMissionId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 });

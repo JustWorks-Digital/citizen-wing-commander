@@ -67,7 +67,9 @@ import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
+import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import {
+  SessionContractScuGrid,
   SessionInventoryStat,
   SessionRouteProgressStats,
   SessionSourceStat,
@@ -380,6 +382,7 @@ export function SessionChecklistView({
         totalCapacity={totalCapacity}
         availableScu={availableScu}
         isOverCapacity={isOverCapacity}
+        showContractBreakdown={false}
       />
     ),
     [
@@ -394,6 +397,16 @@ export function SessionChecklistView({
     ],
   );
 
+  const contractsFooter = useMemo(
+    () => (
+      <SessionContractScuGrid
+        missionScuBreakdown={missionScuBreakdown}
+        sessionId={session.id}
+      />
+    ),
+    [missionScuBreakdown, session.id],
+  );
+
   const toggleCargoLayout = useCallback(() => {
     setCargoLayoutOpen((open) => !open);
   }, []);
@@ -403,6 +416,11 @@ export function SessionChecklistView({
   const toggleMissions = useCallback(() => {
     setMissionsOpen((open) => !open);
   }, []);
+
+  const { auecEarned, auecProjected } = useMemo(
+    () => sessionMissionsAuecProgress(session.missions ?? []),
+    [session.missions],
+  );
 
   const routeProgressStats = useMemo(
     () => (
@@ -414,6 +432,8 @@ export function SessionChecklistView({
         onboardScu={onboardScu}
         totalCapacity={totalCapacity}
         isOverCapacity={isOverCapacity}
+        auecEarned={auecEarned}
+        auecProjected={auecProjected}
         onMissionsClick={openMissions}
         onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
@@ -428,6 +448,8 @@ export function SessionChecklistView({
       onboardScu,
       totalCapacity,
       isOverCapacity,
+      auecEarned,
+      auecProjected,
       openMissions,
       openStops,
       openCargoLayout,
@@ -796,6 +818,7 @@ export function SessionChecklistView({
         onOpenCargoBays={toggleCargoLayout}
         onOpenStops={toggleStops}
         onOpenContracts={toggleMissions}
+        onSelectBoxBreakdown={applyBoxBreakdown}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
         onToggle={onToggleStop}
@@ -848,6 +871,7 @@ export function SessionChecklistView({
         focusedStopId={resolvedFocusedStopId}
         sessionId={session.id}
         headerAside={inventoryAside}
+        footerAside={contractsFooter}
         onClose={closeCargoLayout}
       />
 
