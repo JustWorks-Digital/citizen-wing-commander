@@ -1,6 +1,10 @@
 import type { CatalogMission } from "@/db/schema";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { HaulingCatalogMissionPayload } from "@/lib/missions/catalogMission";
+import {
+  haulingCategoryShortLabel,
+  normalizeHaulingCategory,
+} from "@/lib/missions/haulingCategory";
 
 function normalize(value: string | null | undefined): string {
   if (value == null) return "";
@@ -28,10 +32,18 @@ function payloadFields(mission: CatalogMission): string[] {
     line.commodityName,
     line.commoditySlug,
   ]);
-  return [...fromNames, ...toNames, ...cargo];
+  const category = normalizeHaulingCategory(payload.category);
+  const categoryShort = haulingCategoryShortLabel(payload.category);
+  return [
+    ...fromNames,
+    ...toNames,
+    ...cargo,
+    category ?? "",
+    categoryShort ?? "",
+  ];
 }
 
-/** Client-side fuzzy rank over catalog mission title, places, cargo, contractor. */
+/** Client-side fuzzy rank over catalog mission title, places, cargo, category, contractor. */
 export function searchCatalogMissions(
   missions: CatalogMission[],
   query: string,

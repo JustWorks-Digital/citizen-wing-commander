@@ -7,6 +7,7 @@ import {
   catalogPayload,
   catalogRewardLabel,
   catalogRouteSummary,
+  catalogScuSplitsCaption,
   contractorDisplayName,
   locationDisplayName,
 } from "@/lib/missions/catalogMissionDisplay";
@@ -51,6 +52,11 @@ export function MissionCatalogDetail({
   const route = catalogRouteSummary(mission);
   const sourceUrl = screenshotUrlFromLogicalPath(mission.latestScreenshotPath);
   const box = mission.scuBoxSplits;
+  const splitLines = catalogScuSplitsCaption(mission)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const objectives = payload?.objectives?.filter((line) => line.trim()) ?? [];
 
   return (
     <div
@@ -136,6 +142,39 @@ export function MissionCatalogDetail({
               }
             />
           </dl>
+
+          {splitLines.length > 0 ? (
+            <div>
+              <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                Stops
+              </p>
+              <ul className="mt-2 space-y-1 border-l border-rsi-border/70 pl-3">
+                {splitLines.map((line, index) => (
+                  <li
+                    key={`${index}-${line}`}
+                    className="text-sm text-rsi-text-secondary"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {objectives.length > 0 ? (
+            <div>
+              <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                Objectives
+              </p>
+              <ul className="mt-2 space-y-1 border-l border-rsi-border/70 pl-3">
+                {objectives.map((line) => (
+                  <li key={line} className="text-sm text-rsi-text-secondary">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {payload?.cargo && payload.cargo.length > 0 ? (
             <div>

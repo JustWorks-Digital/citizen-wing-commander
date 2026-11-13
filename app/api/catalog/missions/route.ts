@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getCatalogMission,
+  getCatalogMissionByScreenshotFilename,
   getCatalogMissionsByIds,
   listCatalogMissions,
 } from "@/db/queries/catalogMissions";
@@ -9,6 +10,15 @@ import {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const screenshot = searchParams.get("screenshot")?.trim();
+    if (screenshot) {
+      const one = await getCatalogMissionByScreenshotFilename(screenshot);
+      return NextResponse.json({
+        count: one ? 1 : 0,
+        missions: one ? [one] : [],
+      });
+    }
+
     const idsParam = searchParams.get("ids")?.trim();
     if (idsParam) {
       const ids = idsParam

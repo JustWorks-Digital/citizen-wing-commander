@@ -418,6 +418,24 @@ export async function deleteCatalogMissionsByIds(
   return deleted.length;
 }
 
+/** Catalog row whose source screenshot filename matches an intake file. */
+export async function getCatalogMissionByScreenshotFilename(
+  filename: string,
+): Promise<CatalogMission | null> {
+  const name = filename.split("/").filter(Boolean).at(-1)?.trim() ?? "";
+  if (!name || name === "." || name === "..") return null;
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(catalogMissions)
+    .where(
+      sql`split_part(${catalogMissions.latestScreenshotPath}, '/', -1) = ${name}`,
+    )
+    .orderBy(desc(catalogMissions.lastObservedAt))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getCatalogMissionsByIds(
   ids: string[],
 ): Promise<CatalogMission[]> {

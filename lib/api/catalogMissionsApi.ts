@@ -47,6 +47,22 @@ export async function fetchCatalogMissions(
   return data.missions ?? [];
 }
 
+/** Catalog mission stored from this intake screenshot filename, if any. */
+export async function fetchCatalogMissionByScreenshotFilename(
+  filename: string,
+): Promise<CatalogMission | null> {
+  const url = new URL(appApi.catalogMissions, "http://local");
+  url.searchParams.set("screenshot", filename);
+  const res = await fetch(`${url.pathname}${url.search}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load catalog mission (${res.status})`);
+  }
+  const data = (await res.json()) as CatalogMissionListResponse;
+  return data.missions[0] ?? null;
+}
+
 /** Load catalog missions by id (for session modal enrichment). */
 export async function fetchCatalogMissionsByIds(
   ids: string[],

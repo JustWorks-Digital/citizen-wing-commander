@@ -14,7 +14,7 @@ import { MISSION_RANKS } from "@/lib/missions/missionRank";
 export type MissionCatalogFiltersProps = {
   /** All loaded missions — used to populate dropdown options. */
   missions: CatalogMission[];
-  /** Global fuzzy search (title, locations, cargo, contractor). */
+  /** Global fuzzy search (title, locations, cargo, category, contractor). */
   query: string;
   onQueryChange: (query: string) => void;
   filters: CatalogTableFilters;

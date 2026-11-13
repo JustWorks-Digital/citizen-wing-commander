@@ -1,6 +1,7 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { sampleCatalogMissions } from "@/components/catalog/missionCatalogFixtures";
 import { IntakeUploadsView } from "./IntakeUploadsView";
 
 const meta = {
@@ -11,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Header Intake page: paste (⌘V), clipboard button, drop, or browse contract/mission screenshots into the pending inbox. Done moves a shot to processed for AI post-intake.",
+          "Header Intake page: paste (⌘V), clipboard button, drop, or browse contract/mission screenshots into the pending inbox. Pending thumbnails enlarge. Processed thumbnails open the linked catalog contract.",
       },
     },
   },
@@ -49,5 +50,8 @@ export const WithPending: Story = {
         url: "/icons/commodities/pressurized-ice.svg",
       },
     ],
+    catalogMissionsByFilename: {
+      "done-haul.png": sampleCatalogMissions[0]!,
+    },
   },
 };

@@ -14,13 +14,19 @@ import {
   imageFilesFromDataTransfer,
   imageFilesFromList,
 } from "@/lib/ui/imagePasteFiles";
+import { MissionCatalogDetail } from "@/components/catalog/MissionCatalogDetail";
 import { Button } from "@/components/ui/Button";
+import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
+import { fetchCatalogMissionByScreenshotFilename } from "@/lib/api/catalogMissionsApi";
+import type { CatalogMission } from "@/db/schema";
 
 export type IntakeUploadsViewProps = {
   /** Storybook / offline seed (skips network). */
   initialPending?: IntakeUploadListItem[];
   initialProcessed?: IntakeUploadListItem[];
+  /** Offline catalog rows keyed by intake filename (Storybook). */
+  catalogMissionsByFilename?: Record<string, CatalogMission>;
 };
 
 function formatBytes(bytes: number): string {
@@ -78,8 +84,16 @@ function UploadGrid({
         <li key={shot.logicalPath} className="group relative">
           <button
             type="button"
-            title={`${shot.filename} · ${formatBytes(shot.bytes)} — click to enlarge`}
-            aria-label={`Enlarge ${shot.filename}`}
+            title={
+              shot.status === "processed"
+                ? `${shot.filename} · ${formatBytes(shot.bytes)} — view catalog contract`
+                : `${shot.filename} · ${formatBytes(shot.bytes)} — click to enlarge`
+            }
+            aria-label={
+              shot.status === "processed"
+                ? `View catalog contract for ${shot.filename}`
+                : `Enlarge ${shot.filename}`
+            }
             className="block w-full overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/80 transition-colors hover:border-rsi-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
             onClick={() => onOpen(shot)}
           >
@@ -130,6 +144,7 @@ function UploadGrid({
 export function IntakeUploadsView({
   initialPending,
   initialProcessed,
+  catalogMissionsByFilename,
 }: IntakeUploadsViewProps = {}) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -147,6 +162,10 @@ export function IntakeUploadsView({
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<IntakeUploadListItem | null>(null);
+  const [catalogDetail, setCatalogDetail] = useState<CatalogMission | null>(
+    null,
+  );
+  const [unlinkedFilename, setUnlinkedFilename] = useState<string | null>(null);
 
   isUploadingRef.current = isUploading;
 
@@ -248,6 +267,30 @@ export function IntakeUploadsView({
       cancelled = true;
     };
   }, [offline, refresh]);
+
+  const onOpen = (shot: IntakeUploadListItem) => {
+    if (shot.status !== "processed") {
+      setLightbox(shot);
+      return;
+    }
+    if (offline) {
+      const mission = catalogMissionsByFilename?.[shot.filename] ?? null;
+      if (mission) setCatalogDetail(mission);
+      else setUnlinkedFilename(shot.filename);
+      return;
+    }
+    setError(null);
+    void fetchCatalogMissionByScreenshotFilename(shot.filename)
+      .then((mission) => {
+        if (mission) setCatalogDetail(mission);
+        else setUnlinkedFilename(shot.filename);
+      })
+      .catch((err: unknown) => {
+        setError(
+          err instanceof Error ? err.message : "Failed to load catalog mission",
+        );
+      });
+  };
 
   const onPickFiles = (files: FileList | null) => {
     void uploadFiles(imageFilesFromList(files));
@@ -410,7 +453,7 @@ export function IntakeUploadsView({
             <UploadGrid
               items={pending}
               emptyLabel="No pending shots. Paste, use the clipboard button, drop, or browse."
-              onOpen={setLightbox}
+              onOpen={onOpen}
               onDelete={(shot) => void onDelete(shot)}
               onMarkProcessed={(shot) => void onMarkProcessed(shot)}
             />
@@ -422,7 +465,7 @@ export function IntakeUploadsView({
             <UploadGrid
               items={processed}
               emptyLabel="Nothing processed yet. After AI intake, mark pending shots Done."
-              onOpen={setLightbox}
+              onOpen={onOpen}
               onDelete={(shot) => void onDelete(shot)}
             />
           </section>
@@ -431,15 +474,40 @@ export function IntakeUploadsView({
 
       {lightbox ? (
         <ImageLightbox
-          src={
-            lightbox.status === "processed"
-              ? `${lightbox.url}?status=processed`
-              : lightbox.url
-          }
+          src={lightbox.url}
           alt={lightbox.filename}
           title={lightbox.filename}
           onClose={() => setLightbox(null)}
         />
+      ) : null}
+
+      {catalogDetail ? (
+        <MissionCatalogDetail
+          mission={catalogDetail}
+          onClose={() => setCatalogDetail(null)}
+        />
+      ) : null}
+
+      {unlinkedFilename ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="No catalog contract"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setUnlinkedFilename(null);
+          }}
+        >
+          <div className="relative w-full max-w-md rounded-rsi border border-rsi-border bg-rsi-surface px-5 py-4 pr-12 shadow-rsi-panel">
+            <ModalCloseButton onClick={() => setUnlinkedFilename(null)} />
+            <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
+              Processed
+            </p>
+            <p className="mt-2 text-sm text-rsi-text-secondary">
+              No catalog contract is linked to {unlinkedFilename}.
+            </p>
+          </div>
+        </div>
       ) : null}
     </div>
   );
