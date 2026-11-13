@@ -90,9 +90,6 @@ function ObjectIcon() {
 
 function BulletList({ items }: { items: string[] }) {
   if (items.length === 0) return <span>—</span>;
-  if (items.length === 1) {
-    return <span className="break-words">{items[0]}</span>;
-  }
   return (
     <ul className="list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug">
       {items.map((item, index) => (

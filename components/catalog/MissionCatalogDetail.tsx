@@ -43,6 +43,33 @@ function MetaRow({
   );
 }
 
+function MetaListRow({
+  label,
+  items,
+}: {
+  label: string;
+  items: string[];
+}) {
+  return (
+    <div className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
+      <dt className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        {label}
+      </dt>
+      <dd className="text-rsi-text-secondary">
+        {items.length === 0 ? (
+          "—"
+        ) : (
+          <ul className="list-disc space-y-0.5 pl-4">
+            {items.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        )}
+      </dd>
+    </div>
+  );
+}
+
 export function MissionCatalogDetail({
   mission,
   onClose,
@@ -98,11 +125,8 @@ export function MissionCatalogDetail({
               label="Offer at"
               value={locationDisplayName(mission.offerLocationSlug)}
             />
-            <MetaRow
-              label="From"
-              value={route.from.join(" · ") || "—"}
-            />
-            <MetaRow label="To" value={route.to.join(" · ") || "—"} />
+            <MetaListRow label="From" items={route.from} />
+            <MetaListRow label="To" items={route.to} />
             <MetaRow label="Cargo" value={catalogCargoSummary(mission)} />
             <MetaRow
               label="SCU total"
@@ -148,14 +172,9 @@ export function MissionCatalogDetail({
               <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Stops
               </p>
-              <ul className="mt-2 space-y-1 border-l border-rsi-border/70 pl-3">
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-rsi-text-secondary">
                 {splitLines.map((line, index) => (
-                  <li
-                    key={`${index}-${line}`}
-                    className="text-sm text-rsi-text-secondary"
-                  >
-                    {line}
-                  </li>
+                  <li key={`${index}-${line}`}>{line}</li>
                 ))}
               </ul>
             </div>
@@ -166,11 +185,9 @@ export function MissionCatalogDetail({
               <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Objectives
               </p>
-              <ul className="mt-2 space-y-1 border-l border-rsi-border/70 pl-3">
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-rsi-text-secondary">
                 {objectives.map((line) => (
-                  <li key={line} className="text-sm text-rsi-text-secondary">
-                    {line}
-                  </li>
+                  <li key={line}>{line}</li>
                 ))}
               </ul>
             </div>
@@ -181,12 +198,9 @@ export function MissionCatalogDetail({
               <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Cargo lines
               </p>
-              <ul className="mt-2 space-y-1 border-l border-rsi-border/70 pl-3">
+              <ul className="mt-2 list-disc space-y-1 pl-4 font-mono text-sm tabular-nums text-rsi-text-secondary">
                 {payload.cargo.map((line) => (
-                  <li
-                    key={`${line.commoditySlug}-${line.scu}`}
-                    className="font-mono text-sm tabular-nums text-rsi-text-secondary"
-                  >
+                  <li key={`${line.commoditySlug}-${line.scu}`}>
                     {line.scu} {line.commodityName}
                   </li>
                 ))}

@@ -39,10 +39,11 @@ const DROPDOWN_FIELDS: Array<{
   { key: "from", label: "From" },
   { key: "to", label: "To" },
   { key: "cargo", label: "Cargo" },
+  { key: "category", label: "Category" },
 ];
 
 /**
- * Standalone catalog filters — search plus multi-select Rank / From / To / Cargo.
+ * Standalone catalog filters — search plus Rank / Route / From / To / Cargo / Category.
  */
 export function MissionCatalogFilters({
   missions,
@@ -146,7 +147,7 @@ export function MissionCatalogFilters({
           />
         </div>
 
-        <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {DROPDOWN_FIELDS.map((field) => (
             <SearchableSelect
               key={field.key}

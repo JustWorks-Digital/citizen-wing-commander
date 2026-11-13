@@ -31,6 +31,7 @@ export const ActiveFilters: Story = {
       route: ["One pickup"],
       from: ["Everus Harbor"],
       rank: ["Junior", "Rookie"],
+      category: ["Local"],
     },
     resultCount: 1,
     totalCount: 3,

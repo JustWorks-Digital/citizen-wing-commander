@@ -13,9 +13,18 @@ import {
   type CatalogRouteFlags,
 } from "@/lib/missions/catalogRouteFlags";
 import {
+  HAULING_CATEGORIES,
+  haulingCategoryShortLabel,
+} from "@/lib/missions/haulingCategory";
+import {
   MISSION_RANK_ORDER,
   type MissionRank,
 } from "@/lib/missions/missionRank";
+
+/** Short category labels for catalog filter UI (Local, Planetary, …). */
+export const CATALOG_CATEGORY_FILTER_VALUES = HAULING_CATEGORIES.map(
+  (category) => haulingCategoryShortLabel(category)!,
+);
 
 export type CatalogTableSortKey =
   | "id"
@@ -34,6 +43,7 @@ export type CatalogTableFilterKey =
   | "from"
   | "to"
   | "cargo"
+  | "category"
   | "rank"
   | "route";
 
@@ -51,6 +61,7 @@ export const CATALOG_TABLE_FILTER_KEYS: CatalogTableFilterKey[] = [
   "from",
   "to",
   "cargo",
+  "category",
   "rank",
 ];
 
@@ -125,6 +136,10 @@ function missionSortValue(
   }
 }
 
+function missionCategoryLabel(mission: CatalogMission): string | null {
+  return haulingCategoryShortLabel(catalogPayload(mission)?.category);
+}
+
 function missionFieldValues(
   mission: CatalogMission,
   key: CatalogTableFilterKey,
@@ -135,6 +150,10 @@ function missionFieldValues(
   if (key === "rank") {
     const rank = missionRank(mission);
     return rank ? [rank] : [];
+  }
+  if (key === "category") {
+    const category = missionCategoryLabel(mission);
+    return category ? [category] : [];
   }
   if (key === "from") return catalogRouteSummary(mission).from;
   if (key === "to") return catalogRouteSummary(mission).to;
@@ -220,6 +239,9 @@ export function catalogFilterOptions(
 ): string[] {
   if (key === "route") {
     return [...CATALOG_ROUTE_FILTER_VALUES];
+  }
+  if (key === "category") {
+    return [...CATALOG_CATEGORY_FILTER_VALUES];
   }
 
   const values = new Set<string>();
