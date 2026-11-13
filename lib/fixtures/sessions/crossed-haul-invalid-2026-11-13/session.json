@@ -1,0 +1,3913 @@
+{
+  "id": "4b6fff2c-aa42-428c-ab43-3e8ec291ca41",
+  "sessionName": "Crossed haul invalid route (backup)",
+  "shipSlugs": [
+    "c2-hercules-starlifter"
+  ],
+  "startLocationSlug": "everus-harbor",
+  "missionCount": 24,
+  "missionsCompleted": 0,
+  "missions": [
+    {
+      "id": "022a9877-dd30-4f05-813c-a04a741867f3",
+      "to": [
+        "HDMS-Stanhope",
+        "HDMS-Pinewood",
+        "HDMS-Thedus"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 9,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 9 SCU Stims from HDPC-Farnesway to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 9 SCU Stims to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 9,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 137000,
+        "rewardDisplay": "137,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 137000,
+      "isCompleted": false,
+      "screenshots": [
+        "catalog-local-offers-2026-11-12/local-stims-9-farnesway-stanhope-pinewood-thedus-137000.jpg"
+      ],
+      "cargoSummary": "9 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "137,000 aUEC",
+      "deliverySplits": [
+        {
+          "to": "HDMS-Stanhope",
+          "scu": 4,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        },
+        {
+          "to": "HDMS-Pinewood",
+          "scu": 2,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        },
+        {
+          "to": "HDMS-Thedus",
+          "scu": 3,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "022a9877-dd30-4f05-813c-a04a741867f3",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+      "to": [
+        "HDMS-Pinewood",
+        "HDMS-Stanhope",
+        "HDMS-Thedus"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 5,
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "scu": 8,
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "scu": 8,
+          "commodity": "Ship Ammunition"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 5 SCU Quantum Fuel · 8 SCU Hydrogen Fuel · 8 SCU Ship Ammunition from HDPC-Farnesway to HDMS-Pinewood, HDMS-Stanhope, HDMS-Thedus. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 5 SCU Quantum Fuel · 8 SCU Hydrogen Fuel · 8 SCU Ship Ammunition to HDMS-Pinewood, HDMS-Stanhope, HDMS-Thedus",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 21,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 160250,
+        "rewardDisplay": "160,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 160250,
+      "isCompleted": false,
+      "screenshots": [
+        "catalog-local-offers-2026-11-12/local-fuel-ammo-21-farnesway-hdms-160250.jpg"
+      ],
+      "cargoSummary": "5 SCU Quantum Fuel · 8 SCU Hydrogen Fuel · 8 SCU Ship Ammunition",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "160,250 aUEC",
+      "deliverySplits": [
+        {
+          "to": "HDMS-Pinewood",
+          "scu": 5,
+          "from": "HDPC-Farnesway",
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "to": "HDMS-Stanhope",
+          "scu": 6,
+          "from": "HDPC-Farnesway",
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "to": "HDMS-Thedus",
+          "scu": 8,
+          "from": "HDPC-Farnesway",
+          "commodity": "Ship Ammunition"
+        },
+        {
+          "to": "HDMS-Pinewood",
+          "scu": 2,
+          "from": "HDPC-Farnesway",
+          "commodity": "Hydrogen Fuel"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+      "scuCargoBoxSplits": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "9363be25-072c-4b22-9335-55ae77b7ce69",
+      "to": [
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 6,
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "scu": 8,
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "scu": 9,
+          "commodity": "Ship Ammunition"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 6 SCU Hydrogen Fuel · 8 SCU Quantum Fuel · 9 SCU Ship Ammunition from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 6 SCU Hydrogen Fuel · 8 SCU Quantum Fuel · 9 SCU Ship Ammunition to Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 23,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 163750,
+        "rewardDisplay": "163,750 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 163750,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "6 SCU Hydrogen Fuel · 8 SCU Quantum Fuel · 9 SCU Ship Ammunition",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "163,750 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+      "scuCargoBoxSplits": {
+        "quantum-fuel": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "quantum-fuel": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "847803b4-c69b-4bde-9000-ef4545352eb3",
+      "to": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "from": [
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22"
+      ],
+      "cargo": [
+        {
+          "scu": 4,
+          "commodity": "Waste"
+        },
+        {
+          "scu": 5,
+          "commodity": "Scrap"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 4 SCU Waste · 5 SCU Scrap from Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22 to Covalex Distribution Centre S4DC05. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 4 SCU Waste · 5 SCU Scrap to Covalex Distribution Centre S4DC05",
+            "children": [
+              "Collect from Shubin Mining Facility SM0-13",
+              "Collect from Shubin Mining Facility SM0-18",
+              "Collect from Shubin Mining Facility SM0-10",
+              "Collect from Shubin Mining Facility SM0-22"
+            ],
+            "progressTotal": 9,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 139000,
+        "rewardDisplay": "139,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 139000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "4 SCU Waste · 5 SCU Scrap",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "139,000 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+      "scuCargoBoxSplits": {
+        "scrap": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "scrap": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+      "to": [
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-10"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 13,
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "scu": 10,
+          "commodity": "Processed Food"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 13 SCU Pressurized Ice · 10 SCU Processed Food from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-10. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 13 SCU Pressurized Ice · 10 SCU Processed Food to Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-10",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 23,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 150500,
+        "rewardDisplay": "150,500 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 150500,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "13 SCU Pressurized Ice · 10 SCU Processed Food",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "150,500 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+      "scuCargoBoxSplits": {
+        "processed-food": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "processed-food": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+      "to": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "from": [
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22"
+      ],
+      "cargo": [
+        {
+          "scu": 9,
+          "commodity": "Quartz (Raw)"
+        },
+        {
+          "scu": 10,
+          "commodity": "Corundum (Raw)"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) from Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22 to Covalex Distribution Centre S4DC05. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) to Covalex Distribution Centre S4DC05",
+            "children": [
+              "Collect from Shubin Mining Facility SM0-13",
+              "Collect from Shubin Mining Facility SM0-18",
+              "Collect from Shubin Mining Facility SM0-10",
+              "Collect from Shubin Mining Facility SM0-22"
+            ],
+            "progressTotal": 19,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 153250,
+        "rewardDisplay": "153,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 153250,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "9 SCU Quartz (Raw) · 10 SCU Corundum (Raw)",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "153,250 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+      "scuCargoBoxSplits": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "f443e0c6-7c74-4581-a49c-418fdef90f12",
+      "to": [
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 11,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 11 SCU Stims from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 11 SCU Stims to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 11,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 139000,
+        "rewardDisplay": "139,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 139000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "11 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "139,000 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "f443e0c6-7c74-4581-a49c-418fdef90f12",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "50b717fe-9d67-4a2a-9fbb-3813e0f956bd",
+      "to": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "from": [
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-22"
+      ],
+      "cargo": [
+        {
+          "scu": 9,
+          "commodity": "Quartz (Raw)"
+        },
+        {
+          "scu": 10,
+          "commodity": "Corundum (Raw)"
+        }
+      ],
+      "title": "Small Cargo Haul — Quartz / Corundum",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul — Quartz / Corundum",
+        "details": "Haul 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) from Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-22 to Covalex Distribution Centre S4DC05. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) to Covalex Distribution Centre S4DC05",
+            "children": [
+              "Collect from Shubin Mining Facility SM0-13",
+              "Collect from Shubin Mining Facility SM0-10",
+              "Collect from Shubin Mining Facility SM0-18",
+              "Collect from Shubin Mining Facility SM0-22"
+            ],
+            "progressTotal": 19,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 153250,
+        "rewardDisplay": "153,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 153250,
+      "isCompleted": false,
+      "screenshots": [
+        "4207aa22-c269-4439-9e25-f02b9d9e506a/paste-2026-11-13t00-19-16-530z-1.png"
+      ],
+      "cargoSummary": "9 SCU Quartz (Raw) · 10 SCU Corundum (Raw)",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "153,250 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "50b717fe-9d67-4a2a-9fbb-3813e0f956bd",
+      "scuCargoBoxSplits": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "1220c6b6-83fa-4ae0-9cf7-8c911db409dc",
+      "to": [
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 11,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul — Stims",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul — Stims",
+        "details": "Haul 11 SCU Stims from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 11 SCU Stims to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 11,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 139000,
+        "rewardDisplay": "139,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 139000,
+      "isCompleted": false,
+      "screenshots": [
+        "4207aa22-c269-4439-9e25-f02b9d9e506a/paste-2026-11-13t00-19-12-861z-1.png"
+      ],
+      "cargoSummary": "11 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "139,000 aUEC",
+      "maxContainerScu": 4,
+      "catalogMissionId": "1220c6b6-83fa-4ae0-9cf7-8c911db409dc",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "6521c39a-2866-423b-8fe7-14a4c4790928",
+      "to": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "from": [
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-18"
+      ],
+      "cargo": [
+        {
+          "scu": 9,
+          "commodity": "Quartz (Raw)"
+        },
+        {
+          "scu": 10,
+          "commodity": "Corundum (Raw)"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) from Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-18 to Covalex Distribution Centre S4DC05. Containers at most 4 SCU.",
+        "category": "Hauling - Local",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 9 SCU Quartz (Raw) · 10 SCU Corundum (Raw) to Covalex Distribution Centre S4DC05",
+            "children": [
+              "Collect from Shubin Mining Facility SM0-13",
+              "Collect from Shubin Mining Facility SM0-10",
+              "Collect from Shubin Mining Facility SM0-22",
+              "Collect from Shubin Mining Facility SM0-18"
+            ],
+            "progressTotal": 19,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 153250,
+        "rewardDisplay": "153,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 153250,
+      "isCompleted": false,
+      "screenshots": [
+        "intake-2026-11-12/paste-2026-11-12t23-48-37-778z-1.png"
+      ],
+      "cargoSummary": "9 SCU Quartz (Raw) · 10 SCU Corundum (Raw)",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "153,250 aUEC",
+      "deliverySplits": [
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 5,
+          "from": "Shubin Mining Facility SM0-13",
+          "commodity": "Quartz (Raw)"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 4,
+          "from": "Shubin Mining Facility SM0-10",
+          "commodity": "Quartz (Raw)"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 5,
+          "from": "Shubin Mining Facility SM0-22",
+          "commodity": "Corundum (Raw)"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 5,
+          "from": "Shubin Mining Facility SM0-18",
+          "commodity": "Corundum (Raw)"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "6521c39a-2866-423b-8fe7-14a4c4790928",
+      "scuCargoBoxSplits": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quartz-raw": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "corundum-raw": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "685915ae-c014-44a9-ad4c-3353775e1bcf",
+      "to": [
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 12,
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "scu": 12,
+          "commodity": "Processed Food"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 12 SCU Pressurized Ice · 12 SCU Processed Food from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13. Containers at most 4 SCU.",
+        "category": "Hauling - Local",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 12 SCU Pressurized Ice · 12 SCU Processed Food to Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 24,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 150500,
+        "rewardDisplay": "150,500 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 150500,
+      "isCompleted": false,
+      "screenshots": [
+        "intake-2026-11-12/paste-2026-11-12t23-47-45-665z-1.png"
+      ],
+      "cargoSummary": "12 SCU Pressurized Ice · 12 SCU Processed Food",
+      "scuBoxSplits": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 6,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "150,500 aUEC",
+      "deliverySplits": [
+        {
+          "to": "Shubin Mining Facility SM0-10",
+          "scu": 5,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-18",
+          "scu": 7,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Processed Food"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-22",
+          "scu": 7,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-13",
+          "scu": 5,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Processed Food"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "685915ae-c014-44a9-ad4c-3353775e1bcf",
+      "scuCargoBoxSplits": {
+        "processed-food": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "pressurized-ice": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 6,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "pressurized-ice": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "processed-food": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "e9924e0e-1861-4c06-b452-f74573d99e88",
+      "to": [
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 9,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 9 SCU Stims from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18. Containers at most 4 SCU.",
+        "category": "Hauling - Local",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 9 SCU Stims to Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 9,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 139000,
+        "rewardDisplay": "139,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 139000,
+      "isCompleted": false,
+      "screenshots": [
+        "intake-2026-11-12/paste-2026-11-12t23-47-34-629z-1.png"
+      ],
+      "cargoSummary": "9 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "139,000 aUEC",
+      "deliverySplits": [
+        {
+          "to": "Shubin Mining Facility SM0-22",
+          "scu": 3,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Stims"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-10",
+          "scu": 2,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Stims"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-13",
+          "scu": 2,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Stims"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-18",
+          "scu": 2,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Stims"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "e9924e0e-1861-4c06-b452-f74573d99e88",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
+      "to": [
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13"
+      ],
+      "from": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "cargo": [
+        {
+          "scu": 5,
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "scu": 10,
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "scu": 7,
+          "commodity": "Ship Ammunition"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 5 SCU Hydrogen Fuel · 10 SCU Quantum Fuel · 7 SCU Ship Ammunition from Covalex Distribution Centre S4DC05 to Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13. Containers at most 4 SCU.",
+        "category": "Hauling - Local",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 5 SCU Hydrogen Fuel · 10 SCU Quantum Fuel · 7 SCU Ship Ammunition to Shubin Mining Facility SM0-18, Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13",
+            "children": [
+              "Collect from Covalex Distribution Centre S4DC05"
+            ],
+            "progressTotal": 22,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 163750,
+        "rewardDisplay": "163,750 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 163750,
+      "isCompleted": false,
+      "screenshots": [
+        "intake-2026-11-12/paste-2026-11-12t23-47-29-692z-1.png"
+      ],
+      "cargoSummary": "5 SCU Hydrogen Fuel · 10 SCU Quantum Fuel · 7 SCU Ship Ammunition",
+      "scuBoxSplits": {
+        "scuOne": 2,
+        "scuTwo": 2,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "163,750 aUEC",
+      "deliverySplits": [
+        {
+          "to": "Shubin Mining Facility SM0-18",
+          "scu": 3,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-10",
+          "scu": 10,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-22",
+          "scu": 7,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Ship Ammunition"
+        },
+        {
+          "to": "Shubin Mining Facility SM0-13",
+          "scu": 2,
+          "from": "Covalex Distribution Centre S4DC05",
+          "commodity": "Hydrogen Fuel"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
+      "scuCargoBoxSplits": {
+        "quantum-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 2,
+        "scuTwo": 2,
+        "scuFour": 4,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "hydrogen-fuel": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "quantum-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "f3ad75fe-2b86-4335-995a-6df8770720ea",
+      "to": [
+        "Covalex Distribution Centre S4DC05"
+      ],
+      "from": [
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18"
+      ],
+      "cargo": [
+        {
+          "scu": 4,
+          "commodity": "Waste"
+        },
+        {
+          "scu": 5,
+          "commodity": "Scrap"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 4 SCU Waste · 5 SCU Scrap from Shubin Mining Facility SM0-10, Shubin Mining Facility SM0-22, Shubin Mining Facility SM0-13, Shubin Mining Facility SM0-18 to Covalex Distribution Centre S4DC05. Containers at most 4 SCU.",
+        "category": "Hauling - Local",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 4 SCU Waste · 5 SCU Scrap to Covalex Distribution Centre S4DC05",
+            "children": [
+              "Collect from Shubin Mining Facility SM0-10",
+              "Collect from Shubin Mining Facility SM0-22",
+              "Collect from Shubin Mining Facility SM0-13",
+              "Collect from Shubin Mining Facility SM0-18"
+            ],
+            "progressTotal": 9,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 139000,
+        "rewardDisplay": "139,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 139000,
+      "isCompleted": false,
+      "screenshots": [
+        "intake-2026-11-12/paste-2026-11-12t23-47-24-173z-1.png"
+      ],
+      "cargoSummary": "4 SCU Waste · 5 SCU Scrap",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "139,000 aUEC",
+      "deliverySplits": [
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 2,
+          "from": "Shubin Mining Facility SM0-10",
+          "commodity": "Waste"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 2,
+          "from": "Shubin Mining Facility SM0-22",
+          "commodity": "Waste"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 2,
+          "from": "Shubin Mining Facility SM0-13",
+          "commodity": "Scrap"
+        },
+        {
+          "to": "Covalex Distribution Centre S4DC05",
+          "scu": 3,
+          "from": "Shubin Mining Facility SM0-18",
+          "commodity": "Scrap"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "f3ad75fe-2b86-4335-995a-6df8770720ea",
+      "scuCargoBoxSplits": {
+        "scrap": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 2,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "scrap": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+      "to": [
+        "HDPC-Farnesway"
+      ],
+      "from": [
+        "Everus Harbor"
+      ],
+      "cargo": [
+        {
+          "scu": 17,
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "scu": 395,
+          "commodity": "Processed Food"
+        }
+      ],
+      "title": "Direct Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Direct Medium Cargo Haul",
+        "details": "Haul 17 SCU Pressurized Ice · 395 SCU Processed Food from Everus Harbor to HDPC-Farnesway. Containers at most 16 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 17 SCU Pressurized Ice · 395 SCU Processed Food to HDPC-Farnesway",
+            "children": [
+              "Collect from Everus Harbor"
+            ],
+            "progressTotal": 412,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 163250,
+        "rewardDisplay": "163,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 163250,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "17 SCU Pressurized Ice · 395 SCU Processed Food",
+      "scuBoxSplits": {
+        "scuOne": 2,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 1,
+        "scuSixteen": 25,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "163,250 aUEC",
+      "deliverySplits": [
+        {
+          "to": "HDPC-Farnesway",
+          "scu": 17,
+          "from": "Everus Harbor",
+          "commodity": "Pressurized Ice"
+        },
+        {
+          "to": "HDPC-Farnesway",
+          "scu": 395,
+          "from": "Everus Harbor",
+          "commodity": "Processed Food"
+        }
+      ],
+      "maxContainerScu": 16,
+      "catalogMissionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+      "scuCargoBoxSplits": {
+        "processed-food": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 1,
+          "scuSixteen": 24,
+          "scuThirtyTwo": 0
+        },
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 1,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 2,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 1,
+        "scuSixteen": 25,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 1,
+          "scuThirtyTwo": 0
+        },
+        "processed-food": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 1,
+          "scuSixteen": 24,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "2b2627af-8de0-424c-9ea3-34125e905520",
+      "to": [
+        "HDMS-Stanhope",
+        "HDMS-Pinewood",
+        "HDMS-Thedus"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 12,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 12 SCU Stims from HDPC-Farnesway to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 12 SCU Stims to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 12,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 137000,
+        "rewardDisplay": "137,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 137000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "12 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 3,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "137,000 aUEC",
+      "deliverySplits": [
+        {
+          "to": "HDMS-Stanhope",
+          "scu": 4,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        },
+        {
+          "to": "HDMS-Pinewood",
+          "scu": 5,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        },
+        {
+          "to": "HDMS-Thedus",
+          "scu": 3,
+          "from": "HDPC-Farnesway",
+          "commodity": "Stims"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "2b2627af-8de0-424c-9ea3-34125e905520",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 3,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
+      "to": [
+        "HDMS-Stanhope",
+        "HDMS-Thedus",
+        "HDMS-Pinewood"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 3,
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "scu": 14,
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "scu": 8,
+          "commodity": "Ship Ammunition"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition from HDPC-Farnesway to HDMS-Stanhope, HDMS-Thedus, HDMS-Pinewood. Containers at most 4 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition to HDMS-Stanhope, HDMS-Thedus, HDMS-Pinewood",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 25,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 160250,
+        "rewardDisplay": "160,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 160250,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 2,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "160,250 aUEC",
+      "deliverySplits": [
+        {
+          "to": "HDMS-Stanhope",
+          "scu": 3,
+          "from": "HDPC-Farnesway",
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "to": "HDMS-Thedus",
+          "scu": 10,
+          "from": "HDPC-Farnesway",
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "to": "HDMS-Pinewood",
+          "scu": 8,
+          "from": "HDPC-Farnesway",
+          "commodity": "Ship Ammunition"
+        },
+        {
+          "to": "HDMS-Stanhope",
+          "scu": 4,
+          "from": "HDPC-Farnesway",
+          "commodity": "Hydrogen Fuel"
+        }
+      ],
+      "maxContainerScu": 4,
+      "catalogMissionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
+      "scuCargoBoxSplits": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 2,
+        "scuFour": 5,
+        "scuEight": 0,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 3,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 2,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "7bd6165b-5afd-416a-94e5-09ef5495dd89",
+      "to": [
+        "HDPC-Farnesway"
+      ],
+      "from": [
+        "Everus Harbor"
+      ],
+      "cargo": [
+        {
+          "scu": 17,
+          "commodity": "Pressurized Ice"
+        }
+      ],
+      "title": "Direct Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Direct Medium Cargo Haul",
+        "details": "Haul 17 SCU Pressurized Ice from Everus Harbor to HDPC-Farnesway.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 17 SCU Pressurized Ice to HDPC-Farnesway",
+            "children": [
+              "Collect from Everus Harbor"
+            ],
+            "progressTotal": 17,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 165000,
+        "rewardDisplay": "165,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 165000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "17 SCU Pressurized Ice",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 0,
+        "scuEight": 2,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "165,000 aUEC",
+      "catalogMissionId": "7bd6165b-5afd-416a-94e5-09ef5495dd89",
+      "scuCargoBoxSplits": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 2,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 0,
+        "scuEight": 2,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 2,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "7e437cab-eab9-4027-9441-b639744590d1",
+      "to": [
+        "Everus Harbor"
+      ],
+      "from": [
+        "Port Tressler"
+      ],
+      "cargo": [
+        {
+          "scu": 323,
+          "commodity": "Pressurized Ice"
+        }
+      ],
+      "title": "Direct Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Direct Medium Cargo Haul",
+        "details": "Haul 323 SCU Pressurized Ice from Port Tressler to Everus Harbor.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 323 SCU Pressurized Ice to Everus Harbor",
+            "children": [
+              "Collect from Port Tressler"
+            ],
+            "progressTotal": 323,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 185250,
+        "rewardDisplay": "185,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 185250,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "323 SCU Pressurized Ice",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 40,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "185,250 aUEC",
+      "catalogMissionId": "7e437cab-eab9-4027-9441-b639744590d1",
+      "scuCargoBoxSplits": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 40,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 40,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "pressurized-ice": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 40,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "2f1de501-f003-4a00-a327-dd1eaec12d4a",
+      "to": [
+        "HDMS-Stanhope",
+        "HDMS-Pinewood",
+        "HDMS-Thedus"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 12,
+          "commodity": "Stims"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 12 SCU Stims from HDPC-Farnesway to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 12 SCU Stims to HDMS-Stanhope, HDMS-Pinewood, HDMS-Thedus",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 12,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 137000,
+        "rewardDisplay": "137,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 137000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "12 SCU Stims",
+      "scuBoxSplits": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 1,
+        "scuEight": 1,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "137,000 aUEC",
+      "catalogMissionId": "2f1de501-f003-4a00-a327-dd1eaec12d4a",
+      "scuCargoBoxSplits": {
+        "stims": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 1,
+        "scuEight": 1,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "stims": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "44e339e8-f651-457f-b3dd-c854e9d3ff1f",
+      "to": [
+        "HDMS-Stanhope",
+        "HDMS-Thedus",
+        "HDMS-Pinewood"
+      ],
+      "from": [
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 3,
+          "commodity": "Quantum Fuel"
+        },
+        {
+          "scu": 14,
+          "commodity": "Hydrogen Fuel"
+        },
+        {
+          "scu": 8,
+          "commodity": "Ship Ammunition"
+        }
+      ],
+      "title": "Small Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Small Cargo Haul",
+        "details": "Haul 3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition from HDPC-Farnesway to HDMS-Stanhope, HDMS-Thedus, HDMS-Pinewood.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition to HDMS-Stanhope, HDMS-Thedus, HDMS-Pinewood",
+            "children": [
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 25,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 160250,
+        "rewardDisplay": "160,250 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 160250,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "3 SCU Quantum Fuel · 14 SCU Hydrogen Fuel · 8 SCU Ship Ammunition",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 2,
+        "scuFour": 1,
+        "scuEight": 2,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "160,250 aUEC",
+      "catalogMissionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f",
+      "scuCargoBoxSplits": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 2,
+        "scuFour": 1,
+        "scuEight": 2,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "quantum-fuel": {
+          "scuOne": 1,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 0,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "hydrogen-fuel": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 1,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        },
+        "ship-ammunition": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 1,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+      "to": [
+        "Everus Harbor"
+      ],
+      "from": [
+        "Covalex Distribution Centre S1DC06",
+        "Sakura Sun Magnolia Workcenter",
+        "HDPC-Cassillo",
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 57,
+          "commodity": "Waste"
+        }
+      ],
+      "title": "Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Medium Cargo Haul",
+        "details": "Haul 57 SCU Waste from Covalex Distribution Centre S1DC06, Sakura Sun Magnolia Workcenter, HDPC-Cassillo, HDPC-Farnesway to Everus Harbor. Containers at most 8 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 57 SCU Waste to Everus Harbor",
+            "children": [
+              "Collect from Covalex Distribution Centre S1DC06",
+              "Collect from Sakura Sun Magnolia Workcenter",
+              "Collect from HDPC-Cassillo",
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 57,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 140000,
+        "rewardDisplay": "140,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 140000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "57 SCU Waste",
+      "scuBoxSplits": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 0,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "140,000 aUEC",
+      "maxContainerScu": 8,
+      "catalogMissionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+      "scuCargoBoxSplits": {
+        "waste": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 1,
+        "scuTwo": 0,
+        "scuFour": 0,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "waste": {
+          "scuOne": 1,
+          "scuTwo": 0,
+          "scuFour": 0,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "9a2da867-d61e-4091-b4bd-acf6c4cb240f",
+      "to": [
+        "Everus Harbor"
+      ],
+      "from": [
+        "Covalex Distribution Centre S1DC06",
+        "Sakura Sun Magnolia Workcenter",
+        "HDPC-Cassillo",
+        "HDPC-Farnesway"
+      ],
+      "cargo": [
+        {
+          "scu": 58,
+          "commodity": "Waste"
+        }
+      ],
+      "title": "Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Medium Cargo Haul",
+        "details": "Haul 58 SCU Waste from Covalex Distribution Centre S1DC06, Sakura Sun Magnolia Workcenter, HDPC-Cassillo, HDPC-Farnesway to Everus Harbor. Containers at most 8 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 58 SCU Waste to Everus Harbor",
+            "children": [
+              "Collect from Covalex Distribution Centre S1DC06",
+              "Collect from Sakura Sun Magnolia Workcenter",
+              "Collect from HDPC-Cassillo",
+              "Collect from HDPC-Farnesway"
+            ],
+            "progressTotal": 58,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 140000,
+        "rewardDisplay": "140,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 140000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "58 SCU Waste",
+      "scuBoxSplits": {
+        "scuOne": 0,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "140,000 aUEC",
+      "maxContainerScu": 8,
+      "catalogMissionId": "9a2da867-d61e-4091-b4bd-acf6c4cb240f",
+      "scuCargoBoxSplits": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 0,
+        "scuTwo": 1,
+        "scuFour": 0,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 1,
+          "scuFour": 0,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    },
+    {
+      "id": "cc77610d-7f1e-42bc-bbcf-827d592cb70b",
+      "to": [
+        "Everus Harbor"
+      ],
+      "from": [
+        "HDPC-Cassillo",
+        "HDPC-Farnesway",
+        "Covalex Distribution Centre S1DC06"
+      ],
+      "cargo": [
+        {
+          "scu": 60,
+          "commodity": "Waste"
+        }
+      ],
+      "title": "Medium Cargo Haul",
+      "isHidden": false,
+      "mobiglas": {
+        "tab": "Accepted",
+        "title": "Medium Cargo Haul",
+        "details": "Haul 60 SCU Waste from HDPC-Cassillo, HDPC-Farnesway, Covalex Distribution Centre S1DC06 to Everus Harbor. Containers at most 8 SCU.",
+        "category": "Hauling - Planetary",
+        "deadline": null,
+        "contractor": "Covalex Independent Contractors",
+        "objectives": [
+          {
+            "label": "Deliver 60 SCU Waste to Everus Harbor",
+            "children": [
+              "Collect from HDPC-Cassillo",
+              "Collect from HDPC-Farnesway",
+              "Collect from Covalex Distribution Centre S1DC06"
+            ],
+            "progressTotal": 60,
+            "progressCurrent": 0
+          }
+        ],
+        "rewardAuec": 138000,
+        "rewardDisplay": "138,000 aUEC",
+        "timeRemaining": null
+      },
+      "contractor": "Covalex Independent Contractors",
+      "rewardAuec": 138000,
+      "isCompleted": false,
+      "screenshots": [],
+      "cargoSummary": "60 SCU Waste",
+      "scuBoxSplits": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 1,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "rewardDisplay": "138,000 aUEC",
+      "maxContainerScu": 8,
+      "catalogMissionId": "cc77610d-7f1e-42bc-bbcf-827d592cb70b",
+      "scuCargoBoxSplits": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      },
+      "scuBoxSplitsAutoSelected": {
+        "scuOne": 0,
+        "scuTwo": 0,
+        "scuFour": 1,
+        "scuEight": 7,
+        "scuSixteen": 0,
+        "scuThirtyTwo": 0
+      },
+      "scuCargoBoxSplitsAutoSelected": {
+        "waste": {
+          "scuOne": 0,
+          "scuTwo": 0,
+          "scuFour": 1,
+          "scuEight": 7,
+          "scuSixteen": 0,
+          "scuThirtyTwo": 0
+        }
+      }
+    }
+  ],
+  "startedAt": "2026-11-13T05:28:26.253Z",
+  "completedAt": null,
+  "updatedAt": "2026-11-13T05:29:56.948Z",
+  "rows": [
+    {
+      "id": "leg-1",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 8,
+          "role": "delivery",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 10,
+          "role": "delivery",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "scrap",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 27,
+          "role": "delivery",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "quartz-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 30,
+          "role": "delivery",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "corundum-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 11,
+          "role": "pickup",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 18,
+          "role": "pickup",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 16,
+          "role": "pickup",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 25,
+          "role": "pickup",
+          "missionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 22,
+          "role": "pickup",
+          "missionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 31,
+          "role": "pickup",
+          "missionId": "f443e0c6-7c74-4581-a49c-418fdef90f12",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            1
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-2",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "shubin-mining-facility-sm0-10",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 11,
+          "role": "delivery",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 18,
+          "role": "delivery",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 16,
+          "role": "delivery",
+          "missionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 25,
+          "role": "delivery",
+          "missionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 22,
+          "role": "delivery",
+          "missionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 31,
+          "role": "delivery",
+          "missionId": "f443e0c6-7c74-4581-a49c-418fdef90f12",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 3,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "scrap",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "quartz-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "corundum-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-3",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 11,
+          "role": "delivery",
+          "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 18,
+          "role": "delivery",
+          "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 16,
+          "role": "delivery",
+          "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 25,
+          "role": "delivery",
+          "missionId": "685915ae-c014-44a9-ad4c-3353775e1bcf",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 22,
+          "role": "delivery",
+          "missionId": "685915ae-c014-44a9-ad4c-3353775e1bcf",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 31,
+          "role": "delivery",
+          "missionId": "1220c6b6-83fa-4ae0-9cf7-8c911db409dc",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 3,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "scrap",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 9,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "quartz-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 12,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "corundum-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-4",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 11,
+          "role": "delivery",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 18,
+          "role": "delivery",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 16,
+          "role": "delivery",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 25,
+          "role": "delivery",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 22,
+          "role": "delivery",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 31,
+          "role": "delivery",
+          "missionId": "e9924e0e-1861-4c06-b452-f74573d99e88",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "scrap",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "quartz-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "corundum-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-5",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 11,
+          "role": "delivery",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 18,
+          "role": "delivery",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 16,
+          "role": "delivery",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 25,
+          "role": "delivery",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 22,
+          "role": "delivery",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 31,
+          "role": "delivery",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle"
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 2,
+          "role": "pickup",
+          "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
+          "commoditySlug": "scrap",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            2
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "quartz-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        },
+        {
+          "scu": 6,
+          "role": "pickup",
+          "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
+          "commoditySlug": "corundum-raw",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            2
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-6",
+      "isCompleted": false,
+      "routeAction": "pickup",
+      "locationSlug": "covalex-distribution-centre-s1dc06",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 51,
+          "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            2,
+            1
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-7",
+      "isCompleted": false,
+      "routeAction": "pickup",
+      "locationSlug": "hdpc-cassillo",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 48,
+          "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-8",
+      "isCompleted": false,
+      "routeAction": "pickup",
+      "locationSlug": "port-tressler",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 323,
+          "missionId": "7e437cab-eab9-4027-9441-b639744590d1",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            2,
+            1
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-9",
+      "isCompleted": false,
+      "routeAction": "pickup",
+      "locationSlug": "sakura-sun-magnolia-workcenter",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 28,
+          "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            4
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-10",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "everus-harbor",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 323,
+          "role": "delivery",
+          "missionId": "7e437cab-eab9-4027-9441-b639744590d1",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 175,
+          "role": "delivery",
+          "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            8,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 34,
+          "role": "pickup",
+          "missionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            16,
+            16,
+            2
+          ]
+        },
+        {
+          "scu": 395,
+          "role": "pickup",
+          "missionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            8,
+            2,
+            1
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-11",
+      "isCompleted": false,
+      "routeAction": "both",
+      "locationSlug": "hdpc-farnesway",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 34,
+          "role": "delivery",
+          "missionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+          "commoditySlug": "pressurized-ice",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            16,
+            16,
+            2
+          ]
+        },
+        {
+          "scu": 395,
+          "role": "delivery",
+          "missionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
+          "commoditySlug": "processed-food",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            8,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 33,
+          "role": "pickup",
+          "missionId": "022a9877-dd30-4f05-813c-a04a741867f3",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 11,
+          "role": "pickup",
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 36,
+          "role": "pickup",
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 24,
+          "role": "pickup",
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 48,
+          "role": "pickup",
+          "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
+          "commoditySlug": "waste",
+          "shipStorageLocation": "middle",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            8,
+            8
+          ]
+        }
+      ],
+      "shipStorageLocation": "middle"
+    },
+    {
+      "id": "leg-12",
+      "isCompleted": false,
+      "routeAction": "delivery",
+      "locationSlug": "hdms-pinewood",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 33,
+          "missionId": "022a9877-dd30-4f05-813c-a04a741867f3",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 11,
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 36,
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 24,
+          "missionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        }
+      ],
+      "shipStorageLocation": "rear"
+    },
+    {
+      "id": "leg-13",
+      "isCompleted": false,
+      "routeAction": "delivery",
+      "locationSlug": "hdms-stanhope",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 33,
+          "missionId": "2b2627af-8de0-424c-9ea3-34125e905520",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            1
+          ]
+        },
+        {
+          "scu": 11,
+          "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 36,
+          "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        {
+          "scu": 24,
+          "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        }
+      ],
+      "shipStorageLocation": "rear"
+    },
+    {
+      "id": "leg-14",
+      "isCompleted": false,
+      "routeAction": "delivery",
+      "locationSlug": "hdms-thedus",
+      "distanceToNext": null,
+      "cargoDeliveries": [
+        {
+          "scu": 33,
+          "missionId": "2f1de501-f003-4a00-a327-dd1eaec12d4a",
+          "commoditySlug": "stims",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            1
+          ]
+        },
+        {
+          "scu": 11,
+          "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f",
+          "commoditySlug": "quantum-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            8,
+            2,
+            1
+          ]
+        },
+        {
+          "scu": 36,
+          "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f",
+          "commoditySlug": "hydrogen-fuel",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            8,
+            8,
+            8,
+            8,
+            4
+          ]
+        },
+        {
+          "scu": 24,
+          "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f",
+          "commoditySlug": "ship-ammunition",
+          "shipStorageLocation": "rear",
+          "boxSizes": [
+            8,
+            8,
+            8
+          ]
+        }
+      ],
+      "shipStorageLocation": "rear"
+    }
+  ]
+}

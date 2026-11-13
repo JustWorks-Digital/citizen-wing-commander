@@ -25,8 +25,17 @@ import {
   catalogRewardLabel,
   catalogSourceScreenshotCaption,
 } from "@/lib/missions/catalogMissionDisplay";
-import { auecFromRewards } from "@/lib/missions/catalogMission";
+import {
+  auecFromRewards,
+  formatAuecAmount,
+} from "@/lib/missions/catalogMission";
+import { catalogSelectionTotals } from "@/lib/missions/catalogSelectionTotals";
+import {
+  formatHaulingRepXp,
+} from "@/lib/missions/haulingRepXp";
+import { formatDistanceToNext } from "@/lib/missions/mockSession";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
   ImageLightbox,
   type ImageLightboxItem,
@@ -199,6 +208,11 @@ export function MissionsCatalogView({
     });
   }, [missions, checkedIds]);
 
+  const selectionTotals = useMemo(
+    () => catalogSelectionTotals(checkedMissions),
+    [checkedMissions],
+  );
+
   const openSource = (mission: CatalogMission) => {
     const url = screenshotUrlFromLogicalPath(mission.latestScreenshotPath);
     if (!url) return;
@@ -335,6 +349,59 @@ export function MissionsCatalogView({
                   );
                 })}
               </ul>
+              <dl
+                aria-label="Selection totals"
+                className="flex flex-wrap gap-x-4 gap-y-1 border-t border-rsi-divider/70 pt-2 font-mono text-[0.6rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+              >
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt>Stops</dt>
+                  <dd className="tabular-nums text-rsi-text">
+                    {selectionTotals.stopCount}
+                  </dd>
+                </div>
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt>Distance</dt>
+                  <dd className="normal-case tracking-normal text-rsi-text">
+                    {formatDistanceToNext(selectionTotals.distance)}
+                  </dd>
+                </div>
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt title={SCU_TITLE}>SCU</dt>
+                  <dd className="tabular-nums text-rsi-text">
+                    {selectionTotals.scuTotal > 0
+                      ? selectionTotals.scuTotal
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt title={`${SCU_TITLE} peak aboard (merged trip)`}>
+                    Peak
+                  </dt>
+                  <dd className="tabular-nums text-rsi-text">
+                    {selectionTotals.peakScu > 0
+                      ? selectionTotals.peakScu
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt title={AUEC_TITLE}>aUEC</dt>
+                  <dd className="normal-case tracking-normal tabular-nums text-rsi-text">
+                    {selectionTotals.auecTotal > 0
+                      ? formatAuecAmount(selectionTotals.auecTotal, {
+                          includeUnit: false,
+                        })
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="inline-flex items-baseline gap-1.5">
+                  <dt>EXP</dt>
+                  <dd className="normal-case tracking-normal tabular-nums text-rsi-text">
+                    {selectionTotals.expTotal > 0
+                      ? formatHaulingRepXp(selectionTotals.expTotal)
+                      : "—"}
+                  </dd>
+                </div>
+              </dl>
             </div>
           ) : null}
           {addError ? <p className="text-sm text-rsi-warn">{addError}</p> : null}

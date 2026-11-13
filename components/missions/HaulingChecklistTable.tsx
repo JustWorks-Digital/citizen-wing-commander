@@ -97,6 +97,12 @@ export type HaulingChecklistTableProps = {
    * “Quantum to …” row is shown above the checklist.
    */
   startLocationSlug?: string | null;
+  /**
+   * Controlled: synthetic start → first-stop quantum marked done.
+   * When omitted, the table keeps local state (Storybook).
+   */
+  quantumOriginDeparted?: boolean;
+  onQuantumOriginDepartedChange?: (departed: boolean) => void;
   /** Persist a manual quantum travel leg after a row (or session start). */
   onInsertQuantumTravel?: (input: {
     afterRowId: string;
@@ -821,6 +827,7 @@ function QuantumTravelRow({
   destinationSlug,
   destinationName,
   reasonShopSlug = null,
+  distanceToNext = null,
   isCompleted,
   isFocused,
   isPending = false,
@@ -837,6 +844,7 @@ function QuantumTravelRow({
   destinationSlug: string | null;
   destinationName: string;
   reasonShopSlug?: string | null;
+  distanceToNext?: HaulingChecklistRow["distanceToNext"];
   isCompleted: boolean;
   isFocused: boolean;
   isPending?: boolean;
@@ -854,6 +862,11 @@ function QuantumTravelRow({
     : null;
   const locationFixture = getLocationBySlug(fromSlug);
   const location = locationFixture?.name ?? fromSlug;
+  const hopDistance =
+    (destinationSlug
+      ? distanceBetweenLocationSlugs(fromSlug, destinationSlug)
+      : null) ?? distanceToNext;
+  const hopLabel = formatDistanceToNext(hopDistance);
   const stubRow: HaulingChecklistRow = {
     id: rowId,
     routeAction: "quantum",
@@ -861,7 +874,7 @@ function QuantumTravelRow({
     quantumToLocationSlug: destinationSlug,
     cargoDeliveries: [],
     shipStorageLocation: "front",
-    distanceToNext: null,
+    distanceToNext: hopDistance,
     isCompleted,
   };
 
@@ -874,7 +887,7 @@ function QuantumTravelRow({
       aria-checked={isCompleted}
       aria-current={isFocused ? "step" : undefined}
       className={[
-        "scroll-mt-14 border-b border-rsi-divider/80 px-3 pt-3 pb-1",
+        "scroll-mt-28 border-b border-rsi-divider/80 px-3 pt-3 pb-1",
         checklistRowToneClass(isCompleted, isFocused),
       ].join(" ")}
       onClick={onFocus}
@@ -1011,6 +1024,17 @@ function QuantumTravelRow({
                 </span>
               </p>
             )}
+            {hopDistance ? (
+              <p
+                className={[
+                  "font-mono text-[0.65rem] tabular-nums tracking-wide",
+                  isCompleted ? "text-rsi-text-muted" : "text-rsi-text-secondary",
+                ].join(" ")}
+                title={`Quantum hop ${hopLabel}`}
+              >
+                Distance · {hopLabel}
+              </p>
+            ) : null}
             {reasonLabel ? (
               <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Reason · {reasonLabel}
@@ -1050,7 +1074,7 @@ function QuantumTravelComposer({
   };
 
   return (
-    <li className="scroll-mt-14 border-b border-rsi-divider/80 bg-rsi-accent-muted/20 px-3 py-3">
+    <li className="scroll-mt-28 border-b border-rsi-divider/80 bg-rsi-accent-muted/20 px-3 py-3">
       <div className="flex gap-3">
         <div className="hidden h-14 w-8 shrink-0 md:block" aria-hidden />
         <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-start md:gap-4">
@@ -1790,6 +1814,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   sessionId = null,
   onToggleCargoHandled,
   startLocationSlug = null,
+  quantumOriginDeparted: quantumOriginDepartedProp,
+  onQuantumOriginDepartedChange,
   onInsertQuantumTravel,
   onUpdateQuantumTravel,
   onOpenCargoBays,
@@ -1803,8 +1829,16 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
     ReadonlySet<string>
   >(() => new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
-  /** Local-only: quantum depart marked before any stop is completed. */
-  const [quantumDeparted, setQuantumDeparted] = useState(false);
+  /** Uncontrolled fallback when parent does not lift QT-origin departed. */
+  const [quantumDepartedLocal, setQuantumDepartedLocal] = useState(false);
+  const isQuantumOriginControlled = onQuantumOriginDepartedChange != null;
+  const quantumDeparted = isQuantumOriginControlled
+    ? Boolean(quantumOriginDepartedProp)
+    : quantumDepartedLocal;
+  const setQuantumDeparted = (departed: boolean) => {
+    if (isQuantumOriginControlled) onQuantumOriginDepartedChange(departed);
+    else setQuantumDepartedLocal(departed);
+  };
   /** Which row’s + control opened the quantum destination composer. */
   const [draftingAfterRowId, setDraftingAfterRowId] = useState<string | null>(
     null,
@@ -1836,13 +1870,20 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   const canAddStops = Boolean(onInsertQuantumTravel);
 
   useEffect(() => {
-    setQuantumDeparted(false);
-  }, [startLocationSlug, rows[0]?.id, rows[0]?.locationSlug]);
+    if (isQuantumOriginControlled) return;
+    setQuantumDepartedLocal(false);
+  }, [
+    isQuantumOriginControlled,
+    startLocationSlug,
+    rows[0]?.id,
+    rows[0]?.locationSlug,
+  ]);
 
   // Reset trip clears stop completion; also drop local QT-origin "departed".
   useEffect(() => {
-    if (!tripStarted) setQuantumDeparted(false);
-  }, [tripStarted]);
+    if (isQuantumOriginControlled) return;
+    if (!tripStarted) setQuantumDepartedLocal(false);
+  }, [isQuantumOriginControlled, tripStarted]);
 
   useEffect(() => {
     if (!draftingAfterRowId) return;
@@ -2082,6 +2123,14 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               fromSlug={startSlugTrimmed}
               destinationSlug={firstStop?.locationSlug ?? null}
               destinationName={quantumDestinationName}
+              distanceToNext={
+                firstStop
+                  ? distanceBetweenLocationSlugs(
+                      startSlugTrimmed,
+                      firstStop.locationSlug,
+                    )
+                  : null
+              }
               isCompleted={quantumCompleted}
               isFocused={activeRowId === QUANTUM_ORIGIN_ROW_ID}
               isCopied={copiedRowId === QUANTUM_ORIGIN_ROW_ID}
@@ -2183,6 +2232,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   destinationSlug={destinationSlug || null}
                   destinationName={destinationName}
                   reasonShopSlug={row.reasonShopSlug ?? null}
+                  distanceToNext={row.distanceToNext}
                   isCompleted={row.isCompleted}
                   isFocused={isFocused}
                   isCopied={isCopied}
@@ -2250,7 +2300,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               aria-checked={row.isCompleted}
               aria-current={isFocused ? "step" : undefined}
               className={[
-                "scroll-mt-14 border-b border-rsi-divider/80 px-3 pt-4.5 pb-1",
+                "scroll-mt-28 border-b border-rsi-divider/80 px-3 pt-4.5 pb-1",
                 checklistRowToneClass(row.isCompleted, isFocused),
               ].join(" ")}
               onClick={() => onFocusStop?.(row.id)}

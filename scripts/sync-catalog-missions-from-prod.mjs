@@ -1,14 +1,26 @@
 #!/usr/bin/env node
 /**
- * Pull catalog missions from production MCP `list_missions` into the local DB.
+ * Replace local `catalog_missions` with production (production is master).
  *
- *   DATABASE_URL=… node scripts/sync-catalog-missions-from-prod.mjs
+ * Prefer the public catalog HTTP API (full rows, up to 500). Falls back to MCP
+ * `list_missions` if CATALOG_API_URL fetch fails.
  *
- * Optional: MCP_URL=https://…/mcp
+ *   DATABASE_URL=… npm run db:sync-catalog-missions
+ *
+ * Optional:
+ *   CATALOG_API_URL=https://…/api/catalog/missions
+ *   MCP_URL=https://…/mcp
+ *
+ * Note: Railway Postgres has no public TCP proxy by default, so pg_dump is not
+ * available from outside. Notes/runs are cleared locally (not exposed by API).
+ * Screenshot files under `.data/` are not synced by this script.
  */
 import { createHash } from "node:crypto";
 import postgres from "postgres";
 
+const CATALOG_API_URL =
+  process.env.CATALOG_API_URL ??
+  "https://citizen-wing-commander-production.up.railway.app/api/catalog/missions";
 const MCP_URL =
   process.env.MCP_URL ??
   "https://citizen-wing-commander-production.up.railway.app/mcp";
@@ -41,11 +53,55 @@ async function mcpCall(method, params, id = 1) {
   throw new Error(`No MCP result for ${method}: ${raw.slice(0, 240)}`);
 }
 
+async function fetchMissionsFromApi() {
+  const url = new URL(CATALOG_API_URL);
+  url.searchParams.set("limit", "500");
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Catalog API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  }
+  const parsed = await res.json();
+  if (parsed.error) throw new Error(String(parsed.error));
+  return parsed.missions ?? [];
+}
+
+async function fetchMissionsFromMcp() {
+  const listed = await mcpCall(
+    "tools/call",
+    { name: "list_missions", arguments: { limit: 200 } },
+    3,
+  );
+  if (listed.error) throw new Error(JSON.stringify(listed.error));
+  const text = listed.result?.content?.[0]?.text;
+  if (!text) throw new Error("Empty list_missions response");
+  const parsed = JSON.parse(text);
+  if (parsed.error) throw new Error(String(parsed.error));
+  return parsed.missions ?? [];
+}
+
 function emptyScuBoxSplits() {
-  return { scuOne: 0, scuTwo: 0, scuFour: 0, scuEight: 0 };
+  return {
+    scuOne: 0,
+    scuTwo: 0,
+    scuFour: 0,
+    scuEight: 0,
+    scuSixteen: 0,
+    scuThirtyTwo: 0,
+  };
 }
 
 function routeFlagsFromMission(mission, payload) {
+  if (
+    typeof mission.isDirect === "boolean" &&
+    typeof mission.isOnePickup === "boolean" &&
+    typeof mission.isOneDelivery === "boolean"
+  ) {
+    return {
+      isDirect: mission.isDirect,
+      isOnePickup: mission.isOnePickup,
+      isOneDelivery: mission.isOneDelivery,
+    };
+  }
   const splits =
     mission.scuLocationSplits ?? payload.scuLocationSplits ?? null;
   let fromCount = splits?.from ? Object.keys(splits.from).length : 0;
@@ -89,27 +145,18 @@ function fingerprintFromPayload(payload) {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-const listed = await mcpCall(
-  "tools/call",
-  { name: "list_missions", arguments: { limit: 200 } },
-  3,
-);
-if (listed.error) {
-  console.error(listed.error);
-  process.exit(1);
+let missions;
+let source;
+try {
+  missions = await fetchMissionsFromApi();
+  source = "catalog API";
+} catch (apiError) {
+  console.warn(`Catalog API failed (${apiError.message}); falling back to MCP`);
+  missions = await fetchMissionsFromMcp();
+  source = "MCP list_missions";
 }
-const text = listed.result?.content?.[0]?.text;
-if (!text) {
-  console.error("Empty list_missions response");
-  process.exit(1);
-}
-const parsed = JSON.parse(text);
-if (parsed.error) {
-  console.error(parsed.error);
-  process.exit(1);
-}
-const missions = parsed.missions ?? [];
-console.log(`Fetched ${missions.length} mission(s) from production MCP`);
+
+console.log(`Fetched ${missions.length} mission(s) from production (${source})`);
 
 const sql = postgres(DATABASE_URL, { max: 1 });
 let upserted = 0;

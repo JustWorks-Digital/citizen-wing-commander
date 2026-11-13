@@ -1,0 +1,316 @@
+{
+  "ok": false,
+  "issueCount": 31,
+  "issues": [
+    {
+      "stopId": "leg-1",
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "missing": {
+        "commoditySlug": "waste",
+        "scu": 8,
+        "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3"
+      },
+      "shortfallScu": 8
+    },
+    {
+      "stopId": "leg-1",
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "missing": {
+        "commoditySlug": "scrap",
+        "scu": 10,
+        "missionId": "847803b4-c69b-4bde-9000-ef4545352eb3"
+      },
+      "shortfallScu": 10
+    },
+    {
+      "stopId": "leg-1",
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "missing": {
+        "commoditySlug": "quartz-raw",
+        "scu": 27,
+        "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7"
+      },
+      "shortfallScu": 27
+    },
+    {
+      "stopId": "leg-1",
+      "locationSlug": "covalex-distribution-centre-s4dc05",
+      "missing": {
+        "commoditySlug": "corundum-raw",
+        "scu": 30,
+        "missionId": "56da5f16-925c-4f01-a47a-05d0be40dac7"
+      },
+      "shortfallScu": 30
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 11,
+        "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67"
+      },
+      "shortfallScu": 11
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 18,
+        "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67"
+      },
+      "shortfallScu": 18
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 16,
+        "missionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67"
+      },
+      "shortfallScu": 16
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "pressurized-ice",
+        "scu": 25,
+        "missionId": "685915ae-c014-44a9-ad4c-3353775e1bcf"
+      },
+      "shortfallScu": 25
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "processed-food",
+        "scu": 22,
+        "missionId": "685915ae-c014-44a9-ad4c-3353775e1bcf"
+      },
+      "shortfallScu": 22
+    },
+    {
+      "stopId": "leg-3",
+      "locationSlug": "shubin-mining-facility-sm0-13",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 31,
+        "missionId": "1220c6b6-83fa-4ae0-9cf7-8c911db409dc"
+      },
+      "shortfallScu": 31
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 11,
+        "missionId": null
+      },
+      "shortfallScu": 11
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 18,
+        "missionId": null
+      },
+      "shortfallScu": 18
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 16,
+        "missionId": null
+      },
+      "shortfallScu": 16
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "pressurized-ice",
+        "scu": 25,
+        "missionId": null
+      },
+      "shortfallScu": 25
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "processed-food",
+        "scu": 22,
+        "missionId": null
+      },
+      "shortfallScu": 22
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "shubin-mining-facility-sm0-18",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 31,
+        "missionId": "e9924e0e-1861-4c06-b452-f74573d99e88"
+      },
+      "shortfallScu": 31
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 11,
+        "missionId": null
+      },
+      "shortfallScu": 11
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 18,
+        "missionId": null
+      },
+      "shortfallScu": 18
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 16,
+        "missionId": null
+      },
+      "shortfallScu": 16
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "pressurized-ice",
+        "scu": 25,
+        "missionId": null
+      },
+      "shortfallScu": 25
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "processed-food",
+        "scu": 22,
+        "missionId": null
+      },
+      "shortfallScu": 22
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "shubin-mining-facility-sm0-22",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 31,
+        "missionId": null
+      },
+      "shortfallScu": 31
+    },
+    {
+      "stopId": "leg-10",
+      "locationSlug": "everus-harbor",
+      "missing": {
+        "commoditySlug": "waste",
+        "scu": 175,
+        "missionId": "08822efe-0408-41e2-876a-e627ee3bc7ba"
+      },
+      "shortfallScu": 48
+    },
+    {
+      "stopId": "leg-13",
+      "locationSlug": "hdms-stanhope",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 33,
+        "missionId": "2b2627af-8de0-424c-9ea3-34125e905520"
+      },
+      "shortfallScu": 33
+    },
+    {
+      "stopId": "leg-13",
+      "locationSlug": "hdms-stanhope",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 11,
+        "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8"
+      },
+      "shortfallScu": 11
+    },
+    {
+      "stopId": "leg-13",
+      "locationSlug": "hdms-stanhope",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 36,
+        "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8"
+      },
+      "shortfallScu": 36
+    },
+    {
+      "stopId": "leg-13",
+      "locationSlug": "hdms-stanhope",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 24,
+        "missionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8"
+      },
+      "shortfallScu": 24
+    },
+    {
+      "stopId": "leg-14",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 33,
+        "missionId": "2f1de501-f003-4a00-a327-dd1eaec12d4a"
+      },
+      "shortfallScu": 33
+    },
+    {
+      "stopId": "leg-14",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 11,
+        "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f"
+      },
+      "shortfallScu": 11
+    },
+    {
+      "stopId": "leg-14",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 36,
+        "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f"
+      },
+      "shortfallScu": 36
+    },
+    {
+      "stopId": "leg-14",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 24,
+        "missionId": "44e339e8-f651-457f-b3dd-c854e9d3ff1f"
+      },
+      "shortfallScu": 24
+    }
+  ]
+}

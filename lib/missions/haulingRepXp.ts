@@ -1,4 +1,5 @@
 import {
+  normalizeMissionRank,
   parseRankFromTitle,
   type MissionRank,
 } from "@/lib/missions/missionRank";
@@ -22,11 +23,17 @@ export const HAULING_CONTRACT_REP_XP_BY_RANK: Record<MissionRank, number> = {
   Master: 8_000,
 };
 
-/** Approximate hauling XP for one session mission from its title rank. */
+export type HaulingRepXpMission = Pick<SessionMission, "title"> & {
+  /** Prefer stored catalog/session rank when the title omits “X Rank”. */
+  rank?: MissionRank | string | null;
+};
+
+/** Approximate hauling XP from stored rank, else title rank. */
 export function estimateMissionHaulingRepXp(
-  mission: Pick<SessionMission, "title">,
+  mission: HaulingRepXpMission,
 ): number | null {
-  const rank = parseRankFromTitle(mission.title);
+  const rank =
+    normalizeMissionRank(mission.rank) ?? parseRankFromTitle(mission.title);
   if (!rank) return null;
   return HAULING_CONTRACT_REP_XP_BY_RANK[rank];
 }
@@ -45,7 +52,7 @@ export function formatHaulingRepXp(amount: number): string {
  * (unknown-rank contracts contribute 0).
  */
 export function estimateMissionsHaulingRepXp(
-  missions: Array<Pick<SessionMission, "title">>,
+  missions: HaulingRepXpMission[],
 ): number {
   return missions.reduce((sum, mission) => {
     const xp = estimateMissionHaulingRepXp(mission);

@@ -10,6 +10,7 @@ import {
 const SORT_KEYS = new Set<CatalogTableSortKey>([
   "id",
   "title",
+  "category",
   "rank",
   "reward",
   "scu",

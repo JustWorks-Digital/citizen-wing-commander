@@ -14,6 +14,10 @@ import type {
 } from "@/lib/missions/cargoInventory";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { stripRankFromTitle } from "@/lib/missions/missionRank";
+import {
+  formatDistanceToNext,
+  type DistanceToNext,
+} from "@/lib/missions/mockSession";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 function StatLabel({
@@ -148,6 +152,10 @@ export type SessionRouteProgressStatsProps = {
   auecEarned?: number;
   /** Sum of aUEC across visible (non-hidden) session contracts. */
   auecProjected?: number;
+  /** Distance already flown (completed legs). */
+  distanceTraveled?: DistanceToNext | null;
+  /** Full route distance. */
+  distanceTotal?: DistanceToNext | null;
   onMissionsClick?: () => void;
   /** Opens the route stops timeline modal. */
   onStopsClick?: () => void;
@@ -158,7 +166,7 @@ export type SessionRouteProgressStatsProps = {
    * Kept for callers; toolbar label is always “Storage bays”.
    */
   cargoBayCount?: number;
-  /** Optional control rendered just right of the Storage bays / aUEC block. */
+  /** Optional control rendered just right of the route progress strip. */
   trailing?: ReactNode;
   className?: string;
 };
@@ -167,7 +175,7 @@ function formatToolbarAuec(amount: number): string {
   return Math.floor(amount).toLocaleString("en-US");
 }
 
-/** Contracts + Stops + Storage bays + aUEC telemetry for the checklist toolbar. */
+/** Contracts + Stops + Distance + Storage bays + aUEC for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -178,6 +186,8 @@ export function SessionRouteProgressStats({
   isOverCapacity = false,
   auecEarned = 0,
   auecProjected = 0,
+  distanceTraveled = null,
+  distanceTotal = null,
   onMissionsClick,
   onStopsClick,
   onCapacityClick,
@@ -188,6 +198,9 @@ export function SessionRouteProgressStats({
   const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const showAuec = auecProjected > 0 || auecEarned > 0;
+  const traveledLabel = formatDistanceToNext(distanceTraveled);
+  const totalDistanceLabel = formatDistanceToNext(distanceTotal);
+  const showDistance = Boolean(distanceTotal || distanceTraveled);
   const stopsBody = (
     <>
       <StatLabel>{stopsLabel}</StatLabel>
@@ -230,6 +243,14 @@ export function SessionRouteProgressStats({
       </StatValue>
     </>
   );
+  const distanceBody = (
+    <>
+      <StatLabel>Trip Distance</StatLabel>
+      <StatValue>
+        <Fraction current={traveledLabel} total={totalDistanceLabel} />
+      </StatValue>
+    </>
+  );
 
   return (
     <div
@@ -259,6 +280,15 @@ export function SessionRouteProgressStats({
         ) : (
           <div className={cellClass}>{stopsBody}</div>
         )}
+        {showDistance ? (
+          <div
+            className={cellClass}
+            title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
+            aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
+          >
+            {distanceBody}
+          </div>
+        ) : null}
         {onCapacityClick ? (
           <button
             type="button"

@@ -45,10 +45,14 @@ export function kmToDistanceToNext(km: number): DistanceToNext {
   return { value: roundDistance(megameters / 1_000), unit: "Gm" };
 }
 
+/**
+ * Keep enough fractional digits that a ~1 Mm leg still moves a Gm-scale total
+ * (1 Mm = 0.001 Gm). Coarser rounding made small hops look like a no-op.
+ */
 function roundDistance(value: number): number {
-  if (value >= 100) return Math.round(value);
-  if (value >= 10) return Math.round(value * 10) / 10;
-  return Math.round(value * 100) / 100;
+  if (value >= 100) return Math.round(value * 100) / 100;
+  if (value >= 10) return Math.round(value * 1_000) / 1_000;
+  return Math.round(value * 10_000) / 10_000;
 }
 
 /**

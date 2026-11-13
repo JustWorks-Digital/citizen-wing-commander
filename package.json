@@ -29,7 +29,8 @@
     "fixtures:fetch-location-positions": "node scripts/fetch-location-positions.mjs",
     "fixtures:fetch-location-images": "node scripts/fetch-location-images.mjs",
     "fixtures:fetch-location-shops": "node scripts/fetch-location-shops.mjs",
-    "fixtures:apply-location-short-names": "node scripts/apply-location-short-names.mjs"
+    "fixtures:apply-location-short-names": "node scripts/apply-location-short-names.mjs",
+    "fixtures:restore-crossed-haul-invalid": "node scripts/restore-crossed-haul-invalid.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

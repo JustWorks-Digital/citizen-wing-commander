@@ -4,6 +4,8 @@ import type {
   HaulingChecklistRow,
   RouteAction,
 } from "@/lib/missions/mockSession";
+import { isQuantumTravelRow } from "@/lib/missions/mockSession";
+import { quantumStopDistance } from "@/lib/missions/quantumTravel";
 import {
   distanceBetweenLocationSlugs,
   sumDistanceToNext,
@@ -22,7 +24,7 @@ export type RouteTimelineNode = {
   isCompleted: boolean;
   /** First incomplete stop on the route. */
   isNext: boolean;
-  /** Distance from this node to the next node (null on final). */
+  /** Distance from this node to the next node (null on final cargo; quantum keeps hop). */
   distanceToNext: DistanceToNext | null;
 };
 
@@ -61,6 +63,11 @@ function sameSlug(a: string, b: string): boolean {
 export function buildRouteStopTimeline(input: {
   rows: HaulingChecklistRow[];
   startLocationSlug?: string | null;
+  /**
+   * Synthetic start → first-stop quantum origin marked done (UI-only until a
+   * cargo stop is completed). Counts start distance as traveled.
+   */
+  isStartCompleted?: boolean;
 }): RouteStopTimeline {
   const rows = input.rows;
   const startSlug = input.startLocationSlug?.trim() || null;
@@ -75,6 +82,10 @@ export function buildRouteStopTimeline(input: {
     }
     return last;
   })();
+  const anyStopCompleted = lastCompletedIndex >= 0;
+  const startLegCompleted = Boolean(
+    input.isStartCompleted || anyStopCompleted,
+  );
   const nextIncompleteIndex = rows.findIndex((row) => !row.isCompleted);
 
   const nodes: RouteTimelineNode[] = [];
@@ -88,8 +99,8 @@ export function buildRouteStopTimeline(input: {
       locationName: locationName(startSlug),
       routeAction: null,
       stopNumber: null,
-      isCompleted: lastCompletedIndex >= 0,
-      isNext: false,
+      isCompleted: startLegCompleted,
+      isNext: !startLegCompleted && nextIncompleteIndex === 0,
       distanceToNext: first
         ? resolveLegDistance(startSlug, first.locationSlug, null)
         : null,
@@ -108,13 +119,15 @@ export function buildRouteStopTimeline(input: {
       stopNumber: i + 1,
       isCompleted: row.isCompleted,
       isNext: i === nextIncompleteIndex,
-      distanceToNext: next
-        ? resolveLegDistance(
-            row.locationSlug,
-            next.locationSlug,
-            row.distanceToNext,
-          )
-        : null,
+      distanceToNext: isQuantumTravelRow(row)
+        ? quantumStopDistance(row, next)
+        : next
+          ? resolveLegDistance(
+              row.locationSlug,
+              next.locationSlug,
+              row.distanceToNext,
+            )
+          : null,
     });
   }
 
@@ -126,7 +139,7 @@ export function buildRouteStopTimeline(input: {
     if (!node.distanceToNext) continue;
     totalParts.push(node.distanceToNext);
     if (node.kind === "start") {
-      if (lastCompletedIndex >= 0) traveledParts.push(node.distanceToNext);
+      if (startLegCompleted) traveledParts.push(node.distanceToNext);
       else remainingParts.push(node.distanceToNext);
       continue;
     }

@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Cargo bay/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU + per-contract SCU in the modal footer.",
+          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Distance/Cargo bay/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU + per-contract SCU in the modal footer.",
       },
     },
   },
@@ -39,6 +39,8 @@ export const RouteProgress: Story = {
       cargoBayCount={2}
       auecEarned={0}
       auecProjected={128000}
+      distanceTraveled={{ value: 12.4, unit: "Mm" }}
+      distanceTotal={{ value: 48.2, unit: "Mm" }}
       onStopsClick={() => {}}
       onCapacityClick={() => {}}
     />
@@ -57,6 +59,8 @@ export const RouteProgressSingleBay: Story = {
       cargoBayCount={1}
       auecEarned={48000}
       auecProjected={128000}
+      distanceTraveled={{ value: 27, unit: "Gm" }}
+      distanceTotal={{ value: 91, unit: "Gm" }}
       onStopsClick={() => {}}
       onCapacityClick={() => {}}
     />
@@ -185,6 +189,8 @@ export const AllPieces: Story = {
         totalCapacity={96}
         auecEarned={0}
         auecProjected={144000}
+        distanceTraveled={{ value: 0, unit: "km" }}
+        distanceTotal={{ value: 450.5, unit: "km" }}
       />
       <SessionInventoryStat
         onboardScu={24}

@@ -67,6 +67,18 @@ import {
 } from "./HaulingChecklistTable";
 import { SessionCatalogMissionsPanel } from "./SessionCatalogMissionsPanel";
 import { SessionMissionsModal } from "./SessionMissionsModal";
+import { TripPlanInvalidBanner } from "./TripPlanInvalidBanner";
+import { buildRouteStopTimeline } from "@/lib/missions/routeStopTimeline";
+import {
+  checklistRowsFromTripPlan,
+  contractLegsFromChecklistRows,
+  optimizeTrip,
+  validateChecklistTripCargo,
+} from "@/lib/missions/tripPlan";
+import {
+  mergePreservedQuantumRows,
+  recomputeDistances,
+} from "@/lib/missions/quantumTravel";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
@@ -91,6 +103,8 @@ export type SessionChecklistViewProps = {
 
 /** Near-live while the tab is focused; slower when backgrounded. */
 const POLL_VISIBLE_MS = 1500;
+/** While Contracts / catalog modals are open, poll less so list scroll stays smooth. */
+const POLL_MODAL_MS = 8000;
 const POLL_HIDDEN_MS = 12000;
 
 export function SessionChecklistView({
@@ -133,7 +147,11 @@ export function SessionChecklistView({
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
+  /** Synthetic start → first-stop quantum marked done (feeds Distance traveled). */
+  const [quantumOriginDeparted, setQuantumOriginDeparted] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [tripRepairBusy, setTripRepairBusy] = useState(false);
+  const [tripRepairError, setTripRepairError] = useState<string | null>(null);
   const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
   const [shipsLoading, setShipsLoading] = useState(true);
   const [shipsError, setShipsError] = useState<string | null>(null);
@@ -144,9 +162,11 @@ export function SessionChecklistView({
   const sessionRef = useRef(session);
   const activeIdRef = useRef(activeSessionId);
   const routerRef = useRef(router);
+  const overlayOpenRef = useRef(false);
   sessionRef.current = session;
   activeIdRef.current = activeSessionId;
   routerRef.current = router;
+  overlayOpenRef.current = missionsOpen || catalogOpen;
 
   useEffect(() => {
     let cancelled = false;
@@ -218,9 +238,11 @@ export function SessionChecklistView({
       if (cancelled) return;
       if (timer != null) window.clearTimeout(timer);
       const delay =
-        document.visibilityState === "visible"
-          ? POLL_VISIBLE_MS
-          : POLL_HIDDEN_MS;
+        document.visibilityState !== "visible"
+          ? POLL_HIDDEN_MS
+          : overlayOpenRef.current
+            ? POLL_MODAL_MS
+            : POLL_VISIBLE_MS;
       timer = window.setTimeout(() => {
         void load().finally(schedule);
       }, delay);
@@ -229,7 +251,25 @@ export function SessionChecklistView({
     const refreshTabs = async () => {
       const list = await fetchChecklistSessions();
       if (cancelled) return;
-      setTabs(list.sessions);
+      setTabs((prev) => {
+        if (
+          prev.length === list.sessions.length &&
+          prev.every((tab, index) => {
+            const next = list.sessions[index];
+            return (
+              next != null &&
+              tab.id === next.id &&
+              tab.sessionName === next.sessionName &&
+              tab.updatedAt === next.updatedAt &&
+              tab.missionCount === next.missionCount &&
+              tab.rowCount === next.rowCount
+            );
+          })
+        ) {
+          return prev;
+        }
+        return list.sessions;
+      });
       const stillExists = list.sessions.some(
         (tab) => tab.id === routeSessionId,
       );
@@ -310,7 +350,16 @@ export function SessionChecklistView({
 
   useEffect(() => {
     setFocusedStopId(null);
+    setQuantumOriginDeparted(false);
   }, [session.id]);
+
+  useEffect(() => {
+    setQuantumOriginDeparted(false);
+  }, [
+    session.startLocationSlug,
+    session.rows[0]?.id,
+    session.rows[0]?.locationSlug,
+  ]);
 
   const resolvedFocusedStopId = useMemo(() => {
     const canFocusQuantum =
@@ -421,6 +470,50 @@ export function SessionChecklistView({
     setMissionsOpen(false);
     setMissionsFocusId(null);
   }, []);
+  const handleMissionToggleHidden = useCallback(
+    (missionId: string, isHidden: boolean) => {
+      const result = setMissionHiddenAndRebuildRoute(
+        sessionRef.current,
+        missionId,
+        isHidden,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+    },
+    [persistSession],
+  );
+  const handleMissionToggleCompleted = useCallback(
+    (missionId: string, isCompleted: boolean) => {
+      const result = setMissionCompletedAndRebuildRoute(
+        sessionRef.current,
+        missionId,
+        isCompleted,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+    },
+    [persistSession],
+  );
+  const handleMissionRemove = useCallback(
+    (missionId: string) => {
+      const result = removeMissionAndRebuildRoute(
+        sessionRef.current,
+        missionId,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+    },
+    [persistSession],
+  );
   const openStops = useCallback(() => setStopsOpen(true), []);
   const closeStops = useCallback(() => setStopsOpen(false), []);
   const openCargoLayout = useCallback(() => setCargoLayoutOpen(true), []);
@@ -478,6 +571,21 @@ export function SessionChecklistView({
     [session.missions],
   );
 
+  const isStartLegCompleted =
+    quantumOriginDeparted || session.rows.some((row) => row.isCompleted);
+
+  const routeDistance = useMemo(() => {
+    const timeline = buildRouteStopTimeline({
+      rows: session.rows,
+      startLocationSlug: session.startLocationSlug ?? null,
+      isStartCompleted: isStartLegCompleted,
+    });
+    return {
+      traveled: timeline.traveled,
+      total: timeline.total,
+    };
+  }, [session.rows, session.startLocationSlug, isStartLegCompleted]);
+
   const routeProgressStats = useMemo(
     () => (
       <SessionRouteProgressStats
@@ -490,6 +598,8 @@ export function SessionChecklistView({
         isOverCapacity={isOverCapacity}
         auecEarned={auecEarned}
         auecProjected={auecProjected}
+        distanceTraveled={routeDistance.traveled}
+        distanceTotal={routeDistance.total}
         onMissionsClick={openMissions}
         onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
@@ -506,6 +616,8 @@ export function SessionChecklistView({
       isOverCapacity,
       auecEarned,
       auecProjected,
+      routeDistance.traveled,
+      routeDistance.total,
       openMissions,
       openStops,
       openCargoLayout,
@@ -673,40 +785,51 @@ export function SessionChecklistView({
     [persistSession],
   );
 
-  const applyBoxBreakdown = (
-    missionId: string,
-    commoditySlug: string,
-    breakdown: ScuBoxSplits,
-    options?: {
-      applyPreferredMaxToRemaining?: boolean;
-      onlyUncorrected?: boolean;
+  const applyBoxBreakdown = useCallback(
+    (
+      missionId: string,
+      commoditySlug: string,
+      breakdown: ScuBoxSplits,
+      options?: {
+        applyPreferredMaxToRemaining?: boolean;
+        onlyUncorrected?: boolean;
+      },
+    ) => {
+      const result = setMissionScuBoxSplits(
+        sessionRef.current,
+        missionId,
+        breakdown,
+        commoditySlug,
+        options,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+      const updatedMission =
+        result.session.missions?.find((mission) => mission.id === missionId) ??
+        null;
+      const catalogId = updatedMission?.catalogMissionId ?? null;
+      if (!catalogId || !updatedMission?.scuBoxSplits) return;
+      void updateCatalogMissionScuBoxSplits({
+        missionId: catalogId,
+        scuBoxSplits: updatedMission.scuBoxSplits,
+        scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
+      }).catch(() => {
+        setLoadError("Saved on trip, but failed to update catalog default");
+      });
     },
-  ) => {
-    const result = setMissionScuBoxSplits(
-      session,
-      missionId,
-      breakdown,
-      commoditySlug,
-      options,
-    );
-    if (!result.ok) {
-      setLoadError(result.error);
-      return;
-    }
-    persistSession(result.session);
-    const updatedMission =
-      result.session.missions?.find((mission) => mission.id === missionId) ??
-      null;
-    const catalogId = updatedMission?.catalogMissionId ?? null;
-    if (!catalogId || !updatedMission?.scuBoxSplits) return;
-    void updateCatalogMissionScuBoxSplits({
-      missionId: catalogId,
-      scuBoxSplits: updatedMission.scuBoxSplits,
-      scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
-    }).catch(() => {
-      setLoadError("Saved on trip, but failed to update catalog default");
-    });
-  };
+    [persistSession],
+  );
+
+  const onOpenContracts = useCallback(
+    (missionId?: string) => {
+      if (missionId) openMissions(missionId);
+      else toggleMissions();
+    },
+    [openMissions, toggleMissions],
+  );
 
   const onReorderStops = useCallback(
     (orderedIds: string[]) => {
@@ -727,7 +850,57 @@ export function SessionChecklistView({
   );
 
   const onResetTrip = useCallback(() => {
+    setQuantumOriginDeparted(false);
     persistSession(resetTripProgress(sessionRef.current));
+  }, [persistSession]);
+
+  const tripCargoValidation = useMemo(
+    () =>
+      validateChecklistTripCargo(
+        session.rows,
+        session.startLocationSlug ?? null,
+      ),
+    [session.rows, session.startLocationSlug],
+  );
+
+  useEffect(() => {
+    if (tripCargoValidation.ok) setTripRepairError(null);
+  }, [tripCargoValidation.ok]);
+
+  const repairInvalidTrip = useCallback(() => {
+    const current = sessionRef.current;
+    setTripRepairBusy(true);
+    setTripRepairError(null);
+    try {
+      const legs = contractLegsFromChecklistRows(current.rows);
+      if (legs.length === 0) {
+        setTripRepairError("No contract cargo legs found to rebuild from.");
+        return;
+      }
+      const result = optimizeTrip(legs, current.startLocationSlug ?? null);
+      if (!result.ok) {
+        setTripRepairError(
+          result.issues[0]
+            ? `Still invalid after repair (${result.issues[0].locationSlug}).`
+            : "Could not build a valid route from these contracts.",
+        );
+        return;
+      }
+      const repairedRows = recomputeDistances(
+        mergePreservedQuantumRows(
+          current.rows,
+          checklistRowsFromTripPlan(result.plan),
+        ),
+      );
+      persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          rows: repairedRows,
+        }),
+      );
+    } finally {
+      setTripRepairBusy(false);
+    }
   }, [persistSession]);
 
   const selectSession = async (nextSessionId: string) => {
@@ -895,6 +1068,15 @@ export function SessionChecklistView({
         ) : null}
       </div>
 
+      {!tripCargoValidation.ok ? (
+        <TripPlanInvalidBanner
+          issues={tripCargoValidation.issues}
+          isRepairing={tripRepairBusy}
+          repairError={tripRepairError}
+          onRepair={repairInvalidTrip}
+        />
+      ) : null}
+
       <HaulingChecklistTable
         rows={session.rows}
         focusedStopId={resolvedFocusedStopId}
@@ -903,15 +1085,14 @@ export function SessionChecklistView({
         missions={session.missions ?? []}
         sessionId={session.id}
         startLocationSlug={session.startLocationSlug ?? null}
+        quantumOriginDeparted={quantumOriginDeparted}
+        onQuantumOriginDepartedChange={setQuantumOriginDeparted}
         onToggleCargoHandled={onToggleCargoHandled}
         onInsertQuantumTravel={onInsertQuantumTravel}
         onUpdateQuantumTravel={onUpdateQuantumTravel}
         onOpenCargoBays={toggleCargoLayout}
         onOpenStops={toggleStops}
-        onOpenContracts={(missionId) => {
-          if (missionId) openMissions(missionId);
-          else toggleMissions();
-        }}
+        onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
@@ -955,6 +1136,7 @@ export function SessionChecklistView({
         open={stopsOpen}
         rows={session.rows}
         startLocationSlug={session.startLocationSlug ?? null}
+        isStartCompleted={isStartLegCompleted}
         onClose={closeStops}
         onResetTrip={onResetTrip}
         onReorderStops={onReorderStops}
@@ -977,38 +1159,9 @@ export function SessionChecklistView({
         rows={session.rows}
         focusMissionId={missionsFocusId}
         onClose={closeMissions}
-        onToggleHidden={(missionId, isHidden) => {
-          const result = setMissionHiddenAndRebuildRoute(
-            session,
-            missionId,
-            isHidden,
-          );
-          if (!result.ok) {
-            setLoadError(result.error);
-            return;
-          }
-          persistSession(result.session);
-        }}
-        onToggleCompleted={(missionId, isCompleted) => {
-          const result = setMissionCompletedAndRebuildRoute(
-            session,
-            missionId,
-            isCompleted,
-          );
-          if (!result.ok) {
-            setLoadError(result.error);
-            return;
-          }
-          persistSession(result.session);
-        }}
-        onRemoveMission={(missionId) => {
-          const result = removeMissionAndRebuildRoute(session, missionId);
-          if (!result.ok) {
-            setLoadError(result.error);
-            return;
-          }
-          persistSession(result.session);
-        }}
+        onToggleHidden={handleMissionToggleHidden}
+        onToggleCompleted={handleMissionToggleCompleted}
+        onRemoveMission={handleMissionRemove}
         onSelectBoxBreakdown={applyBoxBreakdown}
       />
     </div>

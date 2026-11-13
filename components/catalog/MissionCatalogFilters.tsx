@@ -35,15 +35,15 @@ const DROPDOWN_FIELDS: Array<{
   multiple?: boolean;
 }> = [
   { key: "rank", label: "Rank" },
+  { key: "category", label: "Category" },
   { key: "route", label: "Route type", multiple: false },
   { key: "from", label: "From" },
   { key: "to", label: "To" },
   { key: "cargo", label: "Cargo" },
-  { key: "category", label: "Category" },
 ];
 
 /**
- * Standalone catalog filters — search plus Rank / Route / From / To / Cargo / Category.
+ * Standalone catalog filters — search plus Rank / Category / Route / From / To / Cargo.
  */
 export function MissionCatalogFilters({
   missions,
@@ -212,7 +212,7 @@ export function MissionCatalogFilters({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rsi-divider/70 pt-3">
         <p className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted">
           Showing {resultCount}
-          {resultCount !== totalCount ? ` of ${totalCount}` : ""} contract
+          {resultCount !== totalCount ? ` / ${totalCount}` : ""} contract
           {resultCount === 1 ? "" : "s"}
         </p>
         {hasActive ? (

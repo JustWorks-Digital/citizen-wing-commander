@@ -29,12 +29,17 @@ export const CATALOG_CATEGORY_FILTER_VALUES = HAULING_CATEGORIES.map(
 export type CatalogTableSortKey =
   | "id"
   | "title"
+  | "category"
   | "rank"
   | "reward"
   | "scu"
   | "from"
   | "to"
   | "cargo";
+
+const CATEGORY_SORT_ORDER = Object.fromEntries(
+  CATALOG_CATEGORY_FILTER_VALUES.map((label, index) => [label, index]),
+) as Record<string, number>;
 
 export type CatalogTableSortDir = "asc" | "desc";
 
@@ -118,6 +123,10 @@ function missionSortValue(
         ? contractorDisplayName(mission.contractorSlug)
         : "";
       return `${mission.title} ${contractor}`.trim();
+    }
+    case "category": {
+      const category = missionCategoryLabel(mission);
+      return category ? (CATEGORY_SORT_ORDER[category] ?? 99) : 99;
     }
     case "rank": {
       const rank = missionRank(mission) as MissionRank | "";

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CatalogMission } from "@/db/schema";
 import {
   catalogCargoLines,
+  catalogPayload,
   catalogRewardLabel,
   catalogRouteSummary,
   contractorDisplayName,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/missions/catalogMissionTableQuery";
 import { SourceIcon } from "@/components/ui/SourceIcon";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type MissionCatalogTableProps = {
@@ -50,7 +52,8 @@ const COLUMNS: Array<{
   title?: string;
 }> = [
   { key: "id", label: "ID", className: "w-[5.5rem]" },
-  { key: "title", label: "Title", className: "w-[24%] min-w-0" },
+  { key: "title", label: "Title", className: "w-[22%] min-w-0" },
+  { key: "category", label: "Category", className: "w-[5.75rem]" },
   { key: "rank", label: "Rank", className: "w-[5.25rem]" },
   {
     key: "reward",
@@ -309,6 +312,7 @@ export function MissionCatalogTable({
                 <tr
                   key={mission.id}
                   className={[
+                    "[content-visibility:auto] [contain-intrinsic-size:auto_3.25rem]",
                     "border-b border-rsi-divider/80 last:border-b-0 transition-colors",
                     isSelected
                       ? "bg-rsi-accent/10"
@@ -391,6 +395,11 @@ export function MissionCatalogTable({
                         {contractorDisplayName(mission.contractorSlug)}
                       </p>
                     ) : null}
+                  </td>
+                  <td className={tdClass}>
+                    {haulingCategoryShortLabel(
+                      catalogPayload(mission)?.category,
+                    ) ?? "—"}
                   </td>
                   <td className={tdClass}>{mission.rank ?? "—"}</td>
                   <td

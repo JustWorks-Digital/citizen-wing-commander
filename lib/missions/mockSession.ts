@@ -151,9 +151,16 @@ export type SessionChecklistModel = {
   rows: HaulingChecklistRow[];
 };
 
+function formatDistanceValue(value: number): string {
+  if (value === 0) return "0";
+  const abs = Math.abs(value);
+  const decimals = abs >= 100 ? 2 : abs >= 10 ? 3 : 4;
+  return value.toFixed(decimals).replace(/\.?0+$/, "");
+}
+
 export function formatDistanceToNext(distance: DistanceToNext | null): string {
   if (!distance) return "—";
-  return `${distance.value} ${distance.unit}`;
+  return `${formatDistanceValue(distance.value)} ${distance.unit}`;
 }
 
 export function areAllLegsComplete(rows: HaulingChecklistRow[]): boolean {

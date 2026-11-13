@@ -3,7 +3,10 @@ import {
   isQuantumTravelRow,
   rowPresenceLocationSlug,
 } from "@/lib/missions/mockSession";
-import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
+import {
+  distanceBetweenLocationSlugs,
+  sumDistanceToNext,
+} from "@/lib/starmap/distance";
 
 /** Sentinel: insert before the first cargo/quantum stop (after session start). */
 export const INSERT_AFTER_SESSION_START = "route-start";
@@ -12,12 +15,57 @@ function sameSlug(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+/** Straight-line hop for a quantum row (`locationSlug` → `quantumToLocationSlug`). */
+export function quantumHopDistance(
+  row: Pick<HaulingChecklistRow, "locationSlug" | "quantumToLocationSlug">,
+) {
+  const toSlug = row.quantumToLocationSlug?.trim();
+  if (!toSlug) return null;
+  return distanceBetweenLocationSlugs(row.locationSlug, toSlug);
+}
+
+/**
+ * Distance owned by a quantum stop: hop, plus any gap from arrival to the next
+ * row’s origin. Prefer live hop math over a stale stored `distanceToNext`
+ * (older recompute wrote post-arrival 0 km and hid the hop).
+ */
+export function quantumStopDistance(
+  row: HaulingChecklistRow,
+  next?: HaulingChecklistRow | null,
+) {
+  const hop = quantumHopDistance(row);
+  if (!next) {
+    return hop ?? row.distanceToNext ?? null;
+  }
+  const after = distanceBetweenLocationSlugs(
+    rowPresenceLocationSlug(row),
+    next.locationSlug,
+  );
+  return sumDistanceToNext([hop, after]) ?? hop ?? row.distanceToNext ?? null;
+}
+
 /** Refresh adjacent `distanceToNext` after insert / reorder / location edits. */
 export function recomputeDistances(
   rows: HaulingChecklistRow[],
 ): HaulingChecklistRow[] {
   return rows.map((row, index) => {
     const next = rows[index + 1];
+    if (isQuantumTravelRow(row)) {
+      // Quantum owns its hop; keep it even when this is the last checklist row.
+      const hop = quantumHopDistance(row);
+      if (!next) {
+        return { ...row, distanceToNext: hop };
+      }
+      const after = distanceBetweenLocationSlugs(
+        rowPresenceLocationSlug(row),
+        next.locationSlug,
+      );
+      return {
+        ...row,
+        distanceToNext:
+          sumDistanceToNext([hop, after]) ?? hop ?? row.distanceToNext,
+      };
+    }
     if (!next) {
       return { ...row, distanceToNext: null };
     }
@@ -48,7 +96,10 @@ export function createQuantumTravelRow(input: {
     reasonShopSlug,
     cargoDeliveries: [],
     shipStorageLocation: "front",
-    distanceToNext: distanceBetweenLocationSlugs(fromSlug, toSlug),
+    distanceToNext: quantumHopDistance({
+      locationSlug: fromSlug,
+      quantumToLocationSlug: toSlug,
+    }),
     isCompleted: false,
   };
 }
@@ -207,7 +258,10 @@ export function updateQuantumTravelEndpoints(
     locationSlug: fromSlug,
     quantumToLocationSlug: toSlug,
     reasonShopSlug,
-    distanceToNext: distanceBetweenLocationSlugs(fromSlug, toSlug),
+    distanceToNext: quantumHopDistance({
+      locationSlug: fromSlug,
+      quantumToLocationSlug: toSlug,
+    }),
   };
   return { ok: true, rows: recomputeDistances(next) };
 }

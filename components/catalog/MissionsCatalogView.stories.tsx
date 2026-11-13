@@ -5,7 +5,15 @@ import { sampleCatalogMissions } from "./missionCatalogFixtures";
 const meta = {
   title: "Catalog/MissionsCatalogView",
   component: MissionsCatalogView,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Contracts catalog with filters, checkbox selection, and selection totals (Stops / Distance / SCU / Peak / aUEC / EXP) under the selected chip block.",
+      },
+    },
+  },
   args: {
     initialMissions: sampleCatalogMissions,
     persistUrlState: false,

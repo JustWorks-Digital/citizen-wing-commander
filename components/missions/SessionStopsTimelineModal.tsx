@@ -24,6 +24,8 @@ export type SessionStopsTimelineModalProps = {
   open: boolean;
   rows: HaulingChecklistRow[];
   startLocationSlug?: string | null;
+  /** Synthetic start → first-stop quantum marked done (counts start distance traveled). */
+  isStartCompleted?: boolean;
   onClose: () => void;
   /** Clear stop completion so the trip can be reordered again (contracts stay). */
   onResetTrip?: () => void;
@@ -94,6 +96,7 @@ export function SessionStopsTimelineModal({
   open,
   rows,
   startLocationSlug = null,
+  isStartCompleted = false,
   onClose,
   onResetTrip,
   onReorderStops,
@@ -123,8 +126,9 @@ export function SessionStopsTimelineModal({
       buildRouteStopTimeline({
         rows: displayRows,
         startLocationSlug,
+        isStartCompleted,
       }),
-    [displayRows, startLocationSlug],
+    [displayRows, startLocationSlug, isStartCompleted],
   );
   const nodeCount = timeline.nodes.length;
   const progressRatio =

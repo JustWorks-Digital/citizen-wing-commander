@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  memo,
+  startTransition,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -8,6 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { CatalogMission } from "@/db/schema";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { fetchCatalogMissionsByIds } from "@/lib/api/catalogMissionsApi";
@@ -350,7 +354,7 @@ function missionBoxCount(mission: SessionMission): number {
   }, 0);
 }
 
-function MissionContractRow({
+const MissionContractRow = memo(function MissionContractRow({
   mission,
   rows,
   isFocused = false,
@@ -363,11 +367,11 @@ function MissionContractRow({
   mission: SessionMission;
   rows: HaulingChecklistRow[];
   isFocused?: boolean;
-  onToggleSelect: () => void;
-  onToggleHidden: (isHidden: boolean) => void;
-  onToggleCompleted: (isCompleted: boolean) => void;
-  onRemoveMission: () => void;
-  onEditBoxTypes: () => void;
+  onToggleSelect: (missionId: string) => void;
+  onToggleHidden: (missionId: string, isHidden: boolean) => void;
+  onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
+  onRemoveMission: (missionId: string) => void;
+  onEditBoxTypes: (missionId: string) => void;
 }) {
   const isHidden = Boolean(mission.isHidden);
   const isCompleted = Boolean(mission.isCompleted);
@@ -420,9 +424,11 @@ function MissionContractRow({
       onClick={(event) => {
         const target = event.target as HTMLElement | null;
         if (target?.closest("button, a, [role='menu']")) return;
-        onToggleSelect();
+        onToggleSelect(mission.id);
       }}
       className={[
+        // Skip off-screen row paint work while scrolling the contracts list.
+        "[content-visibility:auto] [contain-intrinsic-size:auto_4.5rem]",
         "cursor-pointer border-b border-rsi-border/50 last:border-b-0",
         isHidden ? "opacity-55" : "",
         isFocused
@@ -514,7 +520,7 @@ function MissionContractRow({
           aria-label={`Edit box types for ${mission.title}`}
           onClick={(event) => {
             event.stopPropagation();
-            onEditBoxTypes();
+            onEditBoxTypes(mission.id);
           }}
           className={[
             "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1",
@@ -572,14 +578,18 @@ function MissionContractRow({
       <td className={`${tdClass} w-10`}>
         <MissionActionsMenu
           mission={mission}
-          onToggleCompleted={onToggleCompleted}
-          onToggleHidden={onToggleHidden}
-          onRemoveMission={onRemoveMission}
+          onToggleCompleted={(isCompletedNext) =>
+            onToggleCompleted(mission.id, isCompletedNext)
+          }
+          onToggleHidden={(isHiddenNext) =>
+            onToggleHidden(mission.id, isHiddenNext)
+          }
+          onRemoveMission={() => onRemoveMission(mission.id)}
         />
       </td>
     </tr>
   );
-}
+});
 
 export function SessionMissionsModal({
   open,
@@ -597,10 +607,40 @@ export function SessionMissionsModal({
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
     null,
   );
+  /** Keep DOM warm after first open so close/reopen is CSS-only. */
+  const [retain, setRetain] = useState(false);
+  /** Defer heavy row paint one frame so the dialog chrome can appear first. */
+  const [paintRows, setPaintRows] = useState(false);
   const tableScrollRef = useRef<HTMLDivElement>(null);
+  const catalogByIdRef = useRef<Map<string, CatalogMission>>(new Map());
+  const catalogIdsKeyRef = useRef<string>("");
+
+  const catalogIdsKey = useMemo(
+    () =>
+      missions
+        .map((mission) => mission.catalogMissionId)
+        .filter((id): id is string => Boolean(id))
+        .sort()
+        .join(","),
+    [missions],
+  );
+
+  const applyCatalogOverlay = useCallback(
+    (nextMissions: SessionMission[]) =>
+      nextMissions.map((mission) =>
+        enrichSessionMissionFromCatalog(
+          mission,
+          mission.catalogMissionId
+            ? catalogByIdRef.current.get(mission.catalogMissionId)
+            : null,
+        ),
+      ),
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
+    setRetain(true);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && boxEditMissionId == null) onClose();
     };
@@ -618,31 +658,36 @@ export function SessionMissionsModal({
   }, [open, focusMissionId]);
 
   useEffect(() => {
-    if (!open) {
-      setEnriched(missions);
+    if (!open) return;
+    if (paintRows) return;
+    const frame = window.requestAnimationFrame(() => {
+      startTransition(() => setPaintRows(true));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, paintRows]);
+
+  // Prefetch / refresh catalog overlay even while closed so open is not network-bound.
+  useEffect(() => {
+    setEnriched(applyCatalogOverlay(missions));
+
+    if (!catalogIdsKey) {
+      catalogByIdRef.current = new Map();
+      catalogIdsKeyRef.current = "";
       return;
     }
-    let cancelled = false;
-    setEnriched(missions);
-    const ids = missions
-      .map((mission) => mission.catalogMissionId)
-      .filter((id): id is string => Boolean(id));
-    if (ids.length === 0) return;
 
+    if (catalogIdsKey === catalogIdsKeyRef.current) return;
+
+    let cancelled = false;
+    const ids = catalogIdsKey.split(",");
     void fetchCatalogMissionsByIds(ids)
       .then((catalogRows) => {
         if (cancelled) return;
-        const byId = new Map(catalogRows.map((row) => [row.id, row]));
-        setEnriched(
-          missions.map((mission) =>
-            enrichSessionMissionFromCatalog(
-              mission,
-              mission.catalogMissionId
-                ? byId.get(mission.catalogMissionId)
-                : null,
-            ),
-          ),
+        catalogByIdRef.current = new Map(
+          catalogRows.map((row) => [row.id, row]),
         );
+        catalogIdsKeyRef.current = catalogIdsKey;
+        setEnriched(applyCatalogOverlay(missions));
       })
       .catch(() => {
         if (!cancelled) setEnriched(missions);
@@ -651,14 +696,12 @@ export function SessionMissionsModal({
     return () => {
       cancelled = true;
     };
-  }, [open, missions]);
+  }, [missions, catalogIdsKey, applyCatalogOverlay]);
 
-  const displayMissions = useMemo(() => enriched, [enriched]);
   const boxEditMission =
     boxEditMissionId == null
       ? null
-      : (displayMissions.find((mission) => mission.id === boxEditMissionId) ??
-        null);
+      : (enriched.find((mission) => mission.id === boxEditMissionId) ?? null);
 
   const columnTotals = useMemo(() => {
     let rewardAuec = 0;
@@ -668,7 +711,7 @@ export function SessionMissionsModal({
     let exp = 0;
     let expEarned = 0;
     let boxes = 0;
-    for (const mission of displayMissions) {
+    for (const mission of enriched) {
       const missionScu = missionTotalScu(mission);
       const missionReward = missionAuecAmount(mission);
       const missionExp = estimateMissionHaulingRepXp(mission) ?? 0;
@@ -683,7 +726,38 @@ export function SessionMissionsModal({
       }
     }
     return { rewardAuec, rewardEarned, scu, scuEarned, exp, expEarned, boxes };
-  }, [displayMissions]);
+  }, [enriched]);
+
+  const onToggleSelect = useCallback((missionId: string) => {
+    setSelectedMissionId((current) =>
+      current === missionId ? null : missionId,
+    );
+  }, []);
+
+  const handleToggleHidden = useCallback(
+    (missionId: string, isHidden: boolean) => {
+      onToggleHidden(missionId, isHidden);
+    },
+    [onToggleHidden],
+  );
+
+  const handleToggleCompleted = useCallback(
+    (missionId: string, isCompleted: boolean) => {
+      onToggleCompleted(missionId, isCompleted);
+    },
+    [onToggleCompleted],
+  );
+
+  const handleRemoveMission = useCallback(
+    (missionId: string) => {
+      onRemoveMission(missionId);
+    },
+    [onRemoveMission],
+  );
+
+  const handleEditBoxTypes = useCallback((missionId: string) => {
+    setBoxEditMissionId(missionId);
+  }, []);
 
   useEffect(() => {
     if (!open || !selectedMissionId) return;
@@ -697,17 +771,23 @@ export function SessionMissionsModal({
       row.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(id);
-  }, [open, focusMissionId, selectedMissionId, displayMissions]);
+  }, [open, focusMissionId, selectedMissionId, enriched]);
 
-  if (!open) return null;
+  if (!open && !retain) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/85 p-0 sm:items-center sm:p-4"
+      className={[
+        "fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/85 p-0 sm:items-center sm:p-4",
+        open ? "" : "hidden",
+      ].join(" ")}
       role="dialog"
-      aria-modal="true"
+      aria-modal={open}
       aria-label="Contracts"
+      aria-hidden={!open}
+      inert={!open ? true : undefined}
       onClick={(event) => {
+        if (!open) return;
         if (event.target === event.currentTarget) onClose();
       }}
     >
@@ -723,9 +803,13 @@ export function SessionMissionsModal({
           ref={tableScrollRef}
           className="min-h-0 flex-1 overflow-auto overscroll-contain"
         >
-          {displayMissions.length === 0 ? (
+          {enriched.length === 0 ? (
             <p className="px-4 py-4 text-sm text-rsi-text-muted sm:px-5 sm:py-5">
               No contracts in this session.
+            </p>
+          ) : !paintRows ? (
+            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:px-5 sm:py-5">
+              Loading contracts…
             </p>
           ) : (
             <table className="w-full min-w-[58rem] border-collapse text-left">
@@ -750,25 +834,17 @@ export function SessionMissionsModal({
                 </tr>
               </thead>
               <tbody>
-                {displayMissions.map((mission) => (
+                {enriched.map((mission) => (
                   <MissionContractRow
                     key={mission.id}
                     mission={mission}
                     rows={rows}
                     isFocused={mission.id === selectedMissionId}
-                    onToggleSelect={() => {
-                      setSelectedMissionId((current) =>
-                        current === mission.id ? null : mission.id,
-                      );
-                    }}
-                    onToggleHidden={(isHidden) =>
-                      onToggleHidden(mission.id, isHidden)
-                    }
-                    onToggleCompleted={(isCompleted) =>
-                      onToggleCompleted(mission.id, isCompleted)
-                    }
-                    onRemoveMission={() => onRemoveMission(mission.id)}
-                    onEditBoxTypes={() => setBoxEditMissionId(mission.id)}
+                    onToggleSelect={onToggleSelect}
+                    onToggleHidden={handleToggleHidden}
+                    onToggleCompleted={handleToggleCompleted}
+                    onRemoveMission={handleRemoveMission}
+                    onEditBoxTypes={handleEditBoxTypes}
                   />
                 ))}
               </tbody>
@@ -860,7 +936,7 @@ export function SessionMissionsModal({
         </div>
       </div>
 
-      {boxEditMission ? (
+      {open && boxEditMission ? (
         <StopMissionBoxConfigModal
           mission={boxEditMission}
           onClose={() => setBoxEditMissionId(null)}
