@@ -77,8 +77,7 @@ function missionCargoScu(mission: SessionMission): number {
 export const cargoInventory = {
   /**
    * SCU transfer ledger by stop id for the full planned trip.
-   * At `both` stops, phase order follows the first cargo line’s role so
-   * unload-then-load hubs (delivery lines first) do not double-count aboard.
+   * At `both` stops, unload (delivery) runs before load (pickup).
    */
   transferLedgerByStop(
     rows: HaulingChecklistRow[],
@@ -88,47 +87,28 @@ export const cargoInventory = {
     for (const row of rows) {
       let pickupAmount = 0;
       let deliveryAmount = 0;
-      let firstRole: "pickup" | "delivery" | null = null;
       if (row.routeAction !== "quantum") {
         const fallback = row.routeAction === "both" ? null : row.routeAction;
         for (const cargo of row.cargoDeliveries) {
           const role = cargo.role ?? fallback;
           if (role !== "pickup" && role !== "delivery") continue;
-          if (!firstRole) firstRole = role;
           if (role === "pickup") pickupAmount += cargo.scu;
           else deliveryAmount += cargo.scu;
         }
       }
 
-      const deliverFirst =
-        firstRole === "delivery" ||
-        (firstRole == null && deliveryAmount > 0 && pickupAmount === 0);
-
       let pickup: ScuTransfer | false = false;
       let delivery: ScuTransfer | false = false;
 
-      if (deliverFirst) {
-        if (deliveryAmount > 0) {
-          const before = current;
-          current = Math.max(0, current - deliveryAmount);
-          delivery = { before, amount: deliveryAmount, after: current };
-        }
-        if (pickupAmount > 0) {
-          const before = current;
-          current += pickupAmount;
-          pickup = { before, amount: pickupAmount, after: current };
-        }
-      } else {
-        if (pickupAmount > 0) {
-          const before = current;
-          current += pickupAmount;
-          pickup = { before, amount: pickupAmount, after: current };
-        }
-        if (deliveryAmount > 0) {
-          const before = current;
-          current = Math.max(0, current - deliveryAmount);
-          delivery = { before, amount: deliveryAmount, after: current };
-        }
+      if (deliveryAmount > 0) {
+        const before = current;
+        current = Math.max(0, current - deliveryAmount);
+        delivery = { before, amount: deliveryAmount, after: current };
+      }
+      if (pickupAmount > 0) {
+        const before = current;
+        current += pickupAmount;
+        pickup = { before, amount: pickupAmount, after: current };
       }
 
       byStop.set(row.id, { pickup, delivery });
@@ -138,7 +118,7 @@ export const cargoInventory = {
 
   /**
    * Peak aboard SCU at a stop across its transfer phases
-   * (handles pickup-then-delivery and delivery-then-pickup).
+   * (delivery/unload then pickup/load when both run).
    */
   peakScuAtStop(ledger: StopTransferLedger): number {
     let peak = 0;
@@ -227,7 +207,8 @@ export const cargoInventory = {
     }
     return [...byKey.values()].sort((a, b) => {
       if (a.action !== b.action) {
-        return a.action === "pickup" ? -1 : 1;
+        // Drop off before pickup at both-stops.
+        return a.action === "delivery" ? -1 : 1;
       }
       return a.commoditySlug.localeCompare(b.commoditySlug);
     });

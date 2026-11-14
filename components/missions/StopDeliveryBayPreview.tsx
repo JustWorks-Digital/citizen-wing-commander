@@ -104,7 +104,7 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
 /**
  * Per-stop pickup/delivery crates on generic flat 3D pads (not the ship bay).
  * Pass `role` to render a single graph (aligned with that left-side section).
- * Without `role`, both render (pickup then drop off).
+ * Without `role`, both render (drop off then pickup).
  * Pickup can toggle Cargo (by commodity) vs Piles (by delivery location).
  */
 export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
@@ -153,6 +153,35 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         .join(" ")}
       onClick={(event) => event.stopPropagation()}
     >
+      {deliveryPlan ? (
+        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
+              Drop off
+            </p>
+            {showDeliveryPeel ? (
+              <PadPeelButton
+                pressed={deliveryPeel}
+                onPressedChange={setDeliveryPeel}
+              />
+            ) : null}
+          </div>
+          <div className="relative p-1.5">
+            <StopDeliveryStacksView
+              plan={deliveryPlan}
+              peelStack={deliveryPeel}
+              onPeelStackChange={setDeliveryPeel}
+              hidePeel
+              onEditMissionBoxes={onEditMissionBoxes}
+            />
+            {row.isCompleted ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <GraphCompletedStamp />
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
       {pickupPlan ? (
         <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
@@ -208,35 +237,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               plan={pickupPlan}
               peelStack={pickupPeel}
               onPeelStackChange={setPickupPeel}
-              hidePeel
-              onEditMissionBoxes={onEditMissionBoxes}
-            />
-            {row.isCompleted ? (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <GraphCompletedStamp />
-              </div>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-      {deliveryPlan ? (
-        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-              Drop off
-            </p>
-            {showDeliveryPeel ? (
-              <PadPeelButton
-                pressed={deliveryPeel}
-                onPressedChange={setDeliveryPeel}
-              />
-            ) : null}
-          </div>
-          <div className="relative p-1.5">
-            <StopDeliveryStacksView
-              plan={deliveryPlan}
-              peelStack={deliveryPeel}
-              onPeelStackChange={setDeliveryPeel}
               hidePeel
               onEditMissionBoxes={onEditMissionBoxes}
             />

@@ -10,9 +10,19 @@
       "note": "light blue"
     },
     {
+      "slug": "corundum-raw",
+      "colorHex": "#8ec8f8",
+      "note": "light blue"
+    },
+    {
       "slug": "quartz",
       "colorHex": "#1f4e8c",
       "note": "dark blue"
+    },
+    {
+      "slug": "quartz-raw",
+      "colorHex": "#2f6aad",
+      "note": "darker blue"
     },
     {
       "slug": "aluminum",
@@ -50,6 +60,11 @@
       "note": "rust brown mixed with gray"
     },
     {
+      "slug": "scrap",
+      "colorHex": "#8a7d6e",
+      "note": "brown-gray, similar to waste"
+    },
+    {
       "slug": "tungsten",
       "colorHex": "#9a6a6a",
       "note": "grayer red"
@@ -76,6 +91,16 @@
     },
     {
       "slug": "stims",
+      "colorHex": "#f3f6f9",
+      "note": "white"
+    },
+    {
+      "slug": "hydrogen-fuel",
+      "colorHex": "#f3f6f9",
+      "note": "white"
+    },
+    {
+      "slug": "quantum-fuel",
       "colorHex": "#f3f6f9",
       "note": "white"
     }

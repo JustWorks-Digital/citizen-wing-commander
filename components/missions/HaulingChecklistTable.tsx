@@ -330,15 +330,15 @@ function routeActionBadges(routeAction: RouteAction): { label: string; variant: 
     return [{ label: "Delivery", variant: "success" }];
   }
   return [
-    { label: "Pickup", variant: "accent" },
     { label: "Delivery", variant: "success" },
+    { label: "Pickup", variant: "accent" },
   ];
 }
 
 /**
  * Trailing meta for condensed Done rows.
  * CSS grid locks tag / SCU / distance columns so badge right edges line up
- * (Quantum, Pickup, and Pickup+Delivery).
+ * (Quantum, Pickup, and Delivery+Pickup).
  */
 function CondensedRowTrailing({
   routeAction,
@@ -386,7 +386,8 @@ function groupCargoLines(lines: CargoLine[]): {
   role: "pickup" | "delivery" | null;
   items: CargoLine[];
 }[] {
-  const order: ("pickup" | "delivery" | null)[] = ["pickup", "delivery", null];
+  /** Drop off before Pickup at both-stops (unload then load). */
+  const order: ("pickup" | "delivery" | null)[] = ["delivery", "pickup", null];
   const groups: { role: "pickup" | "delivery" | null; items: CargoLine[] }[] =
     [];
   for (const role of order) {
@@ -983,19 +984,19 @@ function CargoGroups({
           </div>
         );
       })}
-      {!hasPickupGroup && pickupTransfer ? (
-        <PickupTransferBlock
-          location={location}
-          shipName={shipName}
-          transfer={pickupTransfer}
-          isDone={row.isCompleted}
-        />
-      ) : null}
       {!hasDeliveryGroup && deliveryTransfer ? (
         <DeliveryTransferBlock
           location={location}
           shipName={shipName}
           transfer={deliveryTransfer}
+          isDone={row.isCompleted}
+        />
+      ) : null}
+      {!hasPickupGroup && pickupTransfer ? (
+        <PickupTransferBlock
+          location={location}
+          shipName={shipName}
+          transfer={pickupTransfer}
           isDone={row.isCompleted}
         />
       ) : null}

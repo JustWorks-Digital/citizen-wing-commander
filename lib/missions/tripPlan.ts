@@ -93,7 +93,7 @@ export function tripPlanFromChecklistRows(
 }
 
 /**
- * Hard rule: walk the hold stop-by-stop (pickup then delivery).
+ * Hard rule: walk the hold stop-by-stop (delivery then pickup = unload then load).
  * Reports every delivery that exceeds what’s aboard.
  */
 export function validateTripCargo(plan: TripPlan): TripValidation {
@@ -101,7 +101,6 @@ export function validateTripCargo(plan: TripPlan): TripValidation {
   const issues: TripCargoIssue[] = [];
 
   for (const stop of plan.stops) {
-    ship = shipCargo.add(ship, stop.pickups);
     const unloaded = shipCargo.remove(ship, stop.deliveries);
     ship = unloaded.ship;
     for (const shortfall of unloaded.shortfalls) {
@@ -112,6 +111,7 @@ export function validateTripCargo(plan: TripPlan): TripValidation {
         shortfallScu: shortfall.shortfallScu,
       });
     }
+    ship = shipCargo.add(ship, stop.pickups);
   }
 
   return { ok: issues.length === 0, issues };
@@ -496,19 +496,19 @@ export function checklistRowsFromTripPlan(
     const hasD = stop.deliveries.length > 0;
     const routeAction =
       hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
-    // Pickup before delivery so transfer ledger / UI load first.
+    // Delivery before pickup (unload then load) for transfer ledger / UI.
     const cargoDeliveries = [
-      ...coalesceCargoLines(stop.pickups).map((line) => ({
-        commoditySlug: line.commoditySlug,
-        scu: line.scu,
-        role: "pickup" as const,
-        missionId: line.missionId ?? undefined,
-        shipStorageLocation: "front" as const,
-      })),
       ...coalesceCargoLines(stop.deliveries).map((line) => ({
         commoditySlug: line.commoditySlug,
         scu: line.scu,
         role: "delivery" as const,
+        missionId: line.missionId ?? undefined,
+        shipStorageLocation: "front" as const,
+      })),
+      ...coalesceCargoLines(stop.pickups).map((line) => ({
+        commoditySlug: line.commoditySlug,
+        scu: line.scu,
+        role: "pickup" as const,
         missionId: line.missionId ?? undefined,
         shipStorageLocation: "front" as const,
       })),

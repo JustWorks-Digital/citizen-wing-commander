@@ -58,7 +58,7 @@ const stopFixtures = {
     }),
   ],
 
-  /** Trip: pickup, then a pickup/transfer stop (load and unload at the same stop). */
+  /** Trip: pickup, then a drop-off/pickup stop (unload then load at the same stop). */
   pickupTransferMix: [
     makeStop({
       id: "stop-1",
@@ -71,13 +71,13 @@ const stopFixtures = {
       routeAction: "both",
       locationSlug: "orison",
       cargo: [
-        cargo("agricium", 20, {
-          role: "pickup",
-          shipStorageLocation: "rear",
-        }),
         cargo("pressurized-ice", 10, {
           role: "delivery",
           shipStorageLocation: "front",
+        }),
+        cargo("agricium", 20, {
+          role: "pickup",
+          shipStorageLocation: "rear",
         }),
       ],
     }),

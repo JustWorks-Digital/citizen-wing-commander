@@ -36,7 +36,9 @@ const PALETTE_SIZE = 96;
  */
 const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   corundum: "#8ec8f8", // light blue
+  "corundum-raw": "#8ec8f8", // light blue
   quartz: "#1f4e8c", // dark blue
+  "quartz-raw": "#2f6aad", // darker blue
   aluminum: "#6e7680", // gray, lighter than titanium
   "aluminum-ore": "#5a626c",
   titanium: "#4a5058", // cool dark gray
@@ -47,12 +49,15 @@ const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   iron: "#5a5652",
   "iron-ore": "#3f3c39",
   waste: "#9a7a62", // rust brown mixed with gray
+  scrap: "#8a7d6e", // brown-gray, similar to waste
   tungsten: "#9a6a6a", // grayer red
   "tungsten-ore": "#7e5555",
   carbon: "#7a9280", // gray-green
   silicon: "#2f6b48", // deeper green
   "silicone-raw": "#25563a",
   stims: "#f3f6f9", // white
+  "hydrogen-fuel": "#f3f6f9", // white
+  "quantum-fuel": "#f3f6f9", // white
   // Sky blue (#87CEEB) + dark blue (#1F4E8C).
   "pressurized-ice": "#538ebc",
 };

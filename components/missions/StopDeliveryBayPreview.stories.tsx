@@ -128,7 +128,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Pass `role` to show only Pickup or Drop off (checklist aligns each graph with that section). Pickup stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided.",
+          "Flat pad stacks for stop cargo. Pass `role` to show only Pickup or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pickup. Pickup stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided.",
       },
     },
   },

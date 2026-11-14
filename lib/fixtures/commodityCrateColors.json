@@ -529,8 +529,8 @@
     },
     {
       "slug": "corundum",
-      "colorHex": "#8a93a0",
-      "colorHex2": "#e0a63a",
+      "colorHex": "#8ec8f8",
+      "colorHex2": "#8ec8f8",
       "image": "crates/cargo_-_minerals.png",
       "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
       "sharedWith": [
@@ -543,16 +543,16 @@
         "quartz",
         "taranite"
       ],
-      "colorSource": "wiki-crate-tuned"
+      "colorSource": "manual"
     },
     {
       "slug": "corundum-raw",
-      "colorHex": "#8a93a0",
-      "colorHex2": "#e0a63a",
+      "colorHex": "#8ec8f8",
+      "colorHex2": "#8ec8f8",
       "image": "crates/cargo_-_minerals.png",
       "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Minerals.png?kctzg",
       "sharedWith": [],
-      "colorSource": "kind-crate-image"
+      "colorSource": "manual"
     },
     {
       "slug": "crude-oil",
@@ -922,14 +922,14 @@
     },
     {
       "slug": "hydrogen-fuel",
-      "colorHex": "#4a5562",
-      "colorHex2": "#e25555",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#f3f6f9",
       "image": "crates/cargo_-_gas_-_hydrogen.png",
       "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
       "sharedWith": [
         "hydrogen"
       ],
-      "colorSource": "wiki-crate-tuned"
+      "colorSource": "manual"
     },
     {
       "slug": "ice-raw",
@@ -1459,12 +1459,12 @@
     },
     {
       "slug": "quantum-fuel",
-      "colorHex": "#4a5562",
-      "colorHex2": "#e25555",
+      "colorHex": "#f3f6f9",
+      "colorHex2": "#f3f6f9",
       "image": "crates/cargo_-_gas_-_hydrogen.png",
       "sourceUrl": "https://media.starcitizen.tools/6/6f/Cargo_-_Gas_-_Hydrogen.png?epg37",
       "sharedWith": [],
-      "colorSource": "kind-crate-image"
+      "colorSource": "manual"
     },
     {
       "slug": "quartz",
@@ -1486,12 +1486,12 @@
     },
     {
       "slug": "quartz-raw",
-      "colorHex": "#4f8f5c",
-      "colorHex2": "#e0a63a",
+      "colorHex": "#2f6aad",
+      "colorHex2": "#2f6aad",
       "image": "crates/cargo_-_metal.png",
       "sourceUrl": "https://media.starcitizen.tools/2/2f/Cargo_-_Metal.png?n7igy",
       "sharedWith": [],
-      "colorSource": "kind-crate-image"
+      "colorSource": "manual"
     },
     {
       "slug": "ranta-dung",
@@ -1623,12 +1623,12 @@
     },
     {
       "slug": "scrap",
-      "colorHex": "#e07a3a",
-      "colorHex2": "#4a4f56",
+      "colorHex": "#8a7d6e",
+      "colorHex2": "#8a7d6e",
       "image": "crates/cargo_-_scrap.png",
       "sourceUrl": "https://media.starcitizen.tools/0/08/Cargo_-_Scrap.png?c0lee",
       "sharedWith": [],
-      "colorSource": "wiki-crate-tuned"
+      "colorSource": "manual"
     },
     {
       "slug": "selenium",
