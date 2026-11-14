@@ -310,6 +310,41 @@ function TravelDownIcon({ className }: { className?: string }) {
   );
 }
 
+/** Triple chevron pointing right — QT / Next stop travel indicator. */
+function TravelChevronsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 20 16"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.5 3.5 L6.5 8 L2.5 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.5 3.5 L11.5 8 L7.5 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.5 3.5 L16.5 8 L12.5 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function routeActionBadges(routeAction: RouteAction): { label: string; variant: BadgeVariant }[] {
   if (routeAction === "quantum") {
     return [{ label: "Quantum", variant: "neutral" }];
@@ -878,6 +913,7 @@ function LocationHeader({
   compact = false,
   showTravelChevron = false,
   travelChevronClassName = "",
+  travelLeading = null,
 }: {
   row: HaulingChecklistRow;
   location: string;
@@ -891,6 +927,8 @@ function LocationHeader({
   showTravelChevron?: boolean;
   /** Extra classes on the travel chevron wrapper (e.g. hide on mobile). */
   travelChevronClassName?: string;
+  /** Rendered immediately left of the travel chevron (e.g. ship badge). */
+  travelLeading?: ReactNode;
 }) {
   const imageSrc = getLocationImageSrc(row.locationSlug);
   const shortName = getLocationShortName(row.locationSlug);
@@ -986,34 +1024,15 @@ function LocationHeader({
             <span
               aria-hidden
               className={[
-                "inline-flex shrink-0 items-center pl-2 text-rsi-text-muted sm:pl-3",
+                "inline-flex shrink-0 items-center gap-10 pl-2 text-rsi-text-muted sm:gap-12 sm:pl-3",
                 travelChevronClassName,
               ]
                 .filter(Boolean)
                 .join(" ")}
               title="Travel"
             >
-              <svg
-                viewBox="0 0 16 16"
-                className="size-4"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3.5 3.5 L8 8 L3.5 12.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M8.5 3.5 L13 8 L8.5 12.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {travelLeading}
+              <TravelChevronsIcon className="h-4 w-5" />
             </span>
           ) : null}
         </div>
@@ -1092,6 +1111,36 @@ function AddStopAfterButton({
 }
 
 /** Compact travel row: current location → Quantum to destination. */
+function QuantumShipBadge({
+  shipSlug,
+  className = "h-7 w-10",
+}: {
+  shipSlug?: string | null;
+  className?: string;
+}) {
+  const shipIconSrc = getShipIconSrc(shipSlug);
+  return (
+    <span
+      className={[
+        "inline-flex shrink-0 items-center justify-center overflow-hidden",
+        className,
+      ].join(" ")}
+      title="Ship"
+    >
+      {shipIconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- static ship badge
+        <img
+          src={shipIconSrc}
+          alt=""
+          className="block size-full object-contain"
+        />
+      ) : (
+        <SpaceshipIcon className="h-3 w-5" />
+      )}
+    </span>
+  );
+}
+
 function QuantumTravelRow({
   rowId,
   fromSlug,
@@ -1099,6 +1148,7 @@ function QuantumTravelRow({
   destinationName,
   reasonShopSlug = null,
   distanceToNext = null,
+  shipSlug = null,
   isCompleted,
   isFocused,
   isPending = false,
@@ -1117,6 +1167,7 @@ function QuantumTravelRow({
   destinationName: string;
   reasonShopSlug?: string | null;
   distanceToNext?: HaulingChecklistRow["distanceToNext"];
+  shipSlug?: string | null;
   isCompleted: boolean;
   isFocused: boolean;
   isPending?: boolean;
@@ -1209,6 +1260,7 @@ function QuantumTravelRow({
           /* Sideways >> only on md+; mobile uses a down arrow between stops. */
           showTravelChevron
           travelChevronClassName="hidden md:inline-flex"
+          travelLeading={<QuantumShipBadge shipSlug={shipSlug} />}
         />
       </div>
     );
@@ -1259,11 +1311,13 @@ function QuantumTravelRow({
           if (onChangeTo) setEditing("to");
         }}
       >
-        <span className="min-w-0 break-words [overflow-wrap:anywhere]">
-          Quantum to{" "}
-          <span className={isCompleted ? "" : "text-rsi-text-secondary"}>
-            {destinationName}
-          </span>
+        <span
+          className={[
+            "min-w-0 break-words [overflow-wrap:anywhere]",
+            isCompleted ? "" : "text-rsi-text-secondary",
+          ].join(" ")}
+        >
+          {destinationName}
         </span>
       </p>
     );
@@ -1300,12 +1354,13 @@ function QuantumTravelRow({
               </p>
             ) : null}
             {fromBlock}
-            {/* Mobile QT: current → ↓ → destination (not a sideways flip). */}
+            {/* Mobile QT: current → ship ↓ → destination (not a sideways flip). */}
             <div
               aria-hidden
-              className="flex justify-center py-1 text-rsi-text-muted md:hidden"
+              className="flex items-center justify-center gap-10 py-1 text-rsi-text-muted md:hidden"
               title="Travel"
             >
+              <QuantumShipBadge shipSlug={shipSlug} />
               <svg
                 viewBox="0 0 16 16"
                 className="size-4"
@@ -2142,10 +2197,10 @@ function NextDistanceMeta({
           )}
         </span>
       </span>
-      {/* Location-thumb column (w-24); ship keeps h-10 w-14, centered in the slot. */}
+      {/* Location-thumb column (w-24); ship centered, >> after ship on active row. */}
       <span
         className={[
-          "inline-flex h-14 w-24 shrink-0 items-center justify-center",
+          "inline-flex h-14 w-24 shrink-0 items-center justify-center gap-1.5",
           isBridge ? "text-rsi-accent" : "text-rsi-text-secondary",
         ].join(" ")}
         title="Next stop"
@@ -2162,6 +2217,15 @@ function NextDistanceMeta({
             <SpaceshipIcon className="h-3 w-5" />
           )}
         </span>
+        {!isBridge ? (
+          <span
+            aria-hidden
+            className="ml-2 inline-flex shrink-0 text-rsi-text-muted sm:ml-3"
+            title="Travel"
+          >
+            <TravelChevronsIcon className="h-4 w-5" />
+          </span>
+        ) : null}
       </span>
       {/* Same start edge as LocationHeader name text. */}
       <div className="min-w-0 flex-1">
@@ -2625,6 +2689,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               fromSlug={startSlugTrimmed}
               destinationSlug={firstStop?.locationSlug ?? null}
               destinationName={quantumDestinationName}
+              shipSlug={shipSlug}
               distanceToNext={
                 firstStop
                   ? distanceBetweenLocationSlugs(
@@ -2736,6 +2801,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   destinationName={destinationName}
                   reasonShopSlug={row.reasonShopSlug ?? null}
                   distanceToNext={row.distanceToNext}
+                  shipSlug={shipSlug}
                   isCompleted={row.isCompleted}
                   isFocused={isFocused}
                   isCopied={isCopied}

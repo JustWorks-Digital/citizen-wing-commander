@@ -24,7 +24,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Bay / Distance / aUEC toolbar; ⋯ menu holds Hide / Show history and Controls. Stop order is edited in the Trip Stops modal (not here). Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo); the Done checkbox left of that image shows a spinner while save finishes. When start ≠ first stop, a compact Quantum-to row is active first (no bay/cargo columns). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. With history shown, completed stops collapse to a horizontal Done strip (checkbox, location, SCU); Next stop bridges below until the following stop is done. With history hidden, completed cards drop out but the Next stop bridge still introduces the current incomplete stop. Active stops: Pickup / Drop off contract cards + commodity tiles; Station/Ship transfer blocks; Payout + Exp; bay preview. Completing a stop scrolls the next one to the top unless history is hidden.",
+          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Bay / Distance / aUEC toolbar; ⋯ menu holds Hide / Show history and Controls. Stop order is edited in the Trip Stops modal (not here). Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo); the Done checkbox left of that image shows a spinner while save finishes. When start ≠ first stop, a compact Quantum row is active first (session ship badge left of triple >>> chevrons; destination name only — no “Quantum to” prefix). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. With history shown, completed stops collapse to a horizontal Done strip (checkbox, location, SCU); Next stop bridges below until the following stop is done. With history hidden, completed cards drop out but the Next stop bridge still introduces the current incomplete stop. Active stops: Pickup / Drop off contract cards + commodity tiles; Station/Ship transfer blocks; Payout + Exp; bay preview; Next stop footer with ship badge + >>> (clickable to mark done). Completing a stop scrolls the next Next-stop bridge flush under the sticky toolbar.",
       },
     },
   },
@@ -39,6 +39,7 @@ function InteractiveTable(args: {
   missions?: typeof mockSessionChecklist.missions;
   sessionId?: string | null;
   startLocationSlug?: string | null;
+  shipSlug?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
   const [missions, setMissions] = useState(
@@ -59,6 +60,9 @@ function InteractiveTable(args: {
       missions={missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
       startLocationSlug={startLocationSlug}
+      shipSlug={
+        args.shipSlug ?? mockSessionChecklist.shipSlugs?.[0] ?? null
+      }
       onInsertQuantumTravel={({ afterRowId, fromSlug, toSlug, reasonShopSlug }) => {
         setRows((prev) =>
           insertQuantumTravelAfter(prev, afterRowId, {
