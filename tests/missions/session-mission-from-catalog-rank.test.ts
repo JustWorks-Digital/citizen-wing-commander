@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogMission } from "@/db/schema";
+import { emptyScuBoxSplits } from "@/lib/missions/catalogMission";
 import { applyCatalogRanksToSessionMissions } from "@/lib/missions/applyCatalogRanksToSessionMissions";
 import { sessionMissionFromCatalog } from "@/lib/missions/sessionMissionFromCatalog";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
@@ -23,7 +24,7 @@ function catalogStub(
     offerStarSystemSlug: null,
     scuTotal: 8,
     scuMaxContainerSize: 4,
-    scuBoxSplits: null,
+    scuBoxSplits: emptyScuBoxSplits(),
     scuLocationSplits: null,
     isDirect: true,
     isOnePickup: true,
@@ -31,7 +32,8 @@ function catalogStub(
     latestScreenshotPath: null,
     missionRunCount: 0,
     missionTotalDurationMs: 0,
-    lastObservedAt: null,
+    missionAvgDurationMs: null,
+    lastObservedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

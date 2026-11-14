@@ -43,7 +43,6 @@ function deliveryStop(
     cargoDeliveries: [
       {
         commoditySlug: "stims",
-        commodityName: "Stims",
         scu: 4,
         role: "delivery",
         missionId,

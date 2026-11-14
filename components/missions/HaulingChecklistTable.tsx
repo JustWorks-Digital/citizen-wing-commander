@@ -24,6 +24,7 @@ import {
   getLocationImageSrc,
   getLocationShortName,
   getShipIconSrc,
+  sumCargoScu,
 } from "@/lib/fixtures";
 import {
   getLocationShopBySlug,
@@ -3156,7 +3157,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     location={location}
                     step={step}
                     routeAction={row.routeAction}
-                    scuTotal={row.scuTotal}
+                    scuTotal={sumCargoScu(row.cargoDeliveries)}
                     hopLabel={(() => {
                       const hop =
                         (nextLocationSlug
