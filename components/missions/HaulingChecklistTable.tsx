@@ -2200,7 +2200,7 @@ function NextDistanceMeta({
       {/* Location-thumb column (w-24); ship centered, >> after ship on active row. */}
       <span
         className={[
-          "inline-flex h-14 w-24 shrink-0 items-center justify-center gap-1.5",
+          "inline-flex h-14 w-24 shrink-0 items-center justify-start gap-1.5",
           isBridge ? "text-rsi-accent" : "text-rsi-text-secondary",
         ].join(" ")}
         title="Next stop"
@@ -2217,15 +2217,13 @@ function NextDistanceMeta({
             <SpaceshipIcon className="h-3 w-5" />
           )}
         </span>
-        {!isBridge ? (
-          <span
-            aria-hidden
-            className="ml-2 inline-flex shrink-0 text-rsi-text-muted sm:ml-3"
-            title="Travel"
-          >
-            <TravelChevronsIcon className="h-4 w-5" />
-          </span>
-        ) : null}
+        <span
+          aria-hidden
+          className="ml-3 inline-flex shrink-0 text-rsi-text-muted sm:ml-4"
+          title="Travel"
+        >
+          <TravelChevronsIcon className="h-4 w-5" />
+        </span>
       </span>
       {/* Same start edge as LocationHeader name text. */}
       <div className="min-w-0 flex-1">
