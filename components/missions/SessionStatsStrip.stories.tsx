@@ -27,6 +27,10 @@ export const Source: Story = {
   render: () => <SessionSourceStat />,
 };
 
+export const SourceWithPending: Story = {
+  render: () => <SessionSourceStat pendingScreenshotCount={3} />,
+};
+
 export const RouteProgress: Story = {
   render: () => (
     <SessionRouteProgressStats

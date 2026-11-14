@@ -265,6 +265,8 @@ export function SessionScreenshotsPanel({
             </h2>
             <p className="mt-1 text-xs text-rsi-text-muted">
               Paste (⌘V / Ctrl+V), drop, or upload — multiple images at once.
+              Pending shots are what MCP AI reads next; processed means already
+              parsed into the trip.
             </p>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -328,11 +330,13 @@ export function SessionScreenshotsPanel({
             </div>
           ) : (
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 md:grid-cols-5">
-              {screenshots.map((shot) => (
+              {screenshots.map((shot) => {
+                const isPending = shot.status !== "processed";
+                return (
                 <li key={shot.logicalPath} className="group relative">
                   <button
                     type="button"
-                    title={`${shot.filename} · ${formatBytes(shot.bytes)} — click to enlarge`}
+                    title={`${shot.filename} · ${formatBytes(shot.bytes)} · ${isPending ? "pending" : "processed"} — click to enlarge`}
                     aria-label={`Enlarge ${shot.filename}`}
                     className="block w-full overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/80 transition-colors hover:border-rsi-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
                     onClick={() => setLightbox(shot)}
@@ -342,9 +346,22 @@ export function SessionScreenshotsPanel({
                       src={shot.url}
                       alt={shot.filename}
                       loading="lazy"
-                      className="aspect-square w-full object-cover object-top"
+                      className={[
+                        "aspect-square w-full object-cover object-top",
+                        isPending ? "" : "opacity-70",
+                      ].join(" ")}
                     />
                   </button>
+                  <span
+                    className={[
+                      "pointer-events-none absolute bottom-1 left-1 rounded-sm px-1 py-0.5 font-mono text-[0.45rem] uppercase tracking-[0.12em] shadow-rsi-panel",
+                      isPending
+                        ? "bg-rsi-accent/90 text-rsi-bg-deep"
+                        : "bg-rsi-bg-deep/85 text-rsi-text-muted",
+                    ].join(" ")}
+                  >
+                    {isPending ? "Pending" : "Done"}
+                  </span>
                   <button
                     type="button"
                     aria-label={`Remove ${shot.filename}`}
@@ -354,7 +371,8 @@ export function SessionScreenshotsPanel({
                     ×
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>

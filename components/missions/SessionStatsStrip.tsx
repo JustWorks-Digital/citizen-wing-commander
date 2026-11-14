@@ -93,6 +93,8 @@ export type SessionSourceStatProps = {
   onMissionsClick?: () => void;
   /** Opens session screenshots / source intake. */
   onClick?: () => void;
+  /** Pending Source shots awaiting AI parse (badge on Source). */
+  pendingScreenshotCount?: number;
   className?: string;
 };
 
@@ -100,10 +102,15 @@ export type SessionSourceStatProps = {
 export function SessionSourceStat({
   onMissionsClick,
   onClick,
+  pendingScreenshotCount = 0,
   className,
 }: SessionSourceStatProps) {
   const actionLabelClass =
     "font-mono text-[0.5rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]";
+  const pending =
+    Number.isFinite(pendingScreenshotCount) && pendingScreenshotCount > 0
+      ? Math.floor(pendingScreenshotCount)
+      : 0;
   return (
     <div
       className={[stripClass, "sm:w-auto", className].filter(Boolean).join(" ")}
@@ -128,10 +135,20 @@ export function SessionSourceStat({
         onClick={onClick}
         className={[
           interactiveCellClass,
-          "min-w-0 flex-1 items-center justify-center px-3 py-2 sm:flex-none sm:px-3",
+          "min-w-0 flex-1 items-center justify-center gap-1.5 px-3 py-2 sm:flex-none sm:px-3",
         ].join(" ")}
+        title={
+          pending > 0
+            ? `${pending} pending Source shot${pending === 1 ? "" : "s"} for AI`
+            : "Contract screenshots (Source)"
+        }
       >
         <span className={actionLabelClass}>Source</span>
+        {pending > 0 ? (
+          <span className="inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rsi-accent/25 px-1 font-mono text-[0.55rem] tabular-nums leading-none text-rsi-accent">
+            {pending}
+          </span>
+        ) : null}
       </button>
     </div>
   );

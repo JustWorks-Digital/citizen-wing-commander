@@ -51,6 +51,7 @@ export const WithShots: Story = {
         filename: "contract-stims.png",
         bytes: 184_320,
         mtime: "2026-11-08T06:00:00.000Z",
+        status: "pending" as const,
         url: "https://placehold.co/640x360/1c2737/54adf7?text=Stims",
       },
       {
@@ -58,6 +59,7 @@ export const WithShots: Story = {
         filename: "contract-tin.png",
         bytes: 201_100,
         mtime: "2026-11-08T06:01:00.000Z",
+        status: "processed" as const,
         url: "https://placehold.co/640x360/1c2737/3dbf8f?text=Tin",
       },
     ],

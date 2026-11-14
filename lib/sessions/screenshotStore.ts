@@ -450,36 +450,148 @@ export async function deleteHaulingScreenshot(logicalPath: string): Promise<{
   }
 }
 
-export async function listHaulingScreenshots(batchId?: string): Promise<
-  {
-    logicalPath: string;
-    filename: string;
-    bytes: number;
-    mtime: string;
-  }[]
-> {
+/** Pending = awaiting AI parse; processed = marked after intake apply. */
+export type HaulingScreenshotStatus = "pending" | "processed";
+
+export type HaulingScreenshotListItem = {
+  logicalPath: string;
+  filename: string;
+  bytes: number;
+  mtime: string;
+  status: HaulingScreenshotStatus;
+};
+
+const SOURCE_STATUS_FILENAME = ".source-status.json";
+
+type SourceStatusFile = {
+  /** Filenames under this batch marked processed after AI intake. */
+  processedFilenames: string[];
+};
+
+function sourceStatusPath(batchId?: string): string {
+  return path.join(resolveBatchDir(batchId), SOURCE_STATUS_FILENAME);
+}
+
+async function readProcessedFilenames(batchId?: string): Promise<Set<string>> {
+  try {
+    const raw = await readFile(sourceStatusPath(batchId), "utf8");
+    const parsed = JSON.parse(raw) as SourceStatusFile;
+    const list = Array.isArray(parsed.processedFilenames)
+      ? parsed.processedFilenames
+      : [];
+    return new Set(
+      list
+        .filter((name): name is string => typeof name === "string")
+        .map((name) => sanitizeFilename(name)),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+async function writeProcessedFilenames(
+  batchId: string | undefined,
+  processed: Set<string>,
+): Promise<void> {
+  const batch = sanitizeSegment(batchId || "default") || "default";
+  const dir = resolveBatchDir(batch);
+  await mkdir(dir, { recursive: true });
+  const payload: SourceStatusFile = {
+    processedFilenames: [...processed].sort((a, b) => a.localeCompare(b)),
+  };
+  await writeFile(
+    sourceStatusPath(batch),
+    `${JSON.stringify(payload, null, 2)}\n`,
+    "utf8",
+  );
+}
+
+export async function listHaulingScreenshots(
+  batchId?: string,
+  options?: { status?: HaulingScreenshotStatus | "all" },
+): Promise<HaulingScreenshotListItem[]> {
+  const statusFilter = options?.status ?? "all";
   const dir = resolveBatchDir(batchId);
+  const processed = await readProcessedFilenames(batchId);
   try {
     const names = await readdir(dir);
-    const rows = [];
+    const rows: HaulingScreenshotListItem[] = [];
     for (const name of names) {
+      if (name === SOURCE_STATUS_FILENAME) continue;
       const ext = path.extname(name).toLowerCase();
       if (!ALLOWED_EXT.has(ext)) continue;
       const absolutePath = path.join(dir, name);
       const info = await stat(absolutePath);
       if (!info.isFile()) continue;
       const batch = sanitizeSegment(batchId || "default") || "default";
+      const status: HaulingScreenshotStatus = processed.has(name)
+        ? "processed"
+        : "pending";
+      if (statusFilter !== "all" && status !== statusFilter) continue;
       rows.push({
         logicalPath: `${batch}/${name}`,
         filename: name,
         bytes: info.size,
         mtime: info.mtime.toISOString(),
+        status,
       });
     }
     return rows.sort((a, b) => a.filename.localeCompare(b.filename));
   } catch {
     return [];
   }
+}
+
+/**
+ * Mark session Source shots as processed after AI has applied intake.
+ * Filenames or logical paths (`batch/filename`) are accepted.
+ */
+export async function markHaulingScreenshotsProcessed(input: {
+  batchId: string;
+  filenames?: string[];
+  logicalPaths?: string[];
+  /** When true, mark every pending file in the batch. */
+  allPending?: boolean;
+}): Promise<{
+  ok: true;
+  batchId: string;
+  marked: string[];
+  pendingRemaining: number;
+}> {
+  const batchId = sanitizeSegment(input.batchId) || "default";
+  const processed = await readProcessedFilenames(batchId);
+  const toMark = new Set<string>();
+
+  if (input.allPending) {
+    const pending = await listHaulingScreenshots(batchId, { status: "pending" });
+    for (const shot of pending) toMark.add(shot.filename);
+  }
+  for (const name of input.filenames ?? []) {
+    const trimmed = name.trim();
+    if (trimmed) toMark.add(sanitizeFilename(trimmed));
+  }
+  for (const logicalPath of input.logicalPaths ?? []) {
+    const parts = logicalPath.split("/").filter(Boolean);
+    const filename = parts[parts.length - 1];
+    if (filename) toMark.add(sanitizeFilename(filename));
+  }
+
+  const listed = await listHaulingScreenshots(batchId, { status: "all" });
+  const known = new Set(listed.map((shot) => shot.filename));
+  const marked: string[] = [];
+  for (const filename of toMark) {
+    if (!known.has(filename)) continue;
+    if (processed.has(filename)) continue;
+    processed.add(filename);
+    marked.push(filename);
+  }
+  if (marked.length > 0) {
+    await writeProcessedFilenames(batchId, processed);
+  }
+  const pendingRemaining = (
+    await listHaulingScreenshots(batchId, { status: "pending" })
+  ).length;
+  return { ok: true, batchId, marked, pendingRemaining };
 }
 
 export async function clearHaulingScreenshots(batchId?: string): Promise<{
@@ -492,6 +604,10 @@ export async function clearHaulingScreenshots(batchId?: string): Promise<{
   try {
     const names = await readdir(dir);
     for (const name of names) {
+      if (name === SOURCE_STATUS_FILENAME) {
+        await unlink(path.join(dir, name));
+        continue;
+      }
       const ext = path.extname(name).toLowerCase();
       if (!ALLOWED_EXT.has(ext)) continue;
       await unlink(path.join(dir, name));

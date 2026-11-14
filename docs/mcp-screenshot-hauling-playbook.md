@@ -2,18 +2,48 @@
 
 For Cursor, ChatGPT, Gemini, or any MCP client connected to Citizen Wing Commander (`/mcp`).
 
-Use this when the user pastes or uploads **Accepted** contract screenshots (or contract text) and wants the shared checklist / route updated.
+Use this when the user wants a **new trip** (or route update) from **Accepted** contract screenshots (or contract text).
 
-## Goal
+**Do not require browser control.** Many chats cannot push chat-attached images to a remote MCP server.
+
+## Two lanes (pick by capability)
+
+### Lane A — push (ideal when the host can deliver image bytes)
+
+Client can pass a reachable **`fileUrl`**, a host-readable **`filePath`**, or **`imageBase64`**.
+
+1. `create_hauling_session` (name from user / first contract). Note `tripUrl` / `sessionId`.
+2. For each shot: `store_hauling_screenshot` with `sessionId` (= batch). Prefer `fileUrl` / `filePath`; `imageBase64` fallback.
+3. Extract contracts (vision on those bytes or via `get_hauling_screenshot`).
+4. `apply_hauling_contracts_intake` with `contracts[].screenshots` = returned `logicalPath`s (+ optimized `legs` when ready).
+5. `mark_hauling_screenshots_processed` (`sessionId`, `allPending: true` or explicit paths).
+6. Confirm with `get_hauling_checklist`.
+
+**Never** pass ChatGPT `/mnt/data/...` as `filePath` — the remote MCP server cannot read it.
+
+### Lane B — Source handoff (universal fallback)
+
+When push is impossible or `store_hauling_screenshot` fails:
+
+1. Still **`create_hauling_session` immediately** (so the user has a trip to paste into).
+2. Reply with **`tripUrl`**: open the trip → **Source** → paste/drop all Accepted shots → reply **continue**.
+3. On continue: `list_hauling_screenshots` (`sessionId`, `status: "pending"`). If empty, ask again for Source uploads.
+4. For each pending shot: `get_hauling_screenshot` (**one image per call**) → vision extract.
+5. `apply_hauling_contracts_intake` with those `logicalPath`s on `contracts[].screenshots`.
+6. `mark_hauling_screenshots_processed` → `get_hauling_checklist`.
+
+Lane B is the reliable ChatGPT path. Lane A is what Cursor/Codex can do when they truly have the files.
+
+## Goal (after shots are in the store)
 
 1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/hurston-covalex-2026-11-08/`.
 2. **Max container SCU (required when visible):** Read the contract’s max container size from Details (wording like “Containers at most N SCU” / max crate size). In screenshots this is **usually blue highlighted text** — scan for that accent before finishing the extract. Record it on every contract as **`maxContainerScu`** (allowed sizes: 1 / 2 / 4 / 8 / 16 / 32). For catalog `create_mission`, pass the same value as **`scuMaxContainerSize`**. This caps default box splits and bay packing — do not omit it when the screenshot shows it.
-3. **Screenshot attachment rule (critical):** If the user attached or pasted contract image(s), you **must** call **`store_hauling_screenshot`**. Prefer **`fileUrl`** (http/https the MCP server can download) or **`filePath`** when the MCP host can read it; keep **`imageBase64`** as a fallback. **ChatGPT `/mnt/data/...` paths are not reachable by a remote MCP server** — do not pass them; use a publicly reachable URL or base64. Pass **`sessionId`** (batch folder = session UUID). When the mission already exists, pass **`missionId`** to store + auto-attach in one call; otherwise put each returned `logicalPath` on that contract’s **`screenshots: [...]`** (session) or **`latestScreenshotPath`** (catalog `create_mission`). Omit screenshots **only** when the user provided no images (text-only). Never invent paths. If you already wrote the checklist without shots, call **`store_hauling_screenshot`** with `missionId` or **`set_mission_screenshots`** — do not rebuild the whole route just to attach evidence. Files go to `.data/mcp-screenshots/<batchId>/` — **not git**.
-4. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths. Keep a MobiGlas-layout `.md` next to the JSON in the batch folder.
+3. Put each shot’s **`logicalPath`** on that contract’s **`screenshots: [...]`** (session) or **`latestScreenshotPath`** (catalog). Never invent paths. Omit screenshots **only** for text-only intake.
+4. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths when useful.
 5. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
 6. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
 7. Write with **`apply_hauling_contracts_intake`** (preferred: contracts + optimized `legs`) or `replace_hauling_checklist` / local `PUT /api/checklist`.
-8. Confirm with `get_hauling_checklist`. Use `list_hauling_screenshots` / `clear_hauling_screenshots` to manage the temp store.
+8. Confirm with `get_hauling_checklist`. Mark Source shots processed when done.
 
 ### Accepted intake JSON
 
@@ -58,13 +88,18 @@ Link evidence on each contract:
 
 | Tool | Purpose |
 | --- | --- |
-| `store_hauling_screenshot` | Save base64/data-URL image → `.data/mcp-screenshots/<batchId>/` (prefer batchId = sessionId) |
-| `list_hauling_screenshots` | List stored files for a batch |
+| `create_hauling_session` | New trip; returns `tripUrl` for Lane B Source handoff |
+| `store_hauling_screenshot` | Lane A: push bytes → `.data/mcp-screenshots/<sessionId>/` |
+| `list_hauling_screenshots` | List Source shots (`status`: pending / processed / all; default pending) |
+| `get_hauling_screenshot` | Pull one image (base64) for vision — prefer one call per shot |
+| `mark_hauling_screenshots_processed` | After apply — clear pending Source badge |
 | `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
 | `set_mission_scu_box_splits` | Correct crate sizes from freight elevator / hangar UI (`boxes: [{ size, count }]`) |
 | `clear_hauling_screenshots` | Delete a batch’s temp images |
 
-**Soft gate (not a hard fail):** `apply_hauling_contracts_intake` and `create_mission` still succeed when screenshot paths are missing, but return `screenshotsMissing: true` plus `warning` / `next`. Treat that as a defect to fix **in the same turn** when the user had images (`store_hauling_screenshot` → `set_mission_screenshots` or re-`create_mission` with `latestScreenshotPath`).
+Web UI **Source** uploads land as **pending**. AI marks them **processed** after intake.
+
+**Soft gate (not a hard fail):** `apply_hauling_contracts_intake` and `create_mission` still succeed when screenshot paths are missing, but return `screenshotsMissing: true` plus `warning` / `next`. Fix with store / Source list paths / `set_mission_screenshots` — prefer attach-after over rebuilding the route.
 
 Railway without a volume: store is wiped on redeploy (same as checklist `.data`).
 

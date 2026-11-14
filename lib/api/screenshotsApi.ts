@@ -1,10 +1,13 @@
 import { appApi } from "@/lib/api/appRoutes";
 
+export type ScreenshotSourceStatus = "pending" | "processed";
+
 export type ScreenshotListItem = {
   logicalPath: string;
   filename: string;
   bytes: number;
   mtime: string;
+  status: ScreenshotSourceStatus;
   /** HTTP URL to fetch/display the image for this session. */
   url: string;
 };
@@ -13,6 +16,8 @@ export type ScreenshotListResponse = {
   sessionId: string;
   batchId: string;
   count: number;
+  pendingCount: number;
+  processedCount: number;
   screenshots: ScreenshotListItem[];
 };
 
@@ -34,10 +39,20 @@ export type ScreenshotUploadResponse = {
 /** List screenshots stored for a hauling session (batch = sessionId). */
 export async function fetchSessionScreenshots(
   sessionId: string,
+  options?: { status?: ScreenshotSourceStatus | "all" },
 ): Promise<ScreenshotListResponse> {
-  const res = await fetch(appApi.checklistSessionScreenshots(sessionId), {
-    cache: "no-store",
-  });
+  const status = options?.status ?? "all";
+  const url = new URL(
+    appApi.checklistSessionScreenshots(sessionId),
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost",
+  );
+  if (status !== "all") url.searchParams.set("status", status);
+  const res = await fetch(
+    `${url.pathname}${url.search}`,
+    { cache: "no-store" },
+  );
   if (!res.ok) {
     throw new Error(`Screenshot list failed (${res.status})`);
   }

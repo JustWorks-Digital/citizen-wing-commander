@@ -85,6 +85,7 @@ import {
   mergePreservedQuantumRows,
   recomputeDistances,
 } from "@/lib/missions/quantumTravel";
+import { fetchSessionScreenshots } from "@/lib/api/screenshotsApi";
 import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
@@ -151,6 +152,7 @@ export function SessionChecklistView({
   const [cargoLayoutOpen, setCargoLayoutOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
+  const [pendingScreenshotCount, setPendingScreenshotCount] = useState(0);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
   /** Synthetic start → first-stop quantum marked done (feeds Distance traveled). */
   const [quantumOriginDeparted, setQuantumOriginDeparted] = useState(false);
@@ -173,6 +175,23 @@ export function SessionChecklistView({
   activeIdRef.current = activeSessionId;
   routerRef.current = router;
   overlayOpenRef.current = missionsOpen || catalogOpen;
+
+  useEffect(() => {
+    if (initial) return;
+    let cancelled = false;
+    void fetchSessionScreenshots(session.id)
+      .then((result) => {
+        if (!cancelled) {
+          setPendingScreenshotCount(result.pendingCount ?? 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPendingScreenshotCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session.id, screenshotsOpen, initial]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1078,6 +1097,7 @@ export function SessionChecklistView({
           </div>
           <SessionSourceStat
             className="w-full sm:w-auto sm:shrink-0"
+            pendingScreenshotCount={pendingScreenshotCount}
             onMissionsClick={() => setCatalogOpen(true)}
             onClick={() => setScreenshotsOpen(true)}
           />

@@ -20,27 +20,45 @@ const EXT_BY_MIME: Record<string, string> = {
 };
 
 function withUrls(sessionId: string, batchId: string) {
-  return listHaulingScreenshots(batchId).then((screenshots) =>
-    screenshots.map((shot) => ({
-      ...shot,
-      url: appApi.checklistSessionScreenshot(sessionId, shot.filename),
-    })),
+  return listHaulingScreenshots(batchId, { status: "all" }).then(
+    (screenshots) =>
+      screenshots.map((shot) => ({
+        ...shot,
+        url: appApi.checklistSessionScreenshot(sessionId, shot.filename),
+      })),
   );
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
     const batchId = sessionId.trim();
     if (!batchId) {
       return NextResponse.json({ error: "sessionId required" }, { status: 400 });
     }
-    const screenshots = await withUrls(sessionId, batchId);
+    const statusParam = new URL(request.url).searchParams.get("status");
+    const statusFilter =
+      statusParam === "pending" ||
+      statusParam === "processed" ||
+      statusParam === "all"
+        ? statusParam
+        : "all";
+    const all = await withUrls(sessionId, batchId);
+    const screenshots =
+      statusFilter === "all"
+        ? all
+        : all.filter((shot) => shot.status === statusFilter);
+    const pendingCount = all.filter((shot) => shot.status === "pending").length;
+    const processedCount = all.filter(
+      (shot) => shot.status === "processed",
+    ).length;
     return NextResponse.json(
       {
         sessionId,
         batchId,
         count: screenshots.length,
+        pendingCount,
+        processedCount,
         screenshots,
       },
       { headers: { "Cache-Control": "no-cache" } },

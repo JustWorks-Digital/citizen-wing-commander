@@ -20,6 +20,7 @@ import {
   toolListHaulingSessions,
   toolListIntakeUploads,
   toolGetIntakeUpload,
+  toolMarkHaulingScreenshotsProcessed,
   toolMarkIntakeUploadProcessed,
   toolListMissions,
   toolListShipBayPreferences,
@@ -149,7 +150,7 @@ const handler = createMcpHandler(
       {
         title: "Create hauling session",
         description:
-          "Use this to open a new empty hauling session tab (same as the UI + control). Returns the new sessionId for MCP targeting.",
+          "Use this to open a new empty hauling session tab (same as the UI + control). Returns sessionId, tripUrl, and sourceHandoff text. When chat attachments cannot be pushed to MCP, create the trip first, send tripUrl, ask the user to paste shots in Source, then continue with list/get.",
         inputSchema: z.object({
           sessionName: z.string().optional(),
           activate: z
@@ -282,16 +283,23 @@ const handler = createMcpHandler(
       {
         title: "List hauling screenshots",
         description:
-          "Use this to list screenshots in the MCP/UI screenshot store for a batch. App uploads use the session UUID as batchId.",
+          "Use this to list session Source / MCP screenshots. Pass batchId or sessionId (UI uploads use session UUID). Default status=pending (awaiting AI parse). After listing, call get_hauling_screenshot one image at a time for vision extract.",
         inputSchema: z.object({
           batchId: z
             .string()
             .optional()
-            .describe("Batch folder id — use sessionId for UI-uploaded shots"),
+            .describe("Batch folder id — use sessionId for UI Source uploads"),
+          sessionId: uuidString
+            .optional()
+            .describe("Alias for batchId when listing a trip’s Source shots"),
+          status: z
+            .enum(["pending", "processed", "all"])
+            .optional()
+            .describe("Filter by Source status (default pending)"),
         }),
         annotations: { readOnlyHint: true },
       },
-      async ({ batchId }) => toolListHaulingScreenshots(batchId),
+      async (input) => toolListHaulingScreenshots(input),
     );
 
     server.registerTool(
@@ -299,7 +307,7 @@ const handler = createMcpHandler(
       {
         title: "Get hauling screenshot",
         description:
-          "Use this to retrieve a screenshot (base64 + data URL) that was uploaded via the web UI or store_hauling_screenshot. Pass logicalPath from list_hauling_screenshots, or batchId + filename.",
+          "Use this to retrieve one screenshot (base64 + data URL) for vision/OCR — from UI Source uploads or store_hauling_screenshot. Prefer one call per image. Pass logicalPath from list_hauling_screenshots, or batchId + filename.",
         inputSchema: z.object({
           logicalPath: z
             .string()
@@ -311,6 +319,27 @@ const handler = createMcpHandler(
         annotations: { readOnlyHint: true },
       },
       async (input) => toolGetHaulingScreenshot(input),
+    );
+
+    server.registerTool(
+      "mark_hauling_screenshots_processed",
+      {
+        title: "Mark hauling screenshots processed",
+        description:
+          "Use this after apply_hauling_contracts_intake (or attach) when Source shots have been parsed. Marks pending session screenshots as processed so list_hauling_screenshots(status=pending) no longer returns them. Pass sessionId/batchId and filenames, logicalPaths, or allPending=true.",
+        inputSchema: z.object({
+          batchId: z.string().optional(),
+          sessionId: uuidString.optional(),
+          filenames: z.array(z.string()).optional(),
+          logicalPaths: z.array(z.string()).optional(),
+          allPending: z
+            .boolean()
+            .optional()
+            .describe("Mark every pending file in the batch processed"),
+        }),
+        annotations: { idempotentHint: true },
+      },
+      async (input) => toolMarkHaulingScreenshotsProcessed(input),
     );
 
     server.registerTool(
@@ -1203,18 +1232,18 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.6",
+      version: "0.2.7",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
-      "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow it.",
+      "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow Lane A (push bytes) vs Lane B (Source handoff).",
       "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32). For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo).",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
-      "Screenshot rule: if the user attached images, you MUST call store_hauling_screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it; imageBase64 remains a fallback. ChatGPT /mnt/data paths are not reachable by remote MCP — do not pass them. Pass sessionId (= batch). Optional missionId stores+attaches in one call. Otherwise put returned logicalPath on contracts[].screenshots / create_mission latestScreenshotPath / set_mission_screenshots. Omit screenshots only for text-only intake. Never invent paths. Do not put screenshot binaries in git.",
-      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] when images existed).",
+      "Screenshots — Lane A: when the host can push image bytes (fileUrl / readable filePath / imageBase64), create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). ChatGPT /mnt/data paths are NOT reachable — never pass them. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
+      "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",
-      "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and the user had images, fix immediately: store_hauling_screenshot with sessionId + missionId (fileUrl preferred) or set_mission_screenshots / re-create_mission with latestScreenshotPath. Prefer attach-after over rebuilding the route.",
+      "If apply_hauling_contracts_intake or create_mission returns screenshotsMissing: true and images existed, fix via store_hauling_screenshot or set_mission_screenshots / Source list paths — prefer attach-after over rebuilding the route.",
       "Set or clear the route origin with set_session_start_location (fuzzy names OK after search_locations). Users can also set it in the web UI.",
       "You may also call replace_hauling_checklist with legs only. Confirm with get_hauling_checklist.",
       "Before proposing cargo bay packing, call get_session_cargo_grid and respect its cell sizes, zones, axes, and placementRules. Do not invent grids. For Sorting DSL: compile_cargo_bay_pack_program (preset→JSON primitives) then pack_cargo_bay_at_stop (optional custom program).",

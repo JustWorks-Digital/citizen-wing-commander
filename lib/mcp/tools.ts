@@ -78,10 +78,13 @@ import {
 import {
   clearHaulingScreenshots,
   listHaulingScreenshots,
+  markHaulingScreenshotsProcessed,
   readHaulingScreenshot,
   resolveHaulingScreenshotBytes,
   storeHaulingScreenshotBuffer,
+  type HaulingScreenshotStatus,
 } from "@/lib/sessions/screenshotStore";
+import { sessionTripUrl } from "@/lib/sessions/sessionTripUrl";
 import {
   listIntakeUploads,
   markIntakeUploadProcessed,
@@ -354,10 +357,15 @@ export async function toolCreateHaulingSession(input?: {
     sessionName: input?.sessionName,
     activate: input?.activate !== false,
   });
+  const trip = sessionTripUrl(session.id);
   return textResult({
     ok: true,
     message: `Created session ${session.id}${input?.activate === false ? "" : " (active)"}.`,
     session: presentSession(session),
+    tripPath: trip.path,
+    tripUrl: trip.url,
+    sourceHandoff:
+      "If chat attachments cannot be pushed to MCP, ask the user to open tripUrl → Source → paste Accepted contract shots → reply continue. Then list_hauling_screenshots (status=pending) + get_hauling_screenshot.",
   });
 }
 
@@ -864,14 +872,62 @@ export async function toolStoreHaulingScreenshot(input: {
   }
 }
 
-export async function toolListHaulingScreenshots(batchId?: string) {
-  const screenshots = await listHaulingScreenshots(batchId);
+export async function toolListHaulingScreenshots(input?: {
+  batchId?: string;
+  sessionId?: string;
+  status?: HaulingScreenshotStatus | "all";
+}) {
+  const batchId =
+    input?.batchId?.trim() || input?.sessionId?.trim() || "default";
+  const status = input?.status ?? "pending";
+  const screenshots = await listHaulingScreenshots(batchId, { status });
+  const all = await listHaulingScreenshots(batchId, { status: "all" });
+  const pendingCount = all.filter((shot) => shot.status === "pending").length;
+  const processedCount = all.filter(
+    (shot) => shot.status === "processed",
+  ).length;
   return textResult({
-    batchId: batchId?.trim() || "default",
+    batchId,
+    status,
     count: screenshots.length,
+    pendingCount,
+    processedCount,
     screenshots,
-    note: "UI uploads use sessionId as batchId. Pass that id here to see app-uploaded shots.",
+    note:
+      "UI Source uploads use sessionId as batchId. Default status=pending (awaiting AI parse). Call get_hauling_screenshot one image at a time for vision. After apply_hauling_contracts_intake, call mark_hauling_screenshots_processed.",
   });
+}
+
+export async function toolMarkHaulingScreenshotsProcessed(input: {
+  batchId?: string;
+  sessionId?: string;
+  filenames?: string[];
+  logicalPaths?: string[];
+  allPending?: boolean;
+}) {
+  const batchId = input.batchId?.trim() || input.sessionId?.trim() || "";
+  if (!batchId) {
+    return textResult({ error: "Provide batchId or sessionId" });
+  }
+  try {
+    const result = await markHaulingScreenshotsProcessed({
+      batchId,
+      filenames: input.filenames,
+      logicalPaths: input.logicalPaths,
+      allPending: input.allPending,
+    });
+    return textResult({
+      ...result,
+      note: "Marked Source shots processed. Pending count is for remaining unparsed uploads.",
+    });
+  } catch (error) {
+    return textResult({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to mark screenshots processed",
+    });
+  }
 }
 
 /**
