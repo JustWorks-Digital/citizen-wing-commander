@@ -92,7 +92,7 @@ function CargoGridZoomControls({
   ariaLabel?: string;
 }) {
   const buttonClass =
-    "inline-flex size-7 items-center justify-center border border-rsi-border bg-rsi-bg-deep/70 font-mono text-[0.7rem] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text disabled:cursor-default disabled:opacity-40";
+    "inline-flex size-5 items-center justify-center border border-rsi-border bg-rsi-bg-deep/70 font-mono text-[0.6rem] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text disabled:cursor-default disabled:opacity-40 sm:size-7 sm:text-[0.7rem]";
   return (
     <div
       className="inline-flex overflow-hidden rounded-rsi border border-rsi-border"
@@ -116,7 +116,7 @@ function CargoGridZoomControls({
         onClick={onReset}
         title="Reset zoom · double-click to set"
         aria-label="Reset zoom"
-        className={`${buttonClass} min-w-[2.75rem] border-0 border-r border-rsi-border px-1.5 text-[0.6rem] tabular-nums`}
+        className={`${buttonClass} min-w-[2.25rem] border-0 border-r border-rsi-border px-1 text-[0.5rem] tabular-nums sm:min-w-[2.75rem] sm:px-1.5 sm:text-[0.6rem]`}
       />
       <button
         type="button"
@@ -1128,7 +1128,7 @@ export function CargoGridSketch({
           {showTop ? (
           <div
             className={[
-              "relative flex min-w-0 flex-col overflow-hidden p-3 pb-10",
+              "relative flex min-w-0 flex-col overflow-hidden p-3 pb-12 sm:pb-14",
               isSplit
                 ? "border-r border-rsi-border"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
@@ -1162,7 +1162,7 @@ export function CargoGridSketch({
                 ) : null}
               </div>
             ) : null}
-            <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
+            <div className="pointer-events-auto absolute right-1.5 bottom-10 z-30 sm:right-2 sm:bottom-12">
               {topZoomControls}
             </div>
             {showTopLayers && topLayerPadVisible ? (

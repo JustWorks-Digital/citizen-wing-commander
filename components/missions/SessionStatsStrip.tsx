@@ -102,9 +102,11 @@ export function SessionSourceStat({
   onClick,
   className,
 }: SessionSourceStatProps) {
+  const actionLabelClass =
+    "font-mono text-[0.5rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]";
   return (
     <div
-      className={[stripClass, className].filter(Boolean).join(" ")}
+      className={[stripClass, "sm:w-auto", className].filter(Boolean).join(" ")}
       role="group"
       aria-label="Trip actions"
     >
@@ -113,11 +115,12 @@ export function SessionSourceStat({
         onClick={onMissionsClick}
         className={[
           interactiveCellClass,
-          "items-center justify-center",
+          "min-w-0 flex-1 items-center justify-center px-3 py-2 sm:flex-none sm:px-3",
         ].join(" ")}
       >
-        <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
-          Contracts List
+        <span className={actionLabelClass}>
+          <span className="sm:hidden">Contracts</span>
+          <span className="hidden sm:inline">Contracts List</span>
         </span>
       </button>
       <button
@@ -125,12 +128,10 @@ export function SessionSourceStat({
         onClick={onClick}
         className={[
           interactiveCellClass,
-          "items-center justify-center",
+          "min-w-0 flex-1 items-center justify-center px-3 py-2 sm:flex-none sm:px-3",
         ].join(" ")}
       >
-        <span className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted">
-          Source
-        </span>
+        <span className={actionLabelClass}>Source</span>
       </button>
     </div>
   );

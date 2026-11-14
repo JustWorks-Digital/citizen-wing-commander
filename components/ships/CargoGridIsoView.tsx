@@ -1113,7 +1113,7 @@ export function CargoGridIsoView({
   return (
     <div
       className={[
-        "relative flex min-w-0 flex-col overflow-hidden px-3 pt-3 pb-3",
+        "relative flex min-w-0 flex-col overflow-hidden px-3 pt-3 pb-12 sm:pb-14",
         embedded
           ? "h-full w-full bg-transparent"
           : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
@@ -1157,7 +1157,7 @@ export function CargoGridIsoView({
         />
       ) : null}
       {toolbarExtra ? (
-        <div className="pointer-events-auto absolute right-2 bottom-2 z-20">
+        <div className="pointer-events-auto absolute right-1.5 bottom-10 z-30 sm:right-2 sm:bottom-12">
           {toolbarExtra}
         </div>
       ) : null}

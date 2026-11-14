@@ -129,7 +129,7 @@ export function BayFacingPad({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="pointer-events-auto absolute bottom-2 left-2 z-20 grid grid-cols-3 gap-px"
+      className="pointer-events-auto absolute top-10 left-1.5 z-20 grid grid-cols-3 gap-px sm:top-auto sm:bottom-2 sm:left-2"
     >
       <span className="size-5" aria-hidden />
       <button

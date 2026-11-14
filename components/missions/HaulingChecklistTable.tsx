@@ -1152,14 +1152,14 @@ function LocationHeader({
             <span
               className={
                 nameTrailing
-                  ? "min-w-0 truncate whitespace-nowrap"
+                  ? "min-w-0 break-words [overflow-wrap:anywhere] sm:truncate sm:whitespace-nowrap"
                   : "min-w-0 break-words [overflow-wrap:anywhere]"
               }
             >
               {location}
             </span>
             {nameTrailing ? (
-              <span className="inline-flex shrink-0 items-center">
+              <span className="inline-flex shrink-0 items-center self-center">
                 {nameTrailing}
               </span>
             ) : null}
@@ -1438,20 +1438,23 @@ function QuantumTravelRow({
           onCopy={onCopy}
           compact
           nameTrailing={
-            <QuantumShipBadge shipSlug={shipSlug} className="ml-16 h-8 w-12" />
+            <QuantumShipBadge
+              shipSlug={shipSlug}
+              className="ml-1.5 h-6 w-9 sm:ml-16 sm:h-8 sm:w-12"
+            />
           }
         />
       </div>
     );
 
-  /** >>> only — aligned to location name height between origin and destination. */
+  /** >>> desktop / rotated down on stacked mobile. */
   const travelBlock = (
     <div
       aria-hidden
-      className="flex h-14 items-center justify-center text-rsi-text-muted"
+      className="flex h-7 items-center justify-start text-rsi-text-muted md:h-14 md:justify-center"
       title="Travel"
     >
-      <TravelChevronsIcon className="h-5 w-6" />
+      <TravelChevronsIcon className="h-4 w-5 rotate-90 md:h-5 md:w-6 md:rotate-0" />
     </div>
   );
 
@@ -1487,9 +1490,9 @@ function QuantumTravelRow({
         </button>
       </div>
     ) : (
-      <p
+        <p
         className={[
-          "flex min-h-10 min-w-0 items-center text-base tracking-wide md:h-14 sm:text-lg",
+          "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
           isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
           onChangeTo ? "cursor-pointer" : "cursor-default",
         ].join(" ")}
@@ -1547,7 +1550,7 @@ function QuantumTravelRow({
             onToggle={onToggle}
           />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-start md:gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 md:flex-row md:items-start md:gap-3">
           <div className="min-w-0 flex-1 md:min-w-[52%] md:flex-[1.7]">
             {isSavingSection ? (
               <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
@@ -1557,10 +1560,10 @@ function QuantumTravelRow({
             ) : null}
             {fromBlock}
           </div>
-          <div className="flex shrink-0 justify-center md:px-1">
+          <div className="flex shrink-0 justify-start pl-[6.75rem] md:justify-center md:px-1 md:pl-0">
             {travelBlock}
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-1 md:max-w-[38%] md:flex-1">
+          <div className="flex w-full min-w-0 flex-col gap-1 pl-[6.75rem] md:max-w-[38%] md:flex-1 md:pl-0">
             {toBlock}
             {hopDistance ? (
               <p

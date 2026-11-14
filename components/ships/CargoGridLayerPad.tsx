@@ -56,7 +56,7 @@ export function CargoGridLayerPad({
       role={mode === "select" ? "radiogroup" : "group"}
       aria-label={ariaLabel}
       className={[
-        "pointer-events-auto absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 flex-wrap items-center justify-center gap-1",
+        "pointer-events-auto absolute bottom-2 left-1.5 z-20 flex max-w-[calc(100%-4.75rem)] flex-nowrap items-center justify-start gap-1 overflow-x-auto sm:left-1/2 sm:max-w-[calc(100%-5.75rem)] sm:-translate-x-1/2 sm:justify-center",
         className,
       ]
         .filter(Boolean)

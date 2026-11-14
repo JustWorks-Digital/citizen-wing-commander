@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Bay/Distance/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
+          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), Contracts/Stops/Bay/Distance/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
       },
     },
   },
