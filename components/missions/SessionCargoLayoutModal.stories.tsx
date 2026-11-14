@@ -1,25 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
-import {
-  SessionContractScuGrid,
-  SessionInventoryStat,
-} from "./SessionStatsStrip";
+import { SessionInventoryStat } from "./SessionStatsStrip";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
-
-const demoContracts = [
-  {
-    missionId: "m1",
-    title: "Member Rank — Stims",
-    scu: 96,
-    screenshots: ["demo/stims.png"],
-  },
-  {
-    missionId: "m2",
-    title: "Junior Rank — Quartz",
-    scu: 48,
-    screenshots: [],
-  },
-];
 
 const meta = {
   title: "Missions/SessionCargoLayoutModal",
@@ -29,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; left edge resizes width (persisted per trip). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total + bay load; footer shows stop transfer SCU + per-contract SCU.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; left edge resizes width (persisted per trip). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total + bay load; footer shows stop transfer SCU by cargo type.",
       },
     },
   },
@@ -51,17 +33,10 @@ export const Open: Story = {
         onboardScu={24}
         peakScu={72}
         missionsTotalScu={144}
-        missionScuBreakdown={demoContracts}
+        missionScuBreakdown={[]}
         sessionId={mockSessionChecklist.id}
         totalCapacity={696}
         availableScu={624}
-        showContractBreakdown={false}
-      />
-    ),
-    footerAside: (
-      <SessionContractScuGrid
-        missionScuBreakdown={demoContracts}
-        sessionId={mockSessionChecklist.id}
       />
     ),
   },

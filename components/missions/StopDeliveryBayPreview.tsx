@@ -16,6 +16,11 @@ export type StopDeliveryBayPreviewProps = {
   className?: string;
   /** Double-click under-stack cargo label to edit that mission’s box mix. */
   onEditMissionBoxes?: (missionId: string) => void;
+  /**
+   * Show only one pad graph. Omit to render both (delivery then pickup).
+   * Used to align each graph with its left-side Pickup / Drop off section.
+   */
+  role?: "pickup" | "delivery";
 };
 
 function GraphCompletedStamp() {
@@ -98,7 +103,8 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
 
 /**
  * Per-stop pickup/delivery crates on generic flat 3D pads (not the ship bay).
- * When both exist: delivery first, pickup below.
+ * Pass `role` to render a single graph (aligned with that left-side section).
+ * Without `role`, both render (pickup then drop off).
  * Pickup can toggle Cargo (by commodity) vs Piles (by delivery location).
  */
 export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
@@ -106,23 +112,27 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   rows,
   className,
   onEditMissionBoxes,
+  role,
 }: StopDeliveryBayPreviewProps) {
   const [pickupMode, setPickupMode] = useState<PickupPadMode>("cargo");
   const [deliveryPeel, setDeliveryPeel] = useState(true);
   const [pickupPeel, setPickupPeel] = useState(true);
 
+  const showDelivery = role == null || role === "delivery";
+  const showPickup = role == null || role === "pickup";
+
   const deliveryPlan = useMemo(
-    () => planStopCargoStacks(row, "delivery"),
-    [row],
+    () => (showDelivery ? planStopCargoStacks(row, "delivery") : null),
+    [row, showDelivery],
   );
   const pickupCargoPlan = useMemo(
-    () => planStopCargoStacks(row, "pickup"),
-    [row],
+    () => (showPickup ? planStopCargoStacks(row, "pickup") : null),
+    [row, showPickup],
   );
   const pickupPilePlan = useMemo(() => {
-    if (!rows || rows.length === 0) return null;
+    if (!showPickup || !rows || rows.length === 0) return null;
     return planPickupHangarStacks(rows, row.id);
-  }, [rows, row.id]);
+  }, [rows, row.id, showPickup]);
 
   const pickupPlan =
     pickupMode === "piles" && pickupPilePlan
@@ -143,35 +153,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         .join(" ")}
       onClick={(event) => event.stopPropagation()}
     >
-      {deliveryPlan ? (
-        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-              Drop off
-            </p>
-            {showDeliveryPeel ? (
-              <PadPeelButton
-                pressed={deliveryPeel}
-                onPressedChange={setDeliveryPeel}
-              />
-            ) : null}
-          </div>
-          <div className="relative p-1.5">
-            <StopDeliveryStacksView
-              plan={deliveryPlan}
-              peelStack={deliveryPeel}
-              onPeelStackChange={setDeliveryPeel}
-              hidePeel
-              onEditMissionBoxes={onEditMissionBoxes}
-            />
-            {row.isCompleted ? (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                <GraphCompletedStamp />
-              </div>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
       {pickupPlan ? (
         <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
@@ -227,6 +208,35 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               plan={pickupPlan}
               peelStack={pickupPeel}
               onPeelStackChange={setPickupPeel}
+              hidePeel
+              onEditMissionBoxes={onEditMissionBoxes}
+            />
+            {row.isCompleted ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                <GraphCompletedStamp />
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+      {deliveryPlan ? (
+        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
+              Drop off
+            </p>
+            {showDeliveryPeel ? (
+              <PadPeelButton
+                pressed={deliveryPeel}
+                onPressedChange={setDeliveryPeel}
+              />
+            ) : null}
+          </div>
+          <div className="relative p-1.5">
+            <StopDeliveryStacksView
+              plan={deliveryPlan}
+              peelStack={deliveryPeel}
+              onPeelStackChange={setDeliveryPeel}
               hidePeel
               onEditMissionBoxes={onEditMissionBoxes}
             />

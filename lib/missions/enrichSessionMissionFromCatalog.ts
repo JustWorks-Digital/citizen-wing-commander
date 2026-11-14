@@ -79,19 +79,21 @@ export function enrichSessionMissionFromCatalog(
   const category =
     normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;
 
-  // Catalog stores rank separately and titles without "X Rank - …". Recompose
-  // so session UI that parses rank from title still shows it.
+  // Catalog stores rank separately and titles without "X Rank - …".
   const rank =
-    normalizeMissionRank(catalog.rank) ?? parseRankFromTitle(mission.title);
-  const baseTitle =
+    normalizeMissionRank(catalog.rank) ??
+    normalizeMissionRank(payload.rank) ??
+    parseRankFromTitle(mission.title) ??
+    normalizeMissionRank(mission.rank);
+  const title =
     (catalog.title?.trim() || stripRankFromTitle(mission.title).title).trim() ||
     mission.title;
-  const titleWithRank = rank ? `${rank} Rank - ${baseTitle}` : baseTitle;
 
   return {
     ...mission,
     catalogMissionId: catalog.id,
-    title: titleWithRank,
+    title,
+    rank,
     contractor: catalog.contractorSlug
       ? (getContractorBySlug(catalog.contractorSlug)?.name ??
         catalog.contractorSlug)
@@ -125,7 +127,7 @@ export function enrichSessionMissionFromCatalog(
     mobiglas: {
       ...mission.mobiglas,
       category,
-      title: titleWithRank,
+      title,
     },
   };
 }

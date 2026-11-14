@@ -74,8 +74,6 @@ export type CargoBayLayoutProps = {
   sessionId?: string | null;
   /** Optional session stats — right of the Storage bays title. */
   headerAside?: ReactNode;
-  /** Optional contracts / inventory strip below the bay grid. */
-  footerAside?: ReactNode;
   className?: string;
 };
 
@@ -91,7 +89,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   onStopScopeChange,
   sessionId = null,
   headerAside = null,
-  footerAside = null,
   className,
 }: CargoBayLayoutProps) {
   const sketch = useMemo(
@@ -318,7 +315,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     reclamp();
     window.addEventListener("resize", reclamp);
     return () => window.removeEventListener("resize", reclamp);
-  }, [maxPanelHeightPx, setHeightPx, footerAside, showGrid]);
+  }, [maxPanelHeightPx, setHeightPx, showGrid]);
   const canPeel = useMemo(() => {
     if (!plan) return false;
     let maxZ = -1;
@@ -672,7 +669,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 <div
                   role="region"
                   aria-label="Cargo packing"
-                  className="pointer-events-auto absolute top-8 left-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
+                  className="pointer-events-auto absolute top-8 left-2 z-40 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
                 >
                   <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
                     Pack mode
@@ -853,13 +850,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
-          {thisStopTransfers.length > 0 || footerAside ? (
-            <div className="mt-2 flex w-full min-w-0 flex-wrap items-start justify-between gap-3 border-t border-rsi-border/80 pt-2">
+          {thisStopTransfers.length > 0 ? (
+            <div className="mt-2 border-t border-rsi-border/80 pt-2">
               <SessionCurrentStopPickupGrid
                 transfers={thisStopTransfers}
                 stopLabel={thisStopLabel}
               />
-              {footerAside}
             </div>
           ) : null}
           <div className="-mx-4 mt-1">
@@ -914,13 +910,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 : "No cargo placed at this stop yet."
               : "No route stops yet."}
           </p>
-          {thisStopTransfers.length > 0 || footerAside ? (
-            <div className="mt-2 flex w-full min-w-0 flex-wrap items-start justify-between gap-3 border-t border-rsi-border/80 pt-2 pb-3">
+          {thisStopTransfers.length > 0 ? (
+            <div className="mt-2 border-t border-rsi-border/80 pt-2 pb-3">
               <SessionCurrentStopPickupGrid
                 transfers={thisStopTransfers}
                 stopLabel={thisStopLabel}
               />
-              {footerAside}
             </div>
           ) : null}
         </>

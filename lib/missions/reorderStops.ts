@@ -4,15 +4,34 @@ import type {
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
 import { recomputeDistances } from "@/lib/missions/quantumTravel";
+import { rebuildRowsFromMissions } from "@/lib/missions/rebuildSessionRoute";
 
 /** Trip has started once any checklist stop is marked complete. */
 export function isTripStarted(rows: HaulingChecklistRow[]): boolean {
   return rows.some((row) => row.isCompleted);
 }
 
+function cargoHandledKey(
+  locationSlug: string,
+  commoditySlug: string,
+  role: string | null | undefined,
+  missionId?: string | null,
+): string {
+  return `${locationSlug}|${commoditySlug}|${role ?? ""}|${missionId ?? ""}`;
+}
+
+function cargoHandledLooseKey(
+  locationSlug: string,
+  commoditySlug: string,
+  role: string | null | undefined,
+): string {
+  return cargoHandledKey(locationSlug, commoditySlug, role);
+}
+
 /**
- * Clear stop completion so the trip can be reordered again.
- * Does not change contracts (missions), cargo handled flags, or mission counts.
+ * Clear stop + contract completion so the trip can be reordered again.
+ * Brings completed-off-route contracts back onto the route table.
+ * Cargo handled flags are preserved across the rebuild when keys still match.
  */
 export function resetTripProgress(
   session: SessionChecklistModel,
@@ -21,10 +40,67 @@ export function resetTripProgress(
     ...row,
     isCompleted: false,
   }));
-  return applySessionCompletionTiming({
+  const missions = (session.missions ?? []).map((mission) =>
+    mission.isCompleted ? { ...mission, isCompleted: false } : mission,
+  );
+  const counted = missions.filter((mission) => !mission.isHidden);
+  const cleared = applySessionCompletionTiming({
     ...session,
     rows,
+    missions,
+    missionCount: counted.length,
+    missionsCompleted: 0,
   });
+  const rebuilt = rebuildRowsFromMissions(cleared, missions);
+  if (!rebuilt.ok) return cleared;
+
+  const handledExact = new Set<string>();
+  const handledLoose = new Set<string>();
+  for (const row of session.rows) {
+    for (const cargo of row.cargoDeliveries) {
+      if (!cargo.isHandled) continue;
+      handledExact.add(
+        cargoHandledKey(
+          row.locationSlug,
+          cargo.commoditySlug,
+          cargo.role,
+          cargo.missionId,
+        ),
+      );
+      handledLoose.add(
+        cargoHandledLooseKey(
+          row.locationSlug,
+          cargo.commoditySlug,
+          cargo.role,
+        ),
+      );
+    }
+  }
+  if (handledExact.size === 0 && handledLoose.size === 0) {
+    return rebuilt.session;
+  }
+
+  return {
+    ...rebuilt.session,
+    rows: rebuilt.session.rows.map((row) => ({
+      ...row,
+      cargoDeliveries: row.cargoDeliveries.map((cargo) => {
+        const exact = cargoHandledKey(
+          row.locationSlug,
+          cargo.commoditySlug,
+          cargo.role,
+          cargo.missionId,
+        );
+        const loose = cargoHandledLooseKey(
+          row.locationSlug,
+          cargo.commoditySlug,
+          cargo.role,
+        );
+        const keep = handledExact.has(exact) || handledLoose.has(loose);
+        return keep ? { ...cargo, isHandled: true } : cargo;
+      }),
+    })),
+  };
 }
 
 /**

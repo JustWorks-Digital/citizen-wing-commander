@@ -38,7 +38,10 @@ import {
 } from "@/lib/missions/mockSession";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
+  applyCompletedMissionStopState,
+  rebuildRowsFromMissions,
   removeMissionAndRebuildRoute,
+  restampAllMissionBoxSizes,
   setMissionScuBoxSplits,
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
@@ -57,7 +60,10 @@ import {
   reorderChecklistStops,
   resetTripProgress,
 } from "@/lib/missions/reorderStops";
-import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletions";
+import {
+  reconcileMissionCompletionFromStops,
+  syncMissionsForStopCompletion,
+} from "@/lib/missions/expectedCompletions";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
@@ -85,7 +91,6 @@ import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import {
-  SessionContractScuGrid,
   SessionInventoryStat,
   SessionRouteProgressStats,
   SessionSourceStat,
@@ -369,11 +374,17 @@ export function SessionChecklistView({
         session.rows,
         session.startLocationSlug ?? null,
       );
+    const hasIncomplete = session.rows.some((row) => !row.isCompleted);
     if (
       focusedStopId &&
       (canFocusQuantum ||
         session.rows.some((row) => row.id === focusedStopId))
     ) {
+      // Trip finished: don't keep the last Done stop as the active focus.
+      if (!hasIncomplete && !canFocusQuantum) {
+        const focused = session.rows.find((row) => row.id === focusedStopId);
+        if (focused?.isCompleted) return null;
+      }
       return focusedStopId;
     }
     return defaultFocusedStopId(
@@ -533,7 +544,6 @@ export function SessionChecklistView({
         totalCapacity={totalCapacity}
         availableScu={availableScu}
         isOverCapacity={isOverCapacity}
-        showContractBreakdown={false}
       />
     ),
     [
@@ -546,16 +556,6 @@ export function SessionChecklistView({
       availableScu,
       isOverCapacity,
     ],
-  );
-
-  const contractsFooter = useMemo(
-    () => (
-      <SessionContractScuGrid
-        missionScuBreakdown={missionScuBreakdown}
-        sessionId={session.id}
-      />
-    ),
-    [missionScuBreakdown, session.id],
   );
 
   const toggleCargoLayout = useCallback(() => {
@@ -669,29 +669,62 @@ export function SessionChecklistView({
       const target = current.rows.find((row) => row.id === rowId);
       if (!target) return Promise.resolve();
       const stopIsCompleted = !target.isCompleted;
-      const missions = syncMissionsForStopCompletion({
+      const rows = current.rows.map((row) =>
+        row.id === rowId ? { ...row, isCompleted: stopIsCompleted } : row,
+      );
+      // Stop sync first, then full reconcile so off-route completed contracts
+      // clear when every stop is open (avoids stuck Contracts N/M).
+      const synced = syncMissionsForStopCompletion({
         missions: current.missions ?? [],
-        rows: current.rows,
+        rows,
         rowId,
         stopIsCompleted,
       });
+      const missions = reconcileMissionCompletionFromStops(synced, rows);
       const counted = missions.filter((mission) => !mission.isHidden);
-      return persistSession(
-        applySessionCompletionTiming({
-          ...current,
-          shipSlugs: current.shipSlugs ?? [],
-          startLocationSlug: current.startLocationSlug ?? null,
-          rows: current.rows.map((row) =>
-            row.id === rowId
-              ? { ...row, isCompleted: stopIsCompleted }
-              : row,
-          ),
-          missions,
-          missionCount: counted.length,
-          missionsCompleted: counted.filter((mission) => mission.isCompleted)
-            .length,
-        }),
+      const activeBefore = new Set(
+        (current.missions ?? [])
+          .filter((mission) => !mission.isHidden && !mission.isCompleted)
+          .map((mission) => mission.id),
       );
+      const activeAfter = new Set(
+        missions
+          .filter((mission) => !mission.isHidden && !mission.isCompleted)
+          .map((mission) => mission.id),
+      );
+      // Only rebuild when contracts reopen onto the route. Completing them must
+      // keep the checklist rows so a finished trip still shows Done history.
+      const needsRebuildForReopened = [...activeAfter].some(
+        (id) => !activeBefore.has(id),
+      );
+
+      let next = applySessionCompletionTiming({
+        ...current,
+        shipSlugs: current.shipSlugs ?? [],
+        startLocationSlug: current.startLocationSlug ?? null,
+        rows,
+        missions,
+        missionCount: counted.length,
+        missionsCompleted: counted.filter((mission) => mission.isCompleted)
+          .length,
+      });
+      if (needsRebuildForReopened) {
+        const rebuilt = rebuildRowsFromMissions(next, missions);
+        if (rebuilt.ok) {
+          // Keep the stop completion the pilot just toggled; rebuild resets rows.
+          next = {
+            ...rebuilt.session,
+            rows: rebuilt.session.rows.map((row) => {
+              const prior = rows.find((entry) => entry.id === row.id);
+              return prior
+                ? { ...row, isCompleted: prior.isCompleted }
+                : row;
+            }),
+          };
+          next = applySessionCompletionTiming(next);
+        }
+      }
+      return persistSession(next);
     },
     [persistSession],
   );
@@ -873,9 +906,34 @@ export function SessionChecklistView({
     setTripRepairBusy(true);
     setTripRepairError(null);
     try {
-      const legs = contractLegsFromChecklistRows(current.rows);
+      // Prefer rebuilding from session missions so orphan contracts (on the
+      // list but missing from cargo missionIds) get wired back onto the route.
+      // Include completed contracts so Repair does not wipe Done work off the table.
+      const missions = current.missions ?? [];
+      const fromMissions = rebuildRowsFromMissions(current, missions, {
+        includeCompleted: true,
+      });
+      if (fromMissions.ok) {
+        const validation = validateChecklistTripCargo(
+          fromMissions.session.rows,
+          fromMissions.session.startLocationSlug ?? null,
+        );
+        if (validation.ok) {
+          void persistSession(fromMissions.session);
+          return;
+        }
+      }
+
+      // Intake merge order can drop-before-load; optimize legs for a legal visit order.
+      const legs = contractLegsFromChecklistRows(
+        fromMissions.ok ? fromMissions.session.rows : current.rows,
+      );
       if (legs.length === 0) {
-        setTripRepairError("No contract cargo legs found to rebuild from.");
+        setTripRepairError(
+          fromMissions.ok
+            ? "Rebuilt from contracts but route is still invalid, and no tagged cargo legs were available to optimize."
+            : "No contract cargo legs found to rebuild from.",
+        );
         return;
       }
       const result = optimizeTrip(legs, current.startLocationSlug ?? null);
@@ -887,18 +945,24 @@ export function SessionChecklistView({
         );
         return;
       }
-      const repairedRows = recomputeDistances(
-        mergePreservedQuantumRows(
-          current.rows,
-          checklistRowsFromTripPlan(result.plan),
+      const optimized = applySessionCompletionTiming({
+        ...(fromMissions.ok ? fromMissions.session : current),
+        missions,
+        rows: recomputeDistances(
+          mergePreservedQuantumRows(
+            current.rows,
+            checklistRowsFromTripPlan(result.plan),
+          ),
         ),
-      );
-      persistSession(
-        applySessionCompletionTiming({
-          ...current,
-          rows: repairedRows,
-        }),
-      );
+      });
+      const stamped = restampAllMissionBoxSizes(optimized);
+      void persistSession({
+        ...stamped,
+        rows: applyCompletedMissionStopState(
+          stamped.rows,
+          stamped.missions ?? missions,
+        ),
+      });
     } finally {
       setTripRepairBusy(false);
     }
@@ -1152,7 +1216,6 @@ export function SessionChecklistView({
         focusedStopId={resolvedFocusedStopId}
         sessionId={session.id}
         headerAside={inventoryAside}
-        footerAside={contractsFooter}
         onClose={closeCargoLayout}
       />
 

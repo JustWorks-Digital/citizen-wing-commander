@@ -25,7 +25,8 @@ import {
 } from "@/lib/missions/catalogMission";
 import { enrichSessionMissionFromCatalog } from "@/lib/missions/enrichSessionMissionFromCatalog";
 import {
-  stripRankFromTitle,
+  resolveMissionRank,
+  resolveMissionTitle,
   type MissionRank,
 } from "@/lib/missions/missionRank";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
@@ -390,7 +391,8 @@ function missionContractView(
 ): MissionContractViewModel {
   const isHidden = Boolean(mission.isHidden);
   const isCompleted = Boolean(mission.isCompleted);
-  const { rank, title } = stripRankFromTitle(mission.title);
+  const rank = resolveMissionRank(mission);
+  const title = resolveMissionTitle(mission);
   const totalScu = missionTotalScu(mission);
   const readyBoxes = cargoBoxSplits.withDefaults(mission);
   const cargoBoxLines = cargoBoxSplits.commodityLines(readyBoxes);

@@ -14,6 +14,11 @@ export type HaulingIntakeContract = {
   /** Stable id; matches `mobiglas_contract_transcript.id` when present. */
   id?: string;
   title: string;
+  /**
+   * Hauling career rank (Trainee…Master), without the word “Rank”.
+   * Extracted from `title` when omitted.
+   */
+  rank?: string | null;
   contractor?: string;
   rewardAuec?: number;
   /** Pickup locations (multi-stop contracts list every site). */

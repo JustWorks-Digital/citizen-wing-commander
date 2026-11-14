@@ -545,6 +545,20 @@ const handler = createMcpHandler(
         .optional()
         .describe("Stable contract/mission id (e.g. contract-1). Prefer setting this."),
       title: z.string(),
+      rank: z
+        .enum([
+          "Trainee",
+          "Rookie",
+          "Junior",
+          "Member",
+          "Experienced",
+          "Senior",
+          "Master",
+        ])
+        .optional()
+        .describe(
+          "Hauling career rank (Trainee…Master), without the word “Rank”. Extracted from title when omitted.",
+        ),
       contractor: z.string().optional(),
       rewardAuec: z.number().nonnegative().optional(),
       from: z.array(z.string()).min(1),

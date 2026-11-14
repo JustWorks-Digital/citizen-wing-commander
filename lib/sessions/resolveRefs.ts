@@ -201,6 +201,8 @@ export type IncomingCargoLine = {
   role?: "pickup" | "delivery";
   /** Per-line bay zone; falls back to leg shipStorageLocation. */
   shipStorageLocation?: string;
+  /** Session / intake contract id — kept distinct when merging stop cargo. */
+  missionId?: string;
 };
 
 export function resolveShipStorageLocation(
@@ -347,11 +349,13 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
       };
     }
 
+    const missionId = line.missionId?.trim() || undefined;
     cargoDeliveries.push({
       commoditySlug,
       scu: Math.trunc(line.scu),
       shipStorageLocation: lineStorage,
       ...(line.role ? { role: line.role } : {}),
+      ...(missionId ? { missionId } : {}),
     });
   }
 

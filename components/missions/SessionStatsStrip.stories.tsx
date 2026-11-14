@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Bay/Distance/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU + per-contract SCU in the modal footer.",
+          "Split trip telemetry: Contracts List/Source (trip header), Contracts/Stops/Bay/Distance/aUEC (route checklist toolbar), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
       },
     },
   },
@@ -90,11 +90,12 @@ export const Inventory: Story = {
       sessionId="demo-session"
       totalCapacity={96}
       availableScu={24}
+      showContractBreakdown
     />
   ),
 };
 
-/** Four-per-column contract grid (footer of Cargo bays modal). */
+/** Inventory header + stop pickup grid (storage-bays modal pattern). */
 export const ContractScuFourPerColumn: Story = {
   render: () => (
     <div className="flex w-full max-w-3xl flex-col gap-3">
@@ -105,9 +106,8 @@ export const ContractScuFourPerColumn: Story = {
         missionScuBreakdown={[]}
         totalCapacity={216}
         availableScu={36}
-        showContractBreakdown={false}
       />
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-start gap-3">
         <SessionCurrentStopPickupGrid
           stopLabel="Everus Harbor"
           transfers={[

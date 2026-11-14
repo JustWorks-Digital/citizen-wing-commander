@@ -6,6 +6,7 @@ import {
   resolveLocationSlug,
 } from "@/lib/sessions/resolveRefs";
 import { getCommodityBySlug } from "@/lib/fixtures";
+import { resolveMissionRank } from "@/lib/missions/missionRank";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 /**
@@ -47,10 +48,13 @@ export async function linkSessionMissionToCatalog(
     extras.deliverySplits = mission.deliverySplits;
   }
 
+  const rank = resolveMissionRank(mission);
+
   const row = await upsertCatalogMission({
     type: "hauling",
     payload: {
       title: mission.title,
+      rank,
       category: normalizeHaulingCategory(mission.mobiglas.category),
       contractorSlug: resolveContractorSlug(mission.contractor),
       rewards:
@@ -67,7 +71,11 @@ export async function linkSessionMissionToCatalog(
     },
   });
 
-  return { ...mission, catalogMissionId: row.id };
+  return {
+    ...mission,
+    catalogMissionId: row.id,
+    rank: rank ?? mission.rank ?? null,
+  };
 }
 
 export async function linkSessionMissionsToCatalog(

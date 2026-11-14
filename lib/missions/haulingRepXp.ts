@@ -1,6 +1,5 @@
 import {
-  normalizeMissionRank,
-  parseRankFromTitle,
+  resolveMissionRank,
   type MissionRank,
 } from "@/lib/missions/missionRank";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
@@ -32,8 +31,7 @@ export type HaulingRepXpMission = Pick<SessionMission, "title"> & {
 export function estimateMissionHaulingRepXp(
   mission: HaulingRepXpMission,
 ): number | null {
-  const rank =
-    normalizeMissionRank(mission.rank) ?? parseRankFromTitle(mission.title);
+  const rank = resolveMissionRank(mission);
   if (!rank) return null;
   return HAULING_CONTRACT_REP_XP_BY_RANK[rank];
 }

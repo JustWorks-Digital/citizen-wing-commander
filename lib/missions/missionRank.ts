@@ -76,6 +76,28 @@ export function normalizeCatalogMissionTitle(title: string): string {
     );
 }
 
+/** Prefer stored `rank`, else parse from title (legacy session JSON). */
+export function resolveMissionRank(mission: {
+  title?: string | null;
+  rank?: MissionRank | string | null;
+}): MissionRank | null {
+  return (
+    normalizeMissionRank(mission.rank) ??
+    (mission.title ? parseRankFromTitle(mission.title) : null)
+  );
+}
+
+/**
+ * Display title without the "X Rank" prefix.
+ * Uses stored rank only for resolution elsewhere — always strips the title.
+ */
+export function resolveMissionTitle(mission: {
+  title?: string | null;
+}): string {
+  if (!mission.title?.trim()) return "";
+  return stripRankFromTitle(mission.title).title;
+}
+
 /**
  * Pull rank out of a title and return a cleaned title without "X Rank".
  * For "Ling Family Rookie Cargo Haul", removes only the rank token.

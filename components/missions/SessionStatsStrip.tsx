@@ -13,7 +13,7 @@ import type {
   StopTransferCommodityScu,
 } from "@/lib/missions/cargoInventory";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
-import { stripRankFromTitle } from "@/lib/missions/missionRank";
+import { resolveMissionTitle } from "@/lib/missions/missionRank";
 import {
   formatDistanceToNext,
   type DistanceToNext,
@@ -348,7 +348,7 @@ export type SessionInventoryStatProps = {
   peakScu: number;
   /** Sum of cargo SCU across agreed contracts. */
   missionsTotalScu: number;
-  /** Per-mission / per-contract SCU rows — shown left of Contracts total. */
+  /** Per-mission SCU rows — optional beside Contracts total when showContractBreakdown. */
   missionScuBreakdown?: MissionScuBreakdownItem[];
   /** Session UUID — resolves contract screenshot URLs for the source icon. */
   sessionId?: string | null;
@@ -490,19 +490,19 @@ export function SessionCurrentStopPickupGrid({
 
   return (
     <div
-      className={["flex shrink-0 min-w-0 justify-start", className]
+      className={["flex w-fit max-w-full shrink-0 justify-start", className]
         .filter(Boolean)
         .join(" ")}
     >
       <div
-        className={[stripClass, "h-auto w-max max-w-full items-center"].join(
+        className={[stripClass, "h-auto !w-fit max-w-full items-center"].join(
           " ",
         )}
         role="group"
         aria-label={`${title} cargo`}
       >
-        <div className="flex h-auto w-max max-w-full flex-col gap-1.5 px-2 pt-1.5 pb-2.5">
-          <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+        <div className="flex h-auto w-max max-w-full flex-col gap-1.5 px-2 py-1.5">
+          <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
             {title}
           </p>
           <ul
@@ -530,18 +530,18 @@ export function SessionCurrentStopPickupGrid({
                 >
                   <span
                     aria-hidden
-                    className="size-2.5 shrink-0 rounded-[2px] border border-rsi-border/60"
+                    className="size-2 shrink-0 rounded-[2px] border border-rsi-border/60"
                     style={{
                       backgroundColor: cargoHex ?? "var(--rsi-text-muted)",
                     }}
                   />
-                  <span className="min-w-0 truncate text-[0.7rem] leading-none text-rsi-text-secondary">
+                  <span className="min-w-0 truncate text-[0.6rem] leading-none text-rsi-text-secondary">
                     {name}
                   </span>
-                  <span className="shrink-0 font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text">
+                  <span className="shrink-0 font-mono text-[0.55rem] leading-none tabular-nums tracking-wide text-rsi-text">
                     {item.scu}
                     <span
-                      className="ml-0.5 text-[0.5rem] uppercase tracking-[0.1em] text-rsi-text-muted"
+                      className="ml-0.5 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted"
                       title={SCU_TITLE}
                     >
                       SCU
@@ -565,7 +565,7 @@ export type SessionContractScuGridProps = {
 
 /**
  * Per-contract SCU grid: 4 per column, fills across columns.
- * Used at the bottom of the cargo-bays modal.
+ * Optional inventory aside / Storybook — not shown in the storage-bays footer.
  */
 export function SessionContractScuGrid({
   missionScuBreakdown,
@@ -578,43 +578,40 @@ export function SessionContractScuGrid({
 
   return (
     <div
-      className={["flex min-w-0 justify-end", className]
+      className={["inline-flex w-max max-w-none shrink-0 justify-start", className]
         .filter(Boolean)
         .join(" ")}
     >
       <div
-        className={[stripClass, "h-auto w-max max-w-full items-center"].join(
-          " ",
-        )}
+        className="flex h-auto w-max items-center overflow-visible rounded-rsi border border-rsi-border bg-rsi-bg-deep/55"
         role="group"
         aria-label="Per-contract SCU"
       >
-        <div className="flex h-auto w-max max-w-full flex-col gap-0.5 px-2 py-1.5">
-          <p className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+        <div className="flex w-max flex-col gap-1.5 px-2 py-1.5">
+          <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
             Contracts
           </p>
           <ul
-            className="grid w-max grid-flow-col auto-cols-max gap-x-4 gap-y-0.5 overflow-x-auto"
+            className="grid w-max grid-flow-col auto-cols-max gap-x-3 gap-y-0.5"
             style={{
               gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
             }}
           >
             {missionScuBreakdown.map((item) => {
-              const { title } = stripRankFromTitle(item.title);
-              const label = title || item.title;
+              const label = resolveMissionTitle(item) || item.title;
               return (
                 <li
                   key={item.missionId}
                   className="flex min-w-0 max-w-[13rem] items-center gap-1"
                   title={item.title}
                 >
-                  <span className="min-w-0 truncate text-[0.7rem] leading-none text-rsi-text-secondary">
+                  <span className="min-w-0 truncate text-[0.6rem] leading-none text-rsi-text-secondary">
                     {label}:
                   </span>
-                  <span className="shrink-0 font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text">
+                  <span className="shrink-0 font-mono text-[0.55rem] leading-none tabular-nums tracking-wide text-rsi-text">
                     {item.scu}
                     <span
-                      className="ml-0.5 text-[0.5rem] uppercase tracking-[0.1em] text-rsi-text-muted"
+                      className="ml-0.5 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted"
                       title={SCU_TITLE}
                     >
                       SCU
@@ -645,7 +642,7 @@ export function SessionInventoryStat({
   isOverCapacity = false,
   className,
   /** When false, omit the per-contract grid (render it separately in the footer). */
-  showContractBreakdown = true,
+  showContractBreakdown = false,
 }: SessionInventoryStatProps & { showContractBreakdown?: boolean }) {
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const availableLabel = availableScu == null ? "—" : availableScu;
@@ -667,7 +664,7 @@ export function SessionInventoryStat({
         />
       ) : null}
       <div
-        className={stripClass}
+        className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
         aria-label={`Contracts total ${missionsTotalScu} SCU`}
       >
@@ -687,7 +684,7 @@ export function SessionInventoryStat({
         </div>
       </div>
       <div
-        className={stripClass}
+        className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
         aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free`}
       >

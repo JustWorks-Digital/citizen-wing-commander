@@ -4,13 +4,13 @@
  */
 const SHIP_ICON_BY_SLUG: Record<string, string> = {
   "c2-hercules-starlifter": "c2-hercules-starlifter.png",
-  "constellation-mk-v-centaurus": "constellation-mk-v-centaurus.jpg",
+  "constellation-mk-v-centaurus": "constellation-mk-v-centaurus.png",
 };
 
 const PUBLIC_PATH = "/icons/ships";
 
 /** Bump when replacing icon binaries so browsers don’t keep a stale badge. */
-const SHIP_ICON_CACHE = "v7";
+const SHIP_ICON_CACHE = "v12";
 
 /** Public URL for a ship icon, or null when none is bundled. */
 export function getShipIconSrc(

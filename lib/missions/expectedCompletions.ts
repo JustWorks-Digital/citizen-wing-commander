@@ -131,3 +131,40 @@ export function syncMissionsForStopCompletion(input: {
       : mission,
   );
 }
+
+/**
+ * Derive contract completion from the current stop checklist.
+ *
+ * - On-route missions: completed iff their final delivery stop is done.
+ * - Off-route completed missions (dropped by rebuild): stay completed while
+ *   any stop is still done; clear when every stop is open so Contracts N/M
+ *   cannot stick after a full uncheck / trip reset.
+ */
+export function reconcileMissionCompletionFromStops(
+  missions: SessionMission[],
+  rows: HaulingChecklistRow[],
+): SessionMission[] {
+  const anyStopDone = rows.some((row) => row.isCompleted);
+  return missions.map((mission) => {
+    if (mission.isHidden) return mission;
+
+    let lastDeliveryIndex = -1;
+    for (let index = 0; index < rows.length; index += 1) {
+      if (missionHasDeliveryOnRow(mission, rows[index]!)) {
+        lastDeliveryIndex = index;
+      }
+    }
+
+    if (lastDeliveryIndex >= 0) {
+      const done = Boolean(rows[lastDeliveryIndex]?.isCompleted);
+      return done === mission.isCompleted
+        ? mission
+        : { ...mission, isCompleted: done };
+    }
+
+    if (mission.isCompleted && !anyStopDone) {
+      return { ...mission, isCompleted: false };
+    }
+    return mission;
+  });
+}

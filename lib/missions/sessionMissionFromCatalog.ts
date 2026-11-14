@@ -5,6 +5,7 @@ import {
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
+import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -67,11 +68,16 @@ export function sessionMissionFromCatalog(
       : [];
   const category =
     normalizeHaulingCategory(payload.category) ?? "Hauling - Planetary";
+  // Catalog titles are stored without “X Rank”; rank lives on the column / payload.
+  const rank =
+    normalizeMissionRank(catalog.rank) ??
+    normalizeMissionRank(payload.rank);
 
   return {
     id: catalog.id,
     catalogMissionId: catalog.id,
     title: catalog.title || payload.title,
+    rank,
     contractor,
     rewardAuec,
     rewardDisplay: rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined,

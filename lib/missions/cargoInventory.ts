@@ -48,6 +48,7 @@ export type StopTransferLedger = {
 export type MissionScuBreakdownItem = {
   missionId: string;
   title: string;
+  rank?: SessionMission["rank"];
   scu: number;
   /** Logical screenshot paths for the source icon / lightbox. */
   screenshots: string[];
@@ -244,6 +245,7 @@ export const cargoInventory = {
       .map((mission) => ({
         missionId: mission.id,
         title: mission.title,
+        rank: mission.rank ?? null,
         scu: missionCargoScu(mission),
         screenshots: [...(mission.screenshots ?? [])],
       }));

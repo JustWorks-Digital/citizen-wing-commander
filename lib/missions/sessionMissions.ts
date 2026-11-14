@@ -8,6 +8,12 @@ import type {
   HaulingIntakeContract,
 } from "@/lib/missions/haulingIntake";
 import type { MobiglasContractPanel } from "@/lib/missions/mobiglasTranscript";
+import {
+  normalizeMissionRank,
+  resolveMissionRank,
+  stripRankFromTitle,
+  type MissionRank,
+} from "@/lib/missions/missionRank";
 
 /** Mission card stored on the active checklist session for UI / MCP. */
 export type SessionMission = {
@@ -18,6 +24,11 @@ export type SessionMission = {
    */
   catalogMissionId?: string | null;
   title: string;
+  /**
+   * Hauling career rank (Trainee…Master), without the word “Rank”.
+   * Prefer this over parsing `title` (legacy rows may still embed “X Rank - …”).
+   */
+  rank?: MissionRank | null;
   contractor: string;
   rewardAuec: number;
   rewardDisplay?: string;
@@ -104,15 +115,50 @@ function synthesizeMobiglas(
   };
 }
 
+/** Extract `rank` and strip “X Rank” from title (idempotent). */
+export function normalizeSessionMissionRankFields(
+  mission: SessionMission,
+): SessionMission {
+  const stripped = stripRankFromTitle(mission.title);
+  const rank =
+    normalizeMissionRank(mission.rank) ??
+    stripped.rank ??
+    resolveMissionRank(mission);
+  const title = stripped.title || mission.title;
+  const nextMobiglasTitle = mission.mobiglas?.title
+    ? stripRankFromTitle(mission.mobiglas.title).title || title
+    : title;
+  if (
+    rank === (mission.rank ?? null) &&
+    title === mission.title &&
+    nextMobiglasTitle === (mission.mobiglas?.title ?? title)
+  ) {
+    return mission;
+  }
+  return {
+    ...mission,
+    rank,
+    title,
+    mobiglas: mission.mobiglas
+      ? { ...mission.mobiglas, title: nextMobiglasTitle }
+      : mission.mobiglas,
+  };
+}
+
 export function sessionMissionFromIntakeContract(
   contract: HaulingIntakeContract,
   index: number,
   mobiglas?: MobiglasContractPanel,
 ): SessionMission {
   const id = contract.id?.trim() || `contract-${index + 1}`;
-  return {
+  const stripped = stripRankFromTitle(contract.title);
+  const rank =
+    normalizeMissionRank(contract.rank) ?? stripped.rank;
+  const title = stripped.title || contract.title;
+  const base = {
     id,
-    title: contract.title,
+    title,
+    rank,
     contractor: contract.contractor ?? "Unknown contractor",
     rewardAuec: contract.rewardAuec ?? 0,
     rewardDisplay:
@@ -136,31 +182,43 @@ export function sessionMissionFromIntakeContract(
     isHidden: false,
     screenshots: contract.screenshots ? [...contract.screenshots] : [],
     transcript: contract.transcript,
-    mobiglas: mobiglas ?? synthesizeMobiglas(contract),
+    mobiglas: mobiglas ?? synthesizeMobiglas({ ...contract, title }),
   };
+  if (mobiglas) {
+    return normalizeSessionMissionRankFields({
+      ...base,
+      mobiglas: {
+        ...mobiglas,
+        title: stripRankFromTitle(mobiglas.title).title || title,
+      },
+    });
+  }
+  return base;
 }
 
 export function intakeContractFromSessionMission(
   mission: SessionMission,
 ): HaulingIntakeContract {
+  const normalized = normalizeSessionMissionRankFields(mission);
   return {
-    id: mission.id,
-    title: mission.title,
-    contractor: mission.contractor,
-    rewardAuec: mission.rewardAuec,
-    from: [...mission.from],
-    to: [...mission.to],
-    cargo: mission.cargo.map((line) => ({ ...line })),
-    pickupSplits: mission.pickupSplits
+    id: normalized.id,
+    title: normalized.title,
+    rank: normalized.rank ?? undefined,
+    contractor: normalized.contractor,
+    rewardAuec: normalized.rewardAuec,
+    from: [...normalized.from],
+    to: [...normalized.to],
+    cargo: normalized.cargo.map((line) => ({ ...line })),
+    pickupSplits: normalized.pickupSplits
       ? Object.fromEntries(
-          Object.entries(mission.pickupSplits).map(([key, lines]) => [
+          Object.entries(normalized.pickupSplits).map(([key, lines]) => [
             key,
             lines.map((line) => ({ ...line })),
           ]),
         )
       : undefined,
-    maxContainerScu: mission.maxContainerScu,
-    screenshots: [...mission.screenshots],
-    transcript: mission.transcript,
+    maxContainerScu: normalized.maxContainerScu,
+    screenshots: [...normalized.screenshots],
+    transcript: normalized.transcript,
   };
 }

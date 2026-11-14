@@ -14,6 +14,7 @@ import {
 } from "react";
 import { RouteChecklistMenu } from "@/components/missions/RouteChecklistMenu";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -56,7 +57,10 @@ import {
   type ScuTransfer,
   type StopTransferLedger,
 } from "@/lib/missions/cargoInventory";
-import { stripRankFromTitle } from "@/lib/missions/missionRank";
+import {
+  resolveMissionRank,
+  resolveMissionTitle,
+} from "@/lib/missions/missionRank";
 import {
   INSERT_AFTER_SESSION_START,
   quantumFromSlugAfter,
@@ -86,8 +90,8 @@ export type HaulingChecklistTableProps = {
   onToggle: (rowId: string) => void | Promise<void>;
   /** Stop shown in cargo layout — any stop, including completed. */
   focusedStopId?: string | null;
-  /** Click a row (not checkbox / copy) to preview that stop. */
-  onFocusStop?: (rowId: string) => void;
+  /** Click a row (not checkbox / copy) to preview that stop. `null` clears focus. */
+  onFocusStop?: (rowId: string | null) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
   /** Shown inside the ⋯ menu (e.g. trip elapsed time). */
@@ -169,7 +173,8 @@ export function needsQuantumOriginRow(
 
 /**
  * Default focus: quantum origin (when start ≠ first and no stop done yet),
- * else first incomplete stop, else last stop.
+ * else first incomplete stop. When every stop is done, no active focus
+ * (completed rows keep the green rail, not the blue active rail).
  */
 export function defaultFocusedStopId(
   rows: HaulingChecklistRow[],
@@ -181,11 +186,7 @@ export function defaultFocusedStopId(
   ) {
     return QUANTUM_ORIGIN_ROW_ID;
   }
-  return (
-    rows.find((row) => !row.isCompleted)?.id ??
-    rows[rows.length - 1]?.id ??
-    null
-  );
+  return rows.find((row) => !row.isCompleted)?.id ?? null;
 }
 
 function checklistRowToneClass(
@@ -282,34 +283,6 @@ function SpaceshipIcon({ className }: { className?: string }) {
   );
 }
 
-/** Double chevron pointing down — leads from Next stop into the following card. */
-function TravelDownIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 16 16"
-      fill="none"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M3.5 2.5 L8 7 L12.5 2.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.5 7.5 L8 12 L12.5 7.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 /** Triple chevron pointing right — QT / Next stop travel indicator. */
 function TravelChevronsIcon({ className }: { className?: string }) {
   return (
@@ -361,6 +334,51 @@ function routeActionBadges(routeAction: RouteAction): { label: string; variant: 
   ];
 }
 
+/**
+ * Trailing meta for condensed Done rows.
+ * CSS grid locks tag / SCU / distance columns so badge right edges line up
+ * (Quantum, Pickup, and Pickup+Delivery).
+ */
+function CondensedRowTrailing({
+  routeAction,
+  scuTotal = null,
+  hopLabel = null,
+}: {
+  routeAction: RouteAction;
+  scuTotal?: number | null;
+  hopLabel?: string | null;
+}) {
+  return (
+    <div className="grid w-[17.5rem] shrink-0 grid-cols-[minmax(0,1fr)_2.5rem_4.75rem] items-center gap-x-2.5">
+      <div className="flex min-w-0 items-center justify-end gap-1">
+        {routeActionBadges(routeAction).map((badge) => (
+          <Badge key={badge.label} variant={badge.variant} size="sm">
+            {badge.label}
+          </Badge>
+        ))}
+      </div>
+      <div
+        className="text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
+        title={scuTotal != null ? SCU_TITLE : undefined}
+      >
+        {scuTotal != null ? scuTotal : null}
+      </div>
+      <div
+        className="text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
+        title={
+          hopLabel
+            ? routeAction === "quantum"
+              ? `Quantum hop ${hopLabel}`
+              : `Distance ${hopLabel}`
+            : undefined
+        }
+      >
+        {hopLabel ?? null}
+      </div>
+    </div>
+  );
+}
+
 type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
 
 function groupCargoLines(lines: CargoLine[]): {
@@ -389,6 +407,7 @@ function DoneCheckbox({
   isCompleted,
   isActive = false,
   isPending = false,
+  compact = false,
   onToggle,
 }: {
   location: string;
@@ -396,6 +415,8 @@ function DoneCheckbox({
   isCompleted: boolean;
   isActive?: boolean;
   isPending?: boolean;
+  /** Smaller circle + mark for condensed Done strips. */
+  compact?: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -417,7 +438,8 @@ function DoneCheckbox({
         onToggle();
       }}
       className={[
-        "group inline-flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+        "group inline-flex shrink-0 items-center justify-center rounded-full border transition-colors",
+        compact ? "size-5" : "size-8",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isPending
           ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/40 text-rsi-accent"
@@ -429,9 +451,15 @@ function DoneCheckbox({
       ].join(" ")}
     >
       {isPending ? (
-        <Spinner className="size-4" />
+        <Spinner className={compact ? "size-2.5" : "size-4"} />
       ) : isCompleted ? (
-        <span aria-hidden className="text-base leading-none">
+        <span
+          aria-hidden
+          className={[
+            "leading-none",
+            compact ? "text-[0.65rem]" : "text-base",
+          ].join(" ")}
+        >
           ✓
         </span>
       ) : (
@@ -439,7 +467,8 @@ function DoneCheckbox({
           <span
             aria-hidden
             className={[
-              "font-mono text-[0.7rem] tabular-nums leading-none tracking-wide group-hover:hidden",
+              "font-mono tabular-nums leading-none tracking-wide group-hover:hidden",
+              compact ? "text-[0.55rem]" : "text-[0.7rem]",
               isActive ? "text-rsi-text-secondary" : "",
             ].join(" ")}
           >
@@ -447,7 +476,10 @@ function DoneCheckbox({
           </span>
           <span
             aria-hidden
-            className="hidden text-base leading-none group-hover:inline"
+            className={[
+              "hidden leading-none group-hover:inline",
+              compact ? "text-[0.65rem]" : "text-base",
+            ].join(" ")}
           >
             ✓
           </span>
@@ -719,20 +751,39 @@ function CargoGroups({
   row,
   cargoLines,
   missions,
+  location,
+  shipName,
+  transferLedger,
   pendingCargoKeys,
   onToggleCargoHandled,
+  bayAside,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
   missions: SessionMission[];
+  location: string;
+  shipName: string;
+  transferLedger?: StopTransferLedger | null;
   pendingCargoKeys?: ReadonlySet<string>;
   onToggleCargoHandled?: (
     rowId: string,
     cargoIndex: number,
   ) => void | Promise<void>;
+  /** Pad graph beside Pickup / Drop off — tops align with each section. */
+  bayAside?: (role: "pickup" | "delivery") => ReactNode;
 }) {
   const groups = groupCargoLines(cargoLines);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
+  const pickupTransfer =
+    transferLedger != null && transferLedger.pickup !== false
+      ? transferLedger.pickup
+      : false;
+  const deliveryTransfer =
+    transferLedger != null && transferLedger.delivery !== false
+      ? transferLedger.delivery
+      : false;
+  const hasPickupGroup = groups.some((group) => group.role === "pickup");
+  const hasDeliveryGroup = groups.some((group) => group.role === "delivery");
 
   return (
     <div className="flex flex-col gap-5 text-sm md:gap-2">
@@ -770,17 +821,29 @@ function CargoGroups({
           missions,
           group.role,
         );
+        const sectionTransfer =
+          group.role === "pickup" && pickupTransfer
+            ? (
+                <PickupTransferBlock
+                  location={location}
+                  shipName={shipName}
+                  transfer={pickupTransfer}
+                  isDone={row.isCompleted}
+                />
+              )
+            : group.role === "delivery" && deliveryTransfer
+              ? (
+                  <DeliveryTransferBlock
+                    location={location}
+                    shipName={shipName}
+                    transfer={deliveryTransfer}
+                    isDone={row.isCompleted}
+                  />
+                )
+              : null;
 
-        return (
-          <div
-            key={`${row.id}-cargo-${group.role ?? "none"}`}
-            className={[
-              "flex flex-col gap-2",
-              showRoleDivider
-                ? "border-t border-rsi-divider pt-2 md:pt-1.5"
-                : "",
-            ].join(" ")}
-          >
+        const sectionBody = (
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             {group.role ? (
               <span
                 className={[
@@ -821,7 +884,8 @@ function CargoGroups({
                   );
                 }
 
-                const { rank, title } = stripRankFromTitle(mission.title);
+                const rank = resolveMissionRank(mission);
+                const title = resolveMissionTitle(mission) || mission.title;
                 const reward = missionRewardLabel(mission);
                 const exp = estimateMissionHaulingRepXp(mission);
                 const headerAccent =
@@ -847,44 +911,39 @@ function CargoGroups({
                         headerAccent,
                       ].join(" ")}
                     >
-                      <p className="flex min-w-0 items-baseline gap-1.5">
-                        <span
-                          className={[
-                            "shrink-0 font-mono text-[0.55rem] tracking-[0.12em]",
-                            mission.isCompleted
-                              ? "text-rsi-text-muted"
-                              : "text-rsi-accent",
-                          ].join(" ")}
-                        >
-                          {rank ?? "—"}
-                        </span>
-                        {exp != null ? (
-                          <span
-                            className={[
-                              "shrink-0 font-mono text-[0.55rem] tabular-nums tracking-wide",
-                              mission.isCompleted
-                                ? "text-rsi-text-muted"
-                                : "text-rsi-text-secondary",
-                            ].join(" ")}
-                            title={`Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`}
-                          >
-                            {formatHaulingRepXp(exp)} XP
-                          </span>
-                        ) : null}
-                        <span
-                          className={[
-                            "min-w-0 truncate text-[0.75rem] font-semibold tracking-wide",
-                            mission.isCompleted
-                              ? "text-rsi-text-muted"
-                              : "text-rsi-text",
-                          ].join(" ")}
-                        >
-                          {title || mission.title}
-                        </span>
+                      <p
+                        className={[
+                          "font-mono text-[0.5rem] tracking-[0.12em]",
+                          mission.isCompleted
+                            ? "text-rsi-text-muted"
+                            : "text-rsi-accent",
+                        ].join(" ")}
+                      >
+                        {rank ?? "—"}
                       </p>
-                      {reward !== "—" ? (
-                        <p className="mt-1 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-secondary">
-                          {reward}
+                      <p
+                        className={[
+                          "mt-0.5 min-w-0 truncate text-[0.65rem] font-semibold tracking-wide",
+                          mission.isCompleted
+                            ? "text-rsi-text-muted"
+                            : "text-rsi-text",
+                        ].join(" ")}
+                      >
+                        {title || mission.title}
+                      </p>
+                      {reward !== "—" || exp != null ? (
+                        <p className="mt-1 flex min-w-0 items-baseline justify-between gap-2 font-mono text-[0.55rem] tabular-nums tracking-wide text-rsi-text-secondary">
+                          <span className="min-w-0 truncate">
+                            {reward !== "—" ? reward : null}
+                          </span>
+                          {exp != null ? (
+                            <span
+                              className="shrink-0"
+                              title={`Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`}
+                            >
+                              {formatHaulingRepXp(exp)} XP
+                            </span>
+                          ) : null}
                         </p>
                       ) : null}
                     </div>
@@ -895,9 +954,50 @@ function CargoGroups({
                 );
               })}
             </div>
+            {sectionTransfer}
+          </div>
+        );
+
+        const sectionAside =
+          group.role === "pickup" || group.role === "delivery"
+            ? bayAside?.(group.role)
+            : null;
+
+        return (
+          <div
+            key={`${row.id}-cargo-${group.role ?? "none"}`}
+            className={[
+              "flex flex-col gap-3 md:flex-row md:items-start md:gap-4",
+              showRoleDivider
+                ? "border-t border-rsi-divider pt-2 md:pt-1.5"
+                : "",
+            ].join(" ")}
+          >
+            {sectionBody}
+            {sectionAside ? (
+              <div className="w-full min-w-0 md:w-1/2 md:shrink-0">
+                {sectionAside}
+              </div>
+            ) : null}
           </div>
         );
       })}
+      {!hasPickupGroup && pickupTransfer ? (
+        <PickupTransferBlock
+          location={location}
+          shipName={shipName}
+          transfer={pickupTransfer}
+          isDone={row.isCompleted}
+        />
+      ) : null}
+      {!hasDeliveryGroup && deliveryTransfer ? (
+        <DeliveryTransferBlock
+          location={location}
+          shipName={shipName}
+          transfer={deliveryTransfer}
+          isDone={row.isCompleted}
+        />
+      ) : null}
     </div>
   );
 }
@@ -913,7 +1013,7 @@ function LocationHeader({
   compact = false,
   showTravelChevron = false,
   travelChevronClassName = "",
-  travelLeading = null,
+  nameTrailing = null,
 }: {
   row: HaulingChecklistRow;
   location: string;
@@ -923,13 +1023,14 @@ function LocationHeader({
   align?: "start" | "end";
   /** Skip pickup/delivery badges; still shows location amenity tags. */
   compact?: boolean;
-  /** Double chevron after the copy control (quantum origin row). */
+  /** Triple chevron after the location name (composer / next-stop). */
   showTravelChevron?: boolean;
   /** Extra classes on the travel chevron wrapper (e.g. hide on mobile). */
   travelChevronClassName?: string;
-  /** Rendered immediately left of the travel chevron (e.g. ship badge). */
-  travelLeading?: ReactNode;
+  /** Sits immediately after the location name (e.g. QT ship badge). */
+  nameTrailing?: ReactNode;
 }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const imageSrc = getLocationImageSrc(row.locationSlug);
   const shortName = getLocationShortName(row.locationSlug);
 
@@ -951,7 +1052,20 @@ function LocationHeader({
         ].join(" ")}
       >
         {imageSrc ? (
-          <div className="relative h-14 w-24 overflow-hidden rounded-lg border border-rsi-border/80 bg-rsi-bg-deep/60">
+          <button
+            type="button"
+            aria-label={`View full image: ${location}`}
+            title="View full image"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLightboxOpen(true);
+            }}
+            className={[
+              "relative h-14 w-24 overflow-hidden rounded-lg border border-rsi-border/80 bg-rsi-bg-deep/60",
+              "cursor-zoom-in transition-opacity hover:opacity-90",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+            ].join(" ")}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- fixture static assets */}
             <img
               src={imageSrc}
@@ -960,13 +1074,22 @@ function LocationHeader({
               loading="lazy"
               decoding="async"
             />
-          </div>
+          </button>
         ) : (
           <div
             className="flex h-14 w-24 items-center justify-center rounded-lg border border-dashed border-rsi-border/70 bg-rsi-bg-deep/40"
             aria-hidden
           />
         )}
+        {lightboxOpen && imageSrc ? (
+          <ImageLightbox
+            src={imageSrc}
+            alt={location}
+            title={location}
+            caption={shortName}
+            onClose={() => setLightboxOpen(false)}
+          />
+        ) : null}
         <div className="flex w-full items-center justify-center gap-0.5">
           <p
             className={[
@@ -1007,32 +1130,51 @@ function LocationHeader({
           align === "end" ? "items-stretch" : "",
         ].join(" ")}
       >
-        {/* Match thumbnail height on sm+; allow wrap on narrow screens. */}
-        <div className="flex min-h-14 min-w-0 items-center gap-1.5 sm:h-14">
+        <div
+          className={[
+            "flex min-h-14 min-w-0 items-center gap-x-2 gap-y-1",
+            showTravelChevron ? "justify-between" : "sm:h-14",
+          ].join(" ")}
+        >
           <span
             className={[
-              "min-w-0 flex-1 text-left text-base font-semibold tracking-wide break-words [overflow-wrap:anywhere] sm:truncate sm:text-xl",
+              "inline-flex min-w-0 max-w-full items-center gap-2 text-left text-base font-semibold tracking-wide sm:text-xl",
+              showTravelChevron || nameTrailing
+                ? "flex-1"
+                : "flex-1 sm:truncate",
               row.isCompleted
                 ? "text-rsi-text-muted"
                 : "text-rsi-text",
             ].join(" ")}
             title={location}
           >
-            {location}
+            <span
+              className={
+                nameTrailing
+                  ? "min-w-0 truncate whitespace-nowrap"
+                  : "min-w-0 break-words [overflow-wrap:anywhere]"
+              }
+            >
+              {location}
+            </span>
+            {nameTrailing ? (
+              <span className="inline-flex shrink-0 items-center">
+                {nameTrailing}
+              </span>
+            ) : null}
           </span>
           {showTravelChevron ? (
             <span
               aria-hidden
               className={[
-                "inline-flex shrink-0 items-center gap-10 pl-2 text-rsi-text-muted sm:gap-12 sm:pl-3",
+                "inline-flex shrink-0 items-center self-center text-rsi-text-muted",
                 travelChevronClassName,
               ]
                 .filter(Boolean)
                 .join(" ")}
               title="Travel"
             >
-              {travelLeading}
-              <TravelChevronsIcon className="h-4 w-5" />
+              <TravelChevronsIcon className="h-5 w-6" />
             </span>
           ) : null}
         </div>
@@ -1113,7 +1255,7 @@ function AddStopAfterButton({
 /** Compact travel row: current location → Quantum to destination. */
 function QuantumShipBadge({
   shipSlug,
-  className = "h-7 w-10",
+  className = "h-8 w-12",
 }: {
   shipSlug?: string | null;
   className?: string;
@@ -1160,6 +1302,9 @@ function QuantumTravelRow({
   onChangeFrom,
   onChangeTo,
   footer = null,
+  isHistoryExpanded = false,
+  onHistoryExpand,
+  onHistoryCollapse,
 }: {
   rowId: string;
   fromSlug: string;
@@ -1180,6 +1325,10 @@ function QuantumTravelRow({
   onChangeFrom?: (slug: string) => void;
   onChangeTo?: (slug: string) => void;
   footer?: ReactNode;
+  /** Completed QT: show full card instead of Done strip. */
+  isHistoryExpanded?: boolean;
+  onHistoryExpand?: () => void;
+  onHistoryCollapse?: () => void;
 }) {
   const sectionBusy = isPending || isSavingSection;
   const [editing, setEditing] = useState<"from" | "to" | null>(null);
@@ -1193,6 +1342,11 @@ function QuantumTravelRow({
       ? distanceBetweenLocationSlugs(fromSlug, destinationSlug)
       : null) ?? distanceToNext;
   const hopLabel = formatDistanceToNext(hopDistance);
+  const fromShort = getLocationShortName(fromSlug);
+  const toShort =
+    destinationSlug != null
+      ? getLocationShortName(destinationSlug)
+      : destinationName;
   const stubRow: HaulingChecklistRow = {
     id: rowId,
     routeAction: "quantum",
@@ -1207,6 +1361,31 @@ function QuantumTravelRow({
   const stopEditBubble = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
   };
+
+  if (isCompleted && !isHistoryExpanded) {
+    return (
+      <li
+        aria-checked
+        aria-busy={sectionBusy}
+        aria-current={isFocused ? "step" : undefined}
+        className={[
+          "scroll-mt-16 border-b border-rsi-divider/80 sm:scroll-mt-24",
+          isSavingSection ? "opacity-90" : "",
+        ].join(" ")}
+        onClick={onFocus}
+      >
+        <CompletedQuantumHistoryRow
+          fromLabel={fromShort}
+          toLabel={toShort}
+          hopLabel={hopDistance ? hopLabel : null}
+          isFocused={isFocused}
+          isPending={isPending || isSavingSection}
+          onToggle={onToggle}
+          onOpen={onHistoryExpand}
+        />
+      </li>
+    );
+  }
 
   const fromBlock =
     editing === "from" && onChangeFrom ? (
@@ -1257,13 +1436,23 @@ function QuantumTravelRow({
           isCopied={isCopied}
           onCopy={onCopy}
           compact
-          /* Sideways >> only on md+; mobile uses a down arrow between stops. */
-          showTravelChevron
-          travelChevronClassName="hidden md:inline-flex"
-          travelLeading={<QuantumShipBadge shipSlug={shipSlug} />}
+          nameTrailing={
+            <QuantumShipBadge shipSlug={shipSlug} className="ml-16 h-8 w-12" />
+          }
         />
       </div>
     );
+
+  /** >>> only — aligned to location name height between origin and destination. */
+  const travelBlock = (
+    <div
+      aria-hidden
+      className="flex h-14 items-center justify-center text-rsi-text-muted"
+      title="Travel"
+    >
+      <TravelChevronsIcon className="h-5 w-6" />
+    </div>
+  );
 
   const toBlock =
     editing === "to" && onChangeTo ? (
@@ -1334,6 +1523,18 @@ function QuantumTravelRow({
       ].join(" ")}
       onClick={onFocus}
     >
+      {isCompleted && onHistoryCollapse ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onHistoryCollapse();
+          }}
+          className="mb-2 ml-auto block font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted hover:text-rsi-accent"
+        >
+          Collapse
+        </button>
+      ) : null}
       <div className="flex gap-3">
         <div className="hidden h-14 shrink-0 items-center self-start md:flex">
           <DoneCheckbox
@@ -1345,8 +1546,8 @@ function QuantumTravelRow({
             onToggle={onToggle}
           />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-start md:gap-6">
-          <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-start md:gap-3">
+          <div className="min-w-0 flex-1 md:min-w-[52%] md:flex-[1.7]">
             {isSavingSection ? (
               <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
                 <Spinner className="size-3" />
@@ -1354,36 +1555,11 @@ function QuantumTravelRow({
               </p>
             ) : null}
             {fromBlock}
-            {/* Mobile QT: current → ship ↓ → destination (not a sideways flip). */}
-            <div
-              aria-hidden
-              className="flex items-center justify-center gap-10 py-1 text-rsi-text-muted md:hidden"
-              title="Travel"
-            >
-              <QuantumShipBadge shipSlug={shipSlug} />
-              <svg
-                viewBox="0 0 16 16"
-                className="size-4"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M8 2.5v9"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M4.5 9.5 L8 13 L11.5 9.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-1 md:w-1/2 md:shrink-0 md:pl-4">
+          <div className="flex shrink-0 justify-center md:px-1">
+            {travelBlock}
+          </div>
+          <div className="flex w-full min-w-0 flex-col gap-1 md:max-w-[38%] md:flex-1">
             {toBlock}
             {hopDistance ? (
               <p
@@ -1604,19 +1780,28 @@ function TransferColumnLabel({ children }: { children: ReactNode }) {
 function TransferBlockFrame({
   title,
   isDone,
+  tone,
   children,
 }: {
   title: string;
   isDone: boolean;
+  /** Pickup = station→ship (accent); delivery = ship→station (gold). */
+  tone: "pickup" | "delivery";
   children: ReactNode;
 }) {
+  const surface =
+    tone === "pickup"
+      ? "border-rsi-accent/20 bg-rsi-accent-muted/20"
+      : "border-rsi-gold/20 bg-rsi-gold-muted/20";
+
   return (
     <div
       className={[
         // Equal endpoint columns — Station always left, Ship always right.
         // Arrow direction flips for pickup vs delivery. Text wraps; never truncates.
-        "mr-auto grid w-full max-w-[26rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 py-5 sm:gap-x-4",
-        isDone ? "text-rsi-text-muted" : "",
+        "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 rounded-rsi border px-3 py-4 sm:gap-x-4 sm:px-4",
+        surface,
+        isDone ? "opacity-70 text-rsi-text-muted" : "",
       ].join(" ")}
       title={title}
     >
@@ -1685,6 +1870,7 @@ function PickupTransferBlock({
     <TransferBlockFrame
       title={`Load ${transfer.amount} SCU from ${location}`}
       isDone={isDone}
+      tone="pickup"
     >
       <TransferColumnLabel>Station</TransferColumnLabel>
       <span aria-hidden className="col-start-2" />
@@ -1786,6 +1972,7 @@ function DeliveryTransferBlock({
     <TransferBlockFrame
       title={`Transfer ${transfer.amount} SCU to ${location}`}
       isDone={isDone}
+      tone="delivery"
     >
       <TransferColumnLabel>Station</TransferColumnLabel>
       <span aria-hidden className="col-start-2" />
@@ -1870,152 +2057,102 @@ function DeliveryTransferBlock({
   );
 }
 
-function TotalMeta({
-  row,
-  location,
-  shipName,
-  transferLedger,
-}: {
-  row: HaulingChecklistRow;
-  /** Station for this stop (load source or unload destination). */
-  location: string;
-  /** Session ship display name for pickup transfers. */
-  shipName: string;
-  /** Planned SCU transfers at this stop. */
-  transferLedger?: StopTransferLedger | null;
-}) {
-  const showPickup =
-    transferLedger != null && transferLedger.pickup !== false;
-  const showDelivering =
-    transferLedger != null && transferLedger.delivery !== false;
-
-  if (!showPickup && !showDelivering) return null;
-
-  return (
-    <div className="w-full max-w-[26rem] space-y-0 text-sm">
-      {showPickup && transferLedger.pickup ? (
-        <PickupTransferBlock
-          location={location}
-          shipName={shipName}
-          transfer={transferLedger.pickup}
-          isDone={row.isCompleted}
-        />
-      ) : null}
-      {showDelivering && transferLedger.delivery ? (
-        <DeliveryTransferBlock
-          location={location}
-          shipName={shipName}
-          transfer={transferLedger.delivery}
-          isDone={row.isCompleted}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function PayoutMeta({
+function PayoutExpMeta({
   row,
   completionAuec,
-  completingMissionCount,
-}: {
-  row: HaulingChecklistRow;
-  completionAuec: number;
-  completingMissionCount: number;
-}) {
-  if (completingMissionCount <= 0) return null;
-
-  return (
-    <div
-      className="min-w-0 py-5 text-sm"
-      title={
-        completionAuec > 0
-          ? `Payout ${formatAuecAmount(completionAuec)}`
-          : `${AUEC_TITLE} not available`
-      }
-    >
-      <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Payout
-      </p>
-      <p className="text-sm font-medium leading-snug text-rsi-text-muted">
-        {completingMissionCount === 1
-          ? "Contract reward"
-          : `${completingMissionCount} contract rewards`}
-      </p>
-      {completionAuec > 0 ? (
-        <p
-          className={[
-            "mt-1 font-mono text-sm tabular-nums tracking-wide",
-            row.isCompleted
-              ? "text-rsi-text-muted"
-              : "text-rsi-success",
-          ].join(" ")}
-        >
-          +{Math.floor(completionAuec).toLocaleString("en-US")}{" "}
-          <span title={AUEC_TITLE}>aUEC</span>
-          <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
-            paid
-          </span>
-        </p>
-      ) : (
-        <p
-          className={[
-            "mt-1 font-mono text-sm tabular-nums tracking-wide",
-            row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
-          ].join(" ")}
-        >
-          <span title={AUEC_TITLE}>aUEC</span> not available
-        </p>
-      )}
-    </div>
-  );
-}
-
-function ExpMeta({
-  row,
   approxXp,
   completingMissionCount,
 }: {
   row: HaulingChecklistRow;
+  completionAuec: number;
   approxXp: number;
   completingMissionCount: number;
 }) {
   if (completingMissionCount <= 0) return null;
 
+  const contractLabel =
+    completingMissionCount === 1
+      ? "1 contract"
+      : `${completingMissionCount} contracts`;
+
   return (
     <div
-      className="min-w-0 py-5 pl-12 text-sm"
-      title="Approximate Covalex hauling reputation for standard ranked cargo hauls (community estimates; recover / special jobs may differ)"
+      className={[
+        "grid w-full grid-cols-2 gap-x-6 rounded-rsi border border-rsi-success/35 bg-rsi-success-muted/40 px-3 py-4 text-sm sm:gap-x-8 sm:px-4",
+        row.isCompleted ? "opacity-70" : "",
+      ].join(" ")}
     >
-      <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Exp
-      </p>
-      <p className="text-sm font-medium leading-snug text-rsi-text-muted">
-        {completingMissionCount === 1
-          ? "1 contract"
-          : `${completingMissionCount} contracts`}
-      </p>
-      {approxXp > 0 ? (
-        <p
-          className={[
-            "mt-1 font-mono text-sm tabular-nums tracking-wide",
-            row.isCompleted
-              ? "text-rsi-text-muted"
-              : "text-rsi-accent",
-          ].join(" ")}
-        >
-          ~{approxXp.toLocaleString("en-US")}{" "}
-          <span title="Hauling reputation / experience points">XP</span>
+      <div
+        className="min-w-0"
+        title={
+          completionAuec > 0
+            ? `Payout ${formatAuecAmount(completionAuec)}`
+            : `${AUEC_TITLE} not available`
+        }
+      >
+        <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+          Payout
         </p>
-      ) : (
-        <p
-          className={[
-            "mt-1 font-mono text-sm tabular-nums tracking-wide",
-            row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
-          ].join(" ")}
-        >
-          XP unknown
+        <p className="text-sm font-medium leading-snug text-rsi-text-muted">
+          {completingMissionCount === 1
+            ? "Contract reward"
+            : `${completingMissionCount} contract rewards`}
         </p>
-      )}
+        {completionAuec > 0 ? (
+          <p
+            className={[
+              "mt-1 font-mono text-sm tabular-nums tracking-wide",
+              row.isCompleted ? "text-rsi-text-muted" : "text-rsi-success",
+            ].join(" ")}
+          >
+            +{Math.floor(completionAuec).toLocaleString("en-US")}{" "}
+            <span title={AUEC_TITLE}>aUEC</span>
+            <span className="ml-1 text-[0.65rem] font-normal tracking-wide text-rsi-text-muted no-underline">
+              paid
+            </span>
+          </p>
+        ) : (
+          <p
+            className={[
+              "mt-1 font-mono text-sm tabular-nums tracking-wide",
+              row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
+            ].join(" ")}
+          >
+            <span title={AUEC_TITLE}>aUEC</span> not available
+          </p>
+        )}
+      </div>
+      <div
+        className="min-w-0"
+        title="Approximate Covalex hauling reputation for standard ranked cargo hauls (community estimates; recover / special jobs may differ)"
+      >
+        <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+          Exp
+        </p>
+        <p className="text-sm font-medium leading-snug text-rsi-text-muted">
+          {contractLabel}
+        </p>
+        {approxXp > 0 ? (
+          <p
+            className={[
+              "mt-1 font-mono text-sm tabular-nums tracking-wide",
+              row.isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
+            ].join(" ")}
+          >
+            ~{approxXp.toLocaleString("en-US")}{" "}
+            <span title="Hauling reputation / experience points">XP</span>
+          </p>
+        ) : (
+          <p
+            className={[
+              "mt-1 font-mono text-sm tabular-nums tracking-wide",
+              row.isCompleted ? "text-rsi-text-muted" : "text-rsi-warn",
+            ].join(" ")}
+          >
+            XP unknown
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -2071,22 +2208,51 @@ function NextStopBridgeBand({
 function CompletedStopHistoryRow({
   location,
   step,
+  routeAction,
   scuTotal,
+  hopLabel = null,
   isFocused,
   isPending,
   onToggle,
+  onOpen,
 }: {
   location: string;
   step: number | string;
+  routeAction: RouteAction;
   scuTotal: number;
+  /** Formatted distance for the hop leaving this stop. */
+  hopLabel?: string | null;
   isFocused: boolean;
   isPending: boolean;
   onToggle: () => void;
+  /** Expand condensed history to the full stop card. */
+  onOpen?: () => void;
 }) {
   return (
     <div
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={
+        onOpen
+          ? (event) => {
+              event.stopPropagation();
+              onOpen();
+            }
+          : undefined
+      }
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen();
+            }
+          : undefined
+      }
       className={[
         "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
+        onOpen ? "cursor-pointer" : "",
         checklistRowToneClass(true, isFocused),
       ].join(" ")}
     >
@@ -2096,20 +2262,93 @@ function CompletedStopHistoryRow({
         isCompleted
         isActive={isFocused}
         isPending={isPending}
+        compact
         onToggle={onToggle}
       />
-      <span className="shrink-0 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-success">
-        Done
-      </span>
       <span
         className="min-w-0 flex-1 truncate text-sm font-medium tracking-wide text-rsi-text-secondary"
         title={location}
       >
         {location}
       </span>
-      <span className="shrink-0 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted">
-        {scuTotal} SCU
+      <CondensedRowTrailing
+        routeAction={routeAction}
+        scuTotal={scuTotal}
+        hopLabel={hopLabel}
+      />
+    </div>
+  );
+}
+
+/** Compact history strip for a completed quantum hop. */
+function CompletedQuantumHistoryRow({
+  fromLabel,
+  toLabel,
+  hopLabel,
+  isFocused,
+  isPending,
+  onToggle,
+  onOpen,
+}: {
+  fromLabel: string;
+  toLabel: string;
+  hopLabel: string | null;
+  isFocused: boolean;
+  isPending: boolean;
+  onToggle: () => void;
+  /** Expand condensed history to the full quantum card. */
+  onOpen?: () => void;
+}) {
+  const hopTitle = `${fromLabel} → ${toLabel}`;
+  return (
+    <div
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={
+        onOpen
+          ? (event) => {
+              event.stopPropagation();
+              onOpen();
+            }
+          : undefined
+      }
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              event.stopPropagation();
+              onOpen();
+            }
+          : undefined
+      }
+      className={[
+        "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
+        onOpen ? "cursor-pointer" : "",
+        checklistRowToneClass(true, isFocused),
+      ].join(" ")}
+    >
+      <DoneCheckbox
+        location={hopTitle}
+        step="QT"
+        isCompleted
+        isActive={isFocused}
+        isPending={isPending}
+        compact
+        onToggle={onToggle}
+      />
+      <span
+        className="flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide text-rsi-text-secondary"
+        title={hopTitle}
+      >
+        <span className="truncate">{fromLabel}</span>
+        <TravelChevronsIcon className="mx-2.5 h-3.5 w-4 shrink-0 text-rsi-text-muted sm:mx-3" />
+        <span className="truncate">{toLabel}</span>
       </span>
+      <CondensedRowTrailing
+        routeAction="quantum"
+        hopLabel={hopLabel}
+      />
     </div>
   );
 }
@@ -2176,27 +2415,11 @@ function NextDistanceMeta({
 
   const body = (
     <>
-      {/* Checkbox column — hidden on mobile like DoneCheckbox. */}
+      {/* Checkbox column spacer — matches DoneCheckbox width on desktop. */}
       <span
         aria-hidden
-        className="hidden w-8 shrink-0 items-center justify-center md:inline-flex"
-      >
-        <span
-          className={[
-            "inline-flex size-8 flex-col items-center justify-center rounded-full border",
-            isBridge
-              ? "border-rsi-border-strong bg-rsi-bg-deep/70 text-rsi-text-secondary"
-              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted",
-          ].join(" ")}
-          title="Continue to next stop"
-        >
-          {isPending ? (
-            <Spinner className="size-3.5" />
-          ) : (
-            <TravelDownIcon className="size-3.5" />
-          )}
-        </span>
-      </span>
+        className="hidden w-8 shrink-0 md:inline-flex"
+      />
       {/* Location-thumb column (w-24); ship centered, >> after ship on active row. */}
       <span
         className={[
@@ -2205,7 +2428,7 @@ function NextDistanceMeta({
         ].join(" ")}
         title="Next stop"
       >
-        <span className="inline-flex h-9 w-12 items-center justify-center overflow-hidden">
+        <span className="inline-flex h-10 w-14 items-center justify-center overflow-hidden">
           {shipIconSrc ? (
             // eslint-disable-next-line @next/next/no-img-element -- static ship badge
             <img
@@ -2219,7 +2442,7 @@ function NextDistanceMeta({
         </span>
         <span
           aria-hidden
-          className="ml-3 inline-flex shrink-0 text-rsi-text-muted sm:ml-4"
+          className="ml-1.5 inline-flex shrink-0 text-rsi-text-muted sm:ml-2"
           title="Travel"
         >
           <TravelChevronsIcon className="h-4 w-5" />
@@ -2329,6 +2552,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   );
   /** Double-click Pickup / Drop off crate → box mix modal. */
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
+  /** Completed Done-strip row expanded to full card (history shown). */
+  const [expandedCompletedRowId, setExpandedCompletedRowId] = useState<
+    string | null
+  >(null);
   const boxEditMission =
     boxEditMissionId == null
       ? null
@@ -2371,6 +2598,10 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
     if (isQuantumOriginControlled) return;
     if (!tripStarted) setQuantumDepartedLocal(false);
   }, [isQuantumOriginControlled, tripStarted]);
+
+  useEffect(() => {
+    if (hideCompleted) setExpandedCompletedRowId(null);
+  }, [hideCompleted]);
 
   useEffect(() => {
     if (!draftingAfterRowId) return;
@@ -2482,7 +2713,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
 
   const emptyMessage =
     rows.length === 0
-      ? "No contracts yet"
+      ? missions.some((mission) => !mission.isHidden)
+        ? "All contracts complete — reopen one from Contracts to rebuild the route"
+        : "No contracts yet"
       : "All contracts complete — show history to review";
 
   const stepById = new Map(
@@ -2492,11 +2725,18 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
     cargoInventory.transferLedgerByStop(displayRows);
   const focusTargetsQuantum =
     focusedStopId === QUANTUM_ORIGIN_ROW_ID && showQuantumOrigin;
+  const hasIncompleteStop = displayRows.some((row) => !row.isCompleted);
+  const focusedRow =
+    focusedStopId && focusedStopId !== QUANTUM_ORIGIN_ROW_ID
+      ? (displayRows.find((row) => row.id === focusedStopId) ?? null)
+      : null;
+  // Trip finished: drop active focus so the last Done row shows green, not blue.
   const activeRowId =
-    focusTargetsQuantum ||
-    (focusedStopId && displayRows.some((row) => row.id === focusedStopId))
+    focusTargetsQuantum && (hasIncompleteStop || !quantumCompleted)
       ? focusedStopId
-      : defaultFocusedStopId(displayRows, startLocationSlug);
+      : focusedRow && !(focusedRow.isCompleted && !hasIncompleteStop)
+        ? focusedStopId
+        : defaultFocusedStopId(displayRows, startLocationSlug);
   const firstStop = displayRows[0] ?? null;
   const quantumDestinationName = firstStop
     ? (getLocationBySlug(firstStop.locationSlug)?.name ??
@@ -2575,12 +2815,14 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           const nextIncomplete = rows
             .slice(routeIndex + 1)
             .find((entry) => !entry.isCompleted);
-          if (nextIncomplete) {
-            startTransition(() => {
+          startTransition(() => {
+            if (nextIncomplete) {
               pendingScrollToIdRef.current = nextIncomplete.id;
               onFocusStop?.(nextIncomplete.id);
-            });
-          }
+            } else {
+              onFocusStop?.(null);
+            }
+          });
         }
       }
     };
@@ -2732,6 +2974,14 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   : undefined
               }
               footer={addStopFooter(QUANTUM_ORIGIN_ROW_ID)}
+              isHistoryExpanded={
+                expandedCompletedRowId === QUANTUM_ORIGIN_ROW_ID
+              }
+              onHistoryExpand={() => {
+                setExpandedCompletedRowId(QUANTUM_ORIGIN_ROW_ID);
+                onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+              }}
+              onHistoryCollapse={() => setExpandedCompletedRowId(null)}
             />
             {draftingAfterRowId === QUANTUM_ORIGIN_ROW_ID ? draftComposer : null}
           </>
@@ -2773,12 +3023,14 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               const nextIncomplete = displayRows
                 .slice(stopRouteIndex + 1)
                 .find((entry) => !entry.isCompleted);
-              if (nextIncomplete) {
-                startTransition(() => {
+              startTransition(() => {
+                if (nextIncomplete) {
                   pendingScrollToIdRef.current = nextIncomplete.id;
                   onFocusStop?.(nextIncomplete.id);
-                });
-              }
+                } else {
+                  onFocusStop?.(null);
+                }
+              });
             }
           };
           const toggleStopDone = () => {
@@ -2830,6 +3082,12 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                       : undefined
                   }
                   footer={addStopFooter(row.id)}
+                  isHistoryExpanded={expandedCompletedRowId === row.id}
+                  onHistoryExpand={() => {
+                    setExpandedCompletedRowId(row.id);
+                    onFocusStop?.(row.id);
+                  }}
+                  onHistoryCollapse={() => setExpandedCompletedRowId(null)}
                 />
                 {draftingAfterRowId === row.id ? draftComposer : null}
               </Fragment>
@@ -2875,8 +3133,12 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
             ? (getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug)
             : null;
 
-          // Show-history: collapse completed stops to a single horizontal strip.
-          if (row.isCompleted && !hideCompleted) {
+          // Show-history: collapse completed stops to a strip unless expanded.
+          if (
+            row.isCompleted &&
+            !hideCompleted &&
+            expandedCompletedRowId !== row.id
+          ) {
             return (
               <Fragment key={row.id}>
                 <li
@@ -2893,10 +3155,25 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   <CompletedStopHistoryRow
                     location={location}
                     step={step}
+                    routeAction={row.routeAction}
                     scuTotal={row.scuTotal}
+                    hopLabel={(() => {
+                      const hop =
+                        (nextLocationSlug
+                          ? distanceBetweenLocationSlugs(
+                              row.locationSlug,
+                              nextLocationSlug,
+                            )
+                          : null) ?? row.distanceToNext;
+                      return hop ? formatDistanceToNext(hop) : null;
+                    })()}
                     isFocused={isFocused}
                     isPending={isPendingComplete}
                     onToggle={toggleStopDone}
+                    onOpen={() => {
+                      setExpandedCompletedRowId(row.id);
+                      onFocusStop?.(row.id);
+                    }}
                   />
                   {bridgeNextDistance && nextRow ? (
                     <NextStopBridgeBand
@@ -2947,6 +3224,20 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   checklistRowToneClass(row.isCompleted, isFocused),
                 ].join(" ")}
               >
+                {row.isCompleted &&
+                !hideCompleted &&
+                expandedCompletedRowId === row.id ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setExpandedCompletedRowId(null);
+                    }}
+                    className="mb-2 ml-auto block font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted hover:text-rsi-accent"
+                  >
+                    Collapse
+                  </button>
+                ) : null}
                 <div className="flex min-h-0 flex-1 gap-3">
                   {/* Desktop: side column aligned to the thumbnail, gutter below. */}
                   <div className="hidden h-14 shrink-0 items-center self-start md:flex">
@@ -2960,90 +3251,79 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4">
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <LocationHeader
-                          row={row}
-                          location={location}
-                          hasOutdoorFreightElevator={Boolean(
-                            locationFixture?.hasOutdoorFreightElevator,
-                          )}
-                          isCopied={isCopied}
-                          onCopy={() => {
-                            void copyStarmapName(
-                              row.id,
-                              getLocationShortName(row.locationSlug),
-                            );
-                          }}
-                        />
-                        <div className="mt-5 pb-5">
-                          {isRowSectionBusy ? (
-                            <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
-                              <Spinner className="size-3" />
-                              Saving…
-                            </p>
-                          ) : null}
-                          <CargoGroups
+                    <LocationHeader
+                      row={row}
+                      location={location}
+                      hasOutdoorFreightElevator={Boolean(
+                        locationFixture?.hasOutdoorFreightElevator,
+                      )}
+                      isCopied={isCopied}
+                      onCopy={() => {
+                        void copyStarmapName(
+                          row.id,
+                          getLocationShortName(row.locationSlug),
+                        );
+                      }}
+                    />
+                    <div className="mt-5 pb-5">
+                      {isRowSectionBusy ? (
+                        <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
+                          <Spinner className="size-3" />
+                          Saving…
+                        </p>
+                      ) : null}
+                      <CargoGroups
+                        row={row}
+                        cargoLines={cargoLines}
+                        missions={missions}
+                        location={location}
+                        shipName={transferShipName}
+                        transferLedger={
+                          transferLedgerByStop.get(row.id) ?? null
+                        }
+                        pendingCargoKeys={pendingCargoKeys}
+                        onToggleCargoHandled={
+                          onToggleCargoHandled
+                            ? handleCargoToggle
+                            : undefined
+                        }
+                        bayAside={(role) => (
+                          <StopDeliveryBayPreview
                             row={row}
-                            cargoLines={cargoLines}
-                            missions={missions}
-                            pendingCargoKeys={pendingCargoKeys}
-                            onToggleCargoHandled={
-                              onToggleCargoHandled
-                                ? handleCargoToggle
+                            rows={rows}
+                            role={role}
+                            onEditMissionBoxes={
+                              onSelectBoxBreakdown
+                                ? (missionId) => {
+                                    const mission = missions.find(
+                                      (entry) => entry.id === missionId,
+                                    );
+                                    if (!mission || mission.isCompleted)
+                                      return;
+                                    setBoxEditMissionId(missionId);
+                                  }
                                 : undefined
                             }
                           />
-                        </div>
-                        <TotalMeta
-                          row={row}
-                          location={location}
-                          shipName={transferShipName}
-                          transferLedger={
-                            transferLedgerByStop.get(row.id) ?? null
-                          }
-                        />
-                      </div>
-                      <div className="w-full min-w-0 md:w-1/2 md:shrink-0">
-                        <StopDeliveryBayPreview
-                          row={row}
-                          rows={rows}
-                          onEditMissionBoxes={
-                            onSelectBoxBreakdown
-                              ? (missionId) => {
-                                  const mission = missions.find(
-                                    (entry) => entry.id === missionId,
-                                  );
-                                  if (!mission || mission.isCompleted) return;
-                                  setBoxEditMissionId(missionId);
-                                }
-                              : undefined
-                          }
-                        />
-                      </div>
+                        )}
+                      />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-start gap-x-8 gap-y-1">
-                        <PayoutMeta
-                          row={row}
-                          completionAuec={completionAuec}
-                          completingMissionCount={expectedCompletions.length}
-                        />
-                        <ExpMeta
-                          row={row}
-                          approxXp={completionXp}
-                          completingMissionCount={expectedCompletions.length}
-                        />
-                      </div>
-                      <div className="flex justify-start py-3 md:hidden">
-                        <DoneStopButton
-                          location={location}
-                          step={step}
-                          isCompleted={row.isCompleted}
-                          isPending={isPendingComplete}
-                          onToggle={toggleStopDone}
-                        />
-                      </div>
+                    <div className="mt-2 w-full md:w-1/2 md:pr-2">
+                      <PayoutExpMeta
+                        row={row}
+                        completionAuec={completionAuec}
+                        approxXp={completionXp}
+                        completingMissionCount={expectedCompletions.length}
+                      />
+                    </div>
+                    <div className="flex justify-start py-3 md:hidden">
+                      <DoneStopButton
+                        location={location}
+                        step={step}
+                        isCompleted={row.isCompleted}
+                        isPending={isPendingComplete}
+                        onToggle={toggleStopDone}
+                      />
                     </div>
                     {sessionId ? (
                       <div

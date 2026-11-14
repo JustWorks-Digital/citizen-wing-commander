@@ -5,6 +5,7 @@ import {
   type SessionChecklistModel,
   type SessionMission,
 } from "@/lib/missions/mockSession";
+import { normalizeSessionMissionRankFields } from "@/lib/missions/sessionMissions";
 import { restampAllMissionBoxSizes } from "@/lib/missions/rebuildSessionRoute";
 
 const ROUTE_ACTIONS = new Set<RouteAction>([
@@ -135,7 +136,7 @@ export function normalizeSessionChecklist(
         return Math.min(done, total);
       })(),
       missions: Array.isArray(raw.missions)
-        ? (raw.missions as SessionMission[])
+        ? (raw.missions as SessionMission[]).map(normalizeSessionMissionRankFields)
         : [],
       startedAt,
       completedAt:

@@ -43,7 +43,8 @@ function mergeCargo(
     (row) =>
       row.commodity === line.commodity &&
       row.role === line.role &&
-      row.shipStorageLocation === line.shipStorageLocation,
+      row.shipStorageLocation === line.shipStorageLocation &&
+      (row.missionId ?? "") === (line.missionId ?? ""),
   );
   if (existing) {
     existing.scu += line.scu;
@@ -56,8 +57,10 @@ function resolveCargoLines(
   lines: HaulingIntakeCargoLine[],
   role: "pickup" | "delivery",
   bay: ShipStorageLocation,
+  missionId?: string,
 ): { ok: true; lines: IncomingCargoLine[] } | { ok: false; error: string } {
   const out: IncomingCargoLine[] = [];
+  const trimmedMissionId = missionId?.trim() || undefined;
   for (const line of lines) {
     const slug = resolveCommoditySlug(line.commodity);
     if (!slug) {
@@ -68,6 +71,7 @@ function resolveCargoLines(
       scu: line.scu,
       role,
       shipStorageLocation: bay,
+      ...(trimmedMissionId ? { missionId: trimmedMissionId } : {}),
     });
   }
   return { ok: true, lines: out };
@@ -94,10 +98,26 @@ function ensureBucket(
   return { ok: true, bucket };
 }
 
+function splitCargoAcrossSites(
+  lines: HaulingIntakeCargoLine[],
+  siteCount: number,
+  siteIndex: number,
+): HaulingIntakeCargoLine[] {
+  return lines.map((line) => {
+    const base = Math.floor(line.scu / siteCount);
+    const rem = line.scu % siteCount;
+    return {
+      ...line,
+      scu: base + (siteIndex === 0 ? rem : 0),
+    };
+  });
+}
+
 function ingestContract(
   buckets: Map<string, StopBucket>,
   contract: HaulingIntakeContract,
 ): { ok: true } | { ok: false; error: string } {
+  const missionId = contract.id?.trim() || undefined;
   const pickupSites =
     contract.pickupSplits && Object.keys(contract.pickupSplits).length > 0
       ? Object.keys(contract.pickupSplits)
@@ -108,7 +128,7 @@ function ingestContract(
       const bucketResult = ensureBucket(buckets, site);
       if (!bucketResult.ok) return bucketResult;
       const bay = defaultBay(bucketResult.bucket.locationSlug);
-      const cargo = resolveCargoLines(lines, "pickup", bay);
+      const cargo = resolveCargoLines(lines, "pickup", bay, missionId);
       if (!cargo.ok) return cargo;
       for (const line of cargo.lines) {
         mergeCargo(bucketResult.bucket.pickups, line);
@@ -118,7 +138,7 @@ function ingestContract(
     const bucketResult = ensureBucket(buckets, pickupSites[0]!);
     if (!bucketResult.ok) return bucketResult;
     const bay = defaultBay(bucketResult.bucket.locationSlug);
-    const cargo = resolveCargoLines(contract.cargo, "pickup", bay);
+    const cargo = resolveCargoLines(contract.cargo, "pickup", bay, missionId);
     if (!cargo.ok) return cargo;
     for (const line of cargo.lines) {
       mergeCargo(bucketResult.bucket.pickups, line);
@@ -129,15 +149,12 @@ function ingestContract(
       const bucketResult = ensureBucket(buckets, site);
       if (!bucketResult.ok) return bucketResult;
       const bay = defaultBay(bucketResult.bucket.locationSlug);
-      const splitLines = contract.cargo.map((line) => {
-        const base = Math.floor(line.scu / pickupSites.length);
-        const rem = line.scu % pickupSites.length;
-        return {
-          ...line,
-          scu: base + (siteIndex === 0 ? rem : 0),
-        };
-      });
-      const cargo = resolveCargoLines(splitLines, "pickup", bay);
+      const splitLines = splitCargoAcrossSites(
+        contract.cargo,
+        pickupSites.length,
+        siteIndex,
+      );
+      const cargo = resolveCargoLines(splitLines, "pickup", bay, missionId);
       if (!cargo.ok) return cargo;
       for (const line of cargo.lines) {
         if (line.scu > 0) mergeCargo(bucketResult.bucket.pickups, line);
@@ -145,14 +162,36 @@ function ingestContract(
     }
   }
 
-  for (const site of contract.to) {
-    const bucketResult = ensureBucket(buckets, site);
+  if (contract.to.length === 1) {
+    const bucketResult = ensureBucket(buckets, contract.to[0]!);
     if (!bucketResult.ok) return bucketResult;
     const bay = defaultBay(bucketResult.bucket.locationSlug);
-    const cargo = resolveCargoLines(contract.cargo, "delivery", bay);
+    const cargo = resolveCargoLines(
+      contract.cargo,
+      "delivery",
+      bay,
+      missionId,
+    );
     if (!cargo.ok) return cargo;
     for (const line of cargo.lines) {
       mergeCargo(bucketResult.bucket.deliveries, line);
+    }
+  } else {
+    // No per-site delivery splits on intake: divide SCU across destinations.
+    for (const [siteIndex, site] of contract.to.entries()) {
+      const bucketResult = ensureBucket(buckets, site);
+      if (!bucketResult.ok) return bucketResult;
+      const bay = defaultBay(bucketResult.bucket.locationSlug);
+      const splitLines = splitCargoAcrossSites(
+        contract.cargo,
+        contract.to.length,
+        siteIndex,
+      );
+      const cargo = resolveCargoLines(splitLines, "delivery", bay, missionId);
+      if (!cargo.ok) return cargo;
+      for (const line of cargo.lines) {
+        if (line.scu > 0) mergeCargo(bucketResult.bucket.deliveries, line);
+      }
     }
   }
 
@@ -248,6 +287,16 @@ function orderBucketsFromStart(
   return ordered;
 }
 
+function cargoLineForLeg(line: IncomingCargoLine): IncomingCargoLine {
+  return {
+    commodity: line.commodity,
+    scu: line.scu,
+    shipStorageLocation: line.shipStorageLocation,
+    ...(line.role ? { role: line.role } : {}),
+    ...(line.missionId ? { missionId: line.missionId } : {}),
+  };
+}
+
 function bucketsToLegs(ordered: StopBucket[]): IncomingLeg[] {
   return ordered.map((bucket, index) => {
     const hasP = bucket.pickups.length > 0;
@@ -256,18 +305,10 @@ function bucketsToLegs(ordered: StopBucket[]): IncomingLeg[] {
     const bay = defaultBay(bucket.locationSlug);
     const cargo =
       routeAction === "both"
-        ? [...bucket.deliveries, ...bucket.pickups]
+        ? [...bucket.deliveries, ...bucket.pickups].map(cargoLineForLeg)
         : hasP
-          ? bucket.pickups.map(({ commodity, scu, shipStorageLocation }) => ({
-              commodity,
-              scu,
-              shipStorageLocation,
-            }))
-          : bucket.deliveries.map(({ commodity, scu, shipStorageLocation }) => ({
-              commodity,
-              scu,
-              shipStorageLocation,
-            }));
+          ? bucket.pickups.map(cargoLineForLeg)
+          : bucket.deliveries.map(cargoLineForLeg);
 
     return {
       id: `leg-${index + 1}`,

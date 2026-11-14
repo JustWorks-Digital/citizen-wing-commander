@@ -180,6 +180,20 @@ function requiredLocations(contracts: TripContractLeg[]): string[] {
   ];
 }
 
+/** Merge matching commodity + missionId lines (multi-leg pickups at one stop). */
+function pushMergedCargo(into: ShipCargoLine[], line: ShipCargoLine): void {
+  const existing = into.find(
+    (row) =>
+      row.commoditySlug === line.commoditySlug &&
+      (row.missionId ?? null) === (line.missionId ?? null),
+  );
+  if (existing) {
+    existing.scu += line.scu;
+    return;
+  }
+  into.push({ ...line });
+}
+
 /** Materialize cargo onto a legal visit sequence. */
 export function sequenceToPlan(
   sequence: string[],
@@ -216,8 +230,10 @@ export function sequenceToPlan(
     if (!pickupStop || !deliveryStop) {
       throw new Error(`Missing stop for contract ${contract.id}`);
     }
-    pickupStop.pickups.push(line);
-    deliveryStop.deliveries.push(line);
+    // One contract leg per destination share — merge at the shared pickup
+    // (and any same-stop delivery) so cards show one tile per commodity.
+    pushMergedCargo(pickupStop.pickups, line);
+    pushMergedCargo(deliveryStop.deliveries, { ...line });
   }
 
   return {
@@ -462,6 +478,15 @@ export function contractLegsFromChecklistRows(
   return legs;
 }
 
+/** Collapse same commodity + missionId lines (defensive; sequenceToPlan also merges). */
+function coalesceCargoLines(lines: ShipCargoLine[]): ShipCargoLine[] {
+  const out: ShipCargoLine[] = [];
+  for (const line of lines) {
+    pushMergedCargo(out, line);
+  }
+  return out;
+}
+
 /** Checklist rows from an optimized trip plan (default bay front). */
 export function checklistRowsFromTripPlan(
   plan: TripPlan,
@@ -473,14 +498,14 @@ export function checklistRowsFromTripPlan(
       hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
     // Pickup before delivery so transfer ledger / UI load first.
     const cargoDeliveries = [
-      ...stop.pickups.map((line) => ({
+      ...coalesceCargoLines(stop.pickups).map((line) => ({
         commoditySlug: line.commoditySlug,
         scu: line.scu,
         role: "pickup" as const,
         missionId: line.missionId ?? undefined,
         shipStorageLocation: "front" as const,
       })),
-      ...stop.deliveries.map((line) => ({
+      ...coalesceCargoLines(stop.deliveries).map((line) => ({
         commoditySlug: line.commoditySlug,
         scu: line.scu,
         role: "delivery" as const,

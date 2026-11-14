@@ -285,7 +285,8 @@ export const mockSessionChecklist: SessionChecklistModel = {
   missions: [
     {
       id: "demo-area18-haul",
-      title: "Junior Rank - Direct Medium Cargo Haul",
+      title: "Direct Medium Cargo Haul",
+      rank: "Junior",
       contractor: "Covalex Independent Contractors",
       rewardAuec: 80000,
       rewardDisplay: "80,000 aUEC",
@@ -302,7 +303,7 @@ export const mockSessionChecklist: SessionChecklistModel = {
         tab: "Accepted",
         acceptedCount: "1/10",
         category: "Hauling - Planetary",
-        title: "Junior Rank - Direct Medium Cargo Haul",
+        title: "Direct Medium Cargo Haul",
         contractor: "Covalex Independent Contractors",
         rewardAuec: 80000,
         rewardDisplay: "80,000 aUEC",

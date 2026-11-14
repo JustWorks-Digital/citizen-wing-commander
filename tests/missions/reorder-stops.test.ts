@@ -73,7 +73,7 @@ describe("moveStopIdBefore", () => {
 });
 
 describe("resetTripProgress", () => {
-  it("clears stop completion only so reorder unlocks; contracts stay", () => {
+  it("clears stop and contract completion so reorder unlocks", () => {
     const started = {
       ...mockSessionChecklist,
       rows: mockSessionChecklist.rows.map((row, index) => ({
@@ -94,8 +94,7 @@ describe("resetTripProgress", () => {
     const reset = resetTripProgress(started);
     expect(isTripStarted(reset.rows)).toBe(false);
     expect(reset.rows.every((row) => !row.isCompleted)).toBe(true);
-    expect(reset.missions).toEqual(started.missions);
-    expect(reset.missionsCompleted).toBe(1);
-    expect(reset.rows[0]?.cargoDeliveries[0]?.isHandled).toBe(true);
+    expect(reset.missions.every((mission) => !mission.isCompleted)).toBe(true);
+    expect(reset.missionsCompleted).toBe(0);
   });
 });

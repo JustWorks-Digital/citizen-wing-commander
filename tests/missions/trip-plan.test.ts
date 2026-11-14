@@ -170,4 +170,65 @@ describe("trip plan sequences", () => {
       },
     ]);
   });
+
+  it("merges multi-destination pickup shares into one line per commodity", () => {
+    const multiDrop: TripContractLeg[] = [
+      {
+        id: "fuel#1",
+        missionId: "fuel",
+        fromLocationSlug: "covalex-distribution-centre-s4dc05",
+        toLocationSlug: "shubin-mining-facility-sm0-10",
+        commoditySlug: "hydrogen-fuel",
+        scu: 3,
+      },
+      {
+        id: "fuel#2",
+        missionId: "fuel",
+        fromLocationSlug: "covalex-distribution-centre-s4dc05",
+        toLocationSlug: "shubin-mining-facility-sm0-18",
+        commoditySlug: "hydrogen-fuel",
+        scu: 1,
+      },
+      {
+        id: "fuel#3",
+        missionId: "fuel",
+        fromLocationSlug: "covalex-distribution-centre-s4dc05",
+        toLocationSlug: "shubin-mining-facility-sm0-22",
+        commoditySlug: "hydrogen-fuel",
+        scu: 1,
+      },
+      {
+        id: "fuel#4",
+        missionId: "fuel",
+        fromLocationSlug: "covalex-distribution-centre-s4dc05",
+        toLocationSlug: "shubin-mining-facility-sm0-13",
+        commoditySlug: "hydrogen-fuel",
+        scu: 1,
+      },
+    ];
+    const plan = sequenceToPlan(
+      [
+        "covalex-distribution-centre-s4dc05",
+        "shubin-mining-facility-sm0-10",
+        "shubin-mining-facility-sm0-18",
+        "shubin-mining-facility-sm0-22",
+        "shubin-mining-facility-sm0-13",
+      ],
+      multiDrop,
+      null,
+    );
+    expect(plan.stops[0]!.pickups).toEqual([
+      {
+        commoditySlug: "hydrogen-fuel",
+        scu: 6,
+        missionId: "fuel",
+      },
+    ]);
+    expect(plan.stops.slice(1).map((stop) => stop.deliveries)).toEqual([
+      [{ commoditySlug: "hydrogen-fuel", scu: 3, missionId: "fuel" }],
+      [{ commoditySlug: "hydrogen-fuel", scu: 1, missionId: "fuel" }],
+      [{ commoditySlug: "hydrogen-fuel", scu: 1, missionId: "fuel" }],
+      [{ commoditySlug: "hydrogen-fuel", scu: 1, missionId: "fuel" }],
+    ]);
+  });
 });

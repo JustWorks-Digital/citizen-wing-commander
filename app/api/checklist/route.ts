@@ -4,6 +4,7 @@ import {
   getChecklistSession,
   saveChecklistSession,
 } from "@/lib/sessions/checklistStore";
+import { backfillSessionMissionRanksFromCatalog } from "@/lib/missions/backfillSessionMissionRanks";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 
 function withSyncHeaders(
@@ -28,7 +29,12 @@ function sessionIdFromRequest(request: Request): string | null {
 export async function GET(request: Request) {
   try {
     const sessionId = sessionIdFromRequest(request);
-    const session = await getChecklistSession(sessionId);
+    let session = await getChecklistSession(sessionId);
+    // Heal sessions built from catalog before rank was copied onto SessionMission.
+    const healed = await backfillSessionMissionRanksFromCatalog(session);
+    if (healed.changed) {
+      session = await saveChecklistSession(healed.session);
+    }
     const etag = checklistEtag(session);
     const ifNoneMatch = request.headers.get("if-none-match");
     if (ifNoneMatch && ifNoneMatch === etag) {

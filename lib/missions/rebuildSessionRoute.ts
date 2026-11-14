@@ -62,10 +62,55 @@ function countedMissions(missions: SessionMission[]): SessionMission[] {
 }
 
 /** Cargo that still belongs on the route table. */
-function routeMissions(missions: SessionMission[]): SessionMission[] {
-  return missions.filter(
-    (mission) => !mission.isHidden && !mission.isCompleted,
+function routeMissions(
+  missions: SessionMission[],
+  options?: { includeCompleted?: boolean },
+): SessionMission[] {
+  return missions.filter((mission) => {
+    if (mission.isHidden) return false;
+    if (options?.includeCompleted) return true;
+    return !mission.isCompleted;
+  });
+}
+
+/**
+ * After a rebuild that kept completed contracts on the table, mark stops Done
+ * to match contract completion:
+ * - Entire trip finished → every cargo stop is Done
+ * - Otherwise → a stop is Done when every tagged cargo mission on it is Done
+ */
+export function applyCompletedMissionStopState(
+  rows: HaulingChecklistRow[],
+  missions: SessionMission[],
+): HaulingChecklistRow[] {
+  const visible = missions.filter((mission) => !mission.isHidden);
+  if (visible.length === 0) return rows;
+
+  const completedIds = new Set(
+    visible
+      .filter((mission) => mission.isCompleted)
+      .map((mission) => mission.id),
   );
+  if (completedIds.size === 0) return rows;
+
+  const tripFinished =
+    completedIds.size === visible.length &&
+    visible.every((mission) => mission.isCompleted);
+
+  return rows.map((row) => {
+    if (row.routeAction === "quantum") return row;
+    if (tripFinished) {
+      return row.isCompleted ? row : { ...row, isCompleted: true };
+    }
+    const tagged = row.cargoDeliveries
+      .map((cargo) => cargo.missionId?.trim())
+      .filter((id): id is string => Boolean(id));
+    if (tagged.length === 0) return row;
+    const allDone = tagged.every((id) => completedIds.has(id));
+    return allDone === row.isCompleted
+      ? row
+      : { ...row, isCompleted: allDone };
+  });
 }
 
 /**
@@ -99,13 +144,28 @@ export function addMissionsAndRebuildRoute(
   return { ok: true, session: rebuilt.session, added: toAdd.length, skipped };
 }
 
-function rebuildRowsFromMissions(
+export type RebuildRowsFromMissionsOptions = {
+  /**
+   * Keep completed contracts on the route table (Repair route).
+   * Default drops them so a finished contract leaves the active trip.
+   */
+  includeCompleted?: boolean;
+};
+
+/**
+ * Rebuild checklist legs from session missions.
+ * By default, hidden and completed missions stay on the session but drop off
+ * the route table. Pass `includeCompleted` for Repair route so Done contracts
+ * remain visible as completed stops.
+ */
+export function rebuildRowsFromMissions(
   session: SessionChecklistModel,
   missions: SessionMission[],
+  options?: RebuildRowsFromMissionsOptions,
 ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
   const nextMissions = missions.map(withMissionBoxSplitDefaults);
   const counted = countedMissions(nextMissions);
-  const active = routeMissions(nextMissions);
+  const active = routeMissions(nextMissions, options);
   const missionCount = counted.length;
   const missionsCompleted = counted.filter((m) => m.isCompleted).length;
 
@@ -150,6 +210,9 @@ function rebuildRowsFromMissions(
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
   nextRows = mergePreservedQuantumRows(session.rows, nextRows);
+  if (options?.includeCompleted) {
+    nextRows = applyCompletedMissionStopState(nextRows, nextMissions);
+  }
 
   return {
     ok: true,

@@ -29,8 +29,6 @@ export type SessionCargoLayoutModalProps = {
   sessionId?: string | null;
   /** Inventory / capacity aside shown beside the Storage bays title. */
   headerAside?: ReactNode;
-  /** Contracts strip below the bay grid. */
-  footerAside?: ReactNode;
   onClose: () => void;
 };
 
@@ -46,7 +44,6 @@ export function SessionCargoLayoutModal({
   focusedStopId = null,
   sessionId = null,
   headerAside = null,
-  footerAside = null,
   onClose,
 }: SessionCargoLayoutModalProps) {
   const titleId = useId();
@@ -194,7 +191,6 @@ export function SessionCargoLayoutModal({
             onStopScopeChange={setStopScope}
             sessionId={sessionId}
             headerAside={headerAside}
-            footerAside={footerAside}
             className="max-h-[min(85vh,52rem)] overflow-hidden"
           />
         </div>

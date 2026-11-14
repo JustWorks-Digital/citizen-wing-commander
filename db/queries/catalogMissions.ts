@@ -49,13 +49,14 @@ export async function upsertCatalogMission(
     .where(eq(catalogMissions.fingerprint, fingerprint))
     .limit(1);
 
-  // Preserve splits / objectives / category when an upsert omits them.
+  // Preserve splits / objectives / category / rank when an upsert omits them.
   if (
     existingByFingerprint &&
     (payload.scuSplits === undefined ||
       payload.scuLocationSplits === undefined ||
       payload.objectives === undefined ||
-      !payload.category)
+      !payload.category ||
+      payload.rank == null)
   ) {
     const existingPayload =
       existingByFingerprint.payload as HaulingCatalogMissionPayload | null;
@@ -67,6 +68,16 @@ export async function upsertCatalogMission(
           payload.scuLocationSplits ?? existingPayload.scuLocationSplits,
         objectives: payload.objectives ?? existingPayload.objectives,
         category: payload.category ?? existingPayload.category,
+        rank:
+          payload.rank ??
+          existingPayload.rank ??
+          existingByFingerprint.rank ??
+          null,
+      });
+    } else if (payload.rank == null && existingByFingerprint.rank) {
+      payload = buildHaulingCatalogMissionPayload({
+        ...payload,
+        rank: existingByFingerprint.rank,
       });
     }
   }

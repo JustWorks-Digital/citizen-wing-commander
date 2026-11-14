@@ -128,7 +128,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Pickup stops with a route can switch Cargo (by commodity) ↔ Piles (hangar piles by delivery location). Double-click the under-stack cargo label (abbrev + SCU) to edit that mission’s box types when `onEditMissionBoxes` is provided.",
+          "Flat pad stacks for stop cargo. Pass `role` to show only Pickup or Drop off (checklist aligns each graph with that section). Pickup stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided.",
       },
     },
   },
@@ -143,10 +143,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const DeliveryOnly: Story = {};
+export const DeliveryOnly: Story = {
+  args: { row: deliveryRow, role: "delivery" },
+};
 
 export const PickupOnly: Story = {
-  args: { row: pickupRow },
+  args: { row: pickupRow, role: "pickup" },
 };
 
 export const PickupAndDelivery: Story = {
