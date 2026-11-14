@@ -1438,25 +1438,25 @@ function QuantumTravelRow({
           onCopy={onCopy}
           compact
           nameTrailing={
-            <QuantumShipBadge
-              shipSlug={shipSlug}
-              className="ml-1.5 h-6 w-9 sm:ml-16 sm:h-8 sm:w-12"
-            />
+            <span
+              className="ml-2 inline-flex shrink-0 items-center gap-2.5 sm:ml-3 sm:gap-3.5"
+              title="Travel"
+            >
+              <QuantumShipBadge
+                shipSlug={shipSlug}
+                className="h-6 w-9 sm:h-8 sm:w-12"
+              />
+              <span
+                aria-hidden
+                className="inline-flex text-rsi-text-muted"
+              >
+                <TravelChevronsIcon className="h-4 w-5 rotate-90 md:h-5 md:w-6 md:rotate-0" />
+              </span>
+            </span>
           }
         />
       </div>
     );
-
-  /** >>> desktop / rotated down on stacked mobile. */
-  const travelBlock = (
-    <div
-      aria-hidden
-      className="flex h-7 items-center justify-start text-rsi-text-muted md:h-14 md:justify-center"
-      title="Travel"
-    >
-      <TravelChevronsIcon className="h-4 w-5 rotate-90 md:h-5 md:w-6 md:rotate-0" />
-    </div>
-  );
 
   const toBlock =
     editing === "to" && onChangeTo ? (
@@ -1560,10 +1560,7 @@ function QuantumTravelRow({
             ) : null}
             {fromBlock}
           </div>
-          <div className="flex shrink-0 justify-start pl-[6.75rem] md:justify-center md:px-1 md:pl-0">
-            {travelBlock}
-          </div>
-          <div className="flex w-full min-w-0 flex-col gap-1 pl-[6.75rem] md:max-w-[38%] md:flex-1 md:pl-0">
+          <div className="flex w-full min-w-0 flex-col gap-1 pl-[6.75rem] md:max-w-[42%] md:flex-1 md:pl-0">
             {toBlock}
             {hopDistance ? (
               <p

@@ -31,7 +31,9 @@ export async function listActiveDeliverySessionTabs(): Promise<{
   return {
     activeSessionId: selected?.id ?? "",
     sessions: rows.map((row) =>
-      summarizeSessionChecklist(rowToChecklist(row)),
+      summarizeSessionChecklist(rowToChecklist(row), {
+        createdAt: row.createdAt,
+      }),
     ),
     rows,
   };

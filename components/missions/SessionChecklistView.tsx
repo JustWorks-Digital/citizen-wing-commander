@@ -49,8 +49,10 @@ import {
 import { SELECTABLE_SHIP_SLUGS } from "@/lib/ships/selectableShips";
 import {
   emptySessionChecklist,
+  summarizeSessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
+import { SessionCreatedLabel } from "./SessionCreatedLabel";
 import {
   insertQuantumTravelAfter,
   updateChecklistRowLocation,
@@ -129,17 +131,7 @@ export function SessionChecklistView({
       }),
   );
   const [tabs, setTabs] = useState<SessionTabSummary[]>(
-    initial
-      ? [
-          {
-            id: initial.id,
-            sessionName: initial.sessionName,
-            updatedAt: initial.updatedAt,
-            missionCount: initial.missionCount,
-            rowCount: initial.rows.length,
-          },
-        ]
-      : [],
+    initial ? [summarizeSessionChecklist(initial)] : [],
   );
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
     initial?.id ?? routeSessionId ?? null,
@@ -1094,6 +1086,13 @@ export function SessionChecklistView({
             <p className="mt-1 break-all font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
               ID {session.id}
             </p>
+            <SessionCreatedLabel
+              className="mt-1"
+              createdAt={
+                tabs.find((tab) => tab.id === session.id)?.createdAt ??
+                session.startedAt
+              }
+            />
           </div>
           <SessionSourceStat
             className="w-full sm:w-auto sm:shrink-0"

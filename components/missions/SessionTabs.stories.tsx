@@ -1,11 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { SessionTabs } from "./SessionTabs";
+import {
+  recordRecentSessionView,
+} from "@/lib/sessions/recentSessionViews";
 
 const demoSessions = [
   {
     id: "a1b2c3d4",
     sessionName: "Hurston Covalex run",
+    createdAt: "2026-11-08T04:30:00.000Z",
     updatedAt: "2026-11-08T05:00:00.000Z",
     missionCount: 4,
     rowCount: 5,
@@ -13,6 +17,7 @@ const demoSessions = [
   {
     id: "e5f60718",
     sessionName: "Stanton hauling run",
+    createdAt: "2026-11-08T02:00:00.000Z",
     updatedAt: "2026-11-08T04:00:00.000Z",
     missionCount: 1,
     rowCount: 4,
@@ -20,6 +25,7 @@ const demoSessions = [
   {
     id: "f9a0b1c2",
     sessionName: "Pyro shuttle legs",
+    createdAt: "2026-11-07T12:00:00.000Z",
     updatedAt: "2026-11-08T03:00:00.000Z",
     missionCount: 2,
     rowCount: 3,
@@ -27,6 +33,7 @@ const demoSessions = [
   {
     id: "d3e4f506",
     sessionName: "MicroTech ice haul",
+    createdAt: "2026-11-06T10:00:00.000Z",
     updatedAt: "2026-11-07T22:00:00.000Z",
     missionCount: 3,
     rowCount: 6,
@@ -34,9 +41,18 @@ const demoSessions = [
   {
     id: "778899aa",
     sessionName: "ArcCorp waste run",
+    createdAt: "2026-11-05T18:00:00.000Z",
     updatedAt: "2026-11-07T18:00:00.000Z",
     missionCount: 1,
     rowCount: 2,
+  },
+  {
+    id: "bbccddee",
+    sessionName: "Nyx courier loop",
+    createdAt: "2026-11-04T09:00:00.000Z",
+    updatedAt: "2026-11-06T12:00:00.000Z",
+    missionCount: 2,
+    rowCount: 4,
   },
 ];
 
@@ -60,11 +76,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** Collapsed to 3 most recent with a “+N more” control. */
+/** Active tile + All / Recent menus with several trips. */
 export const ManySessions: Story = {
   args: {
     sessions: demoSessions,
     activeSessionId: "a1b2c3d4",
+  },
+  render: (args) => {
+    // Seed a few viewed ids so Recent is populated in Storybook.
+    recordRecentSessionView("778899aa");
+    recordRecentSessionView("f9a0b1c2");
+    recordRecentSessionView("a1b2c3d4");
+    return <SessionTabs {...args} />;
   },
 };
 
@@ -83,6 +106,7 @@ export const Interactive: Story = {
             {
               id,
               sessionName: "New trip",
+              createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               missionCount: 0,
               rowCount: 0,

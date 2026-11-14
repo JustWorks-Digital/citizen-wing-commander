@@ -39,6 +39,8 @@ function normalizeChecklistRow(raw: unknown): HaulingChecklistRow {
 export type SessionTabSummary = {
   id: string;
   sessionName: string;
+  /** DB / checklist creation time (ISO). */
+  createdAt: string;
   updatedAt: string;
   missionCount: number;
   rowCount: number;
@@ -151,10 +153,18 @@ export function normalizeSessionChecklist(
 
 export function summarizeSessionChecklist(
   session: SessionChecklistModel,
+  options?: { createdAt?: string | Date | null },
 ): SessionTabSummary {
+  const fromDb =
+    options?.createdAt instanceof Date
+      ? options.createdAt.toISOString()
+      : typeof options?.createdAt === "string" && options.createdAt.trim()
+        ? options.createdAt.trim()
+        : null;
   return {
     id: session.id,
     sessionName: session.sessionName,
+    createdAt: fromDb ?? session.startedAt,
     updatedAt: session.updatedAt,
     missionCount: session.missionCount,
     rowCount: session.rows.length,
