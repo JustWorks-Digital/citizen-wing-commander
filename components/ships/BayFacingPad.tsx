@@ -31,7 +31,7 @@ export function bayFacingSquareDegrees(facing: BayFacing): number {
 const VERTICAL_BAY_LABEL_NUDGE_PX = 14;
 
 /**
- * Layout for "Bay N" labels inside a CSS-rotated top view.
+ * Layout for "Zone N" labels inside a CSS-rotated top view.
  * Counter-rotates text so it stays horizontal. Home/left/right: label sits
  * screen-above the grid. Up/down: label sits screen-left (nudge via translate).
  */

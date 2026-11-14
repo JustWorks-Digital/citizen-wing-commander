@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Front / Rear rails around a cargo bay sketch (2D view). Default: Rear left, Front right. Upright rails offset for Bay N labels.",
+          "Front / Rear rails around a cargo bay sketch (2D view). Default: Rear left, Front right. Upright rails offset for Zone 1 / Zone 2 labels.",
       },
     },
   },

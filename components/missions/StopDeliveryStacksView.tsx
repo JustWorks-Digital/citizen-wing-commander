@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
-import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import {
@@ -22,10 +21,7 @@ export type StopDeliveryStacksViewProps = {
   onPeelStackChange?: (value: boolean) => void;
   /** Hide the built-in Peel control (e.g. host it next to Cargo / Piles). */
   hidePeel?: boolean;
-  /**
-   * Double-click the under-stack cargo label (abbrev + SCU) — or a Breakdown
-   * row — to edit that mission’s crate mix.
-   */
+  /** Double-click the under-stack cargo label (abbrev + SCU) to edit crate mix. */
   onEditMissionBoxes?: (missionId: string) => void;
 };
 
@@ -133,39 +129,6 @@ function floorFace(lx: number, wy: number, size: number) {
   ]);
 }
 
-function SplitMissionIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      className={className}
-      aria-hidden
-      focusable="false"
-    >
-      <rect
-        x="1.25"
-        y="3.25"
-        width="6.5"
-        height="6.5"
-        rx="1"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-      />
-      <rect
-        x="4.25"
-        y="1.25"
-        width="6.5"
-        height="6.5"
-        rx="1"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        opacity="0.9"
-      />
-    </svg>
-  );
-}
-
 const PEEL_GAP = 0.85;
 
 function visualHz(hz: number, peelStack: boolean): number {
@@ -253,7 +216,6 @@ export function StopDeliveryStacksView({
   hidePeel = false,
   onEditMissionBoxes,
 }: StopDeliveryStacksViewProps) {
-  const [legendCollapsed, setLegendCollapsed] = useState(true);
   const [peelStackInternal, setPeelStackInternal] = useState(true);
   const peelStack = peelStackProp ?? peelStackInternal;
   const [zoom, setZoom] = useState(1);
@@ -265,9 +227,6 @@ export function StopDeliveryStacksView({
   }
   const [viewportWidth, setViewportWidth] = useState(0);
   const [pileIndex, setPileIndex] = useState(0);
-  const [hiddenCommodities, setHiddenCommodities] = useState<
-    ReadonlySet<string>
-  >(() => new Set());
   const viewportRef = useRef<HTMLDivElement>(null);
   const userZoomedRef = useRef(false);
 
@@ -407,15 +366,6 @@ export function StopDeliveryStacksView({
   const canGoPrev = showPileNav && safePileIndex > 0;
   const canGoNext = showPileNav && safePileIndex < allPileLabels.length - 1;
 
-  function toggleCommodity(slug: string) {
-    setHiddenCommodities((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
-  }
-
   return (
     <div
       className={[
@@ -426,111 +376,12 @@ export function StopDeliveryStacksView({
         .join(" ")}
     >
       <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2 px-2.5 pt-1.5">
-        <div className="flex min-w-0 items-start gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="sr-only">
             {pileLabels && pileLabels.length > 0
               ? "Hangar piles by delivery location"
               : "Delivery cargo stacks"}
           </span>
-          <div className="relative z-10 shrink-0">
-            <button
-              type="button"
-              aria-expanded={!legendCollapsed}
-              aria-controls="stop-delivery-stacks-breakdown"
-              title={legendCollapsed ? "Show breakdown" : "Hide breakdown"}
-              onClick={() => setLegendCollapsed((value) => !value)}
-              className={[
-                "inline-flex items-center gap-1 rounded-rsi border px-1.5 py-1.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.14em] transition-colors",
-                legendCollapsed
-                  ? "border-rsi-border/80 bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-accent/40 hover:text-rsi-accent"
-                  : "border-rsi-accent/40 bg-rsi-accent-muted/30 text-rsi-accent",
-              ].join(" ")}
-            >
-              <span aria-hidden>{legendCollapsed ? "‹" : "›"}</span>
-              Breakdown
-            </button>
-            {!legendCollapsed ? (
-              <aside
-                id="stop-delivery-stacks-breakdown"
-                aria-label="Cargo breakdown"
-                className="absolute top-0 left-full z-10 ml-1.5 w-[12.5rem] rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
-              >
-                <ul className="space-y-0.5">
-                  {displayPlan.legendItems.map((item) => {
-                    const hex =
-                      resolveCommodityColorHex(
-                        item.color,
-                        item.color2,
-                        item.commoditySlug,
-                      ) ?? FALLBACK_HEX;
-                    const isOn = !hiddenCommodities.has(item.commoditySlug);
-                    const canEditBoxes =
-                      Boolean(onEditMissionBoxes) && Boolean(item.missionId);
-                    return (
-                      <li key={item.id}>
-                        <button
-                          type="button"
-                          aria-pressed={isOn}
-                          title={
-                            canEditBoxes
-                              ? "Click to toggle · double-click to edit box types"
-                              : undefined
-                          }
-                          onClick={() => toggleCommodity(item.commoditySlug)}
-                          onDoubleClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!canEditBoxes || !item.missionId) return;
-                            onEditMissionBoxes?.(item.missionId);
-                          }}
-                          className="flex w-full cursor-pointer text-left"
-                        >
-                          <span
-                            className={[
-                              "flex min-w-0 flex-1 items-center gap-1.5",
-                              isOn ? "" : "opacity-55",
-                            ].join(" ")}
-                          >
-                            <span
-                              className="size-2 shrink-0 rounded-[2px] border border-rsi-border-strong/80"
-                              style={{ backgroundColor: hex }}
-                              aria-hidden
-                            />
-                            <span
-                              className={[
-                                "min-w-0 flex-1 truncate text-left text-[0.7rem] leading-none",
-                                isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                              ].join(" ")}
-                            >
-                              {item.locationName
-                                ? `${item.commodityName} · ${item.locationName}`
-                                : item.commodityName}
-                            </span>
-                            {item.isSplitMission ? (
-                              <span
-                                className="inline-flex shrink-0 text-rsi-warn"
-                                title="Same cargo type from separate contracts"
-                              >
-                                <SplitMissionIcon className="size-3" />
-                                <span className="sr-only">
-                                  Same cargo type from separate contracts
-                                </span>
-                              </span>
-                            ) : null}
-                            <CargoBoxCountIcons
-                              boxCounts={item.boxCounts}
-                              color={hex}
-                              className="ml-auto shrink-0 justify-end gap-x-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
-                            />
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </aside>
-            ) : null}
-          </div>
           {showPeel ? (
             <button
               type="button"
@@ -642,7 +493,6 @@ export function StopDeliveryStacksView({
               />
             ))}
             {boxes.map((box) => {
-              const dimmed = hiddenCommodities.has(box.commoditySlug);
               const hex =
                 resolveCommodityColorHex(
                   box.color,
@@ -663,7 +513,7 @@ export function StopDeliveryStacksView({
                 : "color-mix(in srgb, var(--rsi-gold) 42%, var(--rsi-border-strong))";
               const actionDash = isPickup ? undefined : "2.5 2";
               return (
-                <g key={box.id} opacity={dimmed ? 0.28 : 1}>
+                <g key={box.id}>
                   <title>
                     {box.deliveryLocationName
                       ? `${box.deliveryLocationName} pile`
@@ -737,7 +587,6 @@ export function StopDeliveryStacksView({
               );
             })}
             {stackLabels.map((label) => {
-              const dimmed = hiddenCommodities.has(label.commoditySlug);
               const labelSpan = label.widthCells ?? stackWidthCells;
               const foot = project(
                 label.x + labelSpan / 2,
@@ -776,7 +625,6 @@ export function StopDeliveryStacksView({
               return (
                 <g
                   key={`label-${label.id}`}
-                  opacity={dimmed ? 0.35 : 1}
                   style={canEditBoxes ? { cursor: "pointer" } : undefined}
                   onDoubleClick={(event) => {
                     event.preventDefault();

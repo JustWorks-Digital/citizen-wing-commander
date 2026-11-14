@@ -24,7 +24,10 @@ import {
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import { enrichSessionMissionFromCatalog } from "@/lib/missions/enrichSessionMissionFromCatalog";
-import { stripRankFromTitle } from "@/lib/missions/missionRank";
+import {
+  stripRankFromTitle,
+  type MissionRank,
+} from "@/lib/missions/missionRank";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import {
   estimateMissionHaulingRepXp,
@@ -246,7 +249,7 @@ function MissionActionsMenu({
           setOpen((value) => !value);
         }}
         className={[
-          "flex size-5 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface",
+          "flex size-8 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface md:size-5",
           "text-rsi-text-secondary transition-colors",
           "hover:border-rsi-border-strong hover:text-rsi-text",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
@@ -354,53 +357,45 @@ function missionBoxCount(mission: SessionMission): number {
   }, 0);
 }
 
-const MissionContractRow = memo(function MissionContractRow({
-  mission,
-  rows,
-  isFocused = false,
-  onToggleSelect,
-  onToggleHidden,
-  onToggleCompleted,
-  onRemoveMission,
-  onEditBoxTypes,
-}: {
-  mission: SessionMission;
-  rows: HaulingChecklistRow[];
-  isFocused?: boolean;
+type MissionContractViewModel = {
+  isHidden: boolean;
+  isCompleted: boolean;
+  rank: MissionRank | null;
+  title: string;
+  totalScu: number;
+  reward: string;
+  exp: number | null;
+  cargoBoxLines: Array<{
+    commoditySlug: string;
+    commodity: string;
+    scu: number;
+  }>;
+  readyBoxes: ReturnType<typeof cargoBoxSplits.withDefaults>;
+  fromLocations: Array<{ label: string; isCompleted: boolean }>;
+  toLocations: Array<{ label: string; isCompleted: boolean }>;
+  statusBadge: ReactNode;
+};
+
+type MissionContractHandlers = {
   onToggleSelect: (missionId: string) => void;
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
   onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
   onRemoveMission: (missionId: string) => void;
   onEditBoxTypes: (missionId: string) => void;
-}) {
+};
+
+function missionContractView(
+  mission: SessionMission,
+  rows: HaulingChecklistRow[],
+): MissionContractViewModel {
   const isHidden = Boolean(mission.isHidden);
   const isCompleted = Boolean(mission.isCompleted);
   const { rank, title } = stripRankFromTitle(mission.title);
   const totalScu = missionTotalScu(mission);
-  const reward = formatRewardCell(mission);
-  const exp = estimateMissionHaulingRepXp(mission);
-  const collect = missionCollectObjectives(mission, rows);
-  const deliver = missionDeliverObjectives(mission, rows);
   const readyBoxes = cargoBoxSplits.withDefaults(mission);
   const cargoBoxLines = cargoBoxSplits.commodityLines(readyBoxes);
-  const fromLocations = collect.map((line) => ({
-    label: line.locationLabel,
-    isCompleted: isMissionLocationCompleted(
-      mission,
-      rows,
-      line.locationLabel,
-      "pickup",
-    ),
-  }));
-  const toLocations = deliver.map((line) => ({
-    label: line.locationLabel,
-    isCompleted: isMissionLocationCompleted(
-      mission,
-      rows,
-      line.locationLabel,
-      "delivery",
-    ),
-  }));
+  const collect = missionCollectObjectives(mission, rows);
+  const deliver = missionDeliverObjectives(mission, rows);
 
   let statusBadge: ReactNode = null;
   if (isCompleted) {
@@ -416,6 +411,305 @@ const MissionContractRow = memo(function MissionContractRow({
       </span>
     );
   }
+
+  return {
+    isHidden,
+    isCompleted,
+    rank,
+    title: title || mission.title,
+    totalScu,
+    reward: formatRewardCell(mission),
+    exp: estimateMissionHaulingRepXp(mission),
+    cargoBoxLines,
+    readyBoxes,
+    fromLocations: collect.map((line) => ({
+      label: line.locationLabel,
+      isCompleted: isMissionLocationCompleted(
+        mission,
+        rows,
+        line.locationLabel,
+        "pickup",
+      ),
+    })),
+    toLocations: deliver.map((line) => ({
+      label: line.locationLabel,
+      isCompleted: isMissionLocationCompleted(
+        mission,
+        rows,
+        line.locationLabel,
+        "delivery",
+      ),
+    })),
+    statusBadge,
+  };
+}
+
+function cargoLinesOrFallback(
+  view: MissionContractViewModel,
+): MissionContractViewModel["cargoBoxLines"] {
+  if (view.cargoBoxLines.length > 0) return view.cargoBoxLines;
+  return [
+    {
+      commoditySlug: "_",
+      commodity: "Cargo",
+      scu: view.totalScu,
+    },
+  ];
+}
+
+function MissionBoxesButton({
+  mission,
+  view,
+  onEditBoxTypes,
+  className = "",
+}: {
+  mission: SessionMission;
+  view: MissionContractViewModel;
+  onEditBoxTypes: (missionId: string) => void;
+  className?: string;
+}) {
+  const { isCompleted, readyBoxes } = view;
+  return (
+    <button
+      type="button"
+      disabled={isCompleted}
+      title={
+        isCompleted
+          ? "Box types locked on completed contracts"
+          : "Edit box types"
+      }
+      aria-label={`Edit box types for ${mission.title}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onEditBoxTypes(mission.id);
+      }}
+      className={[
+        "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1.5",
+        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+        isCompleted
+          ? "cursor-not-allowed border-rsi-border/50 opacity-60"
+          : "border-rsi-border bg-rsi-surface/80 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
+        className,
+      ].join(" ")}
+    >
+      <span className="flex flex-col items-start gap-1">
+        {cargoLinesOrFallback(view).map((line) => {
+          const splits =
+            readyBoxes.scuCargoBoxSplits?.[line.commoditySlug] ??
+            resolvedBoxSplits(mission);
+          const cargoColor =
+            resolveCommodityColorHex(null, null, line.commoditySlug) ??
+            "var(--rsi-accent)";
+          return (
+            <span
+              key={line.commoditySlug}
+              className="flex flex-col items-start gap-0.5"
+            >
+              <span
+                className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
+                style={{
+                  color: isCompleted ? "var(--rsi-text-muted)" : cargoColor,
+                }}
+              >
+                {line.commodity}
+              </span>
+              <CargoBoxCountIcons
+                boxCounts={boxCountsFromBreakdown(splits)}
+                color={isCompleted ? "var(--rsi-text-muted)" : cargoColor}
+                className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.6rem]"
+              />
+            </span>
+          );
+        })}
+      </span>
+    </button>
+  );
+}
+
+const MissionContractCard = memo(function MissionContractCard({
+  mission,
+  rows,
+  isFocused = false,
+  onToggleSelect,
+  onToggleHidden,
+  onToggleCompleted,
+  onRemoveMission,
+  onEditBoxTypes,
+}: {
+  mission: SessionMission;
+  rows: HaulingChecklistRow[];
+  isFocused?: boolean;
+} & MissionContractHandlers) {
+  const view = missionContractView(mission, rows);
+  const {
+    isHidden,
+    isCompleted,
+    rank,
+    title,
+    totalScu,
+    reward,
+    exp,
+    fromLocations,
+    toLocations,
+    statusBadge,
+  } = view;
+
+  return (
+    <article
+      data-mission-id={mission.id}
+      aria-selected={isFocused}
+      onClick={(event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("button, a, [role='menu']")) return;
+        onToggleSelect(mission.id);
+      }}
+      className={[
+        "[content-visibility:auto] [contain-intrinsic-size:auto_9rem]",
+        "cursor-pointer rounded-rsi border border-rsi-border/70 p-3",
+        isHidden ? "opacity-55" : "",
+        isFocused
+          ? "bg-rsi-accent-muted/35 ring-1 ring-rsi-accent/70"
+          : isCompleted
+            ? "bg-rsi-success/5"
+            : "bg-rsi-bg-deep/25",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span
+              className={[
+                "font-mono text-[0.55rem] tracking-[0.08em]",
+                isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
+              ].join(" ")}
+            >
+              {rank ?? "—"}
+            </span>
+            {statusBadge}
+          </div>
+          <p
+            className={[
+              "mt-0.5 text-sm font-semibold tracking-wide break-words hyphens-auto",
+              isCompleted
+                ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                : "text-rsi-text",
+            ].join(" ")}
+          >
+            {title}
+          </p>
+          <ul
+            className={[
+              "mt-1 list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug text-rsi-text-muted",
+              isCompleted ? "line-through opacity-80" : "",
+            ].join(" ")}
+          >
+            {cargoLinesOrFallback(view).map((line) => (
+              <li key={line.commoditySlug} className="break-words">
+                {line.scu} SCU {line.commodity}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <MissionActionsMenu
+          mission={mission}
+          onToggleCompleted={(isCompletedNext) =>
+            onToggleCompleted(mission.id, isCompletedNext)
+          }
+          onToggleHidden={(isHiddenNext) =>
+            onToggleHidden(mission.id, isHiddenNext)
+          }
+          onRemoveMission={() => onRemoveMission(mission.id)}
+        />
+      </div>
+
+      <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-rsi-border/50 pt-2.5 font-mono text-[0.65rem] tabular-nums">
+        <div>
+          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            Reward
+          </dt>
+          <dd className="mt-0.5 text-rsi-accent">{reward}</dd>
+        </div>
+        <div>
+          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            SCU
+          </dt>
+          <dd className="mt-0.5 text-rsi-text">{totalScu}</dd>
+        </div>
+        <div>
+          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            EXP
+          </dt>
+          <dd
+            className="mt-0.5 text-rsi-text"
+            title={
+              exp != null
+                ? `Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`
+                : "Approximate Covalex hauling reputation XP"
+            }
+          >
+            {exp != null ? formatHaulingRepXp(exp) : "—"}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-3 text-[0.7rem] leading-snug text-rsi-text-secondary">
+        <div className="min-w-0">
+          <p className="font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            From
+          </p>
+          <div className="mt-0.5">
+            <LocationList items={fromLocations} />
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            To
+          </p>
+          <div className="mt-0.5">
+            <LocationList items={toLocations} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-2.5">
+        <MissionBoxesButton
+          mission={mission}
+          view={view}
+          onEditBoxTypes={onEditBoxTypes}
+          className="w-full justify-start sm:w-auto"
+        />
+      </div>
+    </article>
+  );
+});
+
+const MissionContractRow = memo(function MissionContractRow({
+  mission,
+  rows,
+  isFocused = false,
+  onToggleSelect,
+  onToggleHidden,
+  onToggleCompleted,
+  onRemoveMission,
+  onEditBoxTypes,
+}: {
+  mission: SessionMission;
+  rows: HaulingChecklistRow[];
+  isFocused?: boolean;
+} & MissionContractHandlers) {
+  const view = missionContractView(mission, rows);
+  const {
+    isHidden,
+    isCompleted,
+    rank,
+    title,
+    totalScu,
+    reward,
+    exp,
+    fromLocations,
+    toLocations,
+    statusBadge,
+  } = view;
 
   return (
     <tr
@@ -457,7 +751,7 @@ const MissionContractRow = memo(function MissionContractRow({
               : "text-rsi-text",
           ].join(" ")}
         >
-          {title || mission.title}
+          {title}
         </p>
         <ul
           className={[
@@ -465,16 +759,7 @@ const MissionContractRow = memo(function MissionContractRow({
             isCompleted ? "line-through opacity-80" : "",
           ].join(" ")}
         >
-          {(cargoBoxLines.length > 0
-            ? cargoBoxLines
-            : [
-                {
-                  commoditySlug: "_",
-                  commodity: "Cargo",
-                  scu: totalScu,
-                },
-              ]
-          ).map((line) => (
+          {cargoLinesOrFallback(view).map((line) => (
             <li key={line.commoditySlug} className="break-words">
               {line.scu} SCU {line.commodity}
             </li>
@@ -509,71 +794,11 @@ const MissionContractRow = memo(function MissionContractRow({
         <LocationList items={toLocations} />
       </td>
       <td className={tdClass}>
-        <button
-          type="button"
-          disabled={isCompleted}
-          title={
-            isCompleted
-              ? "Box types locked on completed contracts"
-              : "Edit box types"
-          }
-          aria-label={`Edit box types for ${mission.title}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEditBoxTypes(mission.id);
-          }}
-          className={[
-            "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1",
-            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-            isCompleted
-              ? "cursor-not-allowed border-rsi-border/50 opacity-60"
-              : "border-rsi-border bg-rsi-surface/80 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
-          ].join(" ")}
-        >
-          <span className="flex flex-col items-start gap-1">
-            {(cargoBoxLines.length > 0
-              ? cargoBoxLines
-              : [
-                  {
-                    commoditySlug: "_",
-                    commodity: "Cargo",
-                    scu: totalScu,
-                  },
-                ]
-            ).map((line) => {
-              const splits =
-                readyBoxes.scuCargoBoxSplits?.[line.commoditySlug] ??
-                resolvedBoxSplits(mission);
-              const cargoColor =
-                resolveCommodityColorHex(null, null, line.commoditySlug) ??
-                "var(--rsi-accent)";
-              return (
-                <span
-                  key={line.commoditySlug}
-                  className="flex flex-col items-start gap-0.5"
-                >
-                  <span
-                    className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
-                    style={{
-                      color: isCompleted
-                        ? "var(--rsi-text-muted)"
-                        : cargoColor,
-                    }}
-                  >
-                    {line.commodity}
-                  </span>
-                  <CargoBoxCountIcons
-                    boxCounts={boxCountsFromBreakdown(splits)}
-                    color={
-                      isCompleted ? "var(--rsi-text-muted)" : cargoColor
-                    }
-                    className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.6rem]"
-                  />
-                </span>
-              );
-            })}
-          </span>
-        </button>
+        <MissionBoxesButton
+          mission={mission}
+          view={view}
+          onEditBoxTypes={onEditBoxTypes}
+        />
       </td>
       <td className={`${tdClass} w-10`}>
         <MissionActionsMenu
@@ -812,30 +1037,11 @@ export function SessionMissionsModal({
               Loading contracts…
             </p>
           ) : (
-            <table className="w-full min-w-[58rem] border-collapse text-left">
-              <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
-                <tr>
-                  <th className={`${thClass} w-[5.25rem]`}>Rank</th>
-                  <th className={`${thClass} w-[14rem]`}>Title</th>
-                  <th className={`${thClass} w-[9.5rem] text-right`}>Reward</th>
-                  <th className={`${thClass} w-[7.5rem] text-right`}>SCU</th>
-                  <th
-                    className={`${thClass} w-[7.5rem] text-right`}
-                    title="Approximate Covalex hauling reputation XP"
-                  >
-                    EXP
-                  </th>
-                  <th className={`${thClass} w-[12%] min-w-0`}>From</th>
-                  <th className={`${thClass} w-[12%] min-w-0`}>To</th>
-                  <th className={`${thClass} min-w-[8rem] w-[14%]`}>Boxes</th>
-                  <th className={`${thClass} w-10`}>
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Mobile: stacked cards — no horizontal scroll */}
+              <div className="space-y-2.5 p-3 pb-4 md:hidden">
                 {enriched.map((mission) => (
-                  <MissionContractRow
+                  <MissionContractCard
                     key={mission.id}
                     mission={mission}
                     rows={rows}
@@ -847,93 +1053,222 @@ export function SessionMissionsModal({
                     onEditBoxTypes={handleEditBoxTypes}
                   />
                 ))}
-              </tbody>
-              <tfoot className="sticky bottom-0 border-t border-rsi-border bg-rsi-surface">
-                <tr className="whitespace-nowrap">
-                  <td className={`${tdClass} py-2.5`}>
-                    <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                      Total
-                    </span>
-                  </td>
-                  <td
-                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                    colSpan={2}
-                    title="Earned / session total aUEC"
-                  >
-                    {columnTotals.rewardAuec > 0 ? (
-                      <>
-                        <span
-                          className={
-                            columnTotals.rewardEarned > 0
-                              ? "text-rsi-success"
-                              : undefined
-                          }
-                        >
-                          {Math.floor(
-                            columnTotals.rewardEarned,
-                          ).toLocaleString("en-US")}
-                        </span>
-                        {" / "}
-                        {Math.floor(columnTotals.rewardAuec).toLocaleString(
-                          "en-US",
-                        )}{" "}
-                        aUEC
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td
-                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                    title="Completed contract SCU / session total SCU"
-                  >
-                    <span
-                      className={
-                        columnTotals.scuEarned > 0
-                          ? "text-rsi-success"
-                          : undefined
-                      }
+              </div>
+
+              {/* Desktop: full contracts table */}
+              <table className="hidden w-full min-w-[58rem] border-collapse text-left md:table">
+                <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
+                  <tr>
+                    <th className={`${thClass} w-[5.25rem]`}>Rank</th>
+                    <th className={`${thClass} w-[14rem]`}>Title</th>
+                    <th className={`${thClass} w-[9.5rem] text-right`}>
+                      Reward
+                    </th>
+                    <th className={`${thClass} w-[7.5rem] text-right`}>SCU</th>
+                    <th
+                      className={`${thClass} w-[7.5rem] text-right`}
+                      title="Approximate Covalex hauling reputation XP"
                     >
-                      {columnTotals.scuEarned}
-                    </span>
-                    {" / "}
-                    {columnTotals.scu} SCU
-                  </td>
-                  <td
-                    className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                    title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
-                  >
-                    {columnTotals.exp > 0 ? (
-                      <>
-                        <span
-                          className={
-                            columnTotals.expEarned > 0
-                              ? "text-rsi-success"
-                              : undefined
-                          }
-                        >
-                          {formatHaulingRepXp(columnTotals.expEarned)}
-                        </span>
-                        {" / "}
-                        {formatHaulingRepXp(columnTotals.exp)} EXP
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className={`${tdClass} py-2.5`} />
-                  <td className={`${tdClass} py-2.5`} />
-                  <td
-                    className={`${tdClass} py-2.5 font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                  >
-                    {columnTotals.boxes} boxes
-                  </td>
-                  <td className={`${tdClass} py-2.5`} />
-                </tr>
-              </tfoot>
-            </table>
+                      EXP
+                    </th>
+                    <th className={`${thClass} w-[12%] min-w-0`}>From</th>
+                    <th className={`${thClass} w-[12%] min-w-0`}>To</th>
+                    <th className={`${thClass} min-w-[8rem] w-[14%]`}>Boxes</th>
+                    <th className={`${thClass} w-10`}>
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enriched.map((mission) => (
+                    <MissionContractRow
+                      key={mission.id}
+                      mission={mission}
+                      rows={rows}
+                      isFocused={mission.id === selectedMissionId}
+                      onToggleSelect={onToggleSelect}
+                      onToggleHidden={handleToggleHidden}
+                      onToggleCompleted={handleToggleCompleted}
+                      onRemoveMission={handleRemoveMission}
+                      onEditBoxTypes={handleEditBoxTypes}
+                    />
+                  ))}
+                </tbody>
+                <tfoot className="sticky bottom-0 border-t border-rsi-border bg-rsi-surface">
+                  <tr className="whitespace-nowrap">
+                    <td className={`${tdClass} py-2.5`}>
+                      <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                        Total
+                      </span>
+                    </td>
+                    <td
+                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                      colSpan={2}
+                      title="Earned / session total aUEC"
+                    >
+                      {columnTotals.rewardAuec > 0 ? (
+                        <>
+                          <span
+                            className={
+                              columnTotals.rewardEarned > 0
+                                ? "text-rsi-success"
+                                : undefined
+                            }
+                          >
+                            {Math.floor(
+                              columnTotals.rewardEarned,
+                            ).toLocaleString("en-US")}
+                          </span>
+                          {" / "}
+                          {Math.floor(columnTotals.rewardAuec).toLocaleString(
+                            "en-US",
+                          )}{" "}
+                          aUEC
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td
+                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                      title="Completed contract SCU / session total SCU"
+                    >
+                      <span
+                        className={
+                          columnTotals.scuEarned > 0
+                            ? "text-rsi-success"
+                            : undefined
+                        }
+                      >
+                        {columnTotals.scuEarned}
+                      </span>
+                      {" / "}
+                      {columnTotals.scu} SCU
+                    </td>
+                    <td
+                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                      title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
+                    >
+                      {columnTotals.exp > 0 ? (
+                        <>
+                          <span
+                            className={
+                              columnTotals.expEarned > 0
+                                ? "text-rsi-success"
+                                : undefined
+                            }
+                          >
+                            {formatHaulingRepXp(columnTotals.expEarned)}
+                          </span>
+                          {" / "}
+                          {formatHaulingRepXp(columnTotals.exp)} EXP
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className={`${tdClass} py-2.5`} />
+                    <td className={`${tdClass} py-2.5`} />
+                    <td
+                      className={`${tdClass} py-2.5 font-mono text-[0.65rem] tabular-nums text-rsi-text`}
+                    >
+                      {columnTotals.boxes} boxes
+                    </td>
+                    <td className={`${tdClass} py-2.5`} />
+                  </tr>
+                </tfoot>
+              </table>
+            </>
           )}
         </div>
+
+        {paintRows && enriched.length > 0 ? (
+          <footer className="shrink-0 border-t border-rsi-border bg-rsi-surface px-3 py-2.5 md:hidden">
+            <p className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+              Total
+            </p>
+            <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.65rem] tabular-nums text-rsi-text">
+              <div title="Earned / session total aUEC">
+                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  aUEC
+                </dt>
+                <dd className="mt-0.5">
+                  {columnTotals.rewardAuec > 0 ? (
+                    <>
+                      <span
+                        className={
+                          columnTotals.rewardEarned > 0
+                            ? "text-rsi-success"
+                            : undefined
+                        }
+                      >
+                        {Math.floor(columnTotals.rewardEarned).toLocaleString(
+                          "en-US",
+                        )}
+                      </span>
+                      {" / "}
+                      {Math.floor(columnTotals.rewardAuec).toLocaleString(
+                        "en-US",
+                      )}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+              <div title="Completed contract SCU / session total SCU">
+                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  SCU
+                </dt>
+                <dd className="mt-0.5">
+                  <span
+                    className={
+                      columnTotals.scuEarned > 0
+                        ? "text-rsi-success"
+                        : undefined
+                    }
+                  >
+                    {columnTotals.scuEarned}
+                  </span>
+                  {" / "}
+                  {columnTotals.scu}
+                </dd>
+              </div>
+              <div
+                title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
+              >
+                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  EXP
+                </dt>
+                <dd className="mt-0.5">
+                  {columnTotals.exp > 0 ? (
+                    <>
+                      <span
+                        className={
+                          columnTotals.expEarned > 0
+                            ? "text-rsi-success"
+                            : undefined
+                        }
+                      >
+                        {formatHaulingRepXp(columnTotals.expEarned)}
+                      </span>
+                      {" / "}
+                      {formatHaulingRepXp(columnTotals.exp)}
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  Boxes
+                </dt>
+                <dd className="mt-0.5">{columnTotals.boxes}</dd>
+              </div>
+            </dl>
+          </footer>
+        ) : null}
       </div>
 
       {open && boxEditMission ? (

@@ -29,7 +29,7 @@ function StatLabel({
 }) {
   return (
     <p
-      className="font-mono text-[0.55rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted"
+      className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]"
       title={title}
     >
       {children}
@@ -47,7 +47,7 @@ function StatValue({
   return (
     <p
       className={[
-        "mt-1.5 font-mono text-sm leading-none tabular-nums tracking-wide text-rsi-text",
+        "mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1.5 sm:text-sm",
         className,
       ]
         .filter(Boolean)
@@ -68,19 +68,20 @@ function Fraction({
   currentClassName?: string;
 }) {
   return (
-    <>
+    <span className="inline whitespace-nowrap">
       <span className={currentClassName}>{current}</span>
       <span className="mx-0.5 text-rsi-text-muted">/</span>
       <span>{total}</span>
-    </>
+    </span>
   );
 }
 
+/** Compact single-row strip (horizontal scroll on narrow viewports). */
 const stripClass =
-  "inline-flex max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto rounded-rsi border border-rsi-border bg-rsi-bg-deep/55";
+  "flex w-full min-w-0 max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto overscroll-x-contain rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 const cellClass =
-  "flex min-w-[4.5rem] flex-col justify-center px-3 py-2 text-left first:pl-3.5 last:pr-3.5";
+  "flex shrink-0 flex-col justify-center px-2 py-1 text-left first:pl-2.5 last:pr-2.5 sm:min-w-[4.5rem] sm:px-3 sm:py-2 sm:first:pl-3.5 sm:last:pr-3.5";
 
 const interactiveCellClass = [
   cellClass,
@@ -163,7 +164,7 @@ export type SessionRouteProgressStatsProps = {
   onCapacityClick?: () => void;
   /**
    * Physical cargo holds on the selected ship (from the grid sketch).
-   * Kept for callers; toolbar label is always “Storage bays”.
+   * Kept for callers; toolbar label is Bay / Bays.
    */
   cargoBayCount?: number;
   /** Optional control rendered just right of the route progress strip. */
@@ -171,11 +172,26 @@ export type SessionRouteProgressStatsProps = {
   className?: string;
 };
 
-function formatToolbarAuec(amount: number): string {
+/** Full aUEC for tooltips / a11y. */
+function formatToolbarAuecExact(amount: number): string {
   return Math.floor(amount).toLocaleString("en-US");
 }
 
-/** Contracts + Stops + Distance + Storage bays + aUEC for the checklist toolbar. */
+/** Compact toolbar aUEC — `99.5k`, `1.2M` (exact value stays in title). */
+function formatToolbarAuec(amount: number): string {
+  const n = Math.floor(Math.max(0, amount));
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) {
+    if (n % 1000 === 0) return `${n / 1000}k`;
+    const tenths = Math.round(n / 100) / 10;
+    return `${String(tenths).replace(/\.0$/, "")}k`;
+  }
+  if (n % 1_000_000 === 0) return `${n / 1_000_000}M`;
+  const tenths = Math.round(n / 100_000) / 10;
+  return `${String(tenths).replace(/\.0$/, "")}M`;
+}
+
+/** Contracts + Stops + Storage bays + Distance + aUEC for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -195,7 +211,6 @@ export function SessionRouteProgressStats({
   trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
-  const stopsLabel = totalLegs === 1 ? "Stop" : "Stops";
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const showAuec = auecProjected > 0 || auecEarned > 0;
   const traveledLabel = formatDistanceToNext(distanceTraveled);
@@ -203,7 +218,7 @@ export function SessionRouteProgressStats({
   const showDistance = Boolean(distanceTotal || distanceTraveled);
   const stopsBody = (
     <>
-      <StatLabel>{stopsLabel}</StatLabel>
+      <StatLabel>Stop</StatLabel>
       <StatValue>
         <Fraction current={completedLegs} total={totalLegs} />
       </StatValue>
@@ -211,7 +226,7 @@ export function SessionRouteProgressStats({
   );
   const capacityBody = (
     <>
-      <StatLabel>Storage bays</StatLabel>
+      <StatLabel title="Bay">Bay</StatLabel>
       <StatValue>
         <Fraction
           current={onboardScu}
@@ -219,7 +234,7 @@ export function SessionRouteProgressStats({
           currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
         />
         <span
-          className="ml-1 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+          className="ml-1 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
           title={SCU_TITLE}
         >
           SCU
@@ -229,7 +244,9 @@ export function SessionRouteProgressStats({
   );
   const auecBody = (
     <>
-      <StatLabel title={AUEC_TITLE}>aUEC</StatLabel>
+      <StatLabel title={AUEC_TITLE}>
+        <span className="normal-case">aUEC</span>
+      </StatLabel>
       <StatValue>
         <Fraction
           current={formatToolbarAuec(auecEarned)}
@@ -245,7 +262,10 @@ export function SessionRouteProgressStats({
   );
   const distanceBody = (
     <>
-      <StatLabel>Trip Distance</StatLabel>
+      <StatLabel title="Distance">
+        <span className="sm:hidden">Dist</span>
+        <span className="hidden sm:inline">Distance</span>
+      </StatLabel>
       <StatValue>
         <Fraction current={traveledLabel} total={totalDistanceLabel} />
       </StatValue>
@@ -254,17 +274,21 @@ export function SessionRouteProgressStats({
 
   return (
     <div
-      className={["flex flex-wrap items-center gap-2", className]
+      className={["flex w-full min-w-0 max-w-full items-center gap-2", className]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={stripClass} role="group" aria-label="Route progress">
+      <div
+        className={[stripClass, "!w-fit max-w-full"].join(" ")}
+        role="group"
+        aria-label="Route progress"
+      >
         <button
           type="button"
           onClick={onMissionsClick}
           className={interactiveCellClass}
         >
-          <StatLabel>Contracts</StatLabel>
+          <StatLabel>Contract</StatLabel>
           <StatValue>
             <Fraction current={missionsCompleted} total={missionCount} />
           </StatValue>
@@ -280,6 +304,19 @@ export function SessionRouteProgressStats({
         ) : (
           <div className={cellClass}>{stopsBody}</div>
         )}
+        {onCapacityClick ? (
+          <button
+            type="button"
+            onClick={onCapacityClick}
+            className={interactiveCellClass}
+            title="Open bays"
+            aria-label="Open bays"
+          >
+            {capacityBody}
+          </button>
+        ) : (
+          <div className={cellClass}>{capacityBody}</div>
+        )}
         {showDistance ? (
           <div
             className={cellClass}
@@ -289,24 +326,11 @@ export function SessionRouteProgressStats({
             {distanceBody}
           </div>
         ) : null}
-        {onCapacityClick ? (
-          <button
-            type="button"
-            onClick={onCapacityClick}
-            className={interactiveCellClass}
-            title="Open storage bays"
-            aria-label="Open storage bays"
-          >
-            {capacityBody}
-          </button>
-        ) : (
-          <div className={cellClass}>{capacityBody}</div>
-        )}
         {showAuec ? (
           <div
-            className={cellClass}
-            title={`Projected payout ${formatToolbarAuec(auecProjected)} aUEC; earned ${formatToolbarAuec(auecEarned)} aUEC from completed contracts`}
-            aria-label={`aUEC ${formatToolbarAuec(auecEarned)} of ${formatToolbarAuec(auecProjected)}`}
+            className={[cellClass, "shrink-0"].join(" ")}
+            title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+            aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
           >
             {auecBody}
           </div>

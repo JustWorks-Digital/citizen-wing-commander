@@ -74,7 +74,7 @@ export function TripPlanInvalidBanner({
         <p className="mt-1 text-sm text-rsi-text">
           This route schedules a drop-off before the cargo can be on the ship.
         </p>
-        <p className="mt-1 truncate text-xs text-rsi-text-muted" title={summary}>
+        <p className="mt-1 text-xs leading-snug break-words text-rsi-text-muted">
           {summary}
           {issues.length > 1
             ? ` · ${issues.length} issues across ${issuesByStop.length} stops`

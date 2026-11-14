@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session contracts table: Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions. Boxes always label the cargo type above the mix icons (single- or multi-cargo). Footer totals show earned/total for aUEC, SCU, and EXP; ⋯ menu for complete/hide/delete.",
+          "Session contracts: stacked cards on small screens (no horizontal scroll); Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions table from md+. Boxes always label the cargo type above the mix icons. Footer totals show earned/total for aUEC, SCU, and EXP; ⋯ menu for complete/hide/delete.",
       },
     },
   },
@@ -29,9 +29,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Table of session contracts; Boxes opens the crate-mix modal. */
+/** Desktop table / mobile cards; Boxes opens the crate-mix modal. */
 export const Table: Story = {};
 
+/** Mobile card layout (viewport ≤767px). */
+export const MobileCards: Story = {
+  parameters: {
+    viewport: { defaultViewport: "mobile1" },
+  },
+};
 /** Opened from a stop Contracts tile — focused row is highlighted. */
 export const FocusedRow: Story = {
   args: {

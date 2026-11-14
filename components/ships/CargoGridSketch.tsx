@@ -216,6 +216,11 @@ function zoneFillClass(zone: CargoGridZone, cargoIndex: number): string {
   return CARGO_ZONE_FILL[cargoIndex % CARGO_ZONE_FILL.length] ?? CARGO_ZONE_FILL[0];
 }
 
+/** Visible cargo-grid chrome: Zone 1, Zone 2, … */
+function zoneOrdinalLabel(index: number): string {
+  return `Zone ${index}`;
+}
+
 /**
  * Cargo-grid sketch: 2D (overhead) and/or 3D isometric stacked cubes.
  * With `views="both"`, switch via 2D / 3D / Split tabs.
@@ -1297,13 +1302,13 @@ export function CargoGridSketch({
                       key={zone.id}
                       className={bayLabelChrome.columnClass}
                     >
-                      {/* Match Bay N chrome so the gap sits with cargo grids. */}
+                      {/* Match Zone N chrome so the gap sits with cargo grids. */}
                       {bayLabelChrome.labelBeforeGrid
-                        ? bayLabel("Bay 0", true)
+                        ? bayLabel("Zone 0", true)
                         : null}
                       {gapGrid}
                       {!bayLabelChrome.labelBeforeGrid
-                        ? bayLabel("Bay 0", true)
+                        ? bayLabel("Zone 0", true)
                         : null}
                     </div>
                   );
@@ -1666,11 +1671,11 @@ export function CargoGridSketch({
                     className={bayLabelChrome.columnClass}
                   >
                     {bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(`Bay ${bayNumber}`, false)
+                      ? bayLabel(zoneOrdinalLabel(bayNumber), false)
                       : null}
                     {cargoGrid}
                     {!bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(`Bay ${bayNumber}`, false)
+                      ? bayLabel(zoneOrdinalLabel(bayNumber), false)
                       : null}
                   </div>
                 );

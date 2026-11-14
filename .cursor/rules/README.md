@@ -8,6 +8,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`no-bloat-content.mdc`](./no-bloat-content.mdc) | No scaffold filler or Spectrum/RSI product copy in UI |
 | [`third-party-sources.mdc`](./third-party-sources.mdc) | Accepted external SC data sources (see registry YAML) |
 | [`mcp-server.mdc`](./mcp-server.mdc) | MCP `/mcp` tools for ChatGPT checklist updates; playbook `docs/mcp-screenshot-hauling-playbook.md` |
+| [`pending-backend-ui.mdc`](./pending-backend-ui.mdc) | Spinner on the control/section waiting for backend persist |
 | [`storybook-gate.mdc`](./storybook-gate.mdc) | Storybook required before UI commits |
 | [`database.mdc`](./database.mdc) | Postgres + Drizzle schema & migrations |
 | [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |

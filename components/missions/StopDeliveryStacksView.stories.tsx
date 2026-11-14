@@ -45,7 +45,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pickup/delivery crate stacks with Peel, Breakdown, and zoom (− / % / +) under Breakdown.",
+          "Flat pickup/delivery crate stacks with Peel and zoom (− / % / +).",
       },
     },
   },

@@ -33,7 +33,7 @@ export function SessionElapsedLabel({ session }: SessionElapsedLabelProps) {
   return (
     <p
       className={[
-        "font-mono text-[0.65rem] uppercase tracking-[0.16em] tabular-nums",
+        "font-mono text-[0.65rem] uppercase tracking-[0.14em] tabular-nums",
         isComplete ? "text-rsi-success" : "text-rsi-text-secondary",
       ].join(" ")}
       title="Total time"

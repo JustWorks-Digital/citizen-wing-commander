@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar. Opens Hide / Show history and the Controls keyboard list.",
+          "Right-edge ⋯ on the route checklist toolbar. Opens trip time, Hide / Show history, and the Controls keyboard list.",
       },
     },
   },
@@ -18,6 +18,11 @@ const meta = {
     hideCompleted: false,
     completedCount: 2,
     onToggleHistory: () => {},
+    elapsed: (
+      <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary">
+        <span className="text-rsi-text-muted">Time </span>1h 24m
+      </p>
+    ),
   },
 } satisfies Meta<typeof RouteChecklistMenu>;
 

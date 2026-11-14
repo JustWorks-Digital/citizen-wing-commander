@@ -120,7 +120,7 @@ export function SessionTabs({
       <div
         role="tablist"
         aria-label="Hauling trips"
-        className="flex min-w-0 flex-wrap items-stretch gap-1"
+        className="flex min-w-0 max-w-full flex-wrap items-stretch gap-1"
       >
         {shown.map((tab) => {
           const isActive = tab.id === activeSessionId;
@@ -128,7 +128,7 @@ export function SessionTabs({
             <div
               key={tab.id}
               className={[
-                "group relative inline-flex max-w-[11rem] shrink-0 items-stretch sm:max-w-[14rem]",
+                "group relative inline-flex w-[calc(50%-0.125rem)] max-w-[11rem] shrink-0 items-stretch sm:w-auto sm:max-w-[14rem]",
                 isBusy ? "opacity-60" : "",
               ].join(" ")}
             >

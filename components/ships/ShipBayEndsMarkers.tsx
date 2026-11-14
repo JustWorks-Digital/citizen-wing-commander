@@ -57,7 +57,7 @@ export type ShipBayEndsFrameProps = {
 };
 
 /**
- * Same footprint as the 2D “Bay N” header so Front/Rear center on the grids,
+ * Same footprint as the 2D “Zone 1” header so Front/Rear center on the grids,
  * not on the label+grid column (home / left / right only).
  */
 function BayLabelSpacer() {
@@ -66,7 +66,7 @@ function BayLabelSpacer() {
       className="pointer-events-none invisible shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]"
       aria-hidden
     >
-      Bay 0
+      Zone 1
     </span>
   );
 }
@@ -77,7 +77,7 @@ function EndRail({
   railWidth,
   labelClassName,
   labelStyle,
-  /** Match Bay N chrome: before = home/left; after = right (180°). */
+  /** Match Zone N chrome: before = home/left; after = right (180°). */
   baySpacer,
 }: {
   end: "front" | "rear";
@@ -171,9 +171,9 @@ export function ShipBayEndsFrame({
   const railWidth = compact ? "w-8" : "w-11";
   const gap = compact ? "gap-2" : "gap-4";
   const d = ((squareDegrees % 360) + 360) % 360;
-  // Home/left: Bay N above grid → spacer before label.
-  // Right (180°): Bay N below grid locally (screen-above after turn) → spacer after.
-  // Up/down: Bay N screen-left → no spacer; ends center on grids.
+  // Home/left: Zone N above grid → spacer before label.
+  // Right (180°): Zone N below grid locally (screen-above after turn) → spacer after.
+  // Up/down: Zone N screen-left → no spacer; ends center on grids.
   const baySpacer: "before" | "after" | "none" = iso
     ? "none"
     : d === 180

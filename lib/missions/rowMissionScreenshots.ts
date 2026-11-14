@@ -1,7 +1,10 @@
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
-import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
+import {
+  resolveCommoditySlug,
+  resolveLocationSlug,
+} from "@/lib/sessions/resolveRefs";
 
 export type RowMissionScreenshotRef = {
   logicalPath: string;
@@ -128,6 +131,71 @@ function screenshotUrlForSession(
   return screenshotUrlFromLogicalPath(logicalPath);
 }
 
+function commoditySlugOf(nameOrSlug: string): string {
+  return (
+    resolveCommoditySlug(nameOrSlug) ?? nameOrSlug.trim().toLowerCase()
+  );
+}
+
+/** Whether the mission’s cargo / splits include this commodity slug. */
+export function missionCarriesCommodity(
+  mission: SessionMission,
+  commoditySlug: string,
+): boolean {
+  const want = commoditySlug.trim().toLowerCase();
+  if (!want) return false;
+  if (
+    mission.cargo.some((line) => commoditySlugOf(line.commodity) === want)
+  ) {
+    return true;
+  }
+  if (
+    mission.deliverySplits?.some(
+      (split) => commoditySlugOf(split.commodity) === want,
+    )
+  ) {
+    return true;
+  }
+  if (mission.pickupSplits) {
+    for (const lines of Object.values(mission.pickupSplits)) {
+      if (lines.some((line) => commoditySlugOf(line.commodity) === want)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Infer `missionId` for a cargo line that was stored without one — match
+ * stop location + pickup/delivery role + commodity against session missions.
+ * Returns null when already tagged, ambiguous, or unmatched.
+ */
+export function inferCargoMissionId(input: {
+  missionId?: string | null;
+  commoditySlug: string;
+  role?: "pickup" | "delivery" | null;
+  row: HaulingChecklistRow;
+  missions: SessionMission[];
+  groupRole?: "pickup" | "delivery" | null;
+}): string | null {
+  const tagged = input.missionId?.trim();
+  if (tagged) return tagged;
+
+  const role = input.role ?? input.groupRole ?? null;
+  const slug = input.row.locationSlug;
+  const candidates = input.missions.filter((mission) => {
+    if (mission.isHidden) return false;
+    const collects = missionCollectsAt(mission, slug);
+    const delivers = missionDeliversAt(mission, slug);
+    if (role === "pickup" && !collects) return false;
+    if (role === "delivery" && !delivers) return false;
+    if (role == null && !collects && !delivers) return false;
+    return missionCarriesCommodity(mission, input.commoditySlug);
+  });
+  return candidates.length === 1 ? candidates[0]!.id : null;
+}
+
 /**
  * Missions that touch this stop (collect and/or deliver), with their
  * screenshot references — used on checklist rows so drivers can open the
@@ -141,13 +209,25 @@ export function missionsRelevantToRow(
   const wantDelivery = rowHasDeliveryCargo(row);
   const missionIdsOnCargo = new Set(
     row.cargoDeliveries
-      .map((cargo) => cargo.missionId)
+      .map((cargo) =>
+        inferCargoMissionId({
+          missionId: cargo.missionId,
+          commoditySlug: cargo.commoditySlug,
+          role: cargo.role,
+          row,
+          missions,
+        }),
+      )
       .filter((id): id is string => Boolean(id)),
   );
 
   return missions.filter((mission) => {
     if (mission.isHidden) return false;
-    if (missionIdsOnCargo.has(mission.id)) return true;
+    // Prefer cargo-tagged missions for this stop — do not also pull in every
+    // other contract that merely shares the location.
+    if (missionIdsOnCargo.size > 0) {
+      return missionIdsOnCargo.has(mission.id);
+    }
     const collects = missionCollectsAt(mission, row.locationSlug);
     const delivers = missionDeliversAt(mission, row.locationSlug);
     if (wantDelivery && delivers) return true;

@@ -8,6 +8,7 @@ alwaysApply: true
 - Stack: Next.js (App Router) + TypeScript + Tailwind v4 + Storybook + Postgres/Drizzle. Keep one coherent Tailwind setup (no duplicate PostCSS / Tailwind configs).
 - Target repo: `JustWorks-Digital/citizen-wing-commander`. Do not push scaffolding to unrelated linked clones.
 - Prefer small, reusable primitives under `components/ui/` before page-specific markup.
+- While waiting on backend persist, show a spinner on the triggering control/section (`pending-backend-ui.mdc`, `components/ui/Spinner`).
 - One-off `/dev/*` preview pages are fine while polishing a UI section; delete them when the review is done. Not required for every tweak.
 - Document new standing conventions here or as a new file under `.cursor/rules/`, and link them from `.cursor/rules/README.md`.
 - Keep commits reviewable; do not force-push shared history.

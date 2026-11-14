@@ -152,6 +152,7 @@ export function SessionChecklistView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tripRepairBusy, setTripRepairBusy] = useState(false);
   const [tripRepairError, setTripRepairError] = useState<string | null>(null);
+  const [saveInFlight, setSaveInFlight] = useState(0);
   const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
   const [shipsLoading, setShipsLoading] = useState(true);
   const [shipsError, setShipsError] = useState<string | null>(null);
@@ -426,6 +427,7 @@ export function SessionChecklistView({
       return Promise.resolve();
     }
     savingRef.current = true;
+    setSaveInFlight((count) => count + 1);
     // Stamp locally so in-flight polls can't overwrite with a pre-save body.
     const stamped: SessionChecklistModel = {
       ...next,
@@ -459,6 +461,7 @@ export function SessionChecklistView({
       })
       .finally(() => {
         savingRef.current = false;
+        setSaveInFlight((count) => Math.max(0, count - 1));
       });
   }, [initial]);
 
@@ -638,7 +641,7 @@ export function SessionChecklistView({
   );
 
   const onToggleCargoHandled = useCallback(
-    (rowId: string, cargoIndex: number) => {
+    (rowId: string, cargoIndex: number) =>
       persistSession(
         applySessionCompletionTiming({
           ...sessionRef.current,
@@ -656,8 +659,7 @@ export function SessionChecklistView({
             };
           }),
         }),
-      );
-    },
+      ),
     [persistSession],
   );
 
@@ -702,7 +704,7 @@ export function SessionChecklistView({
       reasonShopSlug?: string | null;
     }) => {
       const current = sessionRef.current;
-      persistSession(
+      return persistSession(
         applySessionCompletionTiming({
           ...current,
           shipSlugs: current.shipSlugs ?? [],
@@ -740,11 +742,11 @@ export function SessionChecklistView({
           );
           if (!updated.ok) {
             setLoadError(updated.error);
-            return;
+            return Promise.resolve();
           }
           rows = updated.rows;
         }
-        persistSession(
+        return persistSession(
           applySessionCompletionTiming({
             ...current,
             shipSlugs: current.shipSlugs ?? [],
@@ -752,7 +754,6 @@ export function SessionChecklistView({
             rows,
           }),
         );
-        return;
       }
 
       const updated = updateQuantumTravelEndpoints(
@@ -771,9 +772,9 @@ export function SessionChecklistView({
       );
       if (!updated.ok) {
         setLoadError(updated.error);
-        return;
+        return Promise.resolve();
       }
-      persistSession(
+      return persistSession(
         applySessionCompletionTiming({
           ...current,
           shipSlugs: current.shipSlugs ?? [],
@@ -970,7 +971,7 @@ export function SessionChecklistView({
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
       <SessionTabs
         sessions={tabs}
         activeSessionId={routeSessionId ?? activeSessionId ?? session.id}
@@ -996,23 +997,23 @@ export function SessionChecklistView({
         }}
       />
 
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
           Trip
         </p>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <SessionNameField
               name={session.sessionName}
               disabled={Boolean(initial) || tabsBusy}
               onRename={renameSession}
             />
-            <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
+            <p className="mt-1 break-all font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
               ID {session.id}
             </p>
           </div>
           <SessionSourceStat
-            className="shrink-0"
+            className="w-full sm:w-auto sm:shrink-0"
             onMissionsClick={() => setCatalogOpen(true)}
             onClick={() => setScreenshotsOpen(true)}
           />
@@ -1082,6 +1083,7 @@ export function SessionChecklistView({
         focusedStopId={resolvedFocusedStopId}
         onFocusStop={setFocusedStopId}
         shipName={selectedShipName}
+        shipSlug={selectedShipSlug}
         missions={session.missions ?? []}
         sessionId={session.id}
         startLocationSlug={session.startLocationSlug ?? null}
@@ -1094,6 +1096,7 @@ export function SessionChecklistView({
         onOpenStops={toggleStops}
         onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
+        isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
         onToggle={onToggleStop}

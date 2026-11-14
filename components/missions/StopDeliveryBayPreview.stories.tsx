@@ -128,7 +128,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Pickup stops with a route can switch Cargo (by commodity) ↔ Piles (hangar piles by delivery location). Double-click the under-stack cargo label (abbrev + SCU) — or a Breakdown row — to edit that mission’s box types when `onEditMissionBoxes` is provided.",
+          "Flat pad stacks for stop cargo. Pickup stops with a route can switch Cargo (by commodity) ↔ Piles (hangar piles by delivery location). Double-click the under-stack cargo label (abbrev + SCU) to edit that mission’s box types when `onEditMissionBoxes` is provided.",
       },
     },
   },

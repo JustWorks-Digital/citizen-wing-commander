@@ -1,0 +1,28 @@
+# Pending backend UI
+
+When the UI is waiting on the server (save, API, MCP-backed persist, catalog write), **show a spinner on the control or section that triggered the wait** — do not leave the surface looking idle.
+
+## Do
+
+- Put `aria-busy` on the pending control/section; disable re-entry while in flight.
+- Prefer a local spinner on the clicked control (checkbox, cargo tile, quantum row, button). For multi-field cards, also mark the row/section busy.
+- Use the shared `Spinner` from `components/ui/Spinner.tsx` (Storybook **Primitives/Spinner**).
+- Await / `.finally` the persist Promise so pending clears on success and failure.
+- Keep optimistic UI if already used; the spinner means “echo not confirmed yet,” not “blocked forever.”
+
+## Don’t
+
+- Rely only on a global page spinner for trip-table edits.
+- Leave sticky toolbar / stop cards with no feedback while `saveChecklist` (or similar) runs.
+- Invent one-off spinner SVGs in feature files — extend `Spinner` if needed.
+
+## Trip checklist (canonical)
+
+| Action | Pending cue |
+| --- | --- |
+| Mark stop done | Checkbox / Mark complete control |
+| Cargo handled tile | That tile |
+| Quantum insert / retarget | Quantum row (and composer confirm) |
+| Any in-flight session save | Subtle sticky-toolbar “Saving…” |
+
+Same rule applies to modals and catalog writes that mutate live session state.

@@ -60,6 +60,7 @@ export function getCommodityBySlug(
 
 export { getCommodityIconSrc } from "@/lib/fixtures/commodityIcons";
 export { getLocationImageSrc } from "@/lib/fixtures/locationImages";
+export { getShipIconSrc } from "@/lib/fixtures/shipIcons";
 
 export function listShips(): FixtureShip[] {
   return ships.items;
@@ -108,6 +109,8 @@ export type CargoLineDisplay = {
   sourceIndex: number | null;
   /** Shared: crew marked this brick picked up / delivered. */
   isHandled: boolean;
+  /** Session mission this line came from (when known). */
+  missionId: string | null;
 };
 
 /** Structured cargo lines for colored UI rendering. */
@@ -117,6 +120,7 @@ export function describeCargoDeliveries(
     scu: number;
     role?: "pickup" | "delivery";
     isHandled?: boolean;
+    missionId?: string;
   }[],
   fallbackRole?: "pickup" | "delivery" | null,
 ): CargoLineDisplay[] {
@@ -132,10 +136,12 @@ export function describeCargoDeliveries(
         color2: null,
         sourceIndex: null,
         isHandled: false,
+        missionId: null,
       },
     ];
   }
-  return deliveries.map(({ commoditySlug, scu, role, isHandled }, index) => {
+  return deliveries.map(
+    ({ commoditySlug, scu, role, isHandled, missionId }, index) => {
     const commodity = getCommodityBySlug(commoditySlug);
     const commodityName = commodity?.name ?? commoditySlug;
     const amount = `${scu} ${commodityName}`;
@@ -156,6 +162,7 @@ export function describeCargoDeliveries(
       color2: commodity?.color2 ?? null,
       sourceIndex: index,
       isHandled: Boolean(isHandled),
+      missionId: missionId?.trim() || null,
     };
   });
 }

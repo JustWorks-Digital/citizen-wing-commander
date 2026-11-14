@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 const SHORTCUTS = [
   { key: "B", action: "Storage bays" },
@@ -14,17 +14,20 @@ export type RouteChecklistMenuProps = {
   hideCompleted: boolean;
   completedCount: number;
   onToggleHistory: () => void;
+  /** Trip elapsed time (shown at the top of the menu). */
+  elapsed?: ReactNode;
   className?: string;
 };
 
 /**
  * Right-edge ⋯ on the route checklist toolbar.
- * Holds Hide / Show history and the keyboard Controls list.
+ * Holds trip time, Hide / Show history, and the keyboard Controls list.
  */
 export function RouteChecklistMenu({
   hideCompleted,
   completedCount,
   onToggleHistory,
+  elapsed = null,
   className,
 }: RouteChecklistMenuProps) {
   const [open, setOpen] = useState(false);
@@ -77,6 +80,11 @@ export function RouteChecklistMenu({
           aria-label="Route checklist menu"
           className="absolute top-full right-0 z-40 mt-1.5 w-52 rounded-rsi border border-rsi-border bg-rsi-surface px-2.5 py-2 shadow-rsi-panel"
         >
+          {elapsed ? (
+            <div className="mb-2 border-b border-rsi-divider px-1.5 pb-2">
+              {elapsed}
+            </div>
+          ) : null}
           <button
             type="button"
             role="menuitem"
