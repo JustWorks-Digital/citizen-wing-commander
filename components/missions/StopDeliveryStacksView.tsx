@@ -557,7 +557,7 @@ export function StopDeliveryStacksView({
                     {box.deliveryLocationName
                       ? `${box.deliveryLocationName} pile`
                       : isPickup
-                        ? "Pickup"
+                        ? "Pick up"
                         : "Drop off"}{" "}
                     · {box.commodityName} · {box.size} SCU
                   </title>

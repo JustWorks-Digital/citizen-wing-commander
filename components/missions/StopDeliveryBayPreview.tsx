@@ -169,7 +169,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-              Drop off
+              Breakdown
             </p>
             {showDeliveryPeel ? (
               <PadPeelButton
@@ -205,7 +205,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-              Pickup
+              Breakdown
             </p>
             {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -218,7 +218,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 {showPickupModes ? (
                   <div
                     role="tablist"
-                    aria-label="Pickup pad grouping"
+                    aria-label="Pick up pad grouping"
                     className="inline-flex rounded-rsi border border-rsi-border bg-rsi-bg-deep/70 p-0.5"
                   >
                     {(

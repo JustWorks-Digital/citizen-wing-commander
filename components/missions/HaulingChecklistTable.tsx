@@ -327,14 +327,14 @@ function routeActionBadges(routeAction: RouteAction): { label: string; variant: 
     return [{ label: "Quantum", variant: "neutral" }];
   }
   if (routeAction === "pickup") {
-    return [{ label: "Pickup", variant: "accent" }];
+    return [{ label: "Pick up", variant: "accent" }];
   }
   if (routeAction === "delivery") {
     return [{ label: "Delivery", variant: "success" }];
   }
   return [
     { label: "Delivery", variant: "success" },
-    { label: "Pickup", variant: "accent" },
+    { label: "Pick up", variant: "accent" },
   ];
 }
 
@@ -895,7 +895,7 @@ function CargoGroups({
                     : "border-rsi-gold/45",
                 ].join(" ")}
               >
-                {group.role === "pickup" ? "Pickup" : "Drop off"}
+                {group.role === "pickup" ? "Pick up" : "Drop off"}
               </span>
             ) : null}
             {sectionTransfer}
