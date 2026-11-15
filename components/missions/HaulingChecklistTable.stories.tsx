@@ -24,7 +24,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Bay / Distance / aUEC toolbar; ⋯ menu holds Copy trip, Hide / Show history, and Controls. Stop order is edited in the Trip Stops modal (not here). Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo); the Done checkbox left of that image shows a spinner while save finishes. When start ≠ first stop, a compact Quantum row is active first (larger session ship badge + triple >>> travel as one group after the current location; mobile rotates chevrons down). Completed Quantum hops and cargo stops collapse to a Done strip; click a strip to expand the full card (Collapse to fold again). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. With history shown, completed stops collapse to a horizontal Done strip (checkbox, location, SCU); Next stop bridges below until the following stop is done. With history hidden, completed cards drop out but the Next stop bridge still introduces the current incomplete stop. Active stops: Pickup / Drop off contract cards + commodity tiles (hover or first tap shows full cargo name; tap again marks handled); Station/Ship transfer blocks; Payout + Exp; bay preview; Next stop footer and transition bridges both show a larger ship badge + >>> (footer clickable to mark done). Completing a stop scrolls the next Next-stop bridge flush under the sticky toolbar.",
+          "Stacked stop cards — the route checklist (same on mobile and desktop). Sticky Contracts / Stops / Bay / Distance / aUEC toolbar; ⋯ menu holds Copy trip, Hide / Show history, and Controls. Stop order is edited in the Trip Stops modal (not here). Stop headers show a wiki location thumbnail with unique shortName under it (e.g. Tressler, Cassillo); the Done checkbox (desktop left column / mobile Mark complete) sticks under the toolbar while you scroll a tall stop card, with a spinner while save finishes. When start ≠ first stop, a compact Quantum row is active first (50/50 current | destination; ship badge + >>> on the right of the current column; mobile rotates chevrons down). Completed Quantum hops and cargo stops collapse to a Done strip; click a strip to expand the full card (Collapse to fold again). Double-click current location or destination on a Quantum row to retarget via fuzzy search. A + under each stop opens a quantum-travel composer (current location locked, pick desired) and inserts a matching Quantum row. With history shown, completed stops collapse to a horizontal Done strip (checkbox, location, SCU); Next stop bridges below until the following stop is done. With history hidden, completed cards drop out but the Next stop bridge still introduces the current incomplete stop. Active stops: Pickup / Drop off contract cards + commodity tiles (full cargo name on the tile; tap marks handled); transfer blocks (Pickup Station→Ship, Drop off Ship→Station; thumbs above names); Payout + Exp; bay preview; Next stop footer and transition bridges both show a larger ship badge + >>> (footer clickable to mark done). Completing a stop scrolls the next Next-stop bridge flush under the sticky toolbar.",
       },
     },
   },
@@ -146,6 +146,15 @@ export const Default: Story = {
     startLocationSlug: mockSessionChecklist.startLocationSlug,
   },
   render: (args) => <InteractiveTable {...args} />,
+};
+
+/** Initial page / session hydrate — spinner until checklist details arrive. */
+export const Loading: Story = {
+  args: {
+    rows: [],
+    onToggle: () => {},
+    isLoading: true,
+  },
 };
 
 /** Start differs from first stop — compact Quantum origin row is active. */

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { appPaths } from "@/lib/appPaths";
 
-export type AppShellNav = "sessions" | "missions" | "intake" | "marketing";
+export type AppShellNav = "sessions" | "missions" | "capture" | "marketing";
 
 export type AppShellProps = {
   children: ReactNode;
@@ -52,11 +52,11 @@ export function AppShell({ children, activeNav }: AppShellProps) {
               Contracts
             </Link>
             <Link
-              href={appPaths.intake}
-              className={navLinkClass(activeNav === "intake")}
-              aria-current={activeNav === "intake" ? "page" : undefined}
+              href={appPaths.capture}
+              className={navLinkClass(activeNav === "capture")}
+              aria-current={activeNav === "capture" ? "page" : undefined}
             >
-              Intake
+              Capture
             </Link>
             <Link
               href={appPaths.marketing}

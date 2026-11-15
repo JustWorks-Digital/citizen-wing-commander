@@ -1,6 +1,6 @@
 /**
  * Shared image pick / paste / drop helpers for contract screenshot uploads
- * (session Sources modal and Intake page).
+ * (session Sources modal and Capture page).
  */
 
 export const IMAGE_UPLOAD_TYPES = new Set([

@@ -166,6 +166,8 @@ export function SessionChecklistView({
   const savingRef = useRef(false);
   /** False until the first successful GET for this route id (loading placeholder must not win the poll race). */
   const hydratedFromServerRef = useRef(Boolean(initial));
+  /** Drives trip-table spinner until the first hydrate (or first-load failure). */
+  const [isTripLoading, setIsTripLoading] = useState(!initial);
   const sessionRef = useRef(session);
   const activeIdRef = useRef(activeSessionId);
   const routerRef = useRef(router);
@@ -245,6 +247,7 @@ export function SessionChecklistView({
     // a just-applied remote body if this effect restarts for other reasons.
     if (sessionRef.current.id !== routeSessionId) {
       hydratedFromServerRef.current = false;
+      setIsTripLoading(true);
       setSession(
         emptySessionChecklist({
           id: routeSessionId,
@@ -286,7 +289,9 @@ export function SessionChecklistView({
               tab.sessionName === next.sessionName &&
               tab.updatedAt === next.updatedAt &&
               tab.missionCount === next.missionCount &&
-              tab.rowCount === next.rowCount
+              tab.rowCount === next.rowCount &&
+              (tab.shipSlugs ?? []).join("\0") ===
+                (next.shipSlugs ?? []).join("\0")
             );
           })
         ) {
@@ -327,6 +332,7 @@ export function SessionChecklistView({
         }
       }
       hydratedFromServerRef.current = true;
+      setIsTripLoading(false);
       setSession(next);
       setActiveSessionId(next.id);
       setLoadError(null);
@@ -341,12 +347,23 @@ export function SessionChecklistView({
         if (result.etag) etagRef.current = result.etag;
         if (!result.notModified && result.session) {
           applyRemote(result.session);
+        } else if (
+          !hydratedFromServerRef.current &&
+          result.notModified &&
+          !result.session
+        ) {
+          // First GET returned 304 with no body — stop the placeholder spinner.
+          hydratedFromServerRef.current = true;
+          setIsTripLoading(false);
         }
       } catch (error) {
         if (!cancelled) {
           setLoadError(
             error instanceof Error ? error.message : "Failed to load checklist",
           );
+          if (!hydratedFromServerRef.current) {
+            setIsTripLoading(false);
+          }
         }
       }
     };
@@ -506,6 +523,7 @@ export function SessionChecklistView({
                     updatedAt: result.session.updatedAt,
                     missionCount: result.session.missionCount,
                     rowCount: result.session.rows.length,
+                    shipSlugs: result.session.shipSlugs ?? [],
                   }
                 : tab,
             ),
@@ -1259,6 +1277,7 @@ export function SessionChecklistView({
         onOpenStops={toggleStops}
         onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
+        isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}

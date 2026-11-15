@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "End-of-trip report when every stop is done. One summary table (time, contracts, stops, peak SCU, distance, aUEC with Split ½, XP); Run again / Continue.",
+          "End-of-trip report when every stop is done. Header Finished control (stop-done checkbox language) dismisses the summary; table covers time, contracts, stops, peak SCU, distance, aUEC with Split ½, XP; Run again / Continue.",
       },
     },
   },

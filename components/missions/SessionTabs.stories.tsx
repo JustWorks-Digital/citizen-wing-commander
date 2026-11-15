@@ -13,6 +13,7 @@ const demoSessions = [
     updatedAt: "2026-11-08T05:00:00.000Z",
     missionCount: 4,
     rowCount: 5,
+    shipSlugs: ["c2-hercules-starlifter"],
   },
   {
     id: "e5f60718",
@@ -21,6 +22,7 @@ const demoSessions = [
     updatedAt: "2026-11-08T04:00:00.000Z",
     missionCount: 1,
     rowCount: 4,
+    shipSlugs: ["misc-freelancer-max"],
   },
   {
     id: "f9a0b1c2",
@@ -29,6 +31,7 @@ const demoSessions = [
     updatedAt: "2026-11-08T03:00:00.000Z",
     missionCount: 2,
     rowCount: 3,
+    shipSlugs: ["galaxy"],
   },
   {
     id: "d3e4f506",
@@ -37,6 +40,7 @@ const demoSessions = [
     updatedAt: "2026-11-07T22:00:00.000Z",
     missionCount: 3,
     rowCount: 6,
+    shipSlugs: ["c2-hercules-starlifter", "misc-freelancer-max"],
   },
   {
     id: "778899aa",
@@ -45,6 +49,7 @@ const demoSessions = [
     updatedAt: "2026-11-07T18:00:00.000Z",
     missionCount: 1,
     rowCount: 2,
+    shipSlugs: [],
   },
   {
     id: "bbccddee",
@@ -53,6 +58,7 @@ const demoSessions = [
     updatedAt: "2026-11-06T12:00:00.000Z",
     missionCount: 2,
     rowCount: 4,
+    shipSlugs: ["misc-freelancer-max"],
   },
 ];
 
@@ -110,6 +116,7 @@ export const Interactive: Story = {
               updatedAt: new Date().toISOString(),
               missionCount: 0,
               rowCount: 0,
+              shipSlugs: [],
             },
             ...prev,
           ]);

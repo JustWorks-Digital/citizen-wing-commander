@@ -30,11 +30,11 @@ export const MissionsNav: Story = {
   },
 };
 
-export const IntakeNav: Story = {
+export const CaptureNav: Story = {
   args: {
-    activeNav: "intake",
+    activeNav: "capture",
     children: (
-      <p className="text-sm text-rsi-text-secondary">Intake uploads</p>
+      <p className="text-sm text-rsi-text-secondary">Capture uploads</p>
     ),
   },
 };

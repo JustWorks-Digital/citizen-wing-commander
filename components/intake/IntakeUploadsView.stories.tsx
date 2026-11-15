@@ -5,14 +5,14 @@ import { sampleCatalogMissions } from "@/components/catalog/missionCatalogFixtur
 import { IntakeUploadsView } from "./IntakeUploadsView";
 
 const meta = {
-  title: "Intake/IntakeUploadsView",
+  title: "Capture/IntakeUploadsView",
   component: IntakeUploadsView,
   parameters: {
     layout: "padded",
     docs: {
       description: {
         component:
-          "Header Intake page: paste (⌘V), clipboard button, drop, or browse contract/mission screenshots into the pending inbox. Pending thumbnails enlarge. Processed thumbnails open the linked catalog contract.",
+          "Capture page: paste (⌘V), clipboard button, drop, or browse contract/mission screenshots into the pending inbox. Pending thumbnails enlarge. Processed thumbnails open the linked catalog contract.",
       },
     },
   },

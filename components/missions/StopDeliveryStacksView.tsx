@@ -21,6 +21,11 @@ export type StopDeliveryStacksViewProps = {
   onPeelStackChange?: (value: boolean) => void;
   /** Hide the built-in Peel control (e.g. host it next to Cargo / Piles). */
   hidePeel?: boolean;
+  /**
+   * Desktop (md+): grow to the parent height and fit the graph into that
+   * space. Mobile keeps the fixed max frame height.
+   */
+  fillAvailableHeight?: boolean;
   /** Double-click the under-stack cargo label (abbrev + SCU) to edit crate mix. */
   onEditMissionBoxes?: (missionId: string) => void;
 };
@@ -207,6 +212,9 @@ function sortKey(box: PlacedCargoBox, peelStack: boolean): number {
 /**
  * Checklist stop delivery stacks — flat oblique 3D pad (not the ship bay iso view).
  */
+/** Tailwind `md` — pad graphs only stretch on desktop. */
+const MD_MIN_WIDTH_PX = 768;
+
 export function StopDeliveryStacksView({
   plan,
   cellPx = 14,
@@ -214,6 +222,7 @@ export function StopDeliveryStacksView({
   peelStack: peelStackProp,
   onPeelStackChange,
   hidePeel = false,
+  fillAvailableHeight = false,
   onEditMissionBoxes,
 }: StopDeliveryStacksViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(true);
@@ -226,9 +235,12 @@ export function StopDeliveryStacksView({
     else setPeelStackInternal(next);
   }
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [pileIndex, setPileIndex] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
   const userZoomedRef = useRef(false);
+  const stretchToParent = fillAvailableHeight && isDesktop;
 
   const allPileLabels = plan.pileLabels ?? [];
   const showPileNav = allPileLabels.length > 0;
@@ -239,14 +251,26 @@ export function StopDeliveryStacksView({
   }, [pileRouteKey]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia(`(min-width: ${MD_MIN_WIDTH_PX}px)`);
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
     const el = viewportRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const update = () => setViewportWidth(el.clientWidth);
+    const update = () => {
+      setViewportWidth(el.clientWidth);
+      setViewportHeight(el.clientHeight);
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [stretchToParent]);
 
   const safePileIndex = showPileNav
     ? Math.min(Math.max(0, pileIndex), allPileLabels.length - 1)
@@ -290,9 +314,13 @@ export function StopDeliveryStacksView({
 
   const fitZoom = useMemo(() => {
     const availableW = Math.max(0, viewportWidth - VIEWPORT_PAD_X);
-    // Fit to the fixed max frame height (not measured height) so tall piles
-    // zoom out instead of fighting a content-sized viewport feedback loop.
-    const availableH = Math.max(0, MAX_VIEWPORT_HEIGHT_PX - VIEWPORT_PAD_Y);
+    // Desktop fill: use the stretched parent height. Otherwise keep the fixed
+    // max so tall piles zoom out instead of a content-sized feedback loop.
+    const frameH =
+      stretchToParent && viewportHeight > 0
+        ? viewportHeight
+        : MAX_VIEWPORT_HEIGHT_PX;
+    const availableH = Math.max(0, frameH - VIEWPORT_PAD_Y);
     if (availableW <= 0 || baseBounds.width <= 0) return 1;
     let zoom = Math.min(
       availableW / baseBounds.width,
@@ -314,6 +342,8 @@ export function StopDeliveryStacksView({
     return clampZoom(zoom);
   }, [
     viewportWidth,
+    viewportHeight,
+    stretchToParent,
     baseBounds.width,
     baseBounds.height,
     frameLengthCells,
@@ -369,7 +399,8 @@ export function StopDeliveryStacksView({
   return (
     <div
       className={[
-        "relative flex h-auto flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
+        "relative flex flex-col overflow-hidden rounded-rsi bg-rsi-bg-deep/50",
+        stretchToParent ? "h-full min-h-0" : "h-auto",
         className,
       ]
         .filter(Boolean)
@@ -467,13 +498,21 @@ export function StopDeliveryStacksView({
         ref={viewportRef}
         className={[
           "relative min-w-0 px-2.5 pb-2.5 pt-1",
+          stretchToParent ? "min-h-0 flex-1" : "",
           // Default fit zoom must not introduce a vertical scrollbar; allow it
           // only after the user zooms in past the auto-fit scale.
           zoom > fitZoom + 0.01 ? "overflow-auto" : "overflow-x-auto overflow-y-hidden",
         ].join(" ")}
-        style={{ maxHeight: MAX_VIEWPORT_HEIGHT_PX }}
+        style={
+          stretchToParent ? undefined : { maxHeight: MAX_VIEWPORT_HEIGHT_PX }
+        }
       >
-        <div className="flex w-max min-w-full items-start justify-center">
+        <div
+          className={[
+            "flex w-max min-w-full justify-center",
+            stretchToParent ? "h-full items-center" : "items-start",
+          ].join(" ")}
+        >
           <svg
             role="img"
             aria-label={`Delivery cargo stacks, ${boxes.length} crates`}
@@ -562,6 +601,7 @@ export function StopDeliveryStacksView({
               const midX = (left.x + right.x) / 2;
               const topY = Math.min(left.y, right.y) - renderCellPx * 1.55;
               const fontSize = Math.max(8, Math.round(renderCellPx * 0.55));
+              const unitSize = Math.max(6, Math.round(fontSize * 0.72));
               return (
                 <g key={`pile-${pile.id}`}>
                   <title>
@@ -576,12 +616,22 @@ export function StopDeliveryStacksView({
                     style={{
                       fontFamily: "var(--font-mono, ui-monospace, monospace)",
                       fontSize,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
                     }}
                   >
-                    <title>{pile.locationName}</title>
-                    {pile.abbrev} · {pile.scu}
+                    {pile.abbrev} – {pile.scu}
+                    <tspan
+                      fill="var(--rsi-text-muted)"
+                      dx="0.2em"
+                      style={{
+                        fontSize: unitSize,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      <title>{SCU_TITLE}</title>
+                      SCU
+                    </tspan>
                   </text>
                 </g>
               );
@@ -710,12 +760,11 @@ export function StopDeliveryStacksView({
             >
               {activePile.locationName}
             </p>
-            <p className="mt-0.5 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-              Pile {safePileIndex + 1}/{allPileLabels.length}
-              <span className="ml-1.5 tabular-nums">
-                {activePile.scu}{" "}
-                <span title={SCU_TITLE}>SCU</span>
-              </span>
+            <p
+              className="mt-0.5 font-mono text-[0.55rem] tabular-nums tracking-[0.14em] text-rsi-text-muted"
+              title={`Pile ${safePileIndex + 1} of ${allPileLabels.length}`}
+            >
+              {safePileIndex + 1}/{allPileLabels.length}
             </p>
           </div>
           <button

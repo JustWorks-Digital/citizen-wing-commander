@@ -138,7 +138,7 @@ function UploadGrid({
 }
 
 /**
- * Site inbox for contract/mission screenshots destined for AI catalog intake.
+ * Site inbox for contract/mission screenshots destined for AI catalog capture.
  * Same paste / drop / upload flow as trip Sources.
  */
 export function IntakeUploadsView({
@@ -392,7 +392,7 @@ export function IntakeUploadsView({
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
-            Intake
+            Capture
           </p>
           <h2 className="mt-1 text-lg font-semibold tracking-wide text-rsi-text sm:text-xl">
             Contract uploads
@@ -464,7 +464,7 @@ export function IntakeUploadsView({
             </h3>
             <UploadGrid
               items={processed}
-              emptyLabel="Nothing processed yet. After AI intake, mark pending shots Done."
+              emptyLabel="Nothing processed yet. After AI capture, mark pending shots Done."
               onOpen={onOpen}
               onDelete={(shot) => void onDelete(shot)}
             />

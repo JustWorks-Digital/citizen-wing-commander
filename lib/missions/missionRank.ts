@@ -81,20 +81,28 @@ export function parseRankFromTitle(title: string): MissionRank | null {
   return null;
 }
 
+/** Words that stay lowercase in catalog titles (never Title Case). */
+const TITLE_LOWERCASE_WORDS = new Set(["and"]);
+
 /**
  * Canonical catalog title casing: Title Case words, collapsed whitespace.
  * Turns "SMALL CARGO HAUL" / "direct medium cargo haul" into the same form.
+ * Small words like `and` stay lowercase.
  */
 export function normalizeCatalogMissionTitle(title: string): string {
   const trimmed = title.trim().replace(/\s+/g, " ");
   if (!trimmed) return "";
   return trimmed
     .toLowerCase()
-    .replace(
-      /(^|[\s\-–—|/])(\p{L})/gu,
-      (_, boundary: string, letter: string) =>
-        `${boundary}${letter.toUpperCase()}`,
-    );
+    .split(/([\s\-–—|/]+)/)
+    .map((part) => {
+      if (!part || /^[\s\-–—|/]+$/.test(part)) return part;
+      if (TITLE_LOWERCASE_WORDS.has(part.toLowerCase())) {
+        return part.toLowerCase();
+      }
+      return part.replace(/^\p{L}/u, (letter) => letter.toUpperCase());
+    })
+    .join("");
 }
 
 /** Prefer stored `rank`, else parse from title (legacy session JSON). */

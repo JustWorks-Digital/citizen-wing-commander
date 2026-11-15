@@ -134,18 +134,37 @@ export function TripCompleteSummaryModal({
             onClick={onClose}
             disabled={isBusy}
           />
-          <p className="flex items-center justify-center gap-2 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-success">
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={onClose}
+            aria-label="Finished — mark summary done and continue"
+            title="Mark done"
+            className={[
+              "group mx-auto flex flex-col items-center gap-1.5 rounded-rsi px-3 py-1 transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-surface",
+              "disabled:cursor-wait disabled:opacity-60",
+            ].join(" ")}
+          >
             <span
               aria-hidden
-              className="inline-flex size-5 items-center justify-center rounded-full border border-rsi-success/50 bg-rsi-success-muted text-[0.65rem] leading-none text-rsi-success"
+              className={[
+                "inline-flex size-11 items-center justify-center rounded-full border-2 border-rsi-success/60 bg-rsi-success-muted text-xl leading-none text-rsi-success ring-1 ring-inset ring-rsi-success/20",
+                "transition-transform group-hover:scale-105 group-hover:border-rsi-success group-active:scale-95",
+              ].join(" ")}
             >
               ✓
             </span>
-            Complete
-          </p>
+            <span className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-rsi-success">
+              Finished
+            </span>
+            <span className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-rsi-text-muted transition-colors group-hover:text-rsi-text-secondary">
+              Mark done
+            </span>
+          </button>
           <h2
             id={titleId}
-            className="mt-1.5 text-center font-sans text-sm font-semibold tracking-wide text-rsi-text sm:text-base"
+            className="mt-2 text-center font-sans text-sm font-semibold tracking-wide text-rsi-text sm:text-base"
           >
             {sessionName.trim() || "Hauling trip"}
           </h2>

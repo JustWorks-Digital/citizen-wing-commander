@@ -8,8 +8,8 @@ export const appPaths = {
   sessions: "/",
   /** Planning catalog of observed missions. */
   missionsCatalog: "/missions",
-  /** Upload contract/mission screenshots for AI intake into the catalog. */
-  intake: "/intake",
+  /** Upload contract/mission screenshots for AI catalog capture. */
+  capture: "/capture",
   /** Feature overlays for stream marketing / OBS review. */
   marketing: "/marketing",
   /** Clean auto-rotating OBS browser source for one aspect-ratio family. */

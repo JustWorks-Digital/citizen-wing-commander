@@ -1,4 +1,4 @@
-import { getCommodityBySlug } from "@/lib/fixtures";
+import { getCommodityBySlug, getLocationShortName } from "@/lib/fixtures";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import {
   decomposeScuIntoBoxes,
@@ -321,7 +321,7 @@ export type StopCargoPileLabel = {
   id: string;
   locationSlug: string;
   locationName: string;
-  /** Short label for the pile header. */
+  /** Pile header label — fixture shortName (falls back to name/slug). */
   abbrev: string;
   /** Pile origin X on the pad. */
   x: number;
@@ -577,7 +577,7 @@ export function planPickupHangarStacks(
       id: `pile-${locationSlug}`,
       locationSlug,
       locationName: first.locationName,
-      abbrev: abbreviateCommodityName(first.locationName),
+      abbrev: getLocationShortName(locationSlug),
       x: pileStartX,
       widthCells: pileWidth,
       locationGroupIndex: first.locationGroupIndex,

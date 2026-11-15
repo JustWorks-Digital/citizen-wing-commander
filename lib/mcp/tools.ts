@@ -1232,7 +1232,7 @@ export async function toolClearHaulingScreenshots(batchId?: string) {
   });
 }
 
-/** List contract/mission images uploaded on the Intake page. */
+/** List contract/mission images uploaded on the Capture page. */
 export async function toolListIntakeUploads(input?: {
   status?: "pending" | "processed" | "all";
 }) {
@@ -1247,7 +1247,7 @@ export async function toolListIntakeUploads(input?: {
   });
 }
 
-/** Read an Intake-page upload (base64) for AI contract extraction. */
+/** Read a Capture-page upload (base64) for AI contract extraction. */
 export async function toolGetIntakeUpload(input: {
   logicalPath?: string;
   filename?: string;
@@ -1273,7 +1273,7 @@ export async function toolGetIntakeUpload(input: {
   }
 }
 
-/** Move a pending Intake upload into the processed batch after AI intake. */
+/** Move a pending Capture upload into the processed batch after AI capture. */
 export async function toolMarkIntakeUploadProcessed(input: {
   logicalPath?: string;
   filename?: string;

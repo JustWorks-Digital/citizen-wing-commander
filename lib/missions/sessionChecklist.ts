@@ -44,6 +44,8 @@ export type SessionTabSummary = {
   updatedAt: string;
   missionCount: number;
   rowCount: number;
+  /** Session ships (primary first) — shown in trip switcher menus. */
+  shipSlugs: string[];
 };
 
 /** UUID for DB row + MCP `sessionId` (works in Node + browser). */
@@ -168,5 +170,6 @@ export function summarizeSessionChecklist(
     updatedAt: session.updatedAt,
     missionCount: session.missionCount,
     rowCount: session.rows.length,
+    shipSlugs: session.shipSlugs ?? [],
   };
 }

@@ -1,10 +1,7 @@
-import { AppShell } from "@/components/AppShell";
-import { IntakeUploadsView } from "@/components/intake/IntakeUploadsView";
+import { redirect } from "next/navigation";
+import { appPaths } from "@/lib/appPaths";
 
-export default function IntakePage() {
-  return (
-    <AppShell activeNav="intake">
-      <IntakeUploadsView />
-    </AppShell>
-  );
+/** Old Intake URL — keep bookmarks working. */
+export default function IntakeRedirectPage() {
+  redirect(appPaths.capture);
 }

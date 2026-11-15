@@ -371,7 +371,7 @@ const handler = createMcpHandler(
       {
         title: "List intake uploads",
         description:
-          "Use this to list contract/mission screenshots uploaded on the Intake page (/intake). Default status=pending (inbox). After extracting contracts into the catalog, call mark_intake_upload_processed.",
+          "Use this to list contract/mission screenshots uploaded on the Capture page (/capture). Default status=pending (inbox). After extracting contracts into the catalog, call mark_intake_upload_processed.",
         inputSchema: z.object({
           status: z
             .enum(["pending", "processed", "all"])
@@ -388,7 +388,7 @@ const handler = createMcpHandler(
       {
         title: "Get intake upload",
         description:
-          "Use this to retrieve an Intake-page screenshot (base64 + data URL) so you can read the contract and call create_mission / apply_hauling_contracts_intake. Pass logicalPath from list_intake_uploads, or filename (+ optional status).",
+          "Use this to retrieve a Capture-page screenshot (base64 + data URL) so you can read the contract and call create_mission / apply_hauling_contracts_intake. Pass logicalPath from list_intake_uploads, or filename (+ optional status).",
         inputSchema: z.object({
           logicalPath: z
             .string()
@@ -407,7 +407,7 @@ const handler = createMcpHandler(
       {
         title: "Mark intake upload processed",
         description:
-          "Use this after you have extracted contracts from an Intake screenshot into the catalog. Moves the file from intake-pending/ to intake-processed/.",
+          "Use this after you have extracted contracts from a Capture screenshot into the catalog. Moves the file from intake-pending/ to intake-processed/.",
         inputSchema: z.object({
           logicalPath: z.string().optional(),
           filename: z.string().optional(),

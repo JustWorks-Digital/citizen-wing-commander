@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { getShipBySlug } from "@/lib/fixtures";
 import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
 import {
   readRecentSessionIds,
@@ -10,6 +11,15 @@ import {
 import { formatTimeAgo } from "@/lib/ui/formatTimeAgo";
 import { Button } from "@/components/ui/Button";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+
+/** Primary ship label for trip menus (extra ships as +N). */
+function tripShipLabel(shipSlugs: string[] | undefined): string | null {
+  const slug = shipSlugs?.[0]?.trim();
+  if (!slug) return null;
+  const name = getShipBySlug(slug)?.name ?? slug;
+  const extra = (shipSlugs?.length ?? 0) - 1;
+  return extra > 0 ? `${name} +${extra}` : name;
+}
 
 export type SessionTabsProps = {
   sessions: SessionTabSummary[];
@@ -173,6 +183,7 @@ function SessionMenu({
           ) : (
             items.map((tab) => {
               const isActive = tab.id === activeSessionId;
+              const shipLabel = tripShipLabel(tab.shipSlugs);
               return (
                 <div
                   key={tab.id}
@@ -183,7 +194,14 @@ function SessionMenu({
                     type="button"
                     role="menuitem"
                     disabled={isBusy}
-                    title={`${tab.sessionName} · created ${formatTimeAgo(tab.createdAt, nowMs)} (${tab.id})`}
+                    title={[
+                      tab.sessionName,
+                      shipLabel,
+                      `created ${formatTimeAgo(tab.createdAt, nowMs)}`,
+                      tab.id,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                     onClick={() => {
                       onSelect(tab.id);
                       onCloseMenu();
@@ -201,6 +219,7 @@ function SessionMenu({
                         {tab.sessionName}
                       </span>
                       <span className="mt-0.5 block truncate font-mono text-[0.6rem] tracking-wide text-rsi-text-muted tabular-nums">
+                        {shipLabel ? `${shipLabel} · ` : ""}
                         {formatTimeAgo(tab.createdAt, nowMs)}
                         {isActive ? " · open" : ""}
                       </span>
@@ -328,6 +347,8 @@ export function SessionTabs({
     onClose?.(sessionId);
   };
 
+  const activeShipLabel = tripShipLabel(activeSession?.shipSlugs);
+
   return (
     <>
       <div
@@ -347,7 +368,14 @@ export function SessionTabs({
               role="tab"
               aria-selected
               disabled={isBusy}
-              title={`${activeSession.sessionName} · created ${formatTimeAgo(activeSession.createdAt, nowMs)} (${activeSession.id})`}
+              title={[
+                activeSession.sessionName,
+                activeShipLabel,
+                `created ${formatTimeAgo(activeSession.createdAt, nowMs)}`,
+                activeSession.id,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               onClick={() => onSelect(activeSession.id)}
               className={[
                 "inline-flex min-w-0 flex-1 items-center gap-1.5 rounded-rsi border border-rsi-accent/50 bg-rsi-surface-raised py-1.5 pr-7 pl-2.5 text-left text-rsi-text transition-colors",
@@ -360,6 +388,7 @@ export function SessionTabs({
                   {activeSession.sessionName}
                 </span>
                 <span className="mt-0.5 block truncate font-mono text-[0.6rem] tracking-wide text-rsi-text-muted tabular-nums">
+                  {activeShipLabel ? `${activeShipLabel} · ` : ""}
                   {formatTimeAgo(activeSession.createdAt, nowMs)}
                 </span>
               </span>

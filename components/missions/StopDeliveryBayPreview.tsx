@@ -146,16 +146,28 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
     return null;
   }
 
+  const fillDesktop =
+    "md:flex md:h-full md:min-h-0 md:flex-col";
+
   return (
     <div
-      className={["flex min-w-0 flex-col gap-2", className]
+      className={[
+        "flex min-w-0 flex-col gap-2",
+        fillDesktop,
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
       onClick={(event) => event.stopPropagation()}
     >
       {deliveryPlan ? (
-        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+        <section
+          className={[
+            "relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30",
+            fillDesktop,
+          ].join(" ")}
+        >
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
               Drop off
             </p>
@@ -166,12 +178,14 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               />
             ) : null}
           </div>
-          <div className="relative p-1.5">
+          <div className="relative flex min-h-0 flex-1 flex-col p-1.5">
             <StopDeliveryStacksView
               plan={deliveryPlan}
               peelStack={deliveryPeel}
               onPeelStackChange={setDeliveryPeel}
               hidePeel
+              fillAvailableHeight
+              className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
             />
             {row.isCompleted ? (
@@ -183,8 +197,13 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         </section>
       ) : null}
       {pickupPlan ? (
-        <section className="relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+        <section
+          className={[
+            "relative min-w-0 rounded-rsi border border-rsi-border bg-rsi-bg-deep/30",
+            fillDesktop,
+          ].join(" ")}
+        >
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
               Pickup
             </p>
@@ -232,12 +251,14 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               </div>
             ) : null}
           </div>
-          <div className="relative p-1.5">
+          <div className="relative flex min-h-0 flex-1 flex-col p-1.5">
             <StopDeliveryStacksView
               plan={pickupPlan}
               peelStack={pickupPeel}
               onPeelStackChange={setPickupPeel}
               hidePeel
+              fillAvailableHeight
+              className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
             />
             {row.isCompleted ? (
