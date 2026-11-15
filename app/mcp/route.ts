@@ -44,6 +44,11 @@ import {
   toolStoreHaulingScreenshot,
   toolUpdateShipBayPreferences,
 } from "@/lib/mcp/tools";
+import {
+  openaiChatFileSchema,
+  STORE_HAULING_SCREENSHOT_FILE_PARAM,
+  storeHaulingScreenshotOpenAiMeta,
+} from "@/lib/mcp/openaiFileParams";
 
 const distanceUnitSchema = z.enum(["m", "km", "Mm", "Gm"]);
 
@@ -220,60 +225,65 @@ const handler = createMcpHandler(
       {
         title: "Store hauling screenshot",
         description:
-          "Use this whenever the user attaches a MobiGlas / contract screenshot. Prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it — ChatGPT /mnt/data paths are NOT reachable by a remote MCP server. Keep imageBase64 as fallback when you can encode bytes. Saves into .data/mcp-screenshots and returns logicalPath. Pass sessionId (batch folder = session UUID). When missionId is set, stores and auto-attaches logicalPath onto that session mission (append by default). Otherwise use the returned path in contracts[].screenshots / set_mission_screenshots / create_mission latestScreenshotPath.",
-        inputSchema: z
-          .object({
-            fileUrl: z
-              .string()
-              .optional()
-              .describe(
-                "Preferred for ChatGPT: publicly reachable http(s) image URL. Server downloads, validates, and stores it. Do not pass /mnt/data paths here.",
-              ),
-            filePath: z
-              .string()
-              .optional()
-              .describe(
-                "Local path readable by the MCP host, or an http(s) URL. ChatGPT sandbox paths like /mnt/data/... are rejected — use fileUrl instead.",
-              ),
-            imageBase64: z
-              .string()
-              .optional()
-              .describe(
-                "Fallback: raw base64 bytes or data:image/...;base64,... URL when fileUrl/filePath are unavailable.",
-              ),
-            filename: z
-              .string()
-              .optional()
-              .describe("Optional filename (e.g. 01-stims-everus-lorville.png)"),
-            sessionId: sessionIdSchema.describe(
-              "Session UUID — used as screenshot batchId and as the attach target when missionId is set.",
+          "Use this whenever the user attaches a MobiGlas / contract screenshot. In ChatGPT, pass the native `file` attachment (openai/fileParams — ChatGPT fills download_url + file_id). Otherwise prefer fileUrl (http/https the MCP server can download) or filePath when the host can read it — bare /mnt/data paths are NOT reachable by a remote MCP server. Keep imageBase64 as fallback when you can encode bytes. Saves into .data/mcp-screenshots and returns logicalPath. Pass sessionId (batch folder = session UUID). When missionId is set, stores and auto-attaches logicalPath onto that session mission (append by default). Otherwise use the returned path in contracts[].screenshots / set_mission_screenshots / create_mission latestScreenshotPath.",
+        inputSchema: z.object({
+          [STORE_HAULING_SCREENSHOT_FILE_PARAM]: openaiChatFileSchema
+            .optional()
+            .describe(
+              "Native ChatGPT file attachment. Listed in _meta openai/fileParams so ChatGPT injects { download_url, file_id, mime_type?, file_name? }. Prefer this over /mnt/data paths.",
             ),
-            batchId: z
-              .string()
-              .optional()
-              .describe(
-                "Screenshot batch folder. Prefer sessionId. Defaults to sessionId or default.",
-              ),
-            missionId: z
-              .string()
-              .optional()
-              .describe(
-                "When set, auto-attach the stored logicalPath onto this session mission (after store).",
-              ),
-            attachMode: z
-              .enum(["append", "replace"])
-              .optional()
-              .describe(
-                "With missionId: append (default) or replace mission.screenshots.",
-              ),
-            contractId: z
-              .string()
-              .optional()
-              .describe(
-                "Optional contract id to associate (e.g. contract-01-stims)",
-              ),
-          }),
+          fileUrl: z
+            .string()
+            .optional()
+            .describe(
+              "Publicly reachable http(s) image URL. Server downloads, validates, and stores it. Do not pass /mnt/data paths here.",
+            ),
+          filePath: z
+            .string()
+            .optional()
+            .describe(
+              "Local path readable by the MCP host, or an http(s) URL. ChatGPT sandbox paths like /mnt/data/... are rejected — use `file` (openai/fileParams) or fileUrl instead.",
+            ),
+          imageBase64: z
+            .string()
+            .optional()
+            .describe(
+              "Fallback: raw base64 bytes or data:image/...;base64,... URL when file / fileUrl / filePath are unavailable.",
+            ),
+          filename: z
+            .string()
+            .optional()
+            .describe("Optional filename (e.g. 01-stims-everus-lorville.png)"),
+          sessionId: sessionIdSchema.describe(
+            "Session UUID — used as screenshot batchId and as the attach target when missionId is set.",
+          ),
+          batchId: z
+            .string()
+            .optional()
+            .describe(
+              "Screenshot batch folder. Prefer sessionId. Defaults to sessionId or default.",
+            ),
+          missionId: z
+            .string()
+            .optional()
+            .describe(
+              "When set, auto-attach the stored logicalPath onto this session mission (after store).",
+            ),
+          attachMode: z
+            .enum(["append", "replace"])
+            .optional()
+            .describe(
+              "With missionId: append (default) or replace mission.screenshots.",
+            ),
+          contractId: z
+            .string()
+            .optional()
+            .describe(
+              "Optional contract id to associate (e.g. contract-01-stims)",
+            ),
+        }),
         annotations: { destructiveHint: false },
+        _meta: { ...storeHaulingScreenshotOpenAiMeta },
       },
       async (input) => toolStoreHaulingScreenshot(input),
     );
@@ -1232,14 +1242,14 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.7",
+      version: "0.2.8",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow Lane A (push bytes) vs Lane B (Source handoff).",
       "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32). For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo).",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
-      "Screenshots — Lane A: when the host can push image bytes (fileUrl / readable filePath / imageBase64), create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). ChatGPT /mnt/data paths are NOT reachable — never pass them. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
+      "Screenshots — Lane A: ChatGPT should pass store_hauling_screenshot `file` (openai/fileParams native attachment with download_url). Other hosts may use fileUrl / readable filePath / imageBase64. create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). Bare ChatGPT /mnt/data paths are NOT reachable — never pass them as filePath. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",

@@ -10,16 +10,21 @@ Use this when the user wants a **new trip** (or route update) from **Accepted** 
 
 ### Lane A — push (ideal when the host can deliver image bytes)
 
-Client can pass a reachable **`fileUrl`**, a host-readable **`filePath`**, or **`imageBase64`**.
+Client can pass:
+
+- ChatGPT native **`file`** (`openai/fileParams` → `{ download_url, file_id, mime_type?, file_name? }`)
+- a reachable **`fileUrl`**
+- a host-readable **`filePath`**
+- or **`imageBase64`**
 
 1. `create_hauling_session` (name from user / first contract). Note `tripUrl` / `sessionId`.
-2. For each shot: `store_hauling_screenshot` with `sessionId` (= batch). Prefer `fileUrl` / `filePath`; `imageBase64` fallback.
+2. For each shot: `store_hauling_screenshot` with `sessionId` (= batch). Prefer ChatGPT **`file`**, then `fileUrl` / `filePath`; `imageBase64` fallback.
 3. Extract contracts (vision on those bytes or via `get_hauling_screenshot`).
 4. `apply_hauling_contracts_intake` with `contracts[].screenshots` = returned `logicalPath`s (+ optimized `legs` when ready).
 5. `mark_hauling_screenshots_processed` (`sessionId`, `allPending: true` or explicit paths).
 6. Confirm with `get_hauling_checklist`.
 
-**Never** pass ChatGPT `/mnt/data/...` as `filePath` — the remote MCP server cannot read it.
+**Never** pass ChatGPT `/mnt/data/...` as `filePath` — the remote MCP server cannot read it. In ChatGPT, pass the attached image via the tool’s **`file`** parameter (native `openai/fileParams`).
 
 ### Lane B — Source handoff (universal fallback)
 
@@ -32,7 +37,7 @@ When push is impossible or `store_hauling_screenshot` fails:
 5. `apply_hauling_contracts_intake` with those `logicalPath`s on `contracts[].screenshots`.
 6. `mark_hauling_screenshots_processed` → `get_hauling_checklist`.
 
-Lane B is the reliable ChatGPT path. Lane A is what Cursor/Codex can do when they truly have the files.
+Lane A is preferred when ChatGPT can pass **`file`** (or Cursor/Codex can push bytes). Lane B remains the fallback if download URLs expire or attachments cannot be injected.
 
 ## Goal (after shots are in the store)
 
@@ -89,7 +94,7 @@ Link evidence on each contract:
 | Tool | Purpose |
 | --- | --- |
 | `create_hauling_session` | New trip; returns `tripUrl` for Lane B Source handoff |
-| `store_hauling_screenshot` | Lane A: push bytes → `.data/mcp-screenshots/<sessionId>/` |
+| `store_hauling_screenshot` | Lane A: ChatGPT `file` (openai/fileParams) / fileUrl / filePath / imageBase64 → `.data/mcp-screenshots/<sessionId>/` |
 | `list_hauling_screenshots` | List Source shots (`status`: pending / processed / all; default pending) |
 | `get_hauling_screenshot` | Pull one image (base64) for vision — prefer one call per shot |
 | `mark_hauling_screenshots_processed` | After apply — clear pending Source badge |

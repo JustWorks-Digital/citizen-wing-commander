@@ -313,8 +313,8 @@ function sessionScreenshotSoftGate(
     screenshotsMissing: true,
     contractsWithoutScreenshots,
     warning:
-      "SCREENSHOTS MISSING: one or more contracts have empty/omitted screenshots[]. If the user attached images, you MUST call store_hauling_screenshot (prefer fileUrl; sessionId + missionId auto-attaches) or set_mission_screenshots. Omit screenshots only when the user provided no images.",
-    next: "store_hauling_screenshot (fileUrl + sessionId + missionId) or set_mission_screenshots",
+      "SCREENSHOTS MISSING: one or more contracts have empty/omitted screenshots[]. If the user attached images, you MUST call store_hauling_screenshot (prefer ChatGPT `file` / fileUrl; sessionId + missionId auto-attaches) or set_mission_screenshots. Omit screenshots only when the user provided no images.",
+    next: "store_hauling_screenshot (file or fileUrl + sessionId + missionId) or set_mission_screenshots",
   };
 }
 
@@ -770,10 +770,13 @@ export async function toolGetHaulingIntakePlaybook() {
 
 /**
  * Persist a user/chat screenshot into the ephemeral MCP screenshot store.
- * Prefer `fileUrl` (server downloads) when the client cannot send base64.
- * Optional `missionId` attaches the stored path onto that session mission.
+ * Prefer ChatGPT `file` (openai/fileParams) or `fileUrl` when the client
+ * cannot send base64. Optional `missionId` attaches the stored path onto
+ * that session mission.
  */
 export async function toolStoreHaulingScreenshot(input: {
+  /** Native ChatGPT attachment via `_meta["openai/fileParams"]`. */
+  file?: unknown;
   imageBase64?: string;
   fileUrl?: string;
   filePath?: string;
@@ -787,6 +790,7 @@ export async function toolStoreHaulingScreenshot(input: {
 }) {
   try {
     const resolved = await resolveHaulingScreenshotBytes({
+      file: input.file,
       imageBase64: input.imageBase64,
       fileUrl: input.fileUrl,
       filePath: input.filePath,
@@ -863,7 +867,7 @@ export async function toolStoreHaulingScreenshot(input: {
       attached,
       note: attached
         ? "Stored under .data/mcp-screenshots and linked on mission.screenshots."
-        : "Stored under .data/mcp-screenshots (gitignored). Pass missionId to auto-attach, or call set_mission_screenshots. Prefer fileUrl over imageBase64 for ChatGPT.",
+        : "Stored under .data/mcp-screenshots (gitignored). Pass missionId to auto-attach, or call set_mission_screenshots. Prefer ChatGPT `file` (openai/fileParams) or fileUrl over imageBase64.",
     });
   } catch (error) {
     return textResult({

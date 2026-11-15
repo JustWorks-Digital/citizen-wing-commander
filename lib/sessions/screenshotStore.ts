@@ -8,10 +8,23 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { isIP } from "node:net";
+import {
+  parseOpenAiChatFile,
+  type OpenAiChatFile,
+} from "@/lib/mcp/openaiFileParams";
 
 const STORE_ROOT = path.join(process.cwd(), ".data", "mcp-screenshots");
 
 const ALLOWED_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+
+/** MIME types accepted for ChatGPT-native / URL downloads (png/jpeg/webp + gif). */
+const ALLOWED_IMAGE_MIMES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
 
 const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
@@ -88,28 +101,65 @@ function filenameFromUrl(url: string): string | undefined {
 }
 
 /**
- * Download an image the MCP server can reach (http/https).
- * ChatGPT `/mnt/data/...` paths are NOT public — pass a reachable URL instead.
+ * Reject clearly non-image declared MIME types. Magic bytes remain authoritative
+ * for the downloaded body (CDNs often send application/octet-stream).
  */
-export async function downloadHaulingScreenshotUrl(fileUrl: string): Promise<{
+function assertAllowedDeclaredMime(mimeType: string | undefined): void {
+  if (!mimeType) return;
+  const normalized = mimeType.trim().toLowerCase().split(";")[0]!.trim();
+  if (!normalized) return;
+  if (
+    normalized === "application/octet-stream" ||
+    normalized === "binary/octet-stream"
+  ) {
+    return;
+  }
+  if (ALLOWED_IMAGE_MIMES.has(normalized)) return;
+  if (normalized.startsWith("image/")) {
+    throw new Error(
+      `Unsupported image MIME type (${mimeType}). Use PNG, JPEG, or WebP.`,
+    );
+  }
+  throw new Error(
+    `Unsupported attachment MIME type (${mimeType}). Use PNG, JPEG, or WebP.`,
+  );
+}
+
+/**
+ * Download an image the MCP server can reach (http/https).
+ * ChatGPT `/mnt/data/...` paths are NOT public — pass openai/fileParams `file`
+ * or a reachable fileUrl instead.
+ */
+export async function downloadHaulingScreenshotUrl(
+  fileUrl: string,
+  options?: {
+    suggestedFilename?: string;
+    declaredMimeType?: string;
+    /** Label in errors — e.g. "ChatGPT file attachment". */
+    sourceLabel?: string;
+  },
+): Promise<{
   buffer: Buffer;
   ext: string;
   suggestedFilename?: string;
   source: string;
 }> {
   const trimmed = fileUrl.trim();
+  const label = options?.sourceLabel ?? "fileUrl";
+  assertAllowedDeclaredMime(options?.declaredMimeType);
+
   let parsed: URL;
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new Error(`Invalid fileUrl: ${trimmed}`);
+    throw new Error(`Invalid ${label} URL: ${trimmed}`);
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("fileUrl must be http:// or https://");
+    throw new Error(`${label} must be http:// or https://`);
   }
   if (isBlockedHostname(parsed.hostname)) {
     throw new Error(
-      `fileUrl host is not allowed (${parsed.hostname}). Use a publicly reachable image URL.`,
+      `${label} host is not allowed (${parsed.hostname}). Use a publicly reachable image URL.`,
     );
   }
 
@@ -125,15 +175,33 @@ export async function downloadHaulingScreenshotUrl(fileUrl: string): Promise<{
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to download fileUrl";
-    throw new Error(`Could not download screenshot URL: ${message}`);
+      error instanceof Error ? error.message : `Failed to download ${label}`;
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || /aborted/i.test(error.message))
+    ) {
+      throw new Error(
+        `Timed out downloading ${label}. Check the URL or re-attach the screenshot.`,
+      );
+    }
+    throw new Error(`Could not download ${label}: ${message}`);
   } finally {
     clearTimeout(timer);
   }
 
   if (!response.ok) {
+    if (
+      response.status === 401 ||
+      response.status === 403 ||
+      response.status === 404 ||
+      response.status === 410
+    ) {
+      throw new Error(
+        `${label} download URL expired or was denied (HTTP ${response.status}). Re-attach the screenshot and try again.`,
+      );
+    }
     throw new Error(
-      `Screenshot URL returned HTTP ${response.status} ${response.statusText}`,
+      `${label} returned HTTP ${response.status} ${response.statusText}`,
     );
   }
 
@@ -145,32 +213,75 @@ export async function downloadHaulingScreenshotUrl(fileUrl: string): Promise<{
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   if (buffer.byteLength === 0) {
-    throw new Error("Screenshot URL returned empty body");
+    throw new Error(`${label} returned empty body`);
   }
   if (buffer.byteLength > SCREENSHOT_MAX_BYTES) {
     throw new Error("Screenshot exceeds 12MB limit");
   }
 
+  // Prefer magic bytes over Content-Type (hosts often send octet-stream).
+  const headerMime = response.headers.get("content-type") || undefined;
+  if (headerMime) {
+    const normalized = headerMime.trim().toLowerCase().split(";")[0]!.trim();
+    if (
+      normalized &&
+      !ALLOWED_IMAGE_MIMES.has(normalized) &&
+      normalized !== "application/octet-stream" &&
+      normalized !== "binary/octet-stream" &&
+      (normalized.startsWith("text/") ||
+        normalized.includes("json") ||
+        normalized.includes("html") ||
+        normalized === "application/pdf")
+    ) {
+      throw new Error(
+        `Downloaded ${label} Content-Type is not an image (${headerMime})`,
+      );
+    }
+  }
+
   const ext = detectImageExtension(buffer);
   if (!ext) {
     throw new Error(
-      "Downloaded file is not a recognized image (png/jpeg/webp/gif)",
+      `Downloaded ${label} is not a recognized image (png/jpeg/webp)`,
     );
   }
 
   return {
     buffer,
     ext,
-    suggestedFilename: filenameFromUrl(trimmed),
+    suggestedFilename:
+      options?.suggestedFilename?.trim() || filenameFromUrl(trimmed),
     source: trimmed,
   };
 }
 
+/** Download + validate a ChatGPT openai/fileParams attachment. */
+export async function downloadOpenAiChatFile(file: OpenAiChatFile): Promise<{
+  buffer: Buffer;
+  ext: string;
+  suggestedFilename?: string;
+  source: string;
+  fileId: string;
+}> {
+  const downloaded = await downloadHaulingScreenshotUrl(file.download_url, {
+    suggestedFilename: file.file_name,
+    declaredMimeType: file.mime_type,
+    sourceLabel: "ChatGPT file attachment",
+  });
+  return {
+    ...downloaded,
+    fileId: file.file_id,
+  };
+}
+
 /**
- * Resolve screenshot bytes from base64, a downloadable URL, or a local path
- * the MCP host can read. Prefer fileUrl for remote MCP (Railway).
+ * Resolve screenshot bytes from a ChatGPT openai/fileParams attachment,
+ * base64, a downloadable URL, or a local path the MCP host can read.
+ * Prefer `file` (ChatGPT) or `fileUrl` for remote MCP (Railway).
  */
 export async function resolveHaulingScreenshotBytes(input: {
+  /** Native ChatGPT attachment (`_meta["openai/fileParams"]`). */
+  file?: unknown;
   imageBase64?: string;
   fileUrl?: string;
   filePath?: string;
@@ -178,12 +289,27 @@ export async function resolveHaulingScreenshotBytes(input: {
   buffer: Buffer;
   ext: string;
   suggestedFilename?: string;
-  sourceKind: "imageBase64" | "fileUrl" | "filePath";
+  sourceKind: "file" | "imageBase64" | "fileUrl" | "filePath";
   source: string;
 }> {
   const fileUrl = input.fileUrl?.trim() || "";
   const filePath = input.filePath?.trim() || "";
   const imageBase64 = input.imageBase64?.trim() || "";
+
+  if (input.file != null) {
+    const parsed = parseOpenAiChatFile(input.file);
+    if ("error" in parsed) {
+      throw new Error(parsed.error);
+    }
+    const downloaded = await downloadOpenAiChatFile(parsed.file);
+    return {
+      buffer: downloaded.buffer,
+      ext: downloaded.ext,
+      suggestedFilename: downloaded.suggestedFilename,
+      sourceKind: "file",
+      source: downloaded.source,
+    };
+  }
 
   if (fileUrl) {
     const downloaded = await downloadHaulingScreenshotUrl(fileUrl);
@@ -213,7 +339,7 @@ export async function resolveHaulingScreenshotBytes(input: {
       filePath.includes("\\mnt\\data")
     ) {
       throw new Error(
-        "filePath looks like a ChatGPT sandbox path (/mnt/data). That path is not reachable by the MCP server. Upload via a publicly reachable fileUrl, or pass imageBase64.",
+        "filePath looks like a ChatGPT sandbox path (/mnt/data). That path is not reachable by the MCP server. Pass the native `file` openai/fileParams attachment, a publicly reachable fileUrl, or imageBase64.",
       );
     }
     const absolutePath = path.resolve(filePath);
@@ -258,7 +384,7 @@ export async function resolveHaulingScreenshotBytes(input: {
   }
 
   throw new Error(
-    "Provide fileUrl, filePath, or imageBase64 (prefer fileUrl for ChatGPT attachments the server can download)",
+    "Provide file (ChatGPT openai/fileParams), fileUrl, filePath, or imageBase64",
   );
 }
 
