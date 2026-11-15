@@ -1,9 +1,11 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { ships, type Ship } from "@/db/schema";
+import { getShipBySlug } from "@/lib/fixtures";
 import { SELECTABLE_SHIP_SLUGS } from "@/lib/ships/selectableShips";
+import { resolveShipCargoScu } from "@/lib/ships/shipCargoScu";
 
 export type ShipUpsertInput = {
   id: number;
@@ -18,13 +20,54 @@ export type ShipUpsertInput = {
   source?: string;
 };
 
+function withResolvedCargoScu(ship: Ship): Ship {
+  const cargoScu = resolveShipCargoScu(ship.slug, ship.cargoScu);
+  return cargoScu === ship.cargoScu ? ship : { ...ship, cargoScu };
+}
+
+/**
+ * Session dropdown ships: allowlisted slugs, with module SCU overrides applied.
+ * Falls back to fixtures when a slug is missing from Postgres (pre-sync).
+ */
 export async function listSelectableShips(): Promise<Ship[]> {
   const db = getDb();
-  return db
+  const allowlist = [...SELECTABLE_SHIP_SLUGS];
+  const rows = await db
     .select()
     .from(ships)
-    .where(eq(ships.isSelectable, true))
+    .where(inArray(ships.slug, allowlist))
     .orderBy(asc(ships.name));
+
+  const bySlug = new Map(rows.map((row) => [row.slug, row] as const));
+  const now = new Date();
+  const result: Ship[] = [];
+
+  for (const slug of allowlist) {
+    const row = bySlug.get(slug);
+    if (row) {
+      result.push(withResolvedCargoScu(row));
+      continue;
+    }
+    const fixture = getShipBySlug(slug);
+    if (!fixture) continue;
+    result.push({
+      id: fixture.id,
+      slug: fixture.slug,
+      name: fixture.name,
+      nameFull: fixture.nameFull,
+      manufacturer: fixture.manufacturer,
+      cargoScu: fixture.cargoScu,
+      isCargo: fixture.isCargo,
+      containerSizes: fixture.containerSizes,
+      isSelectable: true,
+      source: "fixture",
+      syncedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return result.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function listAllShips(): Promise<Ship[]> {
