@@ -1257,7 +1257,7 @@ function AddStopAfterButton({
 /** Compact travel row: current location → Quantum to destination. */
 function QuantumShipBadge({
   shipSlug,
-  className = "h-8 w-12",
+  className = "h-14 w-24",
 }: {
   shipSlug?: string | null;
   className?: string;
@@ -1445,7 +1445,7 @@ function QuantumTravelRow({
             >
               <QuantumShipBadge
                 shipSlug={shipSlug}
-                className="h-6 w-9 sm:h-8 sm:w-12"
+                className="h-12 w-20 sm:h-14 sm:w-24"
               />
               <span
                 aria-hidden
@@ -2422,15 +2422,15 @@ function NextDistanceMeta({
         aria-hidden
         className="hidden w-8 shrink-0 md:inline-flex"
       />
-      {/* Location-thumb column (w-24); ship centered, >> after ship on active row. */}
+      {/* Location-thumb column; ship + travel chevrons on active row. */}
       <span
         className={[
-          "inline-flex h-14 w-24 shrink-0 items-center justify-start gap-1.5",
+          "inline-flex h-16 w-32 shrink-0 items-center justify-start gap-1.5 sm:h-[4.5rem] sm:w-36",
           isBridge ? "text-rsi-accent" : "text-rsi-text-secondary",
         ].join(" ")}
         title="Next stop"
       >
-        <span className="inline-flex h-10 w-14 items-center justify-center overflow-hidden">
+        <span className="inline-flex h-14 w-24 items-center justify-center overflow-hidden sm:h-16 sm:w-28">
           {shipIconSrc ? (
             // eslint-disable-next-line @next/next/no-img-element -- static ship badge
             <img

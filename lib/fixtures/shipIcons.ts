@@ -5,14 +5,13 @@
 const SHIP_ICON_BY_SLUG: Record<string, string> = {
   "c2-hercules-starlifter": "c2-hercules-starlifter.png",
   "constellation-mk-v-centaurus": "constellation-mk-v-centaurus.png",
-  // Temporary: reuse Mk V badge until a Galaxy art asset is added.
-  galaxy: "constellation-mk-v-centaurus.png",
+  galaxy: "galaxy.png",
 };
 
 const PUBLIC_PATH = "/icons/ships";
 
 /** Bump when replacing icon binaries so browsers don’t keep a stale badge. */
-const SHIP_ICON_CACHE = "v12";
+const SHIP_ICON_CACHE = "v18";
 
 /** Public URL for a ship icon, or null when none is bundled. */
 export function getShipIconSrc(
