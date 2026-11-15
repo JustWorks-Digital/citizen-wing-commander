@@ -1,0 +1,451 @@
+{
+  "id": "2026-11-15T08-31-04-413Z-99c26ad",
+  "at": "2026-11-15T08:31:04.413Z",
+  "gitSha": "99c26ad",
+  "source": "session-flush",
+  "sampleCount": 36,
+  "metrics": [
+    {
+      "name": "/api/checklist",
+      "kind": "api",
+      "count": 4,
+      "p50": 13,
+      "p95": 13.879999999999999,
+      "min": 12.3,
+      "max": 14,
+      "unit": "ms"
+    },
+    {
+      "name": "/api/checklist/sessions",
+      "kind": "api",
+      "count": 4,
+      "p50": 222.5,
+      "p95": 225.215,
+      "min": 221,
+      "max": 225.5,
+      "unit": "ms"
+    },
+    {
+      "name": "checklist.get",
+      "kind": "api",
+      "count": 6,
+      "p50": 7.5009999999999994,
+      "p95": 8.22425,
+      "min": 7.145,
+      "max": 8.451,
+      "unit": "ms"
+    },
+    {
+      "name": "checklist.sessions.get",
+      "kind": "api",
+      "count": 7,
+      "p50": 214.197,
+      "p95": 219.5618,
+      "min": 211.225,
+      "max": 220.4,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.get",
+      "kind": "db",
+      "count": 7,
+      "p50": 1.356,
+      "p95": 1.8822999999999994,
+      "min": 1.073,
+      "max": 2.086,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.listActiveTabs",
+      "kind": "db",
+      "count": 7,
+      "p50": 213.461,
+      "p95": 218.7396,
+      "min": 210.437,
+      "max": 219.501,
+      "unit": "ms"
+    },
+    {
+      "name": "heap.periodic",
+      "kind": "memory",
+      "count": 1,
+      "p50": 38469699,
+      "p95": 38469699,
+      "min": 38469699,
+      "max": 38469699,
+      "unit": "bytes"
+    }
+  ],
+  "recentSamples": [
+    {
+      "at": "2026-11-15T08:30:59.169Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 216.04,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:30:59.169Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 216.801,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.177Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 2.086,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:30:59.184Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 8.451,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.476Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 213.378,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:30:59.477Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 214.197,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.484Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.388,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:30:59.490Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 7.544,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:00.910Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 216.963,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:00.911Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 217.606,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:00.918Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.407,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:00.924Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 7.369,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:01.213Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 213.461,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:01.213Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 213.987,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:01.220Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.134,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:01.226Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 7.502,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.029Z",
+      "kind": "memory",
+      "name": "heap.periodic",
+      "value": 38469699,
+      "unit": "bytes"
+    },
+    {
+      "at": "2026-11-15T08:30:59.478Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions",
+      "value": 221,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.492Z",
+      "kind": "api",
+      "name": "/api/checklist",
+      "value": 13.2,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 304,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:01.214Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions",
+      "value": 221.4,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:01.227Z",
+      "kind": "api",
+      "name": "/api/checklist",
+      "value": 12.8,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 304,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.171Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions",
+      "value": 223.6,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:30:59.185Z",
+      "kind": "api",
+      "name": "/api/checklist",
+      "value": 14,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 304,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:00.912Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions",
+      "value": 225.5,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:00.925Z",
+      "kind": "api",
+      "name": "/api/checklist",
+      "value": 12.3,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 304,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:02.642Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 210.437,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:02.643Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 211.225,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:02.652Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.356,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:02.658Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 7.5,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:02.946Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 212.545,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:02.947Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 213.213,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:02.954Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.073,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:02.960Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 7.145,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:04.393Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 219.501,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:31:04.394Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 220.4,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:31:04.402Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.334,
+      "unit": "ms"
+    }
+  ]
+}

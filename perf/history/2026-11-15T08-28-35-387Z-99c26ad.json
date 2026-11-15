@@ -1,0 +1,691 @@
+{
+  "id": "2026-11-15T08-28-35-387Z-99c26ad",
+  "at": "2026-11-15T08:28:35.387Z",
+  "gitSha": "99c26ad",
+  "source": "session-flush",
+  "sampleCount": 58,
+  "metrics": [
+    {
+      "name": "checklist.get",
+      "kind": "api",
+      "count": 1,
+      "p50": 8.531,
+      "p95": 8.531,
+      "min": 8.531,
+      "max": 8.531,
+      "unit": "ms"
+    },
+    {
+      "name": "checklist.sessions.get",
+      "kind": "api",
+      "count": 1,
+      "p50": 217.096,
+      "p95": 217.096,
+      "min": 217.096,
+      "max": 217.096,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.get",
+      "kind": "db",
+      "count": 1,
+      "p50": 1.397,
+      "p95": 1.397,
+      "min": 1.397,
+      "max": 1.397,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.listActiveTabs",
+      "kind": "db",
+      "count": 1,
+      "p50": 216.356,
+      "p95": 216.356,
+      "min": 216.356,
+      "max": 216.356,
+      "unit": "ms"
+    },
+    {
+      "name": "mouseout",
+      "kind": "vital",
+      "count": 9,
+      "p50": 32,
+      "p95": 40,
+      "min": 24,
+      "max": 40,
+      "unit": "ms"
+    },
+    {
+      "name": "mouseover",
+      "kind": "vital",
+      "count": 9,
+      "p50": 32,
+      "p95": 40,
+      "min": 24,
+      "max": 40,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerenter",
+      "kind": "vital",
+      "count": 8,
+      "p50": 32,
+      "p95": 40,
+      "min": 24,
+      "max": 40,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerleave",
+      "kind": "vital",
+      "count": 9,
+      "p50": 32,
+      "p95": 40,
+      "min": 16,
+      "max": 40,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerout",
+      "kind": "vital",
+      "count": 10,
+      "p50": 32,
+      "p95": 40,
+      "min": 16,
+      "max": 40,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerover",
+      "kind": "vital",
+      "count": 9,
+      "p50": 32,
+      "p95": 40,
+      "min": 24,
+      "max": 40,
+      "unit": "ms"
+    }
+  ],
+  "recentSamples": [
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.733Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.868Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.898Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.930Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.930Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.930Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.930Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:33.930Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.464Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.816Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 216.356,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:28:34.817Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 217.096,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.826Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.397,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:28:34.833Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 8.531,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.464Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.464Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.464Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:34.464Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.233Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.266Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 40,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.299Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.332Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.367Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 16,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:28:35.367Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 16,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    }
+  ]
+}

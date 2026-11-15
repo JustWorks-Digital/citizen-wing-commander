@@ -1,0 +1,579 @@
+{
+  "id": "2026-11-15T08-34-54-040Z-99c26ad",
+  "at": "2026-11-15T08:34:54.040Z",
+  "gitSha": "99c26ad",
+  "source": "session-flush",
+  "sampleCount": 38,
+  "metrics": [
+    {
+      "name": "/api/checklist",
+      "kind": "api",
+      "count": 1,
+      "p50": 44,
+      "p95": 44,
+      "min": 44,
+      "max": 44,
+      "unit": "ms"
+    },
+    {
+      "name": "/api/checklist/sessions",
+      "kind": "api",
+      "count": 1,
+      "p50": 232.8,
+      "p95": 232.8,
+      "min": 232.8,
+      "max": 232.8,
+      "unit": "ms"
+    },
+    {
+      "name": "/api/checklist/sessions/43655cc6-671b-4a34-9418-bfd4f6d3efd1/activate",
+      "kind": "api",
+      "count": 1,
+      "p50": 255.5,
+      "p95": 255.5,
+      "min": 255.5,
+      "max": 255.5,
+      "unit": "ms"
+    },
+    {
+      "name": "/api/ships",
+      "kind": "api",
+      "count": 2,
+      "p50": 14,
+      "p95": 14.18,
+      "min": 13.8,
+      "max": 14.2,
+      "unit": "ms"
+    },
+    {
+      "name": "checklist.get",
+      "kind": "api",
+      "count": 1,
+      "p50": 8.042,
+      "p95": 8.042,
+      "min": 8.042,
+      "max": 8.042,
+      "unit": "ms"
+    },
+    {
+      "name": "checklist.sessions.get",
+      "kind": "api",
+      "count": 2,
+      "p50": 220.8015,
+      "p95": 220.88295,
+      "min": 220.711,
+      "max": 220.892,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.get",
+      "kind": "db",
+      "count": 1,
+      "p50": 1.83,
+      "p95": 1.83,
+      "min": 1.83,
+      "max": 1.83,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.listActiveTabs",
+      "kind": "db",
+      "count": 2,
+      "p50": 220.22199999999998,
+      "p95": 220.3093,
+      "min": 220.125,
+      "max": 220.319,
+      "unit": "ms"
+    },
+    {
+      "name": "deliverySessions.select",
+      "kind": "db",
+      "count": 1,
+      "p50": 11.148,
+      "p95": 11.148,
+      "min": 11.148,
+      "max": 11.148,
+      "unit": "ms"
+    },
+    {
+      "name": "heap.session-start",
+      "kind": "memory",
+      "count": 1,
+      "p50": 40818378,
+      "p95": 40818378,
+      "min": 40818378,
+      "max": 40818378,
+      "unit": "bytes"
+    },
+    {
+      "name": "largest-contentful-paint",
+      "kind": "vital",
+      "count": 1,
+      "p50": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "mouseout",
+      "kind": "vital",
+      "count": 3,
+      "p50": 24,
+      "p95": 31.2,
+      "min": 24,
+      "max": 32,
+      "unit": "ms"
+    },
+    {
+      "name": "mouseover",
+      "kind": "vital",
+      "count": 3,
+      "p50": 24,
+      "p95": 31.2,
+      "min": 24,
+      "max": 32,
+      "unit": "ms"
+    },
+    {
+      "name": "navigation.domContentLoaded",
+      "kind": "vital",
+      "count": 1,
+      "p50": 92.4,
+      "p95": 92.4,
+      "min": 92.4,
+      "max": 92.4,
+      "unit": "ms"
+    },
+    {
+      "name": "navigation.loadEventEnd",
+      "kind": "vital",
+      "count": 1,
+      "p50": 167.6,
+      "p95": 167.6,
+      "min": 167.6,
+      "max": 167.6,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerenter",
+      "kind": "vital",
+      "count": 5,
+      "p50": 32,
+      "p95": 32,
+      "min": 32,
+      "max": 32,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerleave",
+      "kind": "vital",
+      "count": 4,
+      "p50": 24,
+      "p95": 24,
+      "min": 24,
+      "max": 24,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerout",
+      "kind": "vital",
+      "count": 4,
+      "p50": 24,
+      "p95": 30.799999999999997,
+      "min": 24,
+      "max": 32,
+      "unit": "ms"
+    },
+    {
+      "name": "pointerover",
+      "kind": "vital",
+      "count": 3,
+      "p50": 24,
+      "p95": 31.2,
+      "min": 24,
+      "max": 32,
+      "unit": "ms"
+    }
+  ],
+  "recentSamples": [
+    {
+      "at": "2026-11-15T08:34:52.086Z",
+      "kind": "db",
+      "name": "deliverySessions.get",
+      "value": 1.83,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:52.092Z",
+      "kind": "api",
+      "name": "checklist.get",
+      "value": 8.042,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist",
+        "status": 304
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:52.093Z",
+      "kind": "api",
+      "name": "/api/checklist",
+      "value": 44,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 304,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.784Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 220.125,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:53.785Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 220.711,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.801Z",
+      "kind": "db",
+      "name": "deliverySessions.select",
+      "value": 11.148,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:54.019Z",
+      "kind": "db",
+      "name": "deliverySessions.listActiveTabs",
+      "value": 220.319,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:54.020Z",
+      "kind": "api",
+      "name": "checklist.sessions.get",
+      "value": 220.892,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "source": "server",
+        "path": "/api/checklist/sessions",
+        "status": 200
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.315Z",
+      "kind": "memory",
+      "name": "heap.session-start",
+      "value": 40818378,
+      "unit": "bytes"
+    },
+    {
+      "at": "2026-11-15T08:34:53.315Z",
+      "kind": "vital",
+      "name": "navigation.domContentLoaded",
+      "value": 92.4,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:53.315Z",
+      "kind": "vital",
+      "name": "navigation.loadEventEnd",
+      "value": 167.6,
+      "unit": "ms"
+    },
+    {
+      "at": "2026-11-15T08:34:53.316Z",
+      "kind": "vital",
+      "name": "largest-contentful-paint",
+      "value": 0,
+      "unit": "ms",
+      "tags": {
+        "entryType": "largest-contentful-paint"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.566Z",
+      "kind": "api",
+      "name": "/api/ships",
+      "value": 13.8,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.568Z",
+      "kind": "api",
+      "name": "/api/ships",
+      "value": 14.2,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.786Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions",
+      "value": 232.8,
+      "unit": "ms",
+      "tags": {
+        "method": "GET",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.808Z",
+      "kind": "api",
+      "name": "/api/checklist/sessions/43655cc6-671b-4a34-9418-bfd4f6d3efd1/activate",
+      "value": 255.5,
+      "unit": "ms",
+      "tags": {
+        "method": "POST",
+        "status": 200,
+        "source": "client"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "pointerenter",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.833Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 32,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.841Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.841Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.841Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.841Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.841Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "pointerleave",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "pointerover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "mouseout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.849Z",
+      "kind": "vital",
+      "name": "mouseover",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    },
+    {
+      "at": "2026-11-15T08:34:53.858Z",
+      "kind": "vital",
+      "name": "pointerout",
+      "value": 24,
+      "unit": "ms",
+      "tags": {
+        "entryType": "event"
+      }
+    }
+  ]
+}

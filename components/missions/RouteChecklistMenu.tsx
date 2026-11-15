@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 
 const SHORTCUTS = [
-  { key: "B", action: "Storage bays" },
+  { key: "B", action: "Cargo bays" },
   { key: "S", action: "Stops" },
   { key: "C", action: "Contracts" },
   { key: "H", action: "Hide / show history" },

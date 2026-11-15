@@ -1,0 +1,28 @@
+{
+  "id": "2026-11-15T08-34-54-085Z-99c26ad",
+  "at": "2026-11-15T08:34:54.085Z",
+  "gitSha": "99c26ad",
+  "source": "session-flush",
+  "sampleCount": 1,
+  "metrics": [
+    {
+      "name": "deliverySessions.select",
+      "kind": "db",
+      "count": 1,
+      "p50": 256.546,
+      "p95": 256.546,
+      "min": 256.546,
+      "max": 256.546,
+      "unit": "ms"
+    }
+  ],
+  "recentSamples": [
+    {
+      "at": "2026-11-15T08:34:54.057Z",
+      "kind": "db",
+      "name": "deliverySessions.select",
+      "value": 256.546,
+      "unit": "ms"
+    }
+  ]
+}

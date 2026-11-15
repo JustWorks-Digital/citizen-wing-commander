@@ -24,6 +24,15 @@ export const MAX_CARGO_BAY_LAYOUT_WIDTH_PX = 96 * 16;
 /** 2D / Split / 3D projection for the cargo layout modal. */
 export type CargoBayViewTab = "top" | "iso" | "split";
 
+/** Packing preset (or manual) — mirrors CargoBayLayout Sorting controls. */
+export type CargoBaySortingMode =
+  | "suggested"
+  | "by-cargo-type"
+  | "by-mission-location"
+  | "manual";
+
+export type CargoBayAutoPackMode = Exclude<CargoBaySortingMode, "manual">;
+
 /**
  * New sessions start with Legend + Sorting collapsed and Split view.
  * After the user toggles, prefs persist per session in `localStorage`.
@@ -33,16 +42,42 @@ export type CargoBayChromePrefs = {
   sortingHidden: boolean;
   /** Cargo layout projection — default Split; survives modal close/reopen. */
   viewTab: CargoBayViewTab;
+  /** Packing type (Suggested / Cargo type / Contract based / Manual). */
+  sortingMode: CargoBaySortingMode;
+  /** Last non-manual packing mode (restored when leaving Manual with no presets). */
+  lastAutoPackMode: CargoBayAutoPackMode;
+  /** Prioritized packing toggle (Cargo type + ships that support it). */
+  prioritized: boolean;
 };
 
 export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   legendHidden: true,
   sortingHidden: true,
   viewTab: "split",
+  sortingMode: "suggested",
+  lastAutoPackMode: "suggested",
+  prioritized: false,
 };
 
 function isCargoBayViewTab(value: unknown): value is CargoBayViewTab {
   return value === "top" || value === "iso" || value === "split";
+}
+
+function isCargoBaySortingMode(value: unknown): value is CargoBaySortingMode {
+  return (
+    value === "suggested" ||
+    value === "by-cargo-type" ||
+    value === "by-mission-location" ||
+    value === "manual"
+  );
+}
+
+function isCargoBayAutoPackMode(value: unknown): value is CargoBayAutoPackMode {
+  return (
+    value === "suggested" ||
+    value === "by-cargo-type" ||
+    value === "by-mission-location"
+  );
 }
 
 const STORAGE_PREFIX = "cwc:session:";
@@ -147,6 +182,14 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
     return { ...DEFAULT_CARGO_BAY_CHROME_PREFS };
   }
   const record = value as Record<string, unknown>;
+  const sortingMode = isCargoBaySortingMode(record.sortingMode)
+    ? record.sortingMode
+    : DEFAULT_CARGO_BAY_CHROME_PREFS.sortingMode;
+  const lastAutoPackMode = isCargoBayAutoPackMode(record.lastAutoPackMode)
+    ? record.lastAutoPackMode
+    : sortingMode !== "manual"
+      ? sortingMode
+      : DEFAULT_CARGO_BAY_CHROME_PREFS.lastAutoPackMode;
   return {
     legendHidden:
       typeof record.legendHidden === "boolean"
@@ -159,6 +202,12 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
     viewTab: isCargoBayViewTab(record.viewTab)
       ? record.viewTab
       : DEFAULT_CARGO_BAY_CHROME_PREFS.viewTab,
+    sortingMode,
+    lastAutoPackMode,
+    prioritized:
+      typeof record.prioritized === "boolean"
+        ? record.prioritized
+        : DEFAULT_CARGO_BAY_CHROME_PREFS.prioritized,
   };
 }
 

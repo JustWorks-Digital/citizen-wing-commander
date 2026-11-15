@@ -35,7 +35,6 @@ import {
 } from "@/lib/sessions/manualBayLayoutPrefs";
 import {
   cargoBayPackModes,
-  defaultCargoBayPackMode,
   placementPlanLegend,
   placementPlanLocationLegend,
   placementPlanTints,
@@ -47,8 +46,6 @@ import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import { tryMoveManualBayBox } from "@/lib/ships/manualBayMove";
 import { cargoBay } from "@/lib/ships/cargoBay";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
-
-type SortingMode = CargoBayPackMode | "manual";
 
 /**
  * What the cargo grid shows for the focused checklist stop.
@@ -72,7 +69,7 @@ export type CargoBayLayoutProps = {
   onStopScopeChange?: (scope: CargoBayStopScope) => void;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
-  /** Optional session stats — right of the Storage bays title. */
+  /** Optional session stats — right of the Cargo bays title. */
   headerAside?: ReactNode;
   className?: string;
 };
@@ -99,17 +96,17 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     legendHidden,
     sortingHidden,
     viewTab,
+    sortingMode,
+    lastAutoPackMode,
+    prioritized,
     setLegendHidden,
     setSortingHidden,
     setViewTab,
+    setSortingMode,
+    setLastAutoPackMode,
+    setPrioritized,
   } = useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
-  const [sortingMode, setSortingMode] =
-    useState<SortingMode>(defaultCargoBayPackMode);
-  const [lastAutoPackMode, setLastAutoPackMode] = useState<CargoBayPackMode>(
-    defaultCargoBayPackMode,
-  );
-  const [prioritized, setPrioritized] = useState(false);
   const [manualSession, setManualSession] =
     useState<ManualBayLayoutSessionState>({ byStop: {} });
   const [manualLiveBoxes, setManualLiveBoxes] = useState<PlacedCargoBox[] | null>(
@@ -349,7 +346,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       setManualLiveBoxes(null);
       manualDragBaseRef.current = null;
     },
-    [],
+    [setLastAutoPackMode, setSortingMode],
   );
 
   const enterManualMode = useCallback(
@@ -531,7 +528,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-              Storage bays
+              Cargo bays
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
@@ -718,9 +715,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                               }
                               onClick={() => {
                                 selectAutoMode("by-cargo-type");
-                                setPrioritized((value) =>
+                                setPrioritized(
                                   sortingMode === "by-cargo-type"
-                                    ? !value
+                                    ? !prioritized
                                     : true,
                                 );
                               }}
@@ -862,7 +859,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             <button
               type="button"
               role="slider"
-              aria-label="Storage bays height"
+              aria-label="Cargo bays height"
               aria-orientation="vertical"
               aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
               aria-valuemax={panelHeightMax}

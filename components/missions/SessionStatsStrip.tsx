@@ -209,7 +209,7 @@ function formatToolbarAuec(amount: number): string {
   return `${String(tenths).replace(/\.0$/, "")}M`;
 }
 
-/** Contracts + Stops + Storage bays + Distance + aUEC for the checklist toolbar. */
+/** Contracts + Stops + Cargo bays + Distance + aUEC for the checklist toolbar. */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,

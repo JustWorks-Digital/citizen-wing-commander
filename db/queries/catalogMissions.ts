@@ -9,6 +9,7 @@ import {
   type CatalogMissionNote,
   type CatalogMissionRun,
 } from "@/db/schema";
+import { timeDbQuery } from "@/lib/perf/timeDb";
 import {
   buildHaulingCatalogMissionPayload,
   catalogMissionFingerprint,
@@ -251,13 +252,15 @@ export async function backfillCatalogMissionVariants(): Promise<{
 export async function getCatalogMission(
   id: string,
 ): Promise<CatalogMission | null> {
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(catalogMissions)
-    .where(eq(catalogMissions.id, id))
-    .limit(1);
-  return row ?? null;
+  return timeDbQuery("catalogMissions.get", async () => {
+    const db = getDb();
+    const [row] = await db
+      .select()
+      .from(catalogMissions)
+      .where(eq(catalogMissions.id, id))
+      .limit(1);
+    return row ?? null;
+  });
 }
 
 /** Patch screenshot path + payload on a specific catalog mission (by id). */
@@ -452,11 +455,13 @@ export async function getCatalogMissionsByIds(
 ): Promise<CatalogMission[]> {
   const unique = [...new Set(ids.filter(Boolean))];
   if (unique.length === 0) return [];
-  const db = getDb();
-  return db
-    .select()
-    .from(catalogMissions)
-    .where(inArray(catalogMissions.id, unique));
+  return timeDbQuery("catalogMissions.getByIds", async () => {
+    const db = getDb();
+    return db
+      .select()
+      .from(catalogMissions)
+      .where(inArray(catalogMissions.id, unique));
+  });
 }
 
 export async function listCatalogMissions(input?: {
@@ -464,25 +469,27 @@ export async function listCatalogMissions(input?: {
   type?: "hauling" | null;
   limit?: number;
 }): Promise<CatalogMission[]> {
-  const db = getDb();
-  const limit = Math.min(Math.max(input?.limit ?? 50, 1), 500);
-  const offer = input?.offerLocationSlug?.trim() || null;
-  const type = input?.type ?? null;
-  const filters = [
-    offer ? eq(catalogMissions.offerLocationSlug, offer) : undefined,
-    type ? eq(catalogMissions.type, type) : undefined,
-  ].filter(Boolean);
+  return timeDbQuery("catalogMissions.list", async () => {
+    const db = getDb();
+    const limit = Math.min(Math.max(input?.limit ?? 50, 1), 500);
+    const offer = input?.offerLocationSlug?.trim() || null;
+    const type = input?.type ?? null;
+    const filters = [
+      offer ? eq(catalogMissions.offerLocationSlug, offer) : undefined,
+      type ? eq(catalogMissions.type, type) : undefined,
+    ].filter(Boolean);
 
-  const whereClause =
-    filters.length === 0
-      ? undefined
-      : filters.length === 1
-        ? filters[0]
-        : and(...filters);
+    const whereClause =
+      filters.length === 0
+        ? undefined
+        : filters.length === 1
+          ? filters[0]
+          : and(...filters);
 
-  const base = db.select().from(catalogMissions);
-  const filtered = whereClause ? base.where(whereClause) : base;
-  return filtered.orderBy(desc(catalogMissions.lastObservedAt)).limit(limit);
+    const base = db.select().from(catalogMissions);
+    const filtered = whereClause ? base.where(whereClause) : base;
+    return filtered.orderBy(desc(catalogMissions.lastObservedAt)).limit(limit);
+  });
 }
 
 export async function addCatalogMissionNote(input: {

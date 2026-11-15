@@ -15,11 +15,6 @@ export type StopMissionScreenshotsProps = {
   variant?: "block" | "inline";
 };
 
-const sourceBtnClass = [
-  "inline-flex size-6 items-center justify-center rounded-rsi border",
-  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-].join(" ");
-
 /**
  * Opens a gallery of contract screenshots for missions active at this stop.
  * Icon-only control (same glyph as the missions table source button).
@@ -29,6 +24,13 @@ export function StopMissionScreenshots({
   className,
   variant = "block",
 }: StopMissionScreenshotsProps) {
+  const isInline = variant === "inline";
+  const sourceBtnClass = [
+    "inline-flex items-center justify-center rounded-rsi border",
+    isInline ? "size-4" : "size-6",
+    "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+  ].join(" ");
+  const iconClass = isInline ? "size-2" : "size-3";
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
@@ -75,7 +77,7 @@ export function StopMissionScreenshots({
         "hover:border-rsi-accent/50 hover:text-rsi-accent",
       ].join(" ")}
     >
-      <SourceIcon />
+      <SourceIcon className={iconClass} />
     </button>
   ) : textOnlyCount > 0 ? (
     <span
@@ -86,7 +88,7 @@ export function StopMissionScreenshots({
         "cursor-default border-rsi-border/50 text-rsi-text-muted opacity-40",
       ].join(" ")}
     >
-      <SourceIcon />
+      <SourceIcon className={iconClass} />
     </span>
   ) : null;
 

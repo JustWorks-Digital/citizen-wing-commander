@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
+import { withPerfRoute } from "@/lib/perf/withPerfRoute";
 
 /** Proves DB connectivity when DATABASE_URL is configured. */
-export async function GET() {
+export const GET = withPerfRoute("health.db", async () => {
   if (!process.env.DATABASE_URL) {
     return NextResponse.json(
       {
@@ -28,4 +29,4 @@ export async function GET() {
       { status: 503 },
     );
   }
-}
+});

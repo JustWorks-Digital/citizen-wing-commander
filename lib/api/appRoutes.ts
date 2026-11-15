@@ -28,6 +28,8 @@ export const appApi = {
   sessions: "/api/sessions",
   ships: "/api/ships",
   healthDb: "/api/health/db",
+  /** Local-only continuous perf capture (dev). */
+  devPerf: "/api/dev/perf",
   /** Contract/mission screenshot inbox for AI intake. */
   intakeUploads: "/api/intake/uploads",
   intakeUpload: (filename: string) =>

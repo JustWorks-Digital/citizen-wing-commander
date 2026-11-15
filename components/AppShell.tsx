@@ -30,7 +30,7 @@ export function AppShell({ children, activeNav }: AppShellProps) {
               JustWorks Digital
             </p>
             <h1 className="text-lg font-semibold tracking-[0.04em] text-rsi-text sm:text-2xl">
-              Citizen Wing Commander
+              Citizen Commander
             </h1>
           </div>
           <nav

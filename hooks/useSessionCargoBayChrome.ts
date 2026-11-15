@@ -5,13 +5,15 @@ import {
   DEFAULT_CARGO_BAY_CHROME_PREFS,
   readCargoBayChromePrefs,
   writeCargoBayChromePrefs,
+  type CargoBayAutoPackMode,
   type CargoBayChromePrefs,
+  type CargoBaySortingMode,
   type CargoBayViewTab,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 
 /**
- * Per-session Legend / Sorting visibility and 2D/Split/3D view in
- * `localStorage`. Defaults: both panels hidden, Split view.
+ * Per-session Legend / Packing visibility, packing type, and 2D/Split/3D view
+ * in `localStorage`. Survives modal close/reopen.
  */
 export function useSessionCargoBayChrome(
   sessionId: string | null | undefined,
@@ -19,9 +21,15 @@ export function useSessionCargoBayChrome(
   legendHidden: boolean;
   sortingHidden: boolean;
   viewTab: CargoBayViewTab;
+  sortingMode: CargoBaySortingMode;
+  lastAutoPackMode: CargoBayAutoPackMode;
+  prioritized: boolean;
   setLegendHidden: (hidden: boolean) => void;
   setSortingHidden: (hidden: boolean) => void;
   setViewTab: (tab: CargoBayViewTab) => void;
+  setSortingMode: (mode: CargoBaySortingMode) => void;
+  setLastAutoPackMode: (mode: CargoBayAutoPackMode) => void;
+  setPrioritized: (prioritized: boolean) => void;
 } {
   const [prefs, setPrefs] = useState<CargoBayChromePrefs>(
     DEFAULT_CARGO_BAY_CHROME_PREFS,
@@ -31,45 +39,71 @@ export function useSessionCargoBayChrome(
     setPrefs(readCargoBayChromePrefs(sessionId));
   }, [sessionId]);
 
-  const setLegendHidden = useCallback(
-    (hidden: boolean) => {
+  const patchPrefs = useCallback(
+    (patch: Partial<CargoBayChromePrefs>) => {
       setPrefs((prev) => {
-        const next = { ...prev, legendHidden: hidden };
+        const next = { ...prev, ...patch };
         writeCargoBayChromePrefs(sessionId, next);
         return next;
       });
     },
     [sessionId],
+  );
+
+  const setLegendHidden = useCallback(
+    (hidden: boolean) => {
+      patchPrefs({ legendHidden: hidden });
+    },
+    [patchPrefs],
   );
 
   const setSortingHidden = useCallback(
     (hidden: boolean) => {
-      setPrefs((prev) => {
-        const next = { ...prev, sortingHidden: hidden };
-        writeCargoBayChromePrefs(sessionId, next);
-        return next;
-      });
+      patchPrefs({ sortingHidden: hidden });
     },
-    [sessionId],
+    [patchPrefs],
   );
 
   const setViewTab = useCallback(
     (tab: CargoBayViewTab) => {
-      setPrefs((prev) => {
-        const next = { ...prev, viewTab: tab };
-        writeCargoBayChromePrefs(sessionId, next);
-        return next;
-      });
+      patchPrefs({ viewTab: tab });
     },
-    [sessionId],
+    [patchPrefs],
+  );
+
+  const setSortingMode = useCallback(
+    (mode: CargoBaySortingMode) => {
+      patchPrefs({ sortingMode: mode });
+    },
+    [patchPrefs],
+  );
+
+  const setLastAutoPackMode = useCallback(
+    (mode: CargoBayAutoPackMode) => {
+      patchPrefs({ lastAutoPackMode: mode });
+    },
+    [patchPrefs],
+  );
+
+  const setPrioritized = useCallback(
+    (next: boolean) => {
+      patchPrefs({ prioritized: next });
+    },
+    [patchPrefs],
   );
 
   return {
     legendHidden: prefs.legendHidden,
     sortingHidden: prefs.sortingHidden,
     viewTab: prefs.viewTab,
+    sortingMode: prefs.sortingMode,
+    lastAutoPackMode: prefs.lastAutoPackMode,
+    prioritized: prefs.prioritized,
     setLegendHidden,
     setSortingHidden,
     setViewTab,
+    setSortingMode,
+    setLastAutoPackMode,
+    setPrioritized,
   };
 }

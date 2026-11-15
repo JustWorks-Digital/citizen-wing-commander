@@ -5,6 +5,7 @@ import {
   memo,
   startTransition,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -68,7 +69,7 @@ import {
 } from "@/lib/missions/quantumTravel";
 import {
   inferCargoMissionId,
-  screenshotRefsForRow,
+  screenshotRefsForMission,
 } from "@/lib/missions/rowMissionScreenshots";
 import {
   missionAuecAmount,
@@ -621,6 +622,184 @@ function partitionCargoByMission(
   }));
 }
 
+/** Desktop hover / mouse — coarse pointers use tap-to-reveal for the name tip. */
+function prefersFineHover(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
+function CargoCommodityTile({
+  row,
+  line,
+  isPickup,
+  handledVerb,
+  doneClass,
+  pendingCargoKeys,
+  onToggleCargoHandled,
+}: {
+  row: HaulingChecklistRow;
+  line: CargoLine;
+  isPickup: boolean;
+  handledVerb: string;
+  doneClass: string;
+  pendingCargoKeys?: ReadonlySet<string>;
+  onToggleCargoHandled?: (
+    rowId: string,
+    cargoIndex: number,
+  ) => void | Promise<void>;
+}) {
+  const tipId = useId();
+  const [nameTipOpen, setNameTipOpen] = useState(false);
+  const tipTimer = useRef<number | null>(null);
+  const cleared = line.isHandled;
+  const isCargoPending =
+    line.sourceIndex != null &&
+    Boolean(pendingCargoKeys?.has(cargoPendingKey(row.id, line.sourceIndex)));
+  const canToggle =
+    Boolean(onToggleCargoHandled) &&
+    line.sourceIndex != null &&
+    !isCargoPending;
+  const cargoHex = resolveCommodityColorHex(
+    line.color,
+    line.color2,
+    line.commoditySlug,
+  );
+  const iconSrc = getCommodityIconSrc(line.commoditySlug);
+  const commodityName =
+    line.commodityName?.trim() || line.commoditySlug || "Cargo";
+  const abbrev = abbreviateCommodityName(commodityName);
+  const fullLabel = `${line.scu} ${commodityName}`;
+  const tileBg = cargoHex
+    ? commodityBadgeBackground(cargoHex)
+    : "var(--rsi-bg-deep)";
+  const tileBorder = cargoHex
+    ? commodityBadgeBorder(cargoHex)
+    : "var(--rsi-border)";
+  const tileFg = cargoHex
+    ? commodityBadgeForeground(cargoHex)
+    : "var(--rsi-text-secondary)";
+
+  useEffect(() => {
+    return () => {
+      if (tipTimer.current != null) window.clearTimeout(tipTimer.current);
+    };
+  }, []);
+
+  const openNameTip = (autoHideMs?: number) => {
+    setNameTipOpen(true);
+    if (tipTimer.current != null) window.clearTimeout(tipTimer.current);
+    if (autoHideMs != null) {
+      tipTimer.current = window.setTimeout(() => {
+        setNameTipOpen(false);
+        tipTimer.current = null;
+      }, autoHideMs);
+    }
+  };
+
+  const closeNameTip = () => {
+    if (tipTimer.current != null) {
+      window.clearTimeout(tipTimer.current);
+      tipTimer.current = null;
+    }
+    setNameTipOpen(false);
+  };
+
+  return (
+    <button
+      type="button"
+      title={
+        prefersFineHover()
+          ? isCargoPending
+            ? `${fullLabel} · updating…`
+            : cleared
+              ? `${fullLabel} · marked ${handledVerb}`
+              : `${fullLabel} · click to mark ${handledVerb}`
+          : undefined
+      }
+      aria-label={fullLabel}
+      aria-pressed={cleared}
+      aria-busy={isCargoPending}
+      aria-describedby={nameTipOpen ? tipId : undefined}
+      disabled={!canToggle && !isCargoPending}
+      onMouseEnter={() => {
+        if (prefersFineHover()) openNameTip();
+      }}
+      onMouseLeave={() => {
+        if (prefersFineHover()) closeNameTip();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (line.sourceIndex == null || isCargoPending) return;
+        // Touch / coarse: first tap reveals full name; second marks handled.
+        if (!prefersFineHover()) {
+          if (!nameTipOpen) {
+            openNameTip(2500);
+            return;
+          }
+          closeNameTip();
+        }
+        void onToggleCargoHandled?.(row.id, line.sourceIndex);
+      }}
+      className={[
+        "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
+        "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+        isCargoPending
+          ? "cursor-wait"
+          : canToggle
+            ? "cursor-pointer"
+            : "cursor-default",
+        doneClass,
+        cleared && !isCargoPending ? "opacity-40" : "",
+      ].join(" ")}
+      style={{
+        backgroundColor: tileBg,
+        borderColor: tileBorder,
+        color: tileFg,
+      }}
+    >
+      <span
+        aria-hidden
+        className="inline-block size-3.5 shrink-0 bg-current"
+        style={{
+          WebkitMaskImage: `url(${iconSrc})`,
+          maskImage: `url(${iconSrc})`,
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+      />
+      <span className="text-[0.7rem] font-semibold leading-none">
+        {line.scu}
+      </span>
+      <span className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90">
+        {abbrev}
+      </span>
+      {nameTipOpen ? (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-rsi border border-rsi-border bg-rsi-bg-deep px-2 py-1 font-mono text-[0.65rem] tracking-wide text-rsi-text shadow-rsi-panel"
+        >
+          {commodityName}
+        </span>
+      ) : null}
+      {isCargoPending ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
+        >
+          <Spinner className="size-3.5 text-rsi-accent" />
+        </span>
+      ) : cleared ? (
+        <CargoTileHandledMark isPickup={isPickup} />
+      ) : null}
+    </button>
+  );
+}
+
 function CargoCommodityTiles({
   row,
   items,
@@ -643,110 +822,18 @@ function CargoCommodityTiles({
 
   return (
     <div className="grid w-full grid-cols-3 gap-1.5">
-      {items.map((line, index) => {
-        const tileId = `${row.id}-${role ?? "none"}-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`;
-        const cleared = line.isHandled;
-        const isCargoPending =
-          line.sourceIndex != null &&
-          Boolean(
-            pendingCargoKeys?.has(cargoPendingKey(row.id, line.sourceIndex)),
-          );
-        const canToggle =
-          Boolean(onToggleCargoHandled) &&
-          line.sourceIndex != null &&
-          !isCargoPending;
-        const cargoHex = resolveCommodityColorHex(
-          line.color,
-          line.color2,
-          line.commoditySlug,
-        );
-        const iconSrc = getCommodityIconSrc(line.commoditySlug);
-        const abbrev = abbreviateCommodityName(
-          line.commodityName ?? line.commoditySlug ?? "?",
-        );
-        const fullLabel = `${line.scu} ${line.commodityName}`;
-        const tileBg = cargoHex
-          ? commodityBadgeBackground(cargoHex)
-          : "var(--rsi-bg-deep)";
-        const tileBorder = cargoHex
-          ? commodityBadgeBorder(cargoHex)
-          : "var(--rsi-border)";
-        const tileFg = cargoHex
-          ? commodityBadgeForeground(cargoHex)
-          : "var(--rsi-text-secondary)";
-        return (
-          <button
-            key={tileId}
-            type="button"
-            title={
-              isCargoPending
-                ? `${fullLabel} · updating…`
-                : cleared
-                  ? `${fullLabel} · marked ${handledVerb}`
-                  : `${fullLabel} · click to mark ${handledVerb}`
-            }
-            aria-label={fullLabel}
-            aria-pressed={cleared}
-            aria-busy={isCargoPending}
-            disabled={!canToggle && !isCargoPending}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (line.sourceIndex == null || isCargoPending) return;
-              void onToggleCargoHandled?.(row.id, line.sourceIndex);
-            }}
-            className={[
-              "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1 font-mono font-medium tabular-nums",
-              "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-              isCargoPending
-                ? "cursor-wait"
-                : canToggle
-                  ? "cursor-pointer"
-                  : "cursor-default",
-              doneClass,
-              cleared && !isCargoPending ? "opacity-40" : "",
-            ].join(" ")}
-            style={{
-              backgroundColor: tileBg,
-              borderColor: tileBorder,
-              color: tileFg,
-            }}
-          >
-            <span
-              aria-hidden
-              className="inline-block size-3.5 shrink-0 bg-current"
-              style={{
-                WebkitMaskImage: `url(${iconSrc})`,
-                maskImage: `url(${iconSrc})`,
-                WebkitMaskSize: "contain",
-                maskSize: "contain",
-                WebkitMaskRepeat: "no-repeat",
-                maskRepeat: "no-repeat",
-                WebkitMaskPosition: "center",
-                maskPosition: "center",
-              }}
-            />
-            <span className="text-[0.7rem] font-semibold leading-none">
-              {line.scu}
-            </span>
-            <span
-              className="text-[0.5rem] uppercase leading-none tracking-[0.12em] opacity-90"
-              title={line.commodityName ?? line.commoditySlug ?? undefined}
-            >
-              {abbrev}
-            </span>
-            {isCargoPending ? (
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
-              >
-                <Spinner className="size-3.5 text-rsi-accent" />
-              </span>
-            ) : cleared ? (
-              <CargoTileHandledMark isPickup={isPickup} />
-            ) : null}
-          </button>
-        );
-      })}
+      {items.map((line, index) => (
+        <CargoCommodityTile
+          key={`${row.id}-${role ?? "none"}-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`}
+          row={row}
+          line={line}
+          isPickup={isPickup}
+          handledVerb={handledVerb}
+          doneClass={doneClass}
+          pendingCargoKeys={pendingCargoKeys}
+          onToggleCargoHandled={onToggleCargoHandled}
+        />
+      ))}
     </div>
   );
 }
@@ -757,6 +844,7 @@ function CargoGroups({
   missions,
   location,
   shipName,
+  sessionId = null,
   transferLedger,
   pendingCargoKeys,
   onToggleCargoHandled,
@@ -767,6 +855,7 @@ function CargoGroups({
   missions: SessionMission[];
   location: string;
   shipName: string;
+  sessionId?: string | null;
   transferLedger?: StopTransferLedger | null;
   pendingCargoKeys?: ReadonlySet<string>;
   onToggleCargoHandled?: (
@@ -899,6 +988,10 @@ function CargoGroups({
                       ? "border-rsi-gold/40"
                       : "border-rsi-border";
 
+                const sourceRefs = sessionId
+                  ? screenshotRefsForMission(mission, sessionId)
+                  : [];
+
                 return (
                   <div
                     key={`${row.id}-${group.role ?? "none"}-${mission.id}`}
@@ -915,26 +1008,37 @@ function CargoGroups({
                         headerAccent,
                       ].join(" ")}
                     >
-                      <p
-                        className={[
-                          "font-mono text-[0.5rem] tracking-[0.12em]",
-                          mission.isCompleted
-                            ? "text-rsi-text-muted"
-                            : "text-rsi-accent",
-                        ].join(" ")}
-                      >
-                        {rank ?? "—"}
-                      </p>
-                      <p
-                        className={[
-                          "mt-0.5 min-w-0 truncate text-[0.65rem] font-semibold tracking-wide",
-                          mission.isCompleted
-                            ? "text-rsi-text-muted"
-                            : "text-rsi-text",
-                        ].join(" ")}
-                      >
-                        {title || mission.title}
-                      </p>
+                      <div className="flex min-w-0 items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={[
+                              "font-mono text-[0.5rem] tracking-[0.12em]",
+                              mission.isCompleted
+                                ? "text-rsi-text-muted"
+                                : "text-rsi-accent",
+                            ].join(" ")}
+                          >
+                            {rank ?? "—"}
+                          </p>
+                          <p
+                            className={[
+                              "mt-0.5 min-w-0 truncate text-[0.65rem] font-semibold tracking-wide",
+                              mission.isCompleted
+                                ? "text-rsi-text-muted"
+                                : "text-rsi-text",
+                            ].join(" ")}
+                          >
+                            {title || mission.title}
+                          </p>
+                        </div>
+                        {sourceRefs.length > 0 ? (
+                          <StopMissionScreenshots
+                            refs={sourceRefs}
+                            variant="inline"
+                            className="shrink-0"
+                          />
+                        ) : null}
+                      </div>
                       {reward !== "—" || exp != null ? (
                         <p className="mt-1 flex min-w-0 items-baseline justify-between gap-2 font-mono text-[0.55rem] tabular-nums tracking-wide text-rsi-text-secondary">
                           <span className="min-w-0 truncate">
@@ -3284,6 +3388,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         missions={missions}
                         location={location}
                         shipName={transferShipName}
+                        sessionId={sessionId}
                         transferLedger={
                           transferLedgerByStop.get(row.id) ?? null
                         }
@@ -3331,21 +3436,6 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         onToggle={toggleStopDone}
                       />
                     </div>
-                    {sessionId ? (
-                      <div
-                        className="mt-3 flex justify-start pt-1"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <StopMissionScreenshots
-                          refs={screenshotRefsForRow(
-                            missions,
-                            row,
-                            sessionId,
-                          )}
-                          variant="inline"
-                        />
-                      </div>
-                    ) : null}
                   </div>
                 </div>
                 {/* Full-width under the checkbox column so it lines up with bridge Next stop. */}

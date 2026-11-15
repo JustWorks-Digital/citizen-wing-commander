@@ -10,6 +10,7 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:storybook": "vitest run --project storybook",
+    "perf:flush": "node scripts/perf-flush.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepare": "husky",

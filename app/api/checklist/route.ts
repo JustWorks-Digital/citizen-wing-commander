@@ -6,6 +6,7 @@ import {
 } from "@/lib/sessions/checklistStore";
 import { backfillSessionMissionRanksFromCatalog } from "@/lib/missions/backfillSessionMissionRanks";
 import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import { withPerfRoute } from "@/lib/perf/withPerfRoute";
 
 function withSyncHeaders(
   session: SessionChecklistModel,
@@ -26,7 +27,7 @@ function sessionIdFromRequest(request: Request): string | null {
   return fromQuery?.trim() || null;
 }
 
-export async function GET(request: Request) {
+export const GET = withPerfRoute("checklist.get", async (request: Request) => {
   try {
     const sessionId = sessionIdFromRequest(request);
     let session = await getChecklistSession(sessionId);
@@ -55,9 +56,9 @@ export async function GET(request: Request) {
     const status = message.startsWith("Unknown session") ? 404 : 500;
     return NextResponse.json({ error: message }, { status });
   }
-}
+});
 
-export async function PUT(request: Request) {
+export const PUT = withPerfRoute("checklist.put", async (request: Request) => {
   try {
     const body = (await request.json()) as SessionChecklistModel;
     if (!body?.sessionName || !Array.isArray(body.rows)) {
@@ -78,4 +79,4 @@ export async function PUT(request: Request) {
     const status = message.startsWith("Unknown session") ? 404 : 500;
     return NextResponse.json({ error: message }, { status });
   }
-}
+});

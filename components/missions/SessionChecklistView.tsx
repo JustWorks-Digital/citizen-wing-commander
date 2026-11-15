@@ -35,8 +35,12 @@ import {
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import {
   applySessionCompletionTiming,
+  areAllLegsComplete,
+  formatSessionDuration,
+  getSessionElapsedMs,
   type SessionChecklistModel,
 } from "@/lib/missions/mockSession";
+import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
   applyCompletedMissionStopState,
@@ -94,6 +98,7 @@ import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
+import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
   SessionInventoryStat,
   SessionRouteProgressStats,
@@ -139,6 +144,7 @@ export function SessionChecklistView({
   );
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
+  const [tripCompleteOpen, setTripCompleteOpen] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [missionsFocusId, setMissionsFocusId] = useState<string | null>(null);
   const [stopsOpen, setStopsOpen] = useState(false);
@@ -440,6 +446,27 @@ export function SessionChecklistView({
     totalCapacity > 0 ? totalCapacity - peakScu : null;
   const totalLegs = session.rows.length;
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
+  const isTripComplete = areAllLegsComplete(session.rows);
+
+  // Close the finish report if the trip is reopened (stops unchecked).
+  useEffect(() => {
+    setTripCompleteOpen(false);
+  }, [session.id]);
+
+  useEffect(() => {
+    if (!session.completedAt) setTripCompleteOpen(false);
+  }, [session.completedAt]);
+
+  const tripElapsedLabel = useMemo(
+    () =>
+      formatSessionDuration(
+        getSessionElapsedMs({
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+        }),
+      ),
+    [session.startedAt, session.completedAt],
+  );
   const startLocation = session.startLocationSlug
     ? getLocationBySlug(session.startLocationSlug)
     : undefined;
@@ -456,6 +483,13 @@ export function SessionChecklistView({
       ...next,
       updatedAt: new Date().toISOString(),
     };
+    // Finish report when this write is the one that completes every stop.
+    if (
+      !areAllLegsComplete(sessionRef.current.rows) &&
+      areAllLegsComplete(stamped.rows)
+    ) {
+      setTripCompleteOpen(true);
+    }
     // Optimistic UI first; defer server echo so packing / grid don't re-run twice urgently.
     setSession(stamped);
     return saveChecklist(stamped)
@@ -585,6 +619,15 @@ export function SessionChecklistView({
     () => sessionMissionsAuecProgress(session.missions ?? []),
     [session.missions],
   );
+
+  const xpEarned = useMemo(() => {
+    return (session.missions ?? [])
+      .filter((mission) => !mission.isHidden && mission.isCompleted)
+      .reduce(
+        (sum, mission) => sum + (estimateMissionHaulingRepXp(mission) ?? 0),
+        0,
+      );
+  }, [session.missions]);
 
   const isStartLegCompleted =
     quantumOriginDeparted || session.rows.some((row) => row.isCompleted);
@@ -1089,6 +1132,23 @@ export function SessionChecklistView({
         onClose={() => setCreateSessionOpen(false)}
         onCreate={(name) => {
           void addSession(name);
+        }}
+      />
+
+      <TripCompleteSummaryModal
+        open={tripCompleteOpen && isTripComplete}
+        sessionName={session.sessionName}
+        elapsedLabel={tripElapsedLabel}
+        contractsDone={session.missionsCompleted ?? 0}
+        stopsDone={completedLegs}
+        peakScu={peakScu}
+        auecEarned={auecEarned}
+        xpEarned={xpEarned}
+        distanceTotal={routeDistance.total}
+        isBusy={tabsBusy}
+        onClose={() => setTripCompleteOpen(false)}
+        onRunAgain={() => {
+          void copyTrip();
         }}
       />
 

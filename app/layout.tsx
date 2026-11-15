@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Exo_2, JetBrains_Mono } from "next/font/google";
+import { PerfCaptureProvider } from "@/components/perf/PerfCaptureProvider";
 import "./globals.css";
 
 const exo = Exo_2({
@@ -33,7 +34,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${exo.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans text-rsi-text">
-        {children}
+        {process.env.NODE_ENV === "development" ? (
+          <PerfCaptureProvider>{children}</PerfCaptureProvider>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
