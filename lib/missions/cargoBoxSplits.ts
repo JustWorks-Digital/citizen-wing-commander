@@ -12,6 +12,7 @@ import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { resolveCommoditySlug } from "@/lib/sessions/resolveRefs";
 import {
   clampToCargoBoxScu,
+  DEFAULT_MAX_CARGO_BOX_SCU,
   decomposeScuIntoBoxes,
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
@@ -115,13 +116,26 @@ export const cargoBoxSplits = {
     scu: number,
   ): CargoBoxScu[] {
     const need = Math.max(0, Math.floor(scu));
-    const max =
+    const contractMax =
       typeof mission.maxContainerScu === "number" && mission.maxContainerScu > 0
         ? (mission.maxContainerScu as CargoBoxScu)
         : undefined;
     if (need === 0) return [];
 
     const splits = cargoBoxSplits.forCommodity(mission, commoditySlug);
+    /**
+     * When the mission mix cannot fill this stop amount exactly (e.g. only 2
+     * SCU crates for a 5 SCU delivery), rebuild with the mix’s preferred max —
+     * not the contract max alone — so a 2-only correction stays 2+2+1, not 4+1.
+     */
+    const decomposeMaxForMix = (mix: ScuBoxSplits | null): CargoBoxScu => {
+      const preferred = cargoBoxSplits.preferredMaxFromSplits(mix);
+      if (preferred != null) {
+        return cargoBoxSplits.effectivePreferredMax(mission, preferred);
+      }
+      return contractMax ?? DEFAULT_MAX_CARGO_BOX_SCU;
+    };
+
     if (splits) {
       const boxes = expandBreakdownToBoxSizes(splits);
       const total = boxes.reduce((sum, size) => sum + size, 0);
@@ -133,10 +147,10 @@ export const cargoBoxSplits = {
         const taken = takeBoxesForScu(pool, need);
         if (taken) return taken;
         // e.g. 8 SCU crates cannot fill a 7 SCU outpost pickup — rebuild for the line.
-        return decomposeScuIntoBoxes(need, max);
+        return decomposeScuIntoBoxes(need, decomposeMaxForMix(splits));
       }
     }
-    return decomposeScuIntoBoxes(need, max);
+    return decomposeScuIntoBoxes(need, contractMax ?? DEFAULT_MAX_CARGO_BOX_SCU);
   },
 
   withDefaults(mission: SessionMission): SessionMission {

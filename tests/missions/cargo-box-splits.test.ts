@@ -231,6 +231,42 @@ describe("cargoBoxSplits.boxSizesForLine", () => {
     ]);
     expect(cargoBoxSplits.boxSizesForLine(iron, "iron-ore", 6)).toEqual([4, 2]);
   });
+
+  it("rebuilds odd stop amounts with the corrected preferred max not contract max", () => {
+    // Mission mix is only 2 SCU crates; contract allows 4. A 5 SCU delivery
+    // cannot take from the pool — must stay 2+2+1, not invent a 4.
+    const hydrogen = cargoBoxSplits.withDefaults(
+      mission({
+        id: "fuel",
+        from: ["Covalex Distribution Centre S4DC05"],
+        to: [
+          "Shubin Mining Facility SM0-13",
+          "Shubin Mining Facility SM0-22",
+        ],
+        maxContainerScu: 4,
+        cargo: [{ commodity: "Hydrogen Fuel", scu: 8 }],
+        scuCargoBoxSplits: {
+          "hydrogen-fuel": {
+            scuOne: 0,
+            scuTwo: 4,
+            scuFour: 0,
+            scuEight: 0,
+            scuSixteen: 0,
+            scuThirtyTwo: 0,
+          },
+        },
+      }),
+    );
+    expect(cargoBoxSplits.boxSizesForLine(hydrogen, "hydrogen-fuel", 8)).toEqual([
+      2, 2, 2, 2,
+    ]);
+    expect(cargoBoxSplits.boxSizesForLine(hydrogen, "hydrogen-fuel", 5)).toEqual([
+      2, 2, 1,
+    ]);
+    expect(cargoBoxSplits.boxSizesForLine(hydrogen, "hydrogen-fuel", 3)).toEqual([
+      2, 1,
+    ]);
+  });
 });
 
 describe("cargoBoxSplits.propagatePreferredMax", () => {
