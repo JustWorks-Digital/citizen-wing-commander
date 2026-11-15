@@ -5,10 +5,26 @@
   "updated": "2026-11-10",
   "tokens": [
     {
+      "slug": "agricultural-supplies",
+      "colorHex": "#7a8348",
+      "note": "green-brown / olive"
+    },
+    {
+      "slug": "copper",
+      "colorHex": "#c47a3a",
+      "note": "copper"
+    },
+    {
+      "slug": "copper-ore",
+      "colorHex": "#a86630",
+      "note": "darker copper"
+    },
+    {
       "slug": "corundum",
       "colorHex": "#8ec8f8",
       "note": "light blue"
     },
+
     {
       "slug": "corundum-raw",
       "colorHex": "#8ec8f8",
@@ -95,12 +111,27 @@
       "note": "white"
     },
     {
+      "slug": "distilled-spirits",
+      "colorHex": "#f3f6f9",
+      "note": "white"
+    },
+    {
+      "slug": "hydrogen",
+      "colorHex": "#f3f6f9",
+      "note": "white (same as hydrogen fuel)"
+    },
+    {
       "slug": "hydrogen-fuel",
       "colorHex": "#f3f6f9",
       "note": "white"
     },
     {
       "slug": "quantum-fuel",
+      "colorHex": "#f3f6f9",
+      "note": "white"
+    },
+    {
+      "slug": "souvenirs",
       "colorHex": "#f3f6f9",
       "note": "white"
     }

@@ -43,7 +43,7 @@ export function getLocationBySlug(slug: string): FixtureLocation | undefined {
   return locationsBySlug.get(slug);
 }
 
-/** Unique one-word location label; falls back to slug when missing. */
+/** Unique short label (exact substring of name); falls back to name/slug. */
 export function getLocationShortName(slug: string): string {
   const location = getLocationBySlug(slug);
   return location?.shortName || location?.name || slug;

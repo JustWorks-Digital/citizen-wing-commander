@@ -56,8 +56,17 @@ const SLUG_COLOR_OVERRIDES: Record<string, string> = {
   silicon: "#2f6b48", // deeper green
   "silicone-raw": "#25563a",
   stims: "#f3f6f9", // white
+  hydrogen: "#f3f6f9", // white (same as hydrogen fuel)
   "hydrogen-fuel": "#f3f6f9", // white
   "quantum-fuel": "#f3f6f9", // white
+  "distilled-spirits": "#f3f6f9", // white
+  souvenirs: "#f3f6f9", // white
+  "agricultural-supplies": "#7a8348", // green-brown / olive
+  copper: "#c47a3a", // copper
+  "copper-ore": "#a86630", // darker copper
+
+
+
   // Sky blue (#87CEEB) + dark blue (#1F4E8C).
   "pressurized-ice": "#538ebc",
 };

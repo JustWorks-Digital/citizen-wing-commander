@@ -43,6 +43,27 @@ export function normalizeMissionRank(
   return MISSION_RANK_BY_NORM.get(value.trim().toLowerCase()) ?? null;
 }
 
+/** Dense table abbrevs (hard-coded). Falls back to the stored rank string. */
+const MISSION_RANK_ABBREV: Record<MissionRank, string> = {
+  Trainee: "Trn",
+  Rookie: "Rk",
+  Junior: "Jr",
+  Member: "Mem",
+  Experienced: "Exp",
+  Senior: "Sr",
+  Master: "Mst",
+};
+
+export function missionRankAbbrevLabel(
+  value: string | null | undefined,
+): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const normalized = normalizeMissionRank(trimmed);
+  if (normalized) return MISSION_RANK_ABBREV[normalized];
+  return trimmed;
+}
+
 const RANK_PREFIX =
   /^(Trainee|Rookie|Junior|Member|Experienced|Senior|Master)\s+Rank\s*[-–—:|]?\s*/i;
 

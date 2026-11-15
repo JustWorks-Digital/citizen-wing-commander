@@ -35,3 +35,10 @@ export const WithChecks: Story = {
     onCheckedIdsChange: () => {},
   },
 };
+
+/** Title/Category/Rank hidden — From/To/Cargo gain width (control lives in Filters). */
+export const CompactColumns: Story = {
+  args: {
+    visibleColumns: ["id", "reward", "scu", "from", "to", "cargo"],
+  },
+};

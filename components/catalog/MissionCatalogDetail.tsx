@@ -1,12 +1,15 @@
 "use client";
 
 import type { CatalogMission } from "@/db/schema";
+import {
+  CatalogCargoBadges,
+  CatalogLocationBadges,
+} from "@/components/catalog/CatalogRouteBadges";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import {
-  catalogCargoSummary,
   catalogPayload,
   catalogRewardLabel,
-  catalogRouteSummary,
+  catalogRouteBadgeItems,
   catalogScuSplitsCaption,
   contractorDisplayName,
   locationDisplayName,
@@ -14,6 +17,7 @@ import {
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
+import type { ReactNode } from "react";
 
 export type MissionCatalogDetailProps = {
   mission: CatalogMission;
@@ -25,46 +29,26 @@ function MetaRow({
   label,
   value,
   labelTitle,
+  valueTitle,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   labelTitle?: string;
+  valueTitle?: string;
 }) {
   return (
-    <div className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
+    <div className="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-x-3">
       <dt
-        className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+        className="flex min-h-5 items-center font-mono text-[0.55rem] leading-none uppercase tracking-[0.16em] text-rsi-text-muted"
         title={labelTitle}
       >
         {label}
       </dt>
-      <dd className="text-rsi-text-secondary">{value}</dd>
-    </div>
-  );
-}
-
-function MetaListRow({
-  label,
-  items,
-}: {
-  label: string;
-  items: string[];
-}) {
-  return (
-    <div className="grid grid-cols-[7rem_1fr] gap-2 text-sm">
-      <dt className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        {label}
-      </dt>
-      <dd className="text-rsi-text-secondary">
-        {items.length === 0 ? (
-          "—"
-        ) : (
-          <ul className="list-disc space-y-0.5 pl-4">
-            {items.map((item, index) => (
-              <li key={`${item}-${index}`}>{item}</li>
-            ))}
-          </ul>
-        )}
+      <dd
+        className="flex min-h-5 min-w-0 items-center text-sm leading-snug text-rsi-text-secondary"
+        title={valueTitle}
+      >
+        {value}
       </dd>
     </div>
   );
@@ -76,7 +60,7 @@ export function MissionCatalogDetail({
   onViewSource,
 }: MissionCatalogDetailProps) {
   const payload = catalogPayload(mission);
-  const route = catalogRouteSummary(mission);
+  const route = catalogRouteBadgeItems(mission);
   const sourceUrl = screenshotUrlFromLogicalPath(mission.latestScreenshotPath);
   const box = mission.scuBoxSplits;
   const splitLines = catalogScuSplitsCaption(mission)
@@ -84,6 +68,16 @@ export function MissionCatalogDetail({
     .map((line) => line.trim())
     .filter(Boolean);
   const objectives = payload?.objectives?.filter((line) => line.trim()) ?? [];
+  const boxesLabel = [
+    box.scuThirtyTwo ? `${box.scuThirtyTwo}×32` : null,
+    box.scuSixteen ? `${box.scuSixteen}×16` : null,
+    box.scuEight ? `${box.scuEight}×8` : null,
+    box.scuFour ? `${box.scuFour}×4` : null,
+    box.scuTwo ? `${box.scuTwo}×2` : null,
+    box.scuOne ? `${box.scuOne}×1` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div
@@ -113,7 +107,20 @@ export function MissionCatalogDetail({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
           <dl className="space-y-2">
-            <MetaRow label="Reward" value={catalogRewardLabel(mission)} />
+            <MetaRow
+              label="Reward"
+              value={
+                <span className="font-mono text-[0.7rem] tabular-nums text-rsi-accent">
+                  {catalogRewardLabel(mission, {
+                    includeAuecUnit: false,
+                    compact: true,
+                  })}
+                </span>
+              }
+              valueTitle={catalogRewardLabel(mission, {
+                includeAuecUnit: true,
+              })}
+            />
             <MetaRow
               label="Category"
               value={
@@ -121,13 +128,23 @@ export function MissionCatalogDetail({
                 "—"
               }
             />
+            <MetaRow label="Rank" value={mission.rank ?? "—"} />
             <MetaRow
               label="Offer at"
               value={locationDisplayName(mission.offerLocationSlug)}
             />
-            <MetaListRow label="From" items={route.from} />
-            <MetaListRow label="To" items={route.to} />
-            <MetaRow label="Cargo" value={catalogCargoSummary(mission)} />
+            <MetaRow
+              label="From"
+              value={<CatalogLocationBadges items={route.from} tone="from" />}
+            />
+            <MetaRow
+              label="To"
+              value={<CatalogLocationBadges items={route.to} tone="to" />}
+            />
+            <MetaRow
+              label="Cargo"
+              value={<CatalogCargoBadges mission={mission} />}
+            />
             <MetaRow
               label="SCU total"
               labelTitle={SCU_TITLE}
@@ -140,19 +157,7 @@ export function MissionCatalogDetail({
                 value={`${mission.scuMaxContainerSize}`}
               />
             ) : null}
-            <MetaRow
-              label="Crates"
-              value={[
-                box.scuThirtyTwo ? `${box.scuThirtyTwo}×32` : null,
-                box.scuSixteen ? `${box.scuSixteen}×16` : null,
-                box.scuEight ? `${box.scuEight}×8` : null,
-                box.scuFour ? `${box.scuFour}×4` : null,
-                box.scuTwo ? `${box.scuTwo}×2` : null,
-                box.scuOne ? `${box.scuOne}×1` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "—"}
-            />
+            <MetaRow label="Boxes" value={boxesLabel || "—"} />
             <MetaRow
               label="Runs"
               value={
@@ -188,21 +193,6 @@ export function MissionCatalogDetail({
               <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-rsi-text-secondary">
                 {objectives.map((line) => (
                   <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {payload?.cargo && payload.cargo.length > 0 ? (
-            <div>
-              <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                Cargo lines
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-4 font-mono text-sm tabular-nums text-rsi-text-secondary">
-                {payload.cargo.map((line) => (
-                  <li key={`${line.commoditySlug}-${line.scu}`}>
-                    {line.scu} {line.commodityName}
-                  </li>
                 ))}
               </ul>
             </div>

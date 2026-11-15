@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { CatalogMission } from "@/db/schema";
+import { CatalogColumnsMenu } from "@/components/catalog/CatalogColumnsMenu";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import {
   catalogFilterOptions,
@@ -9,6 +10,7 @@ import {
   type CatalogTableFilterKey,
   type CatalogTableFilters,
 } from "@/lib/missions/catalogMissionTableQuery";
+import type { CatalogTableColumnKey } from "@/lib/missions/catalogTableColumnPrefs";
 import { MISSION_RANKS } from "@/lib/missions/missionRank";
 
 export type MissionCatalogFiltersProps = {
@@ -21,6 +23,9 @@ export type MissionCatalogFiltersProps = {
   onFiltersChange: (filters: CatalogTableFilters) => void;
   resultCount: number;
   totalCount: number;
+  /** Visible table columns (UI only — does not affect search/filters). */
+  visibleColumns?: CatalogTableColumnKey[];
+  onVisibleColumnsChange?: (columns: CatalogTableColumnKey[]) => void;
 };
 
 const fieldInputClass = [
@@ -53,7 +58,12 @@ export function MissionCatalogFilters({
   onFiltersChange,
   resultCount,
   totalCount,
+  visibleColumns,
+  onVisibleColumnsChange,
 }: MissionCatalogFiltersProps) {
+  const canEditColumns =
+    Array.isArray(visibleColumns) &&
+    typeof onVisibleColumnsChange === "function";
   const optionsByKey = useMemo(() => {
     const map = {} as Record<CatalogTableFilterKey, string[]>;
     for (const field of DROPDOWN_FIELDS) {
@@ -136,15 +146,41 @@ export function MissionCatalogFilters({
       className="rounded-rsi border border-rsi-border bg-rsi-surface/80 p-3 shadow-rsi-panel sm:p-4"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <div className="min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1">
           <input
-            type="search"
+            type="text"
+            inputMode="search"
             aria-label="Search by keywords"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search by keywords"
-            className={fieldInputClass}
+            className={`${fieldInputClass}${query.trim() ? " pr-8" : ""}`}
           />
+          {query.trim() ? (
+            <button
+              type="button"
+              aria-label="Clear search"
+              title="Clear search"
+              onClick={() => onQueryChange("")}
+              className={[
+                "absolute top-1/2 right-2 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-sm text-rsi-text-muted transition-colors",
+                "hover:bg-rsi-danger-muted hover:text-rsi-danger",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 16 16"
+                className="size-2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              >
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          ) : null}
         </div>
 
         <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
@@ -215,15 +251,23 @@ export function MissionCatalogFilters({
           {resultCount !== totalCount ? ` / ${totalCount}` : ""} contract
           {resultCount === 1 ? "" : "s"}
         </p>
-        {hasActive ? (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted transition-colors hover:text-rsi-accent"
-          >
-            Clear all
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {canEditColumns && visibleColumns && onVisibleColumnsChange ? (
+            <CatalogColumnsMenu
+              visibleKeys={visibleColumns}
+              onChange={onVisibleColumnsChange}
+            />
+          ) : null}
+          {hasActive ? (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted transition-colors hover:text-rsi-accent"
+            >
+              Clear all
+            </button>
+          ) : null}
+        </div>
       </div>
     </section>
   );

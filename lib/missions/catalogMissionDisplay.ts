@@ -1,11 +1,24 @@
 import type { CatalogMission } from "@/db/schema";
-import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
+import {
+  getContractorBySlug,
+  getLocationBySlug,
+  getLocationShortName,
+} from "@/lib/fixtures";
 import {
   auecFromRewards,
   formatAuecAmount,
+  formatAuecAmountCompact,
   type CatalogMissionReward,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
+
+export type CatalogLocationBadgeItem = {
+  slug: string;
+  /** Full location name (hover / title). */
+  name: string;
+  /** Badge label — fixture shortName, or full name when no short label exists. */
+  label: string;
+};
 
 export function catalogPayload(
   mission: CatalogMission,
@@ -27,13 +40,22 @@ export function contractorDisplayName(
   return getContractorBySlug(slugOrName)?.name ?? slugOrName;
 }
 
+type CatalogRewardLabelOptions = {
+  includeAuecUnit?: boolean;
+  /** Abbreviate aUEC (42k / 1.3M) for dense table cells. */
+  compact?: boolean;
+};
+
 function formatRewardLine(
   reward: CatalogMissionReward,
-  options?: { includeAuecUnit?: boolean },
+  options?: CatalogRewardLabelOptions,
 ): string {
   if (reward.kind === "auec") {
     if (reward.amount <= 0) return "";
-    return formatAuecAmount(reward.amount, {
+    const format = options?.compact
+      ? formatAuecAmountCompact
+      : formatAuecAmount;
+    return format(reward.amount, {
       includeUnit: options?.includeAuecUnit,
     });
   }
@@ -43,7 +65,7 @@ function formatRewardLine(
 /** Compact table/detail label for catalog rewards (aUEC + other kinds). */
 export function catalogRewardLabel(
   mission: CatalogMission,
-  options?: { includeAuecUnit?: boolean },
+  options?: CatalogRewardLabelOptions,
 ): string {
   const rewards =
     mission.rewards?.length
@@ -72,6 +94,34 @@ export function catalogRouteSummary(mission: CatalogMission): {
   };
 }
 
+/** Fixture shortName for catalog table From/To badges (full name if none); hover uses full name. */
+export function catalogLocationBadgeLabel(
+  slug: string,
+): CatalogLocationBadgeItem {
+  const name = locationDisplayName(slug);
+  return {
+    slug,
+    name,
+    label: getLocationShortName(slug),
+  };
+}
+
+/** From / To badge rows for the catalog table. */
+export function catalogRouteBadgeItems(mission: CatalogMission): {
+  from: CatalogLocationBadgeItem[];
+  to: CatalogLocationBadgeItem[];
+} {
+  const payload = catalogPayload(mission);
+  return {
+    from: (payload?.fromLocationSlugs ?? []).map((slug) =>
+      catalogLocationBadgeLabel(slug),
+    ),
+    to: (payload?.toLocationSlugs ?? []).map((slug) =>
+      catalogLocationBadgeLabel(slug),
+    ),
+  };
+}
+
 /** Per-line cargo labels for table lists (commodity names). */
 export function catalogCargoLines(mission: CatalogMission): string[] {
   const payload = catalogPayload(mission);
@@ -80,6 +130,33 @@ export function catalogCargoLines(mission: CatalogMission): string[] {
     return mission.scuTotal > 0 ? [`${mission.scuTotal} SCU`] : [];
   }
   return cargo.map((line) => line.commodityName);
+}
+
+/** Cargo lines for colored table badges (slug + name + SCU). */
+export function catalogCargoBadgeItems(mission: CatalogMission): Array<{
+  commoditySlug: string;
+  commodityName: string;
+  scu: number;
+}> {
+  const payload = catalogPayload(mission);
+  const cargo = payload?.cargo ?? [];
+  if (cargo.length > 0) {
+    return cargo.map((line) => ({
+      commoditySlug: line.commoditySlug,
+      commodityName: line.commodityName,
+      scu: line.scu,
+    }));
+  }
+  if (mission.scuTotal > 0) {
+    return [
+      {
+        commoditySlug: "",
+        commodityName: `${mission.scuTotal} SCU`,
+        scu: mission.scuTotal,
+      },
+    ];
+  }
+  return [];
 }
 
 /**

@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CatalogMission } from "@/db/schema";
 import {
-  catalogCargoLines,
+  CatalogCargoBadges,
+  CatalogLocationBadges,
+} from "@/components/catalog/CatalogRouteBadges";
+import {
   catalogPayload,
   catalogRewardLabel,
-  catalogRouteSummary,
+  catalogRouteBadgeItems,
   contractorDisplayName,
 } from "@/lib/missions/catalogMissionDisplay";
 import {
@@ -14,9 +17,14 @@ import {
   type CatalogTableSort,
   type CatalogTableSortKey,
 } from "@/lib/missions/catalogMissionTableQuery";
+import {
+  CATALOG_TABLE_COLUMN_KEYS,
+  type CatalogTableColumnKey,
+} from "@/lib/missions/catalogTableColumnPrefs";
 import { SourceIcon } from "@/components/ui/SourceIcon";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { haulingCategoryShortLabel } from "@/lib/missions/haulingCategory";
+import { missionRankAbbrevLabel } from "@/lib/missions/missionRank";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type MissionCatalogTableProps = {
@@ -31,6 +39,11 @@ export type MissionCatalogTableProps = {
   /** Row ids checked for bulk “add to session”. */
   checkedIds?: string[];
   onCheckedIdsChange?: (ids: string[]) => void;
+  /**
+   * Visible columns (from Filters → Columns). Defaults to all.
+   * Does not affect search/filters — display only.
+   */
+  visibleColumns?: CatalogTableColumnKey[];
 };
 
 const thClass =
@@ -44,33 +57,50 @@ const iconBtnClass = [
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
 ].join(" ");
 
-const COLUMNS: Array<{
+type ColumnDef = {
   key: CatalogTableSortKey;
   label: string;
-  className: string;
+  /** Width on `<col>` (table-fixed). Omit so the column absorbs leftover space. */
+  colClass?: string;
+  /** Wider `<col>` when Title is hidden. */
+  expandedColClass?: string;
   align?: "left" | "right";
   title?: string;
-}> = [
-  { key: "id", label: "ID", className: "w-[5.5rem]" },
-  { key: "title", label: "Title", className: "w-[22%] min-w-0" },
-  { key: "category", label: "Category", className: "w-[5.75rem]" },
-  { key: "rank", label: "Rank", className: "w-[5.25rem]" },
+};
+
+const COLUMNS: ColumnDef[] = [
+  { key: "id", label: "ID", colClass: "w-[5.5rem]" },
+  { key: "title", label: "Title", colClass: "w-[20%]" },
+  { key: "category", label: "Category", colClass: "w-[5.75rem]" },
+  // Header “Rank” + sort glyph; cells are short abbrevs — pin so leftover goes to Cargo.
+  { key: "rank", label: "Rank", colClass: "w-[3.25rem]" },
   {
     key: "reward",
     label: "Reward",
-    className: "w-[5.5rem]",
+    colClass: "w-[4.75rem]",
     align: "right",
   },
   {
     key: "scu",
     label: "SCU",
-    className: "w-[3rem]",
+    colClass: "w-[3rem]",
     align: "right",
     title: SCU_TITLE,
   },
-  { key: "from", label: "From", className: "w-[14%] min-w-0" },
-  { key: "to", label: "To", className: "w-[14%] min-w-0" },
-  { key: "cargo", label: "Cargo", className: "w-[12%] min-w-0" },
+  {
+    key: "from",
+    label: "From",
+    colClass: "w-[14%]",
+    expandedColClass: "w-[20%]",
+  },
+  {
+    key: "to",
+    label: "To",
+    colClass: "w-[14%]",
+    expandedColClass: "w-[20%]",
+  },
+  // No fixed width — takes remaining table space after pinned / % columns.
+  { key: "cargo", label: "Cargo" },
 ];
 
 function ObjectIcon() {
@@ -88,19 +118,6 @@ function ObjectIcon() {
       <path d="M8 4H6a2 2 0 0 0-2 2v3c0 1-.6 2-2 2 1.4 0 2 1 2 2v3a2 2 0 0 0 2 2h2" />
       <path d="M16 4h2a2 2 0 0 1 2 2v3c0 1 .6 2 2 2-1.4 0-2 1-2 2v3a2 2 0 0 1-2 2h-2" />
     </svg>
-  );
-}
-
-function BulletList({ items }: { items: string[] }) {
-  if (items.length === 0) return <span>—</span>;
-  return (
-    <ul className="list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug">
-      {items.map((item, index) => (
-        <li key={`${item}-${index}`} className="break-words">
-          {item}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -130,20 +147,12 @@ function SortGlyph({
       }
     >
       {showUp ? (
-        <svg
-          viewBox="0 0 10 6"
-          className="size-2.5"
-          fill="currentColor"
-        >
+        <svg viewBox="0 0 10 6" className="size-2.5" fill="currentColor">
           <path d="M5 0.5 9.5 5.5H0.5Z" />
         </svg>
       ) : null}
       {showDown ? (
-        <svg
-          viewBox="0 0 10 6"
-          className="size-2.5"
-          fill="currentColor"
-        >
+        <svg viewBox="0 0 10 6" className="size-2.5" fill="currentColor">
           <path d="M5 5.5 0.5 0.5h9Z" />
         </svg>
       ) : null}
@@ -162,8 +171,20 @@ export function MissionCatalogTable({
   onSortChange,
   checkedIds,
   onCheckedIdsChange,
+  visibleColumns: visibleColumnsProp,
 }: MissionCatalogTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const visibleKeys = visibleColumnsProp?.length
+    ? visibleColumnsProp
+    : CATALOG_TABLE_COLUMN_KEYS;
+  const visibleSet = useMemo(() => new Set(visibleKeys), [visibleKeys]);
+  const visibleColumns = useMemo(
+    () => COLUMNS.filter((column) => visibleSet.has(column.key)),
+    [visibleSet],
+  );
+  const titleHidden = !visibleSet.has("title");
+
   const canSort = typeof onSortChange === "function";
   const canCheck = typeof onCheckedIdsChange === "function";
   const checkedSet = new Set(checkedIds ?? []);
@@ -214,16 +235,38 @@ export function MissionCatalogTable({
         min-w keeps a usable layout under ~1000px without forcing scroll on
         typical smaller desktops; overflow-x-auto still allows scroll below that.
       */}
-      <table className="w-full min-w-[52rem] table-fixed border-collapse text-left">
+      <table
+        className={[
+          "w-full table-fixed border-collapse text-left",
+          titleHidden ? "min-w-[42rem]" : "min-w-[52rem]",
+        ].join(" ")}
+      >
+        <colgroup>
+          {canCheck ? <col className="w-8" /> : null}
+          {visibleColumns.map((column) => {
+            const colClass =
+              titleHidden && column.expandedColClass
+                ? column.expandedColClass
+                : column.colClass;
+            return (
+              <col
+                key={column.key}
+                className={colClass ?? "min-w-0"}
+              />
+            );
+          })}
+        </colgroup>
         <thead>
           <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
             {canCheck ? (
-              <th scope="col" className={`${thClass} w-10`}>
+              <th scope="col" className={`${thClass} px-2 sm:px-2`}>
                 <input
                   type="checkbox"
                   checked={allVisibleChecked}
                   ref={(el) => {
-                    if (el) el.indeterminate = someVisibleChecked && !allVisibleChecked;
+                    if (el)
+                      el.indeterminate =
+                        someVisibleChecked && !allVisibleChecked;
                   }}
                   onChange={toggleAllVisible}
                   aria-label="Select all visible contracts"
@@ -231,7 +274,7 @@ export function MissionCatalogTable({
                 />
               </th>
             ) : null}
-            {COLUMNS.map((column) => {
+            {visibleColumns.map((column) => {
               const isActive = sort?.key === column.key;
               const alignRight = column.align === "right";
               const headerInner = (
@@ -257,7 +300,7 @@ export function MissionCatalogTable({
                         : "descending"
                       : "none"
                   }
-                  className={`${thClass} ${column.className} ${alignRight ? "text-right" : ""}`}
+                  className={`${thClass} ${alignRight ? "text-right" : ""}`}
                 >
                   {canSort ? (
                     <button
@@ -293,7 +336,7 @@ export function MissionCatalogTable({
           {missions.length === 0 ? (
             <tr>
               <td
-                colSpan={COLUMNS.length + (canCheck ? 1 : 0)}
+                colSpan={visibleColumns.length + (canCheck ? 1 : 0) || 1}
                 className={`${tdClass} py-8 text-center text-rsi-text-muted`}
               >
                 No contracts to show.
@@ -301,7 +344,7 @@ export function MissionCatalogTable({
             </tr>
           ) : (
             missions.map((mission) => {
-              const route = catalogRouteSummary(mission);
+              const route = catalogRouteBadgeItems(mission);
               const sourceUrl = screenshotUrlFromLogicalPath(
                 mission.latestScreenshotPath,
               );
@@ -321,7 +364,7 @@ export function MissionCatalogTable({
                   aria-selected={isSelected}
                 >
                   {canCheck ? (
-                    <td className={tdClass}>
+                    <td className={`${tdClass} px-2 sm:px-2`}>
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -331,96 +374,134 @@ export function MissionCatalogTable({
                       />
                     </td>
                   ) : null}
-                  <td className={tdClass}>
-                    <div className="flex flex-col gap-1.5">
-                      <button
-                        type="button"
-                        title={isCopied ? "Copied" : `Copy ${mission.id}`}
-                        aria-label={`Copy contract ID ${mission.id}`}
-                        onClick={() => void copyMissionId(mission.id)}
-                        className={[
-                          "rounded-rsi text-left font-mono text-[0.65rem] tabular-nums transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                          isCopied
-                            ? "text-rsi-accent"
-                            : "text-rsi-text-muted hover:text-rsi-accent",
-                        ].join(" ")}
-                      >
-                        {isCopied ? "Copied" : mission.id.slice(0, 8)}
-                      </button>
-                      <div className="flex items-center gap-1">
+                  {visibleSet.has("id") ? (
+                    <td className={`${tdClass}`}>
+                      <div className="flex flex-col gap-1.5">
                         <button
                           type="button"
-                          disabled={!sourceUrl}
-                          title={
-                            sourceUrl
-                              ? "View source screenshot"
-                              : "No source screenshot on file"
-                          }
-                          aria-label="View source"
-                          onClick={() => onViewSource?.(mission)}
+                          title={isCopied ? "Copied" : `Copy ${mission.id}`}
+                          aria-label={`Copy contract ID ${mission.id}`}
+                          onClick={() => void copyMissionId(mission.id)}
                           className={[
-                            iconBtnClass,
-                            sourceUrl
-                              ? "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent"
-                              : "cursor-not-allowed border-rsi-border/50 text-rsi-text-muted opacity-40",
+                            "rounded-rsi text-left font-mono text-[0.65rem] tabular-nums transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                            isCopied
+                              ? "text-rsi-accent"
+                              : "text-rsi-text-muted hover:text-rsi-accent",
                           ].join(" ")}
                         >
-                          <SourceIcon />
+                          {isCopied ? "Copied" : mission.id.slice(0, 8)}
                         </button>
-                        <button
-                          type="button"
-                          title="View object JSON"
-                          aria-label="View object"
-                          onClick={() => onViewObject?.(mission)}
-                          className={[
-                            iconBtnClass,
-                            "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent",
-                          ].join(" ")}
-                        >
-                          <ObjectIcon />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={!sourceUrl}
+                            title={
+                              sourceUrl
+                                ? "View source screenshot"
+                                : "No source screenshot on file"
+                            }
+                            aria-label="View source"
+                            onClick={() => onViewSource?.(mission)}
+                            className={[
+                              iconBtnClass,
+                              sourceUrl
+                                ? "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent"
+                                : "cursor-not-allowed border-rsi-border/50 text-rsi-text-muted opacity-40",
+                            ].join(" ")}
+                          >
+                            <SourceIcon />
+                          </button>
+                          <button
+                            type="button"
+                            title="View object JSON"
+                            aria-label="View object"
+                            onClick={() => onViewObject?.(mission)}
+                            className={[
+                              iconBtnClass,
+                              "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent",
+                            ].join(" ")}
+                          >
+                            <ObjectIcon />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td
-                    className={`${tdClass} cursor-pointer`}
-                    onClick={() => onSelect(mission)}
-                  >
-                    <p className="truncate text-xs font-semibold tracking-wide text-rsi-text-secondary">
-                      {mission.title}
-                    </p>
-                    {mission.contractorSlug ? (
-                      <p className="mt-0.5 truncate text-[0.65rem] text-rsi-text-muted">
-                        {contractorDisplayName(mission.contractorSlug)}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("title") ? (
+                    <td
+                      className={`${tdClass} cursor-pointer`}
+                      onClick={() => onSelect(mission)}
+                    >
+                      <p className="truncate text-xs font-semibold tracking-wide text-rsi-text-secondary">
+                        {mission.title}
                       </p>
-                    ) : null}
-                  </td>
-                  <td className={tdClass}>
-                    {haulingCategoryShortLabel(
-                      catalogPayload(mission)?.category,
-                    ) ?? "—"}
-                  </td>
-                  <td className={tdClass}>{mission.rank ?? "—"}</td>
-                  <td
-                    className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-accent`}
-                  >
-                    {catalogRewardLabel(mission, { includeAuecUnit: false })}
-                  </td>
-                  <td
-                    className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
-                  >
-                    {mission.scuTotal}
-                  </td>
-                  <td className={tdClass}>
-                    <BulletList items={route.from} />
-                  </td>
-                  <td className={tdClass}>
-                    <BulletList items={route.to} />
-                  </td>
-                  <td className={tdClass}>
-                    <BulletList items={catalogCargoLines(mission)} />
-                  </td>
+                      {mission.contractorSlug ? (
+                        <p className="mt-0.5 truncate text-[0.65rem] text-rsi-text-muted">
+                          {contractorDisplayName(mission.contractorSlug)}
+                        </p>
+                      ) : null}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("category") ? (
+                    <td className={`${tdClass}`}>
+                      {haulingCategoryShortLabel(
+                        catalogPayload(mission)?.category,
+                      ) ?? "—"}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("rank") ? (
+                    <td
+                      className={`${tdClass} font-mono text-[0.65rem]`}
+                      title={mission.rank ?? undefined}
+                    >
+                      {missionRankAbbrevLabel(mission.rank) ?? "—"}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("reward") ? (
+                    <td
+                      className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-accent`}
+                      title={catalogRewardLabel(mission, {
+                        includeAuecUnit: true,
+                      })}
+                    >
+                      {catalogRewardLabel(mission, {
+                        includeAuecUnit: false,
+                        compact: true,
+                      })}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("scu") ? (
+                    <td
+                      className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
+                    >
+                      {mission.scuTotal}
+                    </td>
+                  ) : null}
+                  {visibleSet.has("from") ? (
+                    <td
+                      className={`${tdClass} cursor-pointer`}
+                      onClick={() => onSelect(mission)}
+                    >
+                      <CatalogLocationBadges items={route.from} tone="from" />
+                    </td>
+                  ) : null}
+                  {visibleSet.has("to") ? (
+                    <td
+                      className={`${tdClass} cursor-pointer`}
+                      onClick={() => onSelect(mission)}
+                    >
+                      <CatalogLocationBadges items={route.to} tone="to" />
+                    </td>
+                  ) : null}
+                  {visibleSet.has("cargo") ? (
+                    <td
+                      className={`${tdClass} cursor-pointer`}
+                      onClick={() => onSelect(mission)}
+                    >
+                      <CatalogCargoBadges mission={mission} />
+                    </td>
+                  ) : null}
                 </tr>
               );
             })

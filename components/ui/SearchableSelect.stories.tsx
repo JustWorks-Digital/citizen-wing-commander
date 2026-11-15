@@ -19,6 +19,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** Clear (×) appears on the input when values are set; Backspace also clears when closed. */
 export const Preselected: Story = {
   args: { values: ["Lorville", "Everus Harbor"] },
 };

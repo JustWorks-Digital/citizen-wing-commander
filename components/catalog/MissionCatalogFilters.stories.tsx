@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import type { CatalogTableFilters } from "@/lib/missions/catalogMissionTableQuery";
+import {
+  CATALOG_TABLE_COLUMN_KEYS,
+  type CatalogTableColumnKey,
+} from "@/lib/missions/catalogTableColumnPrefs";
 import { MissionCatalogFilters } from "./MissionCatalogFilters";
 import { sampleCatalogMissions } from "./missionCatalogFixtures";
 
@@ -16,6 +20,8 @@ const meta = {
     onFiltersChange: () => {},
     resultCount: 2,
     totalCount: 3,
+    visibleColumns: [...CATALOG_TABLE_COLUMN_KEYS],
+    onVisibleColumnsChange: () => {},
   },
 } satisfies Meta<typeof MissionCatalogFilters>;
 
@@ -42,6 +48,9 @@ export const Interactive: Story = {
   render: function InteractiveFilters() {
     const [query, setQuery] = useState("");
     const [filters, setFilters] = useState<CatalogTableFilters>({});
+    const [visibleColumns, setVisibleColumns] = useState<
+      CatalogTableColumnKey[]
+    >([...CATALOG_TABLE_COLUMN_KEYS]);
     return (
       <MissionCatalogFilters
         missions={sampleCatalogMissions}
@@ -51,6 +60,8 @@ export const Interactive: Story = {
         onFiltersChange={setFilters}
         resultCount={2}
         totalCount={3}
+        visibleColumns={visibleColumns}
+        onVisibleColumnsChange={setVisibleColumns}
       />
     );
   },

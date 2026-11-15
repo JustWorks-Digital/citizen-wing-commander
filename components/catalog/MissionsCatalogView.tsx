@@ -15,6 +15,12 @@ import {
   type CatalogTableSort,
 } from "@/lib/missions/catalogMissionTableQuery";
 import {
+  CATALOG_TABLE_COLUMN_KEYS,
+  readCatalogTableVisibleColumns,
+  writeCatalogTableVisibleColumns,
+  type CatalogTableColumnKey,
+} from "@/lib/missions/catalogTableColumnPrefs";
+import {
   buildCatalogMissionSearchParams,
   catalogMissionSearchParamsEqual,
   parseCatalogMissionUrlState,
@@ -91,6 +97,9 @@ export function MissionsCatalogView({
   const [jsonMission, setJsonMission] = useState<CatalogMission | null>(null);
   const [lightbox, setLightbox] = useState<ImageLightboxItem | null>(null);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [visibleColumns, setVisibleColumns] = useState<CatalogTableColumnKey[]>(
+    () => [...CATALOG_TABLE_COLUMN_KEYS],
+  );
   const [isAddToSessionOpen, setIsAddToSessionOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [addStatus, setAddStatus] = useState<string | null>(null);
@@ -124,6 +133,15 @@ export function MissionsCatalogView({
     } finally {
       setIsAdding(false);
     }
+  };
+
+  useEffect(() => {
+    setVisibleColumns(readCatalogTableVisibleColumns());
+  }, []);
+
+  const setVisibleColumnsAndPersist = (next: CatalogTableColumnKey[]) => {
+    setVisibleColumns(next);
+    writeCatalogTableVisibleColumns(next);
   };
 
   // Keep React state aligned when the URL changes (back/forward / shared links).
@@ -256,6 +274,8 @@ export function MissionsCatalogView({
             onFiltersChange={setFilters}
             resultCount={visible.length}
             totalCount={missions.length}
+            visibleColumns={visibleColumns}
+            onVisibleColumnsChange={setVisibleColumnsAndPersist}
           />
           {checkedMissions.length > 0 ? (
             <div className="space-y-2 rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 py-2">
@@ -423,6 +443,7 @@ export function MissionsCatalogView({
               onSortChange={setSort}
               checkedIds={checkedIds}
               onCheckedIdsChange={setCheckedIds}
+              visibleColumns={visibleColumns}
             />
           )}
         </>

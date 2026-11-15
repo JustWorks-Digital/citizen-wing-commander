@@ -13,7 +13,8 @@
  *
  * Note: Railway Postgres has no public TCP proxy by default, so pg_dump is not
  * available from outside. Notes/runs are cleared locally (not exposed by API).
- * Screenshot files under `.data/` are not synced by this script.
+ * Screenshot files under `.data/` are not synced by this script — run
+ * `npm run catalog:copy-screenshots-from-prod` afterward to pull sources.
  */
 import { createHash } from "node:crypto";
 import postgres from "postgres";

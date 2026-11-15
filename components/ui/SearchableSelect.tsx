@@ -101,6 +101,13 @@ export function SearchableSelect({
 
   const closedLabel = summarizeSelection(values);
   const displayValue = open ? query : closedLabel;
+  const canClear = values.length > 0 && !disabled;
+
+  const clearSelection = () => {
+    onChange([]);
+    setQuery("");
+    setOpen(false);
+  };
 
   return (
     <div ref={rootRef} className="relative min-w-0">
@@ -109,52 +116,93 @@ export function SearchableSelect({
           {label}
         </label>
       ) : null}
-      <input
-        type="search"
-        role="combobox"
-        aria-label={showLabel ? undefined : label}
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        aria-multiselectable={multiple ? "true" : undefined}
-        disabled={disabled}
-        value={displayValue}
-        placeholder={closedLabel || placeholder}
-        onFocus={() => {
-          setOpen(true);
-          setQuery("");
-        }}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (!open && (event.key === "ArrowDown" || event.key === "Enter")) {
+      <div className="relative">
+        <input
+          type="text"
+          role="combobox"
+          aria-label={showLabel ? undefined : label}
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-multiselectable={multiple ? "true" : undefined}
+          disabled={disabled}
+          value={displayValue}
+          placeholder={closedLabel || placeholder}
+          onFocus={() => {
             setOpen(true);
-            return;
-          }
-          if (!open) return;
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            setHighlight((prev) =>
-              Math.min(prev + 1, Math.max(filtered.length - 1, 0)),
-            );
-          } else if (event.key === "ArrowUp") {
-            event.preventDefault();
-            setHighlight((prev) => Math.max(prev - 1, 0));
-          } else if (event.key === "Enter") {
-            event.preventDefault();
-            const choice = filtered[highlight];
-            if (choice !== undefined) toggle(choice);
-          }
-        }}
-        className={[
-          "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2.5 py-1.5",
-          "text-xs text-rsi-text placeholder:text-rsi-text-muted",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-          disabled ? "cursor-not-allowed opacity-60" : "",
-        ].join(" ")}
-      />
+            setQuery("");
+          }}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (
+              !open &&
+              (event.key === "Backspace" || event.key === "Delete") &&
+              values.length > 0 &&
+              !query
+            ) {
+              event.preventDefault();
+              clearSelection();
+              return;
+            }
+            if (!open && (event.key === "ArrowDown" || event.key === "Enter")) {
+              setOpen(true);
+              return;
+            }
+            if (!open) return;
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setHighlight((prev) =>
+                Math.min(prev + 1, Math.max(filtered.length - 1, 0)),
+              );
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setHighlight((prev) => Math.max(prev - 1, 0));
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              const choice = filtered[highlight];
+              if (choice !== undefined) toggle(choice);
+            }
+          }}
+          className={[
+            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 py-1.5 pl-2.5 text-xs text-rsi-text placeholder:text-rsi-text-muted",
+            canClear ? "pr-7" : "pr-2.5",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            disabled ? "cursor-not-allowed opacity-60" : "",
+          ].join(" ")}
+        />
+        {canClear ? (
+          <button
+            type="button"
+            aria-label={`Clear ${label}`}
+            title="Clear"
+            onMouseDown={(event) => {
+              // Keep focus handling predictable; clear before blur closes menu.
+              event.preventDefault();
+              clearSelection();
+            }}
+            className={[
+              "absolute top-1/2 right-1.5 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded-sm text-rsi-text-muted transition-colors",
+              "hover:bg-rsi-danger-muted hover:text-rsi-danger",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--rsi-ring)]",
+            ].join(" ")}
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 16 16"
+              className="size-2.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
 
       {open ? (
         <ul

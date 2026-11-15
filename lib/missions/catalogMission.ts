@@ -261,6 +261,33 @@ export function formatAuecAmount(
   return options?.includeUnit === false ? value : `${value} aUEC`;
 }
 
+/**
+ * Compact aUEC for dense table cells (e.g. 42k, 1.3M).
+ * Exact amount stays on hover via `formatAuecAmount`.
+ */
+export function formatAuecAmountCompact(
+  amount: number,
+  options?: { includeUnit?: boolean },
+): string {
+  const n = Math.floor(Math.max(0, amount));
+  let value: string;
+  if (n < 1_000) {
+    value = String(n);
+  } else if (n < 1_000_000) {
+    const thousands = n / 1_000;
+    value = `${trimCompactFraction(thousands)}k`;
+  } else {
+    const millions = n / 1_000_000;
+    value = `${trimCompactFraction(millions)}M`;
+  }
+  return options?.includeUnit === false ? value : `${value} aUEC`;
+}
+
+function trimCompactFraction(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 /** Sum of aUEC reward lines (0 when none). */
 export function auecFromRewards(
   rewards: CatalogMissionReward[] | null | undefined,
