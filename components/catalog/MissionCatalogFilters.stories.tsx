@@ -11,7 +11,15 @@ import { sampleCatalogMissions } from "./missionCatalogFixtures";
 const meta = {
   title: "Catalog/MissionCatalogFilters",
   component: MissionCatalogFilters,
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Desktop: search beside a 2×3 filter grid (Route type / Category / Rank, then From / To / Cargo).",
+      },
+    },
+  },
   args: {
     missions: sampleCatalogMissions,
     query: "",

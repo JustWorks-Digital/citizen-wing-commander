@@ -39,16 +39,16 @@ const DROPDOWN_FIELDS: Array<{
   label: string;
   multiple?: boolean;
 }> = [
-  { key: "rank", label: "Rank" },
-  { key: "category", label: "Category" },
   { key: "route", label: "Route type", multiple: false },
+  { key: "category", label: "Category" },
+  { key: "rank", label: "Rank" },
   { key: "from", label: "From" },
   { key: "to", label: "To" },
   { key: "cargo", label: "Cargo" },
 ];
 
 /**
- * Standalone catalog filters — search plus Rank / Category / Route / From / To / Cargo.
+ * Standalone catalog filters — search plus Route / Category / Rank / From / To / Cargo.
  */
 export function MissionCatalogFilters({
   missions,
@@ -145,8 +145,8 @@ export function MissionCatalogFilters({
       aria-label="Catalog filters"
       className="rounded-rsi border border-rsi-border bg-rsi-surface/80 p-3 shadow-rsi-panel sm:p-4"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <div className="relative min-w-0 flex-1">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="relative min-w-0 w-full lg:w-[18rem] lg:shrink-0 lg:pt-[1.15rem]">
           <input
             type="text"
             inputMode="search"
@@ -183,7 +183,8 @@ export function MissionCatalogFilters({
           ) : null}
         </div>
 
-        <div className="grid min-w-0 flex-[2] grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {/* Beside search on desktop: 2 rows × 3 columns. */}
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
           {DROPDOWN_FIELDS.map((field) => (
             <SearchableSelect
               key={field.key}
