@@ -11,7 +11,7 @@ const SHIP_ICON_BY_SLUG: Record<string, string> = {
 const PUBLIC_PATH = "/icons/ships";
 
 /** Bump when replacing icon binaries so browsers don’t keep a stale badge. */
-const SHIP_ICON_CACHE = "v18";
+const SHIP_ICON_CACHE = "v29";
 
 /** Public URL for a ship icon, or null when none is bundled. */
 export function getShipIconSrc(

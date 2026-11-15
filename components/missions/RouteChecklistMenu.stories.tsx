@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar. Opens trip time, Hide / Show history, and the Controls keyboard list.",
+          "Right-edge ⋯ on the route checklist toolbar. Opens trip time, Copy trip, Hide / Show history, and the Controls keyboard list.",
       },
     },
   },
@@ -18,6 +18,7 @@ const meta = {
     hideCompleted: false,
     completedCount: 2,
     onToggleHistory: () => {},
+    onCopyTrip: async () => {},
     elapsed: (
       <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary">
         <span className="text-rsi-text-muted">Time </span>1h 24m
@@ -39,6 +40,10 @@ export const NoCompletedStops: Story = {
   args: { completedCount: 0 },
 };
 
+export const WithoutCopyTrip: Story = {
+  args: { onCopyTrip: undefined },
+};
+
 export const Interactive: Story = {
   render: function InteractiveMenu() {
     const [hideCompleted, setHideCompleted] = useState(false);
@@ -48,6 +53,9 @@ export const Interactive: Story = {
           hideCompleted={hideCompleted}
           completedCount={2}
           onToggleHistory={() => setHideCompleted((value) => !value)}
+          onCopyTrip={async () => {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+          }}
         />
       </div>
     );

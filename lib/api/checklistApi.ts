@@ -100,6 +100,24 @@ export async function activateChecklistSession(
   return (await res.json()) as SessionChecklistModel;
 }
 
+/** Duplicate a trip into a new session (progress reset, config kept). */
+export async function copyChecklistSession(
+  sessionId: string,
+): Promise<SessionChecklistModel> {
+  const res = await fetch(appApi.checklistSessionCopy(sessionId), {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(
+      body?.error ?? `Checklist session copy failed (${res.status})`,
+    );
+  }
+  return (await res.json()) as SessionChecklistModel;
+}
+
 export type DeleteChecklistSessionResult = {
   deletedSessionId: string;
   activeSessionId: string;

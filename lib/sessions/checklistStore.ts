@@ -16,6 +16,7 @@ import type {
   SessionChecklistModel,
   SessionMission,
 } from "@/lib/missions/mockSession";
+import { copySessionChecklist } from "@/lib/missions/copySessionChecklist";
 import {
   emptySessionChecklist,
   summarizeSessionChecklist,
@@ -93,6 +94,24 @@ export async function createChecklistSession(input?: {
   const row = await createDeliverySession({
     name: sessionName,
     checklist: emptySessionChecklist({ sessionName }),
+    select: input?.activate !== false,
+  });
+  return rowToChecklist(row);
+}
+
+/**
+ * Duplicate a trip into a new session tab (route, ships, box mixes kept;
+ * completion / handled progress reset). Activates the copy by default.
+ */
+export async function duplicateChecklistSession(
+  sessionId: string,
+  input?: { activate?: boolean },
+): Promise<SessionChecklistModel> {
+  const source = await getChecklistSession(sessionId);
+  const checklist = copySessionChecklist(source);
+  const row = await createDeliverySession({
+    name: checklist.sessionName,
+    checklist,
     select: input?.activate !== false,
   });
   return rowToChecklist(row);

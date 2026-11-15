@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Spinner } from "@/components/ui/Spinner";
 
 const SHORTCUTS = [
   { key: "B", action: "Storage bays" },
@@ -14,6 +15,8 @@ export type RouteChecklistMenuProps = {
   hideCompleted: boolean;
   completedCount: number;
   onToggleHistory: () => void;
+  /** Duplicate this trip into a new session tab (progress reset). */
+  onCopyTrip?: () => void | Promise<void>;
   /** Trip elapsed time (shown at the top of the menu). */
   elapsed?: ReactNode;
   className?: string;
@@ -21,16 +24,18 @@ export type RouteChecklistMenuProps = {
 
 /**
  * Right-edge ⋯ on the route checklist toolbar.
- * Holds trip time, Hide / Show history, and the keyboard Controls list.
+ * Holds trip time, Copy trip, Hide / Show history, and the keyboard Controls list.
  */
 export function RouteChecklistMenu({
   hideCompleted,
   completedCount,
   onToggleHistory,
+  onCopyTrip,
   elapsed = null,
   className,
 }: RouteChecklistMenuProps) {
   const [open, setOpen] = useState(false);
+  const [copyPending, setCopyPending] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const historyLabel = hideCompleted ? "Show history" : "Hide history";
@@ -84,6 +89,36 @@ export function RouteChecklistMenu({
             <div className="mb-2 border-b border-rsi-divider px-1.5 pb-2">
               {elapsed}
             </div>
+          ) : null}
+          {onCopyTrip ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={copyPending}
+              aria-busy={copyPending}
+              onClick={() => {
+                void (async () => {
+                  setCopyPending(true);
+                  try {
+                    await onCopyTrip();
+                    setOpen(false);
+                  } finally {
+                    setCopyPending(false);
+                  }
+                })();
+              }}
+              className={[
+                "flex w-full items-center gap-2 rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
+                "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {copyPending ? (
+                <Spinner className="size-3" label="Copying trip" />
+              ) : null}
+              Copy trip
+            </button>
           ) : null}
           <button
             type="button"

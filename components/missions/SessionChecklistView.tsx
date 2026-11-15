@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   activateChecklistSession,
+  copyChecklistSession,
   createChecklistSession,
   deleteChecklistSession,
   fetchChecklist,
@@ -1045,6 +1046,25 @@ export function SessionChecklistView({
     }
   };
 
+  const copyTrip = async () => {
+    if (initial) return;
+    setTabsBusy(true);
+    try {
+      const next = await copyChecklistSession(session.id);
+      const list = await fetchChecklistSessions();
+      setTabs(list.sessions);
+      setActiveSessionId(list.activeSessionId);
+      setLoadError(null);
+      router.push(appPaths.session(next.id));
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Failed to copy trip",
+      );
+    } finally {
+      setTabsBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
       <SessionTabs
@@ -1182,6 +1202,7 @@ export function SessionChecklistView({
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
         toolbarEnd={elapsedToolbar}
+        onCopyTrip={initial ? undefined : copyTrip}
         onToggle={onToggleStop}
       />
 

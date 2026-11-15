@@ -97,6 +97,8 @@ export type HaulingChecklistTableProps = {
   toolbarStart?: ReactNode;
   /** Shown inside the ⋯ menu (e.g. trip elapsed time). */
   toolbarEnd?: ReactNode;
+  /** ⋯ menu: duplicate this trip into a new session. */
+  onCopyTrip?: () => void | Promise<void>;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
@@ -2510,6 +2512,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   onFocusStop,
   toolbarStart = null,
   toolbarEnd = null,
+  onCopyTrip,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -2707,6 +2710,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           hideCompleted={hideCompleted}
           completedCount={completedCount}
           onToggleHistory={() => setHideCompleted((value) => !value)}
+          onCopyTrip={onCopyTrip}
           elapsed={toolbarEnd}
         />
       </div>
