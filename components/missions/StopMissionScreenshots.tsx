@@ -27,10 +27,10 @@ export function StopMissionScreenshots({
   const isInline = variant === "inline";
   const sourceBtnClass = [
     "inline-flex items-center justify-center rounded-rsi border",
-    isInline ? "size-4" : "size-6",
+    isInline ? "size-6 md:size-4" : "size-6",
     "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
   ].join(" ");
-  const iconClass = isInline ? "size-2" : "size-3";
+  const iconClass = isInline ? "size-3 md:size-2" : "size-3";
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 

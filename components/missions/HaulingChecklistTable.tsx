@@ -514,7 +514,8 @@ function DoneStopButton({
   return (
     <button
       type="button"
-      aria-pressed={isCompleted}
+      role="checkbox"
+      aria-checked={isCompleted}
       aria-busy={isPending}
       disabled={isPending}
       aria-label={
@@ -522,7 +523,7 @@ function DoneStopButton({
           ? `Stop ${step}, updating: ${location}`
           : isCompleted
             ? `Stop ${step}, mark incomplete: ${location}`
-            : `Stop ${step}, mark complete: ${location}`
+            : `Stop ${step}, complete: ${location}`
       }
       title={isPending ? "Updating stop…" : undefined}
       onClick={(event) => {
@@ -531,7 +532,7 @@ function DoneStopButton({
         onToggle();
       }}
       className={[
-        "inline-flex min-h-10 w-auto min-w-[8.5rem] items-center justify-center gap-2 rounded-rsi border px-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+        "inline-flex min-h-10 w-full items-center justify-center gap-2.5 rounded-rsi border px-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isPending
           ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/70 text-rsi-accent"
@@ -541,15 +542,33 @@ function DoneStopButton({
       ].join(" ")}
     >
       {isPending ? (
-        <>
-          <Spinner className="size-3.5" />
-          Updating…
-        </>
-      ) : isCompleted ? (
-        "Complete"
+        <Spinner className="size-3.5" />
       ) : (
-        "Mark complete"
+        <span
+          aria-hidden
+          className={[
+            "inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border",
+            isCompleted
+              ? "border-rsi-success bg-rsi-success text-rsi-bg-deep"
+              : "border-rsi-text-secondary/70 bg-transparent",
+          ].join(" ")}
+        >
+          {isCompleted ? (
+            <svg
+              viewBox="0 0 12 12"
+              className="size-2.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2.5 6.2 L4.8 8.5 L9.5 3.5" />
+            </svg>
+          ) : null}
+        </span>
       )}
+      {isPending ? "Updating…" : isCompleted ? "Complete" : "In progress"}
     </button>
   );
 }
@@ -692,7 +711,7 @@ function CargoCommodityTile({
         void onToggleCargoHandled?.(row.id, line.sourceIndex);
       }}
       className={[
-        "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-rsi border px-1.5 py-1 font-mono font-medium tabular-nums",
+        "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-rsi border px-2 py-1.5 font-mono font-medium tabular-nums md:gap-0.5 md:px-1.5 md:py-1",
         "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
         isCargoPending
           ? "cursor-wait"
@@ -710,7 +729,7 @@ function CargoCommodityTile({
     >
       <span
         aria-hidden
-        className="inline-block size-3.5 shrink-0 bg-current"
+        className="inline-block size-5 shrink-0 bg-current md:size-3.5"
         style={{
           WebkitMaskImage: `url(${iconSrc})`,
           maskImage: `url(${iconSrc})`,
@@ -722,10 +741,10 @@ function CargoCommodityTile({
           maskPosition: "center",
         }}
       />
-      <span className="text-[0.7rem] font-semibold leading-none">
+      <span className="text-base font-semibold leading-none md:text-[0.7rem]">
         {line.scu}
       </span>
-      <span className="line-clamp-3 w-full text-center text-[0.55rem] leading-snug tracking-wide opacity-90 normal-case">
+      <span className="line-clamp-3 w-full text-center text-xs leading-snug tracking-wide opacity-90 normal-case md:text-[0.55rem]">
         {commodityName}
       </span>
       {isCargoPending ? (
@@ -884,7 +903,7 @@ function CargoGroups({
               : null;
 
         const sectionBody = (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 md:flex-1">
             {group.role ? (
               <span
                 className={[
@@ -1032,7 +1051,7 @@ function CargoGroups({
           >
             {sectionBody}
             {sectionAside ? (
-              <div className="flex w-full min-w-0 md:w-1/2 md:shrink-0 md:flex-col">
+              <div className="flex w-full min-w-0 flex-col md:w-1/2 md:shrink-0">
                 {sectionAside}
               </div>
             ) : null}
@@ -1504,7 +1523,7 @@ function QuantumTravelRow({
   const travelBlock =
     editing === "from" || editing === "to" ? null : (
       <div
-        className="flex shrink-0 items-center justify-center gap-2.5 self-center px-1 py-1 sm:gap-3"
+        className="flex w-full shrink-0 items-center justify-center gap-2.5 px-1 py-1 md:w-auto md:self-center sm:gap-3"
         title="Travel"
       >
         <QuantumShipBadge
@@ -1516,6 +1535,14 @@ function QuantumTravelRow({
         </span>
       </div>
     );
+
+  const destinationFixture = destinationSlug
+    ? getLocationBySlug(destinationSlug)
+    : null;
+  const destinationStubRow: HaulingChecklistRow = {
+    ...stubRow,
+    locationSlug: destinationSlug ?? stubRow.locationSlug,
+  };
 
   const toBlock =
     editing === "to" && onChangeTo ? (
@@ -1548,13 +1575,8 @@ function QuantumTravelRow({
           Cancel
         </button>
       </div>
-    ) : (
-        <p
-        className={[
-          "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
-          isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
-          onChangeTo ? "cursor-pointer" : "cursor-default",
-        ].join(" ")}
+    ) : destinationSlug ? (
+      <div
         title={
           onChangeTo ? "Double-click to change destination" : undefined
         }
@@ -1562,6 +1584,24 @@ function QuantumTravelRow({
           event.stopPropagation();
           if (onChangeTo) setEditing("to");
         }}
+      >
+        <LocationHeader
+          row={destinationStubRow}
+          location={destinationName}
+          hasOutdoorFreightElevator={Boolean(
+            destinationFixture?.hasOutdoorFreightElevator,
+          )}
+          isCopied={false}
+          onCopy={() => undefined}
+          compact
+        />
+      </div>
+    ) : (
+      <p
+        className={[
+          "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
+          isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
+        ].join(" ")}
       >
         <span
           className={[
@@ -1614,26 +1654,15 @@ function QuantumTravelRow({
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <div
-            className={`${STICKY_DONE_TOP} -mx-1 mb-1 rounded-rsi bg-rsi-surface/95 px-1 py-1 backdrop-blur-sm md:hidden`}
-          >
-            <DoneStopButton
-              location={location}
-              step="QT"
-              isCompleted={isCompleted}
-              isPending={isPending}
-              onToggle={onToggle}
-            />
-          </div>
           {isSavingSection ? (
             <p className="inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
               <Spinner className="size-3" />
               Saving…
             </p>
           ) : null}
-          {/* 50 / 50 — current location | destination; ship sits on the right of the left column. */}
+          {/* Mobile: current → ship line → destination. Desktop: 50/50 with ship on left col. */}
           <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 md:items-center md:gap-3">
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
               <div className="min-w-0 flex-1">{fromBlock}</div>
               {travelBlock}
             </div>
@@ -1658,6 +1687,15 @@ function QuantumTravelRow({
                 </p>
               ) : null}
             </div>
+          </div>
+          <div className="mt-2 md:hidden">
+            <DoneStopButton
+              location={location}
+              step="QT"
+              isCompleted={isCompleted}
+              isPending={isPending}
+              onToggle={onToggle}
+            />
           </div>
         </div>
       </div>
@@ -2046,7 +2084,7 @@ function PickupTransferBlock({
       <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={`−${transfer.amount}`}
-          suffix="loading"
+          suffix="supply"
           tone="text-rsi-danger"
           strike={strike}
           mute={mute}
@@ -2276,7 +2314,10 @@ function PayoutExpMeta({
               row.isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
             ].join(" ")}
           >
-            ~{approxXp.toLocaleString("en-US")}{" "}
+            <span aria-hidden className="mr-0.5">
+              ➕
+            </span>
+            {approxXp.toLocaleString("en-US")}{" "}
             <span title="Hauling reputation / experience points">XP</span>
           </p>
         ) : (
@@ -3415,17 +3456,6 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     </div>
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div
-                      className={`${STICKY_DONE_TOP} -mx-1 mb-2 rounded-rsi bg-rsi-surface/95 px-1 py-1 backdrop-blur-sm md:hidden`}
-                    >
-                      <DoneStopButton
-                        location={location}
-                        step={step}
-                        isCompleted={row.isCompleted}
-                        isPending={isPendingComplete}
-                        onToggle={toggleStopDone}
-                      />
-                    </div>
                     <LocationHeader
                       row={row}
                       location={location}
@@ -3494,6 +3524,15 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                       />
                     </div>
                     <div className="mt-auto">
+                      <div className="mb-2 pt-3 md:hidden">
+                        <DoneStopButton
+                          location={location}
+                          step={step}
+                          isCompleted={row.isCompleted}
+                          isPending={isPendingComplete}
+                          onToggle={toggleStopDone}
+                        />
+                      </div>
                       <NextDistanceMeta
                         row={row}
                         nextLocationName={nextLocationName}
