@@ -173,3 +173,12 @@ body {
     transform: translateY(48px);
   }
 }
+
+@keyframes marketing-fade {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}

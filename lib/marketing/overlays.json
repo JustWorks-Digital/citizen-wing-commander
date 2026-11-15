@@ -1,0 +1,204 @@
+{
+  "slides": [
+    {
+      "id": "stop-cargo",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-stop-cargo.png",
+      "title": "Stop cargo pads",
+      "caption": "See exact crate sizes at each drop-off and pickup \u2014 Hydrogen, Stims, Ice \u2014 before you leave the ship.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "stop-cargo",
+      "family": "square",
+      "file": "/marketing/overlays/square-stop-cargo.png",
+      "title": "Stop cargo pads",
+      "caption": "See exact crate sizes at each drop-off and pickup \u2014 Hydrogen, Stims, Ice \u2014 before you leave the ship.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "stop-cargo",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-stop-cargo.png",
+      "title": "Stop cargo pads",
+      "caption": "See exact crate sizes at each drop-off and pickup \u2014 Hydrogen, Stims, Ice \u2014 before you leave the ship.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    },
+    {
+      "id": "bay-packing",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-bay-packing.png",
+      "title": "Ship bay packing",
+      "caption": "AI-suggested bay layouts for your C2 \u2014 2D + 3D views so you know where every crate goes.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "bay-packing",
+      "family": "square",
+      "file": "/marketing/overlays/square-bay-packing.png",
+      "title": "Ship bay packing",
+      "caption": "AI-suggested bay layouts for your C2 \u2014 2D + 3D views so you know where every crate goes.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "bay-packing",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-bay-packing.png",
+      "title": "Ship bay packing",
+      "caption": "AI-suggested bay layouts for your C2 \u2014 2D + 3D views so you know where every crate goes.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    },
+    {
+      "id": "contracts",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-contracts.png",
+      "title": "Contracts catalog",
+      "caption": "Browse observed hauling contracts by rank, route, and SCU \u2014 then add them to your trip.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "contracts",
+      "family": "square",
+      "file": "/marketing/overlays/square-contracts.png",
+      "title": "Contracts catalog",
+      "caption": "Browse observed hauling contracts by rank, route, and SCU \u2014 then add them to your trip.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "contracts",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-contracts.png",
+      "title": "Contracts catalog",
+      "caption": "Browse observed hauling contracts by rank, route, and SCU \u2014 then add them to your trip.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    },
+    {
+      "id": "source",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-source.png",
+      "title": "Screenshot Source",
+      "caption": "Paste MobiGlas shots into Source. AI reads them into your checklist \u2014 no retyping objectives.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "source",
+      "family": "square",
+      "file": "/marketing/overlays/square-source.png",
+      "title": "Screenshot Source",
+      "caption": "Paste MobiGlas shots into Source. AI reads them into your checklist \u2014 no retyping objectives.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "source",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-source.png",
+      "title": "Screenshot Source",
+      "caption": "Paste MobiGlas shots into Source. AI reads them into your checklist \u2014 no retyping objectives.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    },
+    {
+      "id": "pickup",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-pickup.png",
+      "title": "Route checklist",
+      "caption": "One tactical view for every stop: cargo, bay zones, and completion as you fly.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "pickup",
+      "family": "square",
+      "file": "/marketing/overlays/square-pickup.png",
+      "title": "Route checklist",
+      "caption": "One tactical view for every stop: cargo, bay zones, and completion as you fly.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "pickup",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-pickup.png",
+      "title": "Route checklist",
+      "caption": "One tactical view for every stop: cargo, bay zones, and completion as you fly.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    },
+    {
+      "id": "delivery",
+      "family": "landscape",
+      "file": "/marketing/overlays/landscape-delivery.png",
+      "title": "Trip progress",
+      "caption": "Track contracts, distance, bay fill, and aUEC earned across the whole run.",
+      "width": 1280,
+      "height": 720,
+      "ratio": "16:9"
+    },
+    {
+      "id": "delivery",
+      "family": "square",
+      "file": "/marketing/overlays/square-delivery.png",
+      "title": "Trip progress",
+      "caption": "Track contracts, distance, bay fill, and aUEC earned across the whole run.",
+      "width": 720,
+      "height": 720,
+      "ratio": "1:1"
+    },
+    {
+      "id": "delivery",
+      "family": "banner",
+      "file": "/marketing/overlays/banner-delivery.png",
+      "title": "Trip progress",
+      "caption": "Track contracts, distance, bay fill, and aUEC earned across the whole run.",
+      "width": 1280,
+      "height": 320,
+      "ratio": "4:1"
+    }
+  ],
+  "families": {
+    "landscape": {
+      "label": "16:9 Landscape",
+      "width": 1280,
+      "height": 720,
+      "obsHint": "Main scene / cam overlay"
+    },
+    "square": {
+      "label": "1:1 Square",
+      "width": 720,
+      "height": 720,
+      "obsHint": "Corner cam"
+    },
+    "banner": {
+      "label": "4:1 Banner",
+      "width": 1280,
+      "height": 320,
+      "obsHint": "Lower third"
+    }
+  }
+}

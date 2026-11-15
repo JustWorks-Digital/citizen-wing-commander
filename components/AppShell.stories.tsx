@@ -38,3 +38,12 @@ export const IntakeNav: Story = {
     ),
   },
 };
+
+export const MarketingNav: Story = {
+  args: {
+    activeNav: "marketing",
+    children: (
+      <p className="text-sm text-rsi-text-secondary">Marketing overlays</p>
+    ),
+  },
+};

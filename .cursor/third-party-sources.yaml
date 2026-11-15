@@ -94,7 +94,9 @@ sources:
     notes: >
       Ship/vehicle list including cargo SCU capacity (`scu`). Fixture filters to
       spaceships. Synced into Postgres `ships` via `npm run db:sync-ships` for
-      the session ship dropdown (currently C2 Hercules + Mk V Centaurus).
+      the session ship dropdown (C2 Hercules, Mk V Centaurus, RSI Galaxy).
+      Galaxy UEX `scu` is hangar-only (64); cargo-module config overrides to 720
+      (64 hangar + 656 module) via `lib/ships/shipCargoScu.ts` / sync-ships.
     added: "2026-11-07"
     last_verified: "2026-11-07"
 

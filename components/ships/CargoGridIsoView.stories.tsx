@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
   c2HerculesCargoGridSketch,
+  galaxyCargoGridSketch,
   mkVCentaurusCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
 import { CargoGridIsoView } from "./CargoGridIsoView";
@@ -32,6 +33,13 @@ export const C2Hercules: Story = {};
 export const MkVCentaurus: Story = {
   args: {
     sketch: mkVCentaurusCargoGridSketch,
+    cellPx: 16,
+  },
+};
+
+export const Galaxy: Story = {
+  args: {
+    sketch: galaxyCargoGridSketch,
     cellPx: 16,
   },
 };

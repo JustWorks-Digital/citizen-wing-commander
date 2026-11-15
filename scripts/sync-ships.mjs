@@ -18,7 +18,13 @@ const root = path.resolve(__dirname, "..");
 const SELECTABLE_SHIP_SLUGS = [
   "c2-hercules-starlifter",
   "constellation-mk-v-centaurus",
+  "galaxy",
 ];
+
+/** UEX hull-only SCU → session hauling capacity (modules). Galaxy: 64 hangar + 656 cargo module. */
+const SHIP_CARGO_SCU_OVERRIDES = {
+  galaxy: 720,
+};
 
 async function loadEnvFiles() {
   try {
@@ -94,6 +100,8 @@ async function main() {
 
     for (const ship of uniqueVehicles) {
       const isSelectable = selectable.has(ship.slug);
+      const cargoScu =
+        SHIP_CARGO_SCU_OVERRIDES[ship.slug] ?? ship.cargoScu;
       await db.execute(sql`
         INSERT INTO ships (
           id, slug, name, name_full, manufacturer, cargo_scu, is_cargo,
@@ -104,7 +112,7 @@ async function main() {
           ${ship.name},
           ${ship.nameFull},
           ${ship.manufacturer},
-          ${ship.cargoScu},
+          ${cargoScu},
           ${ship.isCargo},
           ${JSON.stringify(ship.containerSizes)}::jsonb,
           ${isSelectable},

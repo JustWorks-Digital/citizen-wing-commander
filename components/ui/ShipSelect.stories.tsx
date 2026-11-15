@@ -13,6 +13,11 @@ const demoOptions = [
     name: "Constellation Mk V Centaurus",
     cargoScu: 240,
   },
+  {
+    slug: "galaxy",
+    name: "Galaxy",
+    cargoScu: 720,
+  },
 ];
 
 const meta = {

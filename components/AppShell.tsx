@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { appPaths } from "@/lib/appPaths";
 
-export type AppShellNav = "sessions" | "missions" | "intake";
+export type AppShellNav = "sessions" | "missions" | "intake" | "marketing";
 
 export type AppShellProps = {
   children: ReactNode;
@@ -57,6 +57,13 @@ export function AppShell({ children, activeNav }: AppShellProps) {
               aria-current={activeNav === "intake" ? "page" : undefined}
             >
               Intake
+            </Link>
+            <Link
+              href={appPaths.marketing}
+              className={navLinkClass(activeNav === "marketing")}
+              aria-current={activeNav === "marketing" ? "page" : undefined}
+            >
+              Marketing
             </Link>
           </nav>
         </div>

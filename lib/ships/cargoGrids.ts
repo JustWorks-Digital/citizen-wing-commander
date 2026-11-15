@@ -76,6 +76,8 @@ export const c2HerculesCargoGridSketch =
 export const mkVCentaurusCargoGridSketch =
   sketchesBySlug.get("constellation-mk-v-centaurus")!;
 
+export const galaxyCargoGridSketch = sketchesBySlug.get("galaxy")!;
+
 export function getCargoGridSketchBySlug(
   shipSlug: string | null | undefined,
 ): ShipCargoGridSketch | null {

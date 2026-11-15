@@ -10,6 +10,11 @@ export const appPaths = {
   missionsCatalog: "/missions",
   /** Upload contract/mission screenshots for AI intake into the catalog. */
   intake: "/intake",
+  /** Feature overlays for stream marketing / OBS review. */
+  marketing: "/marketing",
+  /** Clean auto-rotating OBS browser source for one aspect-ratio family. */
+  marketingObs: (family: "landscape" | "square" | "banner") =>
+    `/marketing/obs/${encodeURIComponent(family)}`,
   session: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}`,
 } as const;

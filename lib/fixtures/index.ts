@@ -11,6 +11,7 @@ import type {
   FixtureShip,
   FixtureStarSystem,
 } from "@/lib/fixtures/types";
+import { resolveShipCargoScu } from "@/lib/ships/shipCargoScu";
 
 const locations = locationsFixture as FixtureFile<FixtureLocation>;
 const commodities = commoditiesFixture as FixtureFile<FixtureCommodity>;
@@ -62,12 +63,18 @@ export { getCommodityIconSrc } from "@/lib/fixtures/commodityIcons";
 export { getLocationImageSrc } from "@/lib/fixtures/locationImages";
 export { getShipIconSrc } from "@/lib/fixtures/shipIcons";
 
+function withResolvedCargoScu(ship: FixtureShip): FixtureShip {
+  const cargoScu = resolveShipCargoScu(ship.slug, ship.cargoScu);
+  return cargoScu === ship.cargoScu ? ship : { ...ship, cargoScu };
+}
+
 export function listShips(): FixtureShip[] {
-  return ships.items;
+  return ships.items.map(withResolvedCargoScu);
 }
 
 export function getShipBySlug(slug: string): FixtureShip | undefined {
-  return shipsBySlug.get(slug);
+  const ship = shipsBySlug.get(slug);
+  return ship ? withResolvedCargoScu(ship) : undefined;
 }
 
 export function listContractors(): FixtureContractor[] {

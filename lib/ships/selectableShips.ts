@@ -5,6 +5,7 @@
 export const SELECTABLE_SHIP_SLUGS = [
   "c2-hercules-starlifter",
   "constellation-mk-v-centaurus",
+  "galaxy",
 ] as const;
 
 export type SelectableShipSlug = (typeof SELECTABLE_SHIP_SLUGS)[number];

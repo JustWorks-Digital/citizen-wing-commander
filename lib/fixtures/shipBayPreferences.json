@@ -40,6 +40,24 @@
           "Prioritized / Mission based: early deliveries toward bay edges; later deliveries toward the center."
         ]
       }
+    },
+    {
+      "shipSlug": "galaxy",
+      "payload": {
+        "notes": "RSI Galaxy (cargo module): C2-style front/gap/rear with two equal 360 SCU holds. Prefer flat layers; keep the mid-gap clear.",
+        "preferredZoneOrder": ["rear", "middle", "front"],
+        "preferredRuleIds": [
+          "prefer-flat-layers",
+          "prefer-flat-stable-support",
+          "prefer-back-when-full-height"
+        ],
+        "commodityZoneHints": {},
+        "guidelines": [
+          "Front and rear holds are equal (360 SCU each; 720 total).",
+          "Load from the ramp (rear) first when stacking deep.",
+          "Keep full-height stacks toward the back of each hold; do not block the mid-gap."
+        ]
+      }
     }
   ]
 }

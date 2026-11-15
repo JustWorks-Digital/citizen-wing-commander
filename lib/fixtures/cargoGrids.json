@@ -55,6 +55,40 @@
       "viewScale": {
         "top": 2
       }
+    },
+    {
+      "shipSlug": "galaxy",
+      "shipName": "RSI Galaxy",
+      "widthCells": 10,
+      "heightCells": 4,
+      "zones": [
+        {
+          "id": "forward",
+          "label": "Front bay",
+          "lengthCells": 9,
+          "widthCells": 10,
+          "kind": "cargo",
+          "storageLocation": "front"
+        },
+        {
+          "id": "mid-gap",
+          "label": "Gap",
+          "lengthCells": 3,
+          "widthCells": 10,
+          "kind": "gap"
+        },
+        {
+          "id": "rear",
+          "label": "Back bay",
+          "lengthCells": 9,
+          "widthCells": 10,
+          "kind": "cargo",
+          "storageLocation": "rear"
+        }
+      ],
+      "notes": [
+        "Same orientation / skeleton as C2 (front + mid-gap + rear, height 4). Cargo-module config 720 SCU (64 hangar + 656 module); two equal holds 10×9×4 = 360 SCU each (wider / shorter than a deep C2-style bay)."
+      ]
     }
   ]
 }
