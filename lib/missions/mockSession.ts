@@ -158,9 +158,23 @@ function formatDistanceValue(value: number): string {
   return value.toFixed(decimals).replace(/\.?0+$/, "");
 }
 
-export function formatDistanceToNext(distance: DistanceToNext | null): string {
+/** Shorter decimals for narrow UI (mobile checklist / toolbar). */
+function formatDistanceValueCompact(value: number): string {
+  if (value === 0) return "0";
+  const abs = Math.abs(value);
+  const decimals = abs >= 100 ? 0 : 1;
+  return value.toFixed(decimals).replace(/\.?0+$/, "");
+}
+
+export function formatDistanceToNext(
+  distance: DistanceToNext | null,
+  options?: { compact?: boolean },
+): string {
   if (!distance) return "—";
-  return `${formatDistanceValue(distance.value)} ${distance.unit}`;
+  const value = options?.compact
+    ? formatDistanceValueCompact(distance.value)
+    : formatDistanceValue(distance.value);
+  return `${value} ${distance.unit}`;
 }
 
 export function areAllLegsComplete(rows: HaulingChecklistRow[]): boolean {

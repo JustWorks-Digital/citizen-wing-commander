@@ -347,11 +347,16 @@ function CondensedRowTrailing({
   routeAction,
   scuTotal = null,
   hopLabel = null,
+  hopTitle = null,
 }: {
   routeAction: RouteAction;
   scuTotal?: number | null;
-  hopLabel?: string | null;
+  hopLabel?: ReactNode;
+  /** Full distance string for tooltip (when hopLabel is responsive). */
+  hopTitle?: string | null;
 }) {
+  const titleText =
+    hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
   return (
     <div className="grid w-[17.5rem] shrink-0 grid-cols-[minmax(0,1fr)_2.5rem_4.75rem] items-center gap-x-2.5">
       <div className="flex min-w-0 items-center justify-end gap-1">
@@ -370,10 +375,10 @@ function CondensedRowTrailing({
       <div
         className="text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
         title={
-          hopLabel
+          titleText
             ? routeAction === "quantum"
-              ? `Quantum hop ${hopLabel}`
-              : `Distance ${hopLabel}`
+              ? `Quantum hop ${titleText}`
+              : `Distance ${titleText}`
             : undefined
         }
       >
@@ -1422,6 +1427,7 @@ function QuantumTravelRow({
       ? distanceBetweenLocationSlugs(fromSlug, destinationSlug)
       : null) ?? distanceToNext;
   const hopLabel = formatDistanceToNext(hopDistance);
+  const hopLabelCompact = formatDistanceToNext(hopDistance, { compact: true });
   const fromShort = getLocationShortName(fromSlug);
   const toShort =
     destinationSlug != null
@@ -1678,7 +1684,10 @@ function QuantumTravelRow({
                   ].join(" ")}
                   title={`Quantum hop ${hopLabel}`}
                 >
-                  Distance · {hopLabel}
+                  <span className="md:hidden">{hopLabelCompact}</span>
+                  <span className="hidden md:inline">
+                    Distance · {hopLabel}
+                  </span>
                 </p>
               ) : null}
               {reasonLabel ? (
@@ -2389,6 +2398,7 @@ function CompletedStopHistoryRow({
   routeAction,
   scuTotal,
   hopLabel = null,
+  hopTitle = null,
   isFocused,
   isPending,
   onToggle,
@@ -2399,7 +2409,8 @@ function CompletedStopHistoryRow({
   routeAction: RouteAction;
   scuTotal: number;
   /** Formatted distance for the hop leaving this stop. */
-  hopLabel?: string | null;
+  hopLabel?: ReactNode;
+  hopTitle?: string | null;
   isFocused: boolean;
   isPending: boolean;
   onToggle: () => void;
@@ -2453,6 +2464,7 @@ function CompletedStopHistoryRow({
         routeAction={routeAction}
         scuTotal={scuTotal}
         hopLabel={hopLabel}
+        hopTitle={hopTitle}
       />
     </div>
   );
@@ -2577,9 +2589,9 @@ function NextDistanceMeta({
     row.locationSlug,
     nextLocationSlug!,
   );
-  const distance = formatDistanceToNext(
-    starmapDistance ?? row.distanceToNext,
-  );
+  const distanceRaw = starmapDistance ?? row.distanceToNext;
+  const distance = formatDistanceToNext(distanceRaw);
+  const distanceCompact = formatDistanceToNext(distanceRaw, { compact: true });
 
   // Same columns as stop header (checkbox → thumb → name); keep ship/text sizes.
   const shellClass = [
@@ -2648,8 +2660,12 @@ function NextDistanceMeta({
         >
           <span className="font-medium tracking-wide">{nextLocationName}</span>
           <span className="text-rsi-text-muted"> – </span>
-          <span className="font-mono tabular-nums text-rsi-text-secondary">
-            {distance}
+          <span
+            className="font-mono tabular-nums text-rsi-text-secondary"
+            title={distance}
+          >
+            <span className="md:hidden">{distanceCompact}</span>
+            <span className="hidden md:inline">{distance}</span>
           </span>
         </p>
       </div>
@@ -3359,6 +3375,26 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                     routeAction={row.routeAction}
                     scuTotal={sumCargoScu(row.cargoDeliveries)}
                     hopLabel={(() => {
+                      const hop =
+                        (nextLocationSlug
+                          ? distanceBetweenLocationSlugs(
+                              row.locationSlug,
+                              nextLocationSlug,
+                            )
+                          : null) ?? row.distanceToNext;
+                      if (!hop) return null;
+                      return (
+                        <>
+                          <span className="md:hidden">
+                            {formatDistanceToNext(hop, { compact: true })}
+                          </span>
+                          <span className="hidden md:inline">
+                            {formatDistanceToNext(hop)}
+                          </span>
+                        </>
+                      );
+                    })()}
+                    hopTitle={(() => {
                       const hop =
                         (nextLocationSlug
                           ? distanceBetweenLocationSlugs(

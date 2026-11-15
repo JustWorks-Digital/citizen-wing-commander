@@ -24,4 +24,16 @@ describe("distance precision", () => {
       "1.5001 Mm",
     );
   });
+
+  it("formats compact distances with fewer decimals", () => {
+    expect(
+      formatDistanceToNext({ value: 1.5001, unit: "Mm" }, { compact: true }),
+    ).toBe("1.5 Mm");
+    expect(
+      formatDistanceToNext({ value: 12.3456, unit: "Mm" }, { compact: true }),
+    ).toBe("12.3 Mm");
+    expect(
+      formatDistanceToNext({ value: 125.67, unit: "Gm" }, { compact: true }),
+    ).toBe("126 Gm");
+  });
 });

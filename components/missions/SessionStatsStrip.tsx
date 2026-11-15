@@ -233,6 +233,12 @@ export function SessionRouteProgressStats({
   const showAuec = auecProjected > 0 || auecEarned > 0;
   const traveledLabel = formatDistanceToNext(distanceTraveled);
   const totalDistanceLabel = formatDistanceToNext(distanceTotal);
+  const traveledCompact = formatDistanceToNext(distanceTraveled, {
+    compact: true,
+  });
+  const totalDistanceCompact = formatDistanceToNext(distanceTotal, {
+    compact: true,
+  });
   const showDistance = Boolean(distanceTotal || distanceTraveled);
   const stopsBody = (
     <>
@@ -285,7 +291,12 @@ export function SessionRouteProgressStats({
         <span className="hidden sm:inline">Distance</span>
       </StatLabel>
       <StatValue>
-        <Fraction current={traveledLabel} total={totalDistanceLabel} />
+        <span className="md:hidden">
+          <Fraction current={traveledCompact} total={totalDistanceCompact} />
+        </span>
+        <span className="hidden md:inline">
+          <Fraction current={traveledLabel} total={totalDistanceLabel} />
+        </span>
       </StatValue>
     </>
   );
