@@ -42,7 +42,10 @@ import {
 } from "@/lib/missions/mockSession";
 import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
-import { missionScuAmounts } from "@/lib/missions/missionScuAmounts";
+import {
+  missionScuAmounts,
+  type MissionScuDraft,
+} from "@/lib/missions/missionScuAmounts";
 import {
   applyCompletedMissionStopState,
   rebuildRowsFromMissions,
@@ -893,38 +896,12 @@ export function SessionChecklistView({
     [persistSession, syncCatalogBoxSplits],
   );
 
-  const applyCommodityScu = useCallback(
-    (missionId: string, commoditySlug: string, scu: number) => {
-      const result = missionScuAmounts.setCommodityTotal(
+  const applyMissionScuDraft = useCallback(
+    (missionId: string, draft: MissionScuDraft) => {
+      const result = missionScuAmounts.applyDraft(
         sessionRef.current,
         missionId,
-        commoditySlug,
-        scu,
-      );
-      if (!result.ok) {
-        setLoadError(result.error);
-        return;
-      }
-      persistSession(result.session);
-      syncCatalogBoxSplits(missionId, result.session);
-    },
-    [persistSession, syncCatalogBoxSplits],
-  );
-
-  const applyStationScu = useCallback(
-    (
-      missionId: string,
-      input: {
-        role: "pickup" | "delivery";
-        locationKey: string;
-        commoditySlug: string;
-        scu: number;
-      },
-    ) => {
-      const result = missionScuAmounts.setStationAmount(
-        sessionRef.current,
-        missionId,
-        input,
+        draft,
       );
       if (!result.ok) {
         setLoadError(result.error);
@@ -1287,8 +1264,7 @@ export function SessionChecklistView({
         onOpenStops={toggleStops}
         onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
-        onChangeMissionCommodityScu={applyCommodityScu}
-        onChangeMissionStationScu={applyStationScu}
+        onSaveMissionScuDraft={applyMissionScuDraft}
         isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
@@ -1366,8 +1342,7 @@ export function SessionChecklistView({
         onToggleCompleted={handleMissionToggleCompleted}
         onRemoveMission={handleMissionRemove}
         onSelectBoxBreakdown={applyBoxBreakdown}
-        onChangeMissionCommodityScu={applyCommodityScu}
-        onChangeMissionStationScu={applyStationScu}
+        onSaveMissionScuDraft={applyMissionScuDraft}
       />
     </div>
   );

@@ -73,6 +73,7 @@ import {
   missionAuecAmount,
   missionRewardLabel,
 } from "@/lib/missions/sessionMissionObjectives";
+import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
@@ -156,22 +157,8 @@ export type HaulingChecklistTableProps = {
       onlyUncorrected?: boolean;
     },
   ) => void | Promise<void>;
-  /** Persist mission-level commodity SCU from the box-types modal. */
-  onChangeMissionCommodityScu?: (
-    missionId: string,
-    commoditySlug: string,
-    scu: number,
-  ) => void;
-  /** Persist per-station SCU from the box-types modal. */
-  onChangeMissionStationScu?: (
-    missionId: string,
-    input: {
-      role: "pickup" | "delivery";
-      locationKey: string;
-      commoditySlug: string;
-      scu: number;
-    },
-  ) => void;
+  /** Persist draft mission + delivery SCU from the box-types modal. */
+  onSaveMissionScuDraft?: (missionId: string, draft: MissionScuDraft) => void;
   /** True while any session save is awaiting the backend echo. */
   isSaving?: boolean;
   /** True until the first checklist hydrate on page / session change. */
@@ -379,7 +366,7 @@ function CondensedRowTrailing({
     hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
   const stackBadgesOnMobile = routeAction === "both";
   return (
-    <div className="grid w-[10rem] shrink-0 grid-cols-[minmax(3.75rem,1fr)_1.75rem_3.5rem] items-center gap-x-1.5 md:w-[17.5rem] md:grid-cols-[minmax(0,1fr)_2.5rem_4.75rem] md:gap-x-2.5">
+    <div className="grid w-[11.25rem] shrink-0 grid-cols-[minmax(3.75rem,1fr)_2.75rem_3.5rem] items-center gap-x-1.5 md:w-[18.75rem] md:grid-cols-[minmax(0,1fr)_3.5rem_4.75rem] md:gap-x-2.5">
       <div
         className={[
           "flex min-w-0 justify-end",
@@ -398,7 +385,14 @@ function CondensedRowTrailing({
         className="whitespace-nowrap text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
         title={scuTotal != null ? SCU_TITLE : undefined}
       >
-        {scuTotal != null ? scuTotal : null}
+        {scuTotal != null ? (
+          <>
+            {scuTotal}
+            <span className="ml-0.5 text-[0.5rem] uppercase tracking-[0.1em] text-rsi-text-muted/80">
+              SCU
+            </span>
+          </>
+        ) : null}
       </div>
       <div
         className="whitespace-nowrap text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
@@ -2795,8 +2789,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   onOpenStops,
   onOpenContracts,
   onSelectBoxBreakdown,
-  onChangeMissionCommodityScu,
-  onChangeMissionStationScu,
+  onSaveMissionScuDraft,
   isSaving = false,
   isLoading = false,
 }: HaulingChecklistTableProps) {
@@ -3695,20 +3688,9 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               setBoxEditMissionId(null);
             }
           }}
-          onChangeCommodityScu={
-            onChangeMissionCommodityScu
-              ? (commoditySlug, scu) =>
-                  onChangeMissionCommodityScu(
-                    boxEditMission.id,
-                    commoditySlug,
-                    scu,
-                  )
-              : undefined
-          }
-          onChangeStationScu={
-            onChangeMissionStationScu
-              ? (input) =>
-                  onChangeMissionStationScu(boxEditMission.id, input)
+          onSaveScuDraft={
+            onSaveMissionScuDraft
+              ? (draft) => onSaveMissionScuDraft(boxEditMission.id, draft)
               : undefined
           }
         />

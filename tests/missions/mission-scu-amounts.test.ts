@@ -122,4 +122,148 @@ describe("missionScuAmounts", () => {
       lines.some((line) => line.role === "delivery" && line.scu === 32),
     ).toBe(true);
   });
+
+  it("rejects a draft when delivery stops do not sum to the commodity total", () => {
+    const session = multiDeliverySession();
+    const draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    draft.deliveries[0]!.scu = 9;
+    const check = missionScuAmounts.validateDraft(draft);
+    expect(check.ok).toBe(false);
+    if (check.ok) return;
+    expect(check.error).toMatch(/delivery stops total 16 SCU but mission total is 11 SCU/);
+
+    const applied = missionScuAmounts.applyDraft(session, "food", draft);
+    expect(applied.ok).toBe(false);
+  });
+
+  it("applies a balanced draft to mission cargo and delivery stops", () => {
+    const session = multiDeliverySession();
+    const draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    draft.commodities[0]!.scu = 15;
+    draft.deliveries[0]!.scu = 6;
+    draft.deliveries[1]!.scu = 5;
+    draft.deliveries[2]!.scu = 4;
+
+    const result = missionScuAmounts.applyDraft(session, "food", draft);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const mission = result.session.missions?.find((entry) => entry.id === "food");
+    expect(mission?.cargo[0]?.scu).toBe(15);
+    expect(mission?.deliverySplits?.map((split) => split.scu)).toEqual([6, 5, 4]);
+    expect(mission?.scuTotalCertainty).toBe("known");
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "delivery")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([6, 5, 4]);
+    expect(result.session.rows[0]!.cargoDeliveries[0]!.scu).toBe(15);
+  });
 });
+
+function multiDeliverySession(): SessionChecklistModel {
+  const missions: SessionMission[] = [
+    {
+      id: "food",
+      title: "Processed Food",
+      contractor: "Galaxy",
+      rewardAuec: 5000,
+      from: ["Port Tressler"],
+      to: ["Everus Harbor", "Baijini Point", "Area 18"],
+      cargo: [{ commodity: "Processed Food", scu: 11 }],
+      deliverySplits: [
+        {
+          from: "Port Tressler",
+          to: "Everus Harbor",
+          commodity: "Processed Food",
+          scu: 4,
+        },
+        {
+          from: "Port Tressler",
+          to: "Baijini Point",
+          commodity: "Processed Food",
+          scu: 3,
+        },
+        {
+          from: "Port Tressler",
+          to: "Area 18",
+          commodity: "Processed Food",
+          scu: 4,
+        },
+      ],
+      isCompleted: false,
+      screenshots: [],
+      mobiglas: {
+        tab: "Accepted",
+        category: "Hauling - Stellar",
+        title: "Processed Food",
+        contractor: "Galaxy",
+        rewardAuec: 5000,
+        timeRemaining: null,
+        deadline: null,
+        details: "",
+        objectives: [],
+      },
+    },
+  ];
+  return applySessionCompletionTiming({
+    id: "scu-draft",
+    sessionName: "SCU draft",
+    shipSlugs: ["c2-hercules-starlifter"],
+    startLocationSlug: "port-tressler",
+    missionCount: 1,
+    missionsCompleted: 0,
+    missions,
+    startedAt: "2026-11-15T00:00:00.000Z",
+    completedAt: null,
+    updatedAt: "2026-11-15T00:00:00.000Z",
+    rows: [
+      makeStop({
+        id: "leg-1",
+        routeAction: "pickup",
+        locationSlug: "port-tressler",
+        cargo: [
+          cargo("processed-food", 11, { role: "pickup", missionId: "food" }),
+        ],
+      }),
+      makeStop({
+        id: "leg-2",
+        routeAction: "delivery",
+        locationSlug: "everus-harbor",
+        cargo: [
+          cargo("processed-food", 4, {
+            role: "delivery",
+            missionId: "food",
+          }),
+        ],
+      }),
+      makeStop({
+        id: "leg-3",
+        routeAction: "delivery",
+        locationSlug: "baijini-point",
+        cargo: [
+          cargo("processed-food", 3, {
+            role: "delivery",
+            missionId: "food",
+          }),
+        ],
+      }),
+      makeStop({
+        id: "leg-4",
+        routeAction: "delivery",
+        locationSlug: "area18",
+        cargo: [
+          cargo("processed-food", 4, {
+            role: "delivery",
+            missionId: "food",
+          }),
+        ],
+      }),
+    ],
+  });
+}

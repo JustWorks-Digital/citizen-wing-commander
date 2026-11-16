@@ -41,6 +41,7 @@ import {
   missionDeliverObjectives,
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
+import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
@@ -65,20 +66,7 @@ export type SessionMissionsModalProps = {
       onlyUncorrected?: boolean;
     },
   ) => void;
-  onChangeMissionCommodityScu?: (
-    missionId: string,
-    commoditySlug: string,
-    scu: number,
-  ) => void;
-  onChangeMissionStationScu?: (
-    missionId: string,
-    input: {
-      role: "pickup" | "delivery";
-      locationKey: string;
-      commoditySlug: string;
-      scu: number;
-    },
-  ) => void;
+  onSaveMissionScuDraft?: (missionId: string, draft: MissionScuDraft) => void;
 };
 
 function EllipsisIcon() {
@@ -842,8 +830,7 @@ export function SessionMissionsModal({
   onToggleCompleted,
   onRemoveMission,
   onSelectBoxBreakdown,
-  onChangeMissionCommodityScu,
-  onChangeMissionStationScu,
+  onSaveMissionScuDraft,
 }: SessionMissionsModalProps) {
   const [enriched, setEnriched] = useState<SessionMission[]>(missions);
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
@@ -1304,20 +1291,9 @@ export function SessionMissionsModal({
             const lines = cargoBoxSplits.commodityLines(boxEditMission);
             if (lines.length <= 1) setBoxEditMissionId(null);
           }}
-          onChangeCommodityScu={
-            onChangeMissionCommodityScu
-              ? (commoditySlug, scu) =>
-                  onChangeMissionCommodityScu(
-                    boxEditMission.id,
-                    commoditySlug,
-                    scu,
-                  )
-              : undefined
-          }
-          onChangeStationScu={
-            onChangeMissionStationScu
-              ? (input) =>
-                  onChangeMissionStationScu(boxEditMission.id, input)
+          onSaveScuDraft={
+            onSaveMissionScuDraft
+              ? (draft) => onSaveMissionScuDraft(boxEditMission.id, draft)
               : undefined
           }
         />

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CommodityIcon } from "@/components/missions/CommodityIcon";
 import { MissionBoxBreakdownPicker } from "@/components/missions/MissionBoxBreakdownPicker";
+import { Button } from "@/components/ui/Button";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/missions/boxBreakdownOptions";
 import {
   missionScuAmounts,
-  type MissionStationScuLine,
+  type MissionScuDraft,
 } from "@/lib/missions/missionScuAmounts";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
@@ -46,15 +47,11 @@ export type StopMissionBoxConfigModalProps = {
     breakdown: ScuBoxSplits,
     options?: SelectBoxBreakdownOptions,
   ) => void;
-  /** Persist a mission-level commodity SCU total. */
-  onChangeCommodityScu?: (commoditySlug: string, scu: number) => void;
-  /** Persist SCU for one commodity at one collect/deliver station. */
-  onChangeStationScu?: (input: {
-    role: "pickup" | "delivery";
-    locationKey: string;
-    commoditySlug: string;
-    scu: number;
-  }) => void;
+  /**
+   * Persist draft mission + nested delivery SCU. Caller should run
+   * `missionScuAmounts.applyDraft` (validates delivery sums === totals).
+   */
+  onSaveScuDraft?: (draft: MissionScuDraft) => void;
 };
 
 type CargoLine = {
@@ -94,14 +91,14 @@ function ScuAmountInput({
   ariaLabel: string;
   onCommit: (scu: number) => void;
 }) {
-  const [draft, setDraft] = useState(String(value));
+  const [text, setText] = useState(String(value));
   useEffect(() => {
-    setDraft(String(value));
+    setText(String(value));
   }, [value]);
 
   const commit = () => {
-    const parsed = Math.max(0, Math.floor(Number(draft) || 0));
-    setDraft(String(parsed));
+    const parsed = Math.max(0, Math.floor(Number(text) || 0));
+    setText(String(parsed));
     if (parsed !== value) onCommit(parsed);
   };
 
@@ -114,9 +111,9 @@ function ScuAmountInput({
         min={0}
         step={1}
         disabled={disabled}
-        value={draft}
+        value={text}
         aria-label={ariaLabel}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => setText(event.target.value)}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -133,17 +130,57 @@ function ScuAmountInput({
   );
 }
 
+function ExpandChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 20 20"
+      className={[
+        "h-3.5 w-3.5 shrink-0 text-rsi-text-muted transition-transform",
+        expanded ? "rotate-90" : "",
+      ].join(" ")}
+      fill="currentColor"
+    >
+      <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
+    </svg>
+  );
+}
+
+function draftsEqual(a: MissionScuDraft, b: MissionScuDraft): boolean {
+  if (a.commodities.length !== b.commodities.length) return false;
+  if (a.deliveries.length !== b.deliveries.length) return false;
+  for (const [index, line] of a.commodities.entries()) {
+    const other = b.commodities[index];
+    if (!other) return false;
+    if (line.commoditySlug !== other.commoditySlug || line.scu !== other.scu) {
+      return false;
+    }
+  }
+  for (const [index, line] of a.deliveries.entries()) {
+    const other = b.deliveries[index];
+    if (!other) return false;
+    if (
+      line.commoditySlug !== other.commoditySlug ||
+      line.locationSlug !== other.locationSlug ||
+      line.scu !== other.scu
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
- * Correct crate sizes and SCU amounts for a session contract — mission totals,
- * per-station collect/deliver amounts, and crate-mix dropdowns.
+ * Correct crate sizes and SCU amounts for a session contract — condensed
+ * cargo totals with expandable nested delivery SCU, plus crate-mix dropdowns.
+ * SCU edits stay in a draft until Save (delivery sums must match totals).
  */
 export function StopMissionBoxConfigModal({
   mission,
   rows = null,
   onClose,
   onSelectBoxBreakdown,
-  onChangeCommodityScu,
-  onChangeStationScu,
+  onSaveScuDraft,
 }: StopMissionBoxConfigModalProps) {
   const reward =
     mission.rewardDisplay ??
@@ -151,32 +188,47 @@ export function StopMissionBoxConfigModal({
       ? `${mission.rewardAuec.toLocaleString()} aUEC`
       : null);
   const disabled = mission.isCompleted;
-  const canEditScu =
-    !disabled && Boolean(onChangeCommodityScu || onChangeStationScu);
+  const canEditScu = !disabled && Boolean(onSaveScuDraft);
 
-  const ready = useMemo(() => cargoBoxSplits.withDefaults(mission), [mission]);
-  const lines = useMemo(
-    () =>
-      [...cargoBoxSplits.commodityLines(ready)].sort(
-        (a, b) =>
-          b.scu - a.scu || a.commoditySlug.localeCompare(b.commoditySlug),
-      ),
-    [ready],
-  );
-  const isMultiCargo = lines.length > 1;
-  const primaryLine = lines[0] ?? null;
-  const stationLines = useMemo(
-    () => missionScuAmounts.stationLines(mission, rows),
+  const baseline = useMemo(
+    () => missionScuAmounts.draftFromMission(mission, rows),
     [mission, rows],
   );
-  const pickupStations = stationLines.filter((line) => line.role === "pickup");
-  const deliveryStations = stationLines.filter(
-    (line) => line.role === "delivery",
+  const [draft, setDraft] = useState<MissionScuDraft>(baseline);
+  const [expandedSlugs, setExpandedSlugs] = useState<Set<string>>(
+    () => new Set(),
   );
-  const showStations =
-    Boolean(onChangeStationScu) &&
-    (pickupStations.length > 0 || deliveryStations.length > 0);
-  const missionScu = missionTotalScu(mission);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(baseline);
+    setSaveError(null);
+  }, [baseline]);
+
+  const isDirty = canEditScu && !draftsEqual(draft, baseline);
+
+  const ready = useMemo(() => cargoBoxSplits.withDefaults(mission), [mission]);
+  const lines = useMemo(() => {
+    const bySlug = new Map(
+      draft.commodities.map((line) => [line.commoditySlug, line]),
+    );
+    return [...cargoBoxSplits.commodityLines(ready)]
+      .map((line) => {
+        const draftLine = bySlug.get(line.commoditySlug);
+        return draftLine ? { ...line, scu: draftLine.scu } : line;
+      })
+      .sort(
+        (a, b) =>
+          b.scu - a.scu || a.commoditySlug.localeCompare(b.commoditySlug),
+      );
+  }, [ready, draft.commodities]);
+  const isMultiCargo = lines.length > 1;
+  const primaryLine = lines[0] ?? null;
+  const missionScu = draft.commodities.reduce(
+    (sum, line) => sum + Math.max(0, Math.floor(line.scu)),
+    0,
+  );
+  const liveMissionScu = missionTotalScu(mission);
 
   const selectTotalStyle = (breakdown: ScuBoxSplits) => {
     if (!primaryLine) return;
@@ -190,6 +242,58 @@ export function StopMissionBoxConfigModal({
   const selectCargoStyle = (commoditySlug: string, breakdown: ScuBoxSplits) => {
     onSelectBoxBreakdown(commoditySlug, breakdown);
     if (!isMultiCargo) onClose();
+  };
+
+  const setCommodityScu = (commoditySlug: string, scu: number) => {
+    setSaveError(null);
+    setDraft((prev) => ({
+      ...prev,
+      commodities: prev.commodities.map((line) =>
+        line.commoditySlug === commoditySlug ? { ...line, scu } : line,
+      ),
+    }));
+  };
+
+  const setDeliveryScu = (
+    commoditySlug: string,
+    locationSlug: string,
+    scu: number,
+  ) => {
+    setSaveError(null);
+    setDraft((prev) => ({
+      ...prev,
+      deliveries: prev.deliveries.map((line) =>
+        line.commoditySlug === commoditySlug &&
+        line.locationSlug === locationSlug
+          ? { ...line, scu }
+          : line,
+      ),
+    }));
+  };
+
+  const toggleExpanded = (commoditySlug: string) => {
+    setExpandedSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(commoditySlug)) next.delete(commoditySlug);
+      else next.add(commoditySlug);
+      return next;
+    });
+  };
+
+  const handleSave = () => {
+    if (!onSaveScuDraft) return;
+    const check = missionScuAmounts.validateDraft(draft);
+    if (!check.ok) {
+      setSaveError(check.error);
+      return;
+    }
+    setSaveError(null);
+    onSaveScuDraft(draft);
+  };
+
+  const handleCancelDraft = () => {
+    setDraft(baseline);
+    setSaveError(null);
   };
 
   useEffect(() => {
@@ -223,7 +327,9 @@ export function StopMissionBoxConfigModal({
             {[
               mission.contractor || null,
               reward,
-              missionScu > 0 ? `${missionScu} SCU` : null,
+              (canEditScu ? missionScu : liveMissionScu) > 0
+                ? `${canEditScu ? missionScu : liveMissionScu} SCU`
+                : null,
             ]
               .filter(Boolean)
               .join(" · ") || "—"}
@@ -238,9 +344,7 @@ export function StopMissionBoxConfigModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-rsi-text-secondary">
             {canEditScu
-              ? isMultiCargo
-                ? "Correct mission or station SCU, then set crate styles."
-                : "Correct SCU amounts, then pick the crate mix."
+              ? "Edit cargo totals, expand a type to set delivery SCU, then Save. Delivery stops must sum to each cargo total."
               : isMultiCargo
                 ? "Set the total crate style, or adjust each cargo type."
                 : "Pick the crate mix that matches the contract."}
@@ -252,20 +356,15 @@ export function StopMissionBoxConfigModal({
             </p>
           ) : (
             <div className="mt-4 space-y-4">
-              {onChangeCommodityScu ? (
-                <MissionScuSection
+              {canEditScu ? (
+                <CargoScuDraftSection
                   lines={lines}
+                  draft={draft}
+                  expandedSlugs={expandedSlugs}
                   disabled={disabled}
-                  onChange={onChangeCommodityScu}
-                />
-              ) : null}
-
-              {showStations ? (
-                <StationScuSection
-                  pickupStations={pickupStations}
-                  deliveryStations={deliveryStations}
-                  disabled={disabled}
-                  onChange={onChangeStationScu!}
+                  onToggle={toggleExpanded}
+                  onChangeCommodity={setCommodityScu}
+                  onChangeDelivery={setDeliveryScu}
                 />
               ) : null}
 
@@ -280,129 +379,174 @@ export function StopMissionBoxConfigModal({
             </div>
           )}
         </div>
+
+        {canEditScu ? (
+          <footer className="shrink-0 space-y-2 border-t border-rsi-divider px-4 py-3 sm:px-6">
+            {saveError ? (
+              <p className="text-sm text-rsi-danger" role="alert">
+                {saveError}
+              </p>
+            ) : isDirty ? (
+              <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                Unsaved SCU changes
+              </p>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={!isDirty}
+                onClick={handleCancelDraft}
+              >
+                Reset
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!isDirty}
+                onClick={handleSave}
+              >
+                Save SCU
+              </Button>
+            </div>
+          </footer>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function MissionScuSection({
+function CargoScuDraftSection({
   lines,
+  draft,
+  expandedSlugs,
   disabled,
-  onChange,
+  onToggle,
+  onChangeCommodity,
+  onChangeDelivery,
 }: {
   lines: CargoLine[];
+  draft: MissionScuDraft;
+  expandedSlugs: Set<string>;
   disabled: boolean;
-  onChange: (commoditySlug: string, scu: number) => void;
+  onToggle: (commoditySlug: string) => void;
+  onChangeCommodity: (commoditySlug: string, scu: number) => void;
+  onChangeDelivery: (
+    commoditySlug: string,
+    locationSlug: string,
+    scu: number,
+  ) => void;
 }) {
   return (
     <section className="rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
       <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
         Mission SCU
       </p>
-      <ul className="mt-2.5 space-y-2.5">
+      <ul className="mt-2.5 space-y-2">
         {lines.map((line) => {
           const cargoColor =
             resolveCommodityColorHex(null, null, line.commoditySlug) ??
             "var(--rsi-text-secondary)";
+          const deliveries = draft.deliveries.filter(
+            (entry) => entry.commoditySlug === line.commoditySlug,
+          );
+          const hasDeliveries = deliveries.length > 0;
+          const expanded = expandedSlugs.has(line.commoditySlug);
+          const deliverySum = deliveries.reduce(
+            (sum, entry) => sum + Math.max(0, Math.floor(entry.scu)),
+            0,
+          );
+          const matches =
+            !hasDeliveries || deliverySum === Math.max(0, Math.floor(line.scu));
+
           return (
             <li
               key={line.commoditySlug}
-              className="flex flex-wrap items-center justify-between gap-3"
+              className="rounded-rsi border border-rsi-border/40 bg-rsi-surface/30"
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <CommodityIcon
-                  commoditySlug={line.commoditySlug}
-                  label={line.commodity}
-                  showTooltip={false}
+              <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 sm:gap-3">
+                {hasDeliveries ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-rsi text-rsi-text-secondary hover:bg-rsi-surface-raised hover:text-rsi-text"
+                    aria-expanded={expanded}
+                    aria-label={
+                      expanded
+                        ? `Hide ${line.commodity} delivery SCU`
+                        : `Show ${line.commodity} delivery SCU`
+                    }
+                    onClick={() => onToggle(line.commoditySlug)}
+                  >
+                    <ExpandChevron expanded={expanded} />
+                  </button>
+                ) : (
+                  <span className="inline-flex h-7 w-7" aria-hidden />
+                )}
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <CommodityIcon
+                    commoditySlug={line.commoditySlug}
+                    label={line.commodity}
+                    showTooltip={false}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className="truncate text-sm font-medium tracking-wide"
+                      style={{ color: cargoColor }}
+                    >
+                      {line.commodity}
+                    </p>
+                    {hasDeliveries ? (
+                      <p
+                        className={[
+                          "font-mono text-[0.55rem] uppercase tracking-[0.12em]",
+                          matches
+                            ? "text-rsi-text-muted"
+                            : "text-rsi-danger",
+                        ].join(" ")}
+                      >
+                        Deliveries {deliverySum} / {line.scu}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <ScuAmountInput
+                  value={line.scu}
+                  disabled={disabled}
+                  ariaLabel={`${line.commodity} mission SCU`}
+                  onCommit={(scu) => onChangeCommodity(line.commoditySlug, scu)}
                 />
-                <p
-                  className="truncate text-sm font-medium tracking-wide"
-                  style={{ color: cargoColor }}
-                >
-                  {line.commodity}
-                </p>
               </div>
-              <ScuAmountInput
-                value={line.scu}
-                disabled={disabled}
-                ariaLabel={`${line.commodity} mission SCU`}
-                onCommit={(scu) => onChange(line.commoditySlug, scu)}
-              />
+
+              {hasDeliveries && expanded ? (
+                <ul className="space-y-2 border-t border-rsi-border/40 px-2.5 py-2.5 pl-11 sm:pl-12">
+                  {deliveries.map((delivery) => (
+                    <li
+                      key={`${delivery.locationSlug}:${delivery.commoditySlug}`}
+                      className="flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <p className="min-w-0 truncate text-sm text-rsi-text-secondary">
+                        {delivery.locationLabel}
+                      </p>
+                      <ScuAmountInput
+                        value={delivery.scu}
+                        disabled={disabled}
+                        ariaLabel={`${delivery.locationLabel} ${delivery.commodity} delivery SCU`}
+                        onCommit={(scu) =>
+                          onChangeDelivery(
+                            delivery.commoditySlug,
+                            delivery.locationSlug,
+                            scu,
+                          )
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           );
         })}
       </ul>
-    </section>
-  );
-}
-
-function StationScuSection({
-  pickupStations,
-  deliveryStations,
-  disabled,
-  onChange,
-}: {
-  pickupStations: MissionStationScuLine[];
-  deliveryStations: MissionStationScuLine[];
-  disabled: boolean;
-  onChange: (input: {
-    role: "pickup" | "delivery";
-    locationKey: string;
-    commoditySlug: string;
-    scu: number;
-  }) => void;
-}) {
-  const renderGroup = (
-    title: string,
-    stations: MissionStationScuLine[],
-  ) => {
-    if (stations.length === 0) return null;
-    return (
-      <div>
-        <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          {title}
-        </p>
-        <ul className="mt-2 space-y-2.5">
-          {stations.map((line) => (
-            <li
-              key={`${line.role}:${line.locationSlug}:${line.commoditySlug}`}
-              className="flex flex-wrap items-center justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium tracking-wide text-rsi-text">
-                  {line.locationLabel}
-                </p>
-                <p className="truncate font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  {line.commodity}
-                </p>
-              </div>
-              <ScuAmountInput
-                value={line.scu}
-                disabled={disabled}
-                ariaLabel={`${line.locationLabel} ${line.commodity} ${line.role} SCU`}
-                onCommit={(scu) =>
-                  onChange({
-                    role: line.role,
-                    locationKey: line.locationKey,
-                    commoditySlug: line.commoditySlug,
-                    scu,
-                  })
-                }
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  };
-
-  return (
-    <section className="space-y-3 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
-      <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-        Station SCU
-      </p>
-      {renderGroup("Collect", pickupStations)}
-      {renderGroup("Deliver", deliveryStations)}
     </section>
   );
 }

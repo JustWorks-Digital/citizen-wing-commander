@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState, type ComponentProps } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 
@@ -23,6 +24,41 @@ const multiCargoMission: SessionMission = cargoBoxSplits.withDefaults({
   scuCargoBoxSplitsAutoSelected: undefined,
 });
 
+const multiDeliveryMission: SessionMission = cargoBoxSplits.withDefaults({
+  ...mission,
+  id: "multi-delivery",
+  title: "Processed Food — three drops",
+  cargo: [{ commodity: "Processed Food", scu: 11 }],
+  cargoSummary: "11 SCU Processed Food",
+  from: ["Port Tressler"],
+  to: ["Everus Harbor", "Baijini Point", "Area 18"],
+  deliverySplits: [
+    {
+      from: "Port Tressler",
+      to: "Everus Harbor",
+      commodity: "Processed Food",
+      scu: 4,
+    },
+    {
+      from: "Port Tressler",
+      to: "Baijini Point",
+      commodity: "Processed Food",
+      scu: 3,
+    },
+    {
+      from: "Port Tressler",
+      to: "Area 18",
+      commodity: "Processed Food",
+      scu: 4,
+    },
+  ],
+  maxContainerScu: 4,
+  scuBoxSplits: undefined,
+  scuBoxSplitsAutoSelected: undefined,
+  scuCargoBoxSplits: undefined,
+  scuCargoBoxSplitsAutoSelected: undefined,
+});
+
 const meta = {
   title: "Missions/StopMissionBoxConfigModal",
   component: StopMissionBoxConfigModal,
@@ -31,7 +67,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Correct mission SCU, per-station collect/deliver SCU, and crate mixes (Pickup / Drop off double-click). Total dropdown applies a style to every cargo type; each commodity also has its own combination dropdown (`scuCargoBoxSplits`).",
+          "Condensed cargo SCU with expandable nested delivery amounts. Edits stay in a draft until Save validates that delivery stops sum to each cargo total. Crate-mix dropdowns still apply immediately.",
       },
     },
   },
@@ -66,47 +102,44 @@ function InteractiveModal({
         });
         args.onSelectBoxBreakdown(commoditySlug, breakdown, options);
       }}
-      onChangeCommodityScu={(commoditySlug, scu) => {
+      onSaveScuDraft={(scuDraft: MissionScuDraft) => {
         setDraft((prev) => {
-          const lines = cargoBoxSplits.commodityLines(prev);
-          const match = lines.find(
-            (entry) => entry.commoditySlug === commoditySlug,
+          const bySlug = new Map(
+            scuDraft.commodities.map((line) => [line.commoditySlug, line]),
           );
-          if (!match) return prev;
-          return {
-            ...prev,
-            cargo: prev.cargo.map((line) =>
-              line.commodity === match.commodity ? { ...line, scu } : line,
-            ),
-            scuTotalCertainty: "known" as const,
-          };
-        });
-        args.onChangeCommodityScu?.(commoditySlug, scu);
-      }}
-      onChangeStationScu={(input) => {
-        setDraft((prev) => {
-          const field = input.role === "pickup" ? "from" : "to";
-          const splits = (prev.deliverySplits ?? []).map((split) => {
-            const lines = cargoBoxSplits.commodityLines({
-              ...prev,
-              cargo: [{ commodity: split.commodity, scu: split.scu }],
-            });
-            if (lines[0]?.commoditySlug !== input.commoditySlug) return split;
-            if (
-              split[field].trim().toLowerCase() !==
-              input.locationKey.trim().toLowerCase()
-            ) {
-              return split;
-            }
-            return { ...split, scu: input.scu };
+          const cargo = prev.cargo.map((line) => {
+            const slug = line.commodity.trim().toLowerCase().replace(/\s+/g, "-");
+            const match =
+              bySlug.get(slug) ??
+              scuDraft.commodities.find(
+                (entry) =>
+                  entry.commodity.toLowerCase() === line.commodity.toLowerCase(),
+              );
+            return match ? { ...line, scu: match.scu } : line;
           });
+          const deliverySplits =
+            prev.deliverySplits?.map((split) => {
+              const match = scuDraft.deliveries.find(
+                (entry) =>
+                  entry.commodity.toLowerCase() ===
+                    split.commodity.toLowerCase() &&
+                  entry.locationKey.trim().toLowerCase() ===
+                    split.to.trim().toLowerCase(),
+              );
+              return match ? { ...split, scu: match.scu } : split;
+            }) ?? prev.deliverySplits;
           return {
             ...prev,
-            deliverySplits: splits,
+            cargo,
+            deliverySplits,
+            cargoSummary: cargo
+              .filter((line) => line.scu > 0)
+              .map((line) => `${line.scu} SCU ${line.commodity}`)
+              .join(" · "),
             scuTotalCertainty: "known" as const,
           };
         });
-        args.onChangeStationScu?.(input);
+        args.onSaveScuDraft?.(scuDraft);
       }}
     />
   );
@@ -117,8 +150,7 @@ export const Default: Story = {
     mission,
     onClose: () => {},
     onSelectBoxBreakdown: () => {},
-    onChangeCommodityScu: () => {},
-    onChangeStationScu: () => {},
+    onSaveScuDraft: () => {},
   },
   render: (args) => <InteractiveModal args={args} />,
 };
@@ -128,8 +160,17 @@ export const MultiCargo: Story = {
     mission: multiCargoMission,
     onClose: () => {},
     onSelectBoxBreakdown: () => {},
-    onChangeCommodityScu: () => {},
-    onChangeStationScu: () => {},
+    onSaveScuDraft: () => {},
+  },
+  render: (args) => <InteractiveModal args={args} />,
+};
+
+export const NestedDeliveries: Story = {
+  args: {
+    mission: multiDeliveryMission,
+    onClose: () => {},
+    onSelectBoxBreakdown: () => {},
+    onSaveScuDraft: () => {},
   },
   render: (args) => <InteractiveModal args={args} />,
 };

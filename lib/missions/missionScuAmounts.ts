@@ -24,6 +24,28 @@ export type MissionStationScuLine = {
   scu: number;
 };
 
+/** Draft commodity totals for the box-types modal Save flow. */
+export type MissionScuDraftCommodity = {
+  commoditySlug: string;
+  commodity: string;
+  scu: number;
+};
+
+/** Draft per-delivery-location SCU nested under a cargo type. */
+export type MissionScuDraftDelivery = {
+  locationKey: string;
+  locationSlug: string;
+  locationLabel: string;
+  commoditySlug: string;
+  commodity: string;
+  scu: number;
+};
+
+export type MissionScuDraft = {
+  commodities: MissionScuDraftCommodity[];
+  deliveries: MissionScuDraftDelivery[];
+};
+
 function commoditySlugOf(nameOrSlug: string): string {
   return (
     resolveCommoditySlug(nameOrSlug) ?? nameOrSlug.trim().toLowerCase()
@@ -258,6 +280,194 @@ function finishMissionUpdate(
  * per-station collect/deliver amounts.
  */
 export const missionScuAmounts = {
+  /** Build a draft from the live mission + route (delivery stations only). */
+  draftFromMission(
+    mission: SessionMission,
+    rows?: HaulingChecklistRow[] | null,
+  ): MissionScuDraft {
+    const lines = cargoBoxSplits.commodityLines(mission);
+    const stations = missionScuAmounts
+      .stationLines(mission, rows)
+      .filter((line) => line.role === "delivery");
+    return {
+      commodities: lines.map((line) => ({
+        commoditySlug: line.commoditySlug,
+        commodity: line.commodity,
+        scu: line.scu,
+      })),
+      deliveries: stations.map((line) => ({
+        locationKey: line.locationKey,
+        locationSlug: line.locationSlug,
+        locationLabel: line.locationLabel,
+        commoditySlug: line.commoditySlug,
+        commodity: line.commodity,
+        scu: line.scu,
+      })),
+    };
+  },
+
+  /**
+   * Delivery station sums must equal each commodity’s mission total when that
+   * commodity has one or more delivery rows in the draft.
+   */
+  validateDraft(
+    draft: MissionScuDraft,
+  ): { ok: true } | { ok: false; error: string } {
+    for (const commodity of draft.commodities) {
+      const total = Math.max(0, Math.floor(Number(commodity.scu) || 0));
+      const deliveries = draft.deliveries.filter(
+        (line) => line.commoditySlug === commodity.commoditySlug,
+      );
+      if (deliveries.length === 0) continue;
+      const sum = deliveries.reduce(
+        (acc, line) => acc + Math.max(0, Math.floor(Number(line.scu) || 0)),
+        0,
+      );
+      if (sum !== total) {
+        return {
+          ok: false,
+          error: `${commodity.commodity}: delivery stops total ${sum} SCU but mission total is ${total} SCU.`,
+        };
+      }
+    }
+    return { ok: true };
+  },
+
+  /**
+   * Persist a validated draft: commodity totals + delivery station amounts,
+   * then scale pickups / restamp crates. Fails closed when delivery sums
+   * do not match each commodity total.
+   */
+  applyDraft(
+    session: SessionChecklistModel,
+    missionId: string,
+    draft: MissionScuDraft,
+  ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+    const check = missionScuAmounts.validateDraft(draft);
+    if (!check.ok) return check;
+
+    const existing = (session.missions ?? []).find(
+      (mission) => mission.id === missionId,
+    );
+    if (!existing) {
+      return { ok: false, error: `Unknown mission: ${missionId}` };
+    }
+
+    const commodityBySlug = new Map(
+      draft.commodities.map((line) => [line.commoditySlug, line]),
+    );
+
+    const cargo = existing.cargo.map((line) => {
+      const slug = commoditySlugOf(line.commodity);
+      const next = commodityBySlug.get(slug);
+      return next ? { ...line, scu: Math.max(0, Math.floor(next.scu)) } : line;
+    });
+
+    let deliverySplits = [...(existing.deliverySplits ?? [])];
+    if (deliverySplits.length === 0 && draft.deliveries.length > 0) {
+      const fromDefault = existing.from[0] ?? draft.deliveries[0]!.locationKey;
+      for (const delivery of draft.deliveries) {
+        deliverySplits.push({
+          from: fromDefault,
+          to: delivery.locationKey,
+          commodity: delivery.commodity,
+          scu: Math.max(0, Math.floor(delivery.scu)),
+        });
+      }
+    } else if (deliverySplits.length > 0) {
+      // Pin delivery (`to`) amounts from the draft; leave unmatched splits.
+      for (const delivery of draft.deliveries) {
+        const amount = Math.max(0, Math.floor(delivery.scu));
+        const matchingIndexes: number[] = [];
+        for (const [index, split] of deliverySplits.entries()) {
+          if (commoditySlugOf(split.commodity) !== delivery.commoditySlug) {
+            continue;
+          }
+          if (!locationMatches(split.to, delivery.locationKey)) continue;
+          matchingIndexes.push(index);
+        }
+        if (matchingIndexes.length === 0) {
+          deliverySplits.push({
+            from: existing.from[0] ?? delivery.locationKey,
+            to: delivery.locationKey,
+            commodity: delivery.commodity,
+            scu: amount,
+          });
+          continue;
+        }
+        if (matchingIndexes.length === 1) {
+          const index = matchingIndexes[0]!;
+          deliverySplits[index] = {
+            ...deliverySplits[index]!,
+            scu: amount,
+          };
+        } else {
+          const parts = matchingIndexes.map(
+            (index) => deliverySplits[index]!.scu,
+          );
+          const scaled = scalePositiveParts(parts, amount);
+          matchingIndexes.forEach((index, i) => {
+            deliverySplits[index] = {
+              ...deliverySplits[index]!,
+              scu: scaled[i]!,
+            };
+          });
+        }
+      }
+    }
+
+    let mission: SessionMission = {
+      ...existing,
+      cargo,
+      deliverySplits: deliverySplits.length > 0 ? deliverySplits : existing.deliverySplits,
+      cargoSummary: cargoSummaryFor({ ...existing, cargo }),
+      scuTotalCertainty: "known",
+    };
+
+    for (const commodity of draft.commodities) {
+      mission = refreshBoxSplitsForScu(
+        mission,
+        commodity.commoditySlug,
+        Math.max(0, Math.floor(commodity.scu)),
+      );
+    }
+
+    let rows = session.rows;
+    for (const commodity of draft.commodities) {
+      const amount = Math.max(0, Math.floor(commodity.scu));
+      rows = scaleRouteCommodityScu(
+        rows,
+        missionId,
+        commodity.commoditySlug,
+        amount,
+      );
+    }
+    for (const delivery of draft.deliveries) {
+      rows = setRouteStationCommodityScu(
+        rows,
+        missionId,
+        "delivery",
+        delivery.locationKey,
+        delivery.commoditySlug,
+        Math.max(0, Math.floor(delivery.scu)),
+      );
+    }
+    // Pickups follow each commodity total after deliveries are pinned.
+    for (const commodity of draft.commodities) {
+      const amount = Math.max(0, Math.floor(commodity.scu));
+      rows = applyScaledHits(
+        rows,
+        roleHits(rows, missionId, commodity.commoditySlug, "pickup"),
+        amount,
+      );
+    }
+
+    return {
+      ok: true,
+      session: finishMissionUpdate(session, missionId, mission, rows),
+    };
+  },
+
   stationLines(
     mission: SessionMission,
     rows?: HaulingChecklistRow[] | null,
