@@ -43,15 +43,9 @@ export type SessionMission = {
    * Source of truth; `rewardAuec` / `rewardDisplay` stay in sync via normalize.
    */
   rewards?: CatalogMissionReward[];
-  /**
-   * @deprecated Prefer `rewards` / `auecFromRewards(mission.rewards)`.
-   * Sum of aUEC lines — kept for legacy session JSON + dense UI; synced on normalize.
-   */
+  /** Sum of aUEC reward lines — derived from `rewards` on normalize. */
   rewardAuec: number;
-  /**
-   * @deprecated Prefer `formatRewardsLabel(mission.rewards)` / `missionRewardLabel`.
-   * Display string synced from `rewards` on normalize.
-   */
+  /** Display string synced from `rewards` on normalize. */
   rewardDisplay?: string;
   from: string[];
   to: string[];
@@ -62,11 +56,8 @@ export type SessionMission = {
    * Drives Collect / Deliver objectives and Mission SCU edits.
    */
   scuSplits?: ScuSplit[];
-  /**
-   * @deprecated Prefer catalog-aligned `scuMaxContainerSize` naming when
-   * rewriting session JSON; still the live session field today.
-   */
-  maxContainerScu?: number;
+  /** Max crate size from contract Details (1/2/4/8/16/32). */
+  scuMaxContainerSize?: number;
   /**
    * Selected crate mix per commodity slug (source of truth for restamp).
    * Aggregate `scuBoxSplits` is the sum of these maps.
@@ -126,16 +117,16 @@ function synthesizeMobiglas(
     category: "Hauling - Planetary",
     title: contract.title,
     contractor: contract.contractor ?? "Unknown contractor",
-    rewardAuec: contract.rewardAuec ?? 0,
+    rewardAuec: auecFromRewards(contract.rewards),
     rewardDisplay:
-      contract.rewardAuec != null
-        ? formatAuecAmount(contract.rewardAuec)
+      contract.rewards && contract.rewards.length > 0
+        ? formatRewardsLabel(contract.rewards)
         : undefined,
     timeRemaining: null,
     deadline: null,
     details: `Haul ${cargo} from ${from} to ${to}.${
-      contract.maxContainerScu
-        ? ` Containers at most ${contract.maxContainerScu} SCU.`
+      contract.scuMaxContainerSize
+        ? ` Containers at most ${contract.scuMaxContainerSize} SCU.`
         : ""
     }`,
     objectives: [
@@ -180,13 +171,16 @@ export function normalizeSessionMissionRankFields(
 }
 
 /**
- * Prefer `rewards[]`; hydrate from `rewardAuec` when missing; keep aUEC
- * display fields aligned.
+ * Canonical `rewards[]`; load-migrate bare `rewardAuec` into rewards once;
+ * keep derived aUEC / display fields aligned.
  */
 export function normalizeSessionMissionRewards(
   mission: SessionMission,
 ): SessionMission {
-  const rewards = normalizeCatalogRewards(mission.rewards, mission.rewardAuec);
+  const rewards =
+    mission.rewards && mission.rewards.length > 0
+      ? mission.rewards
+      : rewardsFromAuec(mission.rewardAuec);
   const rewardAuec = auecFromRewards(rewards);
   const rewardDisplay =
     rewards.length > 0
@@ -231,8 +225,8 @@ export function sessionMissionFromIntakeContract(
   const rank =
     normalizeMissionRank(contract.rank) ?? stripped.rank;
   const title = stripped.title || contract.title;
-  const rewardAuec = contract.rewardAuec ?? 0;
-  const rewards = rewardsFromAuec(rewardAuec);
+  const rewards = normalizeCatalogRewards(contract.rewards);
+  const rewardAuec = auecFromRewards(rewards);
   const base: SessionMission = {
     id,
     title,
@@ -241,7 +235,7 @@ export function sessionMissionFromIntakeContract(
     rewards,
     rewardAuec,
     rewardDisplay:
-      rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined,
+      rewards.length > 0 ? formatRewardsLabel(rewards) : undefined,
     from: [...contract.from],
     to: [...contract.to],
     cargo: contract.cargo.map((line) => ({ ...line })),
@@ -253,7 +247,7 @@ export function sessionMissionFromIntakeContract(
           ]),
         )
       : undefined,
-    maxContainerScu: contract.maxContainerScu,
+    scuMaxContainerSize: contract.scuMaxContainerSize,
     cargoSummary: cargoSummary(contract),
     isCompleted: false,
     isHidden: false,
@@ -282,7 +276,9 @@ export function intakeContractFromSessionMission(
     title: normalized.title,
     rank: normalized.rank ?? undefined,
     contractor: normalized.contractor,
-    rewardAuec: normalized.rewardAuec,
+    rewards: normalized.rewards?.length
+      ? [...normalized.rewards]
+      : rewardsFromAuec(normalized.rewardAuec),
     from: [...normalized.from],
     to: [...normalized.to],
     cargo: normalized.cargo.map((line) => ({ ...line })),
@@ -294,7 +290,7 @@ export function intakeContractFromSessionMission(
           ]),
         )
       : undefined,
-    maxContainerScu: normalized.maxContainerScu,
+    scuMaxContainerSize: normalized.scuMaxContainerSize,
     screenshots: [...normalized.screenshots],
     transcript: normalized.transcript,
   };

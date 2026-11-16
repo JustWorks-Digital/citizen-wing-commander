@@ -30,7 +30,7 @@ function refreshBoxSplitsForScu(
   commoditySlug: string,
   scu: number,
 ): SessionMission {
-  const auto = scuBoxSplitsForScu(scu, mission.maxContainerScu ?? null);
+  const auto = scuBoxSplitsForScu(scu, mission.scuMaxContainerSize ?? null);
   const preferredMax = cargoBoxSplits.preferredMaxFromSplits(
     mission.scuCargoBoxSplits?.[commoditySlug] ??
       mission.scuCargoBoxSplitsAutoSelected?.[commoditySlug] ??

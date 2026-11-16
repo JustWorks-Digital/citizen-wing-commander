@@ -323,7 +323,7 @@ function resolvedBoxSplits(mission: SessionMission): ScuBoxSplits {
   if (hasBoxes) return aggregate;
   return scuBoxSplitsForScu(
     missionTotalScu(mission),
-    mission.maxContainerScu,
+    mission.scuMaxContainerSize,
   );
 }
 

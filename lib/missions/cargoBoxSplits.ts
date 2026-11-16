@@ -82,7 +82,7 @@ function mapsEqualEnough(
  */
 export const cargoBoxSplits = {
   autoSelectedForMission(mission: SessionMission): ScuCargoBoxSplits {
-    const max = mission.maxContainerScu;
+    const max = mission.scuMaxContainerSize;
     const out: ScuCargoBoxSplits = {};
     for (const line of missionCargoLines(mission)) {
       out[line.commoditySlug] = scuBoxSplitsForScu(line.scu, max ?? null);
@@ -103,6 +103,20 @@ export const cargoBoxSplits = {
   selectedAggregate(mission: SessionMission): ScuBoxSplits {
     const ready = cargoBoxSplits.withDefaults(mission);
     return cargoBoxSplits.aggregate(ready.scuCargoBoxSplits);
+  },
+
+  /** True when the selected aggregate has at least one crate. */
+  hasSelected(mission: SessionMission): boolean {
+    const a = cargoBoxSplits.selectedAggregate(mission);
+    return (
+      a.scuOne +
+        a.scuTwo +
+        a.scuFour +
+        a.scuEight +
+        a.scuSixteen +
+        a.scuThirtyTwo >
+      0
+    );
   },
 
   /** Mission auto mix = sum of per-cargo auto maps. */
@@ -130,8 +144,8 @@ export const cargoBoxSplits = {
   ): CargoBoxScu[] {
     const need = Math.max(0, Math.floor(scu));
     const contractMax =
-      typeof mission.maxContainerScu === "number" && mission.maxContainerScu > 0
-        ? (mission.maxContainerScu as CargoBoxScu)
+      typeof mission.scuMaxContainerSize === "number" && mission.scuMaxContainerSize > 0
+        ? (mission.scuMaxContainerSize as CargoBoxScu)
         : undefined;
     if (need === 0) return [];
 
@@ -218,7 +232,7 @@ export const cargoBoxSplits = {
       if (!auto[line.commoditySlug]) {
         auto[line.commoditySlug] = scuBoxSplitsForScu(
           line.scu,
-          mission.maxContainerScu ?? null,
+          mission.scuMaxContainerSize ?? null,
         );
       }
     }
@@ -319,7 +333,7 @@ export const cargoBoxSplits = {
     mission: SessionMission,
     preferredMax: CargoBoxScu,
   ): CargoBoxScu {
-    const missionMax = clampToCargoBoxScu(mission.maxContainerScu);
+    const missionMax = clampToCargoBoxScu(mission.scuMaxContainerSize);
     if (missionMax == null) return preferredMax;
     return Math.min(missionMax, preferredMax) as CargoBoxScu;
   },

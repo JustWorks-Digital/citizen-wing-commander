@@ -9,7 +9,6 @@
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 80000,
       "from": [
         "Everus Harbor"
       ],
@@ -22,17 +21,22 @@
           "scu": 96
         }
       ],
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "id": "contract-01-stims",
       "screenshots": [
         "hurston-covalex-2026-11-08/01-stims-96-everus-lorville.png"
       ],
-      "transcript": "transcripts/contract-01-stims.json"
+      "transcript": "transcripts/contract-01-stims.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 80000
+        }
+      ]
     },
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 69250,
       "from": [
         "HDPC-Cassillo"
       ],
@@ -45,17 +49,22 @@
           "scu": 85
         }
       ],
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "id": "contract-02-iron-ore",
       "screenshots": [
         "hurston-covalex-2026-11-08/02-iron-ore-85-cassillo-everus.png"
       ],
-      "transcript": "transcripts/contract-02-iron-ore.json"
+      "transcript": "transcripts/contract-02-iron-ore.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 69250
+        }
+      ]
     },
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 56000,
       "from": [
         "Everus Harbor"
       ],
@@ -68,17 +77,22 @@
           "scu": 100
         }
       ],
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "id": "contract-03-tin",
       "screenshots": [
         "hurston-covalex-2026-11-08/03-tin-100-everus-lorville.png"
       ],
-      "transcript": "transcripts/contract-03-tin.json"
+      "transcript": "transcripts/contract-03-tin.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 56000
+        }
+      ]
     },
     {
       "title": "Junior Rank - Small Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 59750,
       "from": [
         "HDMS-Lathan",
         "HDMS-Bezdek"
@@ -96,7 +110,7 @@
           "scu": 5
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "pickupSplits": {
         "HDMS-Lathan": [
           {
@@ -123,12 +137,17 @@
       "screenshots": [
         "hurston-covalex-2026-11-08/04-small-haul-arial-everus.png"
       ],
-      "transcript": "transcripts/contract-04-arial-small.json"
+      "transcript": "transcripts/contract-04-arial-small.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 59750
+        }
+      ]
     },
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 56000,
       "from": [
         "Everus Harbor"
       ],
@@ -141,17 +160,22 @@
           "scu": 82
         }
       ],
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "id": "contract-05-silicon-82",
       "screenshots": [
         "hurston-covalex-2026-11-08/05-silicon-82-everus-lorville.png"
       ],
-      "transcript": "transcripts/contract-05-silicon-82.json"
+      "transcript": "transcripts/contract-05-silicon-82.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 56000
+        }
+      ]
     },
     {
       "title": "Rookie Rank - Direct Extra Small Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 50250,
       "from": [
         "Everus Harbor"
       ],
@@ -164,17 +188,22 @@
           "scu": 9
         }
       ],
-      "maxContainerScu": 1,
+      "scuMaxContainerSize": 1,
       "id": "contract-06-tungsten",
       "screenshots": [
         "hurston-covalex-2026-11-08/06-tungsten-9-everus-farnesway.png"
       ],
-      "transcript": "transcripts/contract-06-tungsten.json"
+      "transcript": "transcripts/contract-06-tungsten.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 50250
+        }
+      ]
     },
     {
       "title": "Rookie Rank - Direct Extra Small Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 50250,
       "from": [
         "Everus Harbor"
       ],
@@ -187,17 +216,22 @@
           "scu": 11
         }
       ],
-      "maxContainerScu": 1,
+      "scuMaxContainerSize": 1,
       "id": "contract-07-quartz",
       "screenshots": [
         "hurston-covalex-2026-11-08/07-quartz-11-everus-cassillo.png"
       ],
-      "transcript": "transcripts/contract-07-quartz.json"
+      "transcript": "transcripts/contract-07-quartz.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 50250
+        }
+      ]
     },
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 56750,
       "from": [
         "HDPC-Cassillo"
       ],
@@ -210,17 +244,22 @@
           "scu": 58
         }
       ],
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "id": "contract-08-waste",
       "screenshots": [
         "hurston-covalex-2026-11-08/08-waste-58-cassillo-everus.jpg"
       ],
-      "transcript": "transcripts/contract-08-waste.json"
+      "transcript": "transcripts/contract-08-waste.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 56750
+        }
+      ]
     },
     {
       "title": "Rookie Rank - Direct Extra Small Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 50250,
       "from": [
         "Everus Harbor"
       ],
@@ -233,12 +272,18 @@
           "scu": 7
         }
       ],
-      "maxContainerScu": 1,
+      "scuMaxContainerSize": 1,
       "id": "contract-09-silicon-7",
       "screenshots": [
         "hurston-covalex-2026-11-08/09-silicon-7-everus-cassillo.jpg"
       ],
-      "transcript": "transcripts/contract-09-silicon-7.json"
+      "transcript": "transcripts/contract-09-silicon-7.json",
+      "rewards": [
+        {
+          "kind": "auec",
+          "amount": 50250
+        }
+      ]
     }
   ]
 }

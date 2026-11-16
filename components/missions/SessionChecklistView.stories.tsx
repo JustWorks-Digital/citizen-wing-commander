@@ -43,7 +43,7 @@ export const MissionCargoOverCapacity: Story = {
           from: ["Everus Harbor"],
           to: ["Lorville"],
           cargo: [{ commodity: "Stims", scu: 280 }],
-          maxContainerScu: 8,
+          scuMaxContainerSize: 8,
           cargoSummary: "280 SCU Stims",
           isCompleted: false,
           isHidden: false,

@@ -26,7 +26,7 @@ import {
 } from "@/lib/missions/scuCertainty";
 
 export type UpsertHaulingCatalogMissionInput = {
-  /** Accepts builder input (including legacy rewardAuec → rewards). */
+  /** Builder input for `buildHaulingCatalogMissionPayload`. */
   payload: Parameters<typeof buildHaulingCatalogMissionPayload>[0];
   /**
    * Explicitly join this catalog mission’s variant group (SCU variants).

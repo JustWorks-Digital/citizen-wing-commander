@@ -38,7 +38,7 @@ export type SelectBoxBreakdownOptions = {
 
 export type StopMissionBoxConfigModalProps = {
   mission: SessionMission;
-  /** Route rows — used for live per-station SCU amounts. */
+  /** Route rows — used for live per-location SCU amounts. */
   rows?: HaulingChecklistRow[] | null;
   /** Session id — resolves Source screenshot URLs for the header. */
   sessionId?: string | null;
@@ -644,10 +644,10 @@ function BoxConfigTile({
   const primarySelected =
     mission.scuCargoBoxSplits?.[primaryLine.commoditySlug] ??
     mission.scuCargoBoxSplitsAutoSelected?.[primaryLine.commoditySlug] ??
-    scuBoxSplitsForScu(primaryLine.scu, mission.maxContainerScu ?? null);
+    scuBoxSplitsForScu(primaryLine.scu, mission.scuMaxContainerSize ?? null);
   const primaryAuto =
     mission.scuCargoBoxSplitsAutoSelected?.[primaryLine.commoditySlug] ??
-    scuBoxSplitsForScu(primaryLine.scu, mission.maxContainerScu ?? null);
+    scuBoxSplitsForScu(primaryLine.scu, mission.scuMaxContainerSize ?? null);
 
   const totalAuto = cargoBoxSplits.autoSelectedAggregate(mission);
   const totalSelected = cargoBoxSplits.selectedAggregate(mission);
@@ -655,7 +655,7 @@ function BoxConfigTile({
   const totalStyleOptions = useMemo(() => {
     const primaryOptions = enumerateBoxBreakdowns(
       primaryLine.scu,
-      mission.maxContainerScu,
+      mission.scuMaxContainerSize,
       16,
     );
     return primaryOptions.map((option): BoxBreakdownOption & {
@@ -713,7 +713,7 @@ function BoxConfigTile({
         </div>
         <MissionBoxBreakdownPicker
           totalScu={primaryLine.scu}
-          maxContainerScu={mission.maxContainerScu}
+          scuMaxContainerSize={mission.scuMaxContainerSize}
           selected={isMultiCargo ? totalSelected : primarySelected}
           autoSelected={isMultiCargo ? totalAuto : primaryAuto}
           options={isMultiCargo ? totalStyleOptions : undefined}
@@ -733,10 +733,10 @@ function BoxConfigTile({
             const selected =
               mission.scuCargoBoxSplits?.[line.commoditySlug] ??
               mission.scuCargoBoxSplitsAutoSelected?.[line.commoditySlug] ??
-              scuBoxSplitsForScu(line.scu, mission.maxContainerScu ?? null);
+              scuBoxSplitsForScu(line.scu, mission.scuMaxContainerSize ?? null);
             const autoSelected =
               mission.scuCargoBoxSplitsAutoSelected?.[line.commoditySlug] ??
-              scuBoxSplitsForScu(line.scu, mission.maxContainerScu ?? null);
+              scuBoxSplitsForScu(line.scu, mission.scuMaxContainerSize ?? null);
             return (
               <li
                 key={line.commoditySlug}
@@ -762,7 +762,7 @@ function BoxConfigTile({
                 </div>
                 <MissionBoxBreakdownPicker
                   totalScu={line.scu}
-                  maxContainerScu={mission.maxContainerScu}
+                  scuMaxContainerSize={mission.scuMaxContainerSize}
                   selected={selected}
                   autoSelected={autoSelected}
                   onSelect={(breakdown) =>

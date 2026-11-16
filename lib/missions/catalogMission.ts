@@ -191,43 +191,20 @@ export function emptyScuBoxSplits(): ScuBoxSplits {
   };
 }
 
-/** @deprecated Prefer `emptyScuBoxSplits` */
-export const emptyBoxBreakdown = emptyScuBoxSplits;
-
-/**
- * Accept current `scuOne`… keys.
- * Also reads deprecated `size1`/`size2`/`size4`/`size8`/`size16`/`size32` —
- * drop those aliases once no callers/fixtures emit them.
- */
+/** Normalize crate-count maps to the canonical `scuOne`… keys. */
 export function normalizeScuBoxSplits(
-  raw: Partial<ScuBoxSplits> & {
-    /** @deprecated Prefer `scuOne`. */
-    size1?: number;
-    /** @deprecated Prefer `scuTwo`. */
-    size2?: number;
-    /** @deprecated Prefer `scuFour`. */
-    size4?: number;
-    /** @deprecated Prefer `scuEight`. */
-    size8?: number;
-    /** @deprecated Prefer `scuSixteen`. */
-    size16?: number;
-    /** @deprecated Prefer `scuThirtyTwo`. */
-    size32?: number;
-  } | null | undefined,
+  raw: Partial<ScuBoxSplits> | null | undefined,
 ): ScuBoxSplits {
   if (!raw) return emptyScuBoxSplits();
   return {
-    scuOne: Number(raw.scuOne ?? raw.size1 ?? 0) || 0,
-    scuTwo: Number(raw.scuTwo ?? raw.size2 ?? 0) || 0,
-    scuFour: Number(raw.scuFour ?? raw.size4 ?? 0) || 0,
-    scuEight: Number(raw.scuEight ?? raw.size8 ?? 0) || 0,
-    scuSixteen: Number(raw.scuSixteen ?? raw.size16 ?? 0) || 0,
-    scuThirtyTwo: Number(raw.scuThirtyTwo ?? raw.size32 ?? 0) || 0,
+    scuOne: Number(raw.scuOne ?? 0) || 0,
+    scuTwo: Number(raw.scuTwo ?? 0) || 0,
+    scuFour: Number(raw.scuFour ?? 0) || 0,
+    scuEight: Number(raw.scuEight ?? 0) || 0,
+    scuSixteen: Number(raw.scuSixteen ?? 0) || 0,
+    scuThirtyTwo: Number(raw.scuThirtyTwo ?? 0) || 0,
   };
 }
-
-/** @deprecated Prefer `normalizeScuBoxSplits` */
-export const normalizeCargoBoxBreakdown = normalizeScuBoxSplits;
 
 export function incrementScuBoxSplit(
   counts: ScuBoxSplits,
@@ -269,9 +246,6 @@ export function scuBoxSplitsForScu(
   }
   return counts;
 }
-
-/** @deprecated Prefer `scuBoxSplitsForScu` */
-export const boxBreakdownForScu = scuBoxSplitsForScu;
 
 function decomposeScuIntoBoxesCapped(
   scu: number,
@@ -345,13 +319,12 @@ export function auecFromRewards(
   }, 0);
 }
 
+/** Canonical payout lines only — build aUEC with `rewardsFromAuec` at the call site. */
 export function normalizeCatalogRewards(
   rewards?: CatalogMissionReward[] | null,
-  /** @deprecated Prefer `rewards` */
-  rewardAuec?: number | null,
 ): CatalogMissionReward[] {
   if (rewards && rewards.length > 0) return rewards;
-  return rewardsFromAuec(rewardAuec);
+  return [];
 }
 
 /** Human label for payout lines (aUEC + blueprint names). */
@@ -579,15 +552,7 @@ export function buildHaulingCatalogMissionPayload(
   > & {
     rewards?: CatalogMissionReward[] | null;
     scuTotal?: number;
-    /** @deprecated Prefer scuTotal */
-    totalScu?: number;
-    /** @deprecated Prefer scuMaxContainerSize */
-    maxContainerScu?: number | null;
-    /** @deprecated Prefer rewards: [{ kind: "auec", amount }] */
-    rewardAuec?: number | null;
     scuBoxSplits?: ScuBoxSplits;
-    /** @deprecated Prefer scuBoxSplits */
-    boxBreakdown?: ScuBoxSplits;
     scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
     scuTotalCertainty?: ScuCertainty | null;
     scuBoxSplitsCertainty?: ScuCertainty | null;
@@ -595,12 +560,9 @@ export function buildHaulingCatalogMissionPayload(
   },
 ): HaulingCatalogMissionPayload {
   const scuTotal =
-    partial.scuTotal ??
-    partial.totalScu ??
-    sumCatalogCargoScu(partial.cargo);
-  const scuMaxContainerSize =
-    partial.scuMaxContainerSize ?? partial.maxContainerScu ?? null;
-  const rawSplits = partial.scuBoxSplits ?? partial.boxBreakdown;
+    partial.scuTotal ?? sumCatalogCargoScu(partial.cargo);
+  const scuMaxContainerSize = partial.scuMaxContainerSize ?? null;
+  const rawSplits = partial.scuBoxSplits;
   const scuCargoBoxSplits = partial.scuCargoBoxSplits
     ? Object.fromEntries(
         Object.entries(partial.scuCargoBoxSplits).map(([slug, splits]) => [
@@ -628,7 +590,7 @@ export function buildHaulingCatalogMissionPayload(
     rank,
     category: normalizeHaulingCategory(partial.category),
     contractorSlug: partial.contractorSlug ?? null,
-    rewards: normalizeCatalogRewards(partial.rewards, partial.rewardAuec),
+    rewards: normalizeCatalogRewards(partial.rewards),
     offerLocationSlug: partial.offerLocationSlug ?? null,
     offerStarSystemSlug,
     fromLocationSlugs: partial.fromLocationSlugs,

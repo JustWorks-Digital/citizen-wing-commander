@@ -42,7 +42,7 @@ Lane A is preferred when ChatGPT can pass **`file`** (or Cursor/Codex can push b
 ## Goal (after shots are in the store)
 
 1. Extract every accepted hauling contract into **`hauling_contracts_intake`** JSON (`lib/missions/haulingIntake.ts`). Example batch: `lib/fixtures/hauling-intake/hurston-covalex-2026-11-08/`.
-2. **Max container SCU (required when visible):** Read the contract’s max container size from Details (wording like “Containers at most N SCU” / max crate size). In screenshots this is **usually blue highlighted text** — scan for that accent before finishing the extract. Record it on every contract as **`maxContainerScu`** (allowed sizes: 1 / 2 / 4 / 8 / 16 / 32). For catalog `create_mission`, pass the same value as **`scuMaxContainerSize`**. This caps default box splits and bay packing — do not omit it when the screenshot shows it.
+2. **Max container SCU (required when visible):** Read the contract’s max container size from Details (wording like “Containers at most N SCU” / max crate size). In screenshots this is **usually blue highlighted text** — scan for that accent before finishing the extract. Record it on every contract as **`scuMaxContainerSize`** (allowed sizes: 1 / 2 / 4 / 8 / 16 / 32). For catalog `create_mission`, pass the same value as **`scuMaxContainerSize`**. This caps default box splits and bay packing — do not omit it when the screenshot shows it.
 3. Put each shot’s **`logicalPath`** on that contract’s **`screenshots: [...]`** (session) or **`latestScreenshotPath`** (catalog). Never invent paths. Omit screenshots **only** for text-only intake.
 4. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths when useful.
 5. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
@@ -63,11 +63,11 @@ Lane A is preferred when ChatGPT can pass **`file`** (or Cursor/Codex can push b
     {
       "title": "Junior Rank - Direct Medium Cargo Haul",
       "contractor": "Covalex Independent Contractors",
-      "rewardAuec": 56750,
+      "rewards": [{ "kind": "auec", "amount": 56750 }],
       "from": ["HDPC-Cassillo"],
       "to": ["Everus Harbor"],
       "cargo": [{ "commodity": "Waste", "scu": 58 }],
-      "maxContainerScu": 8
+      "scuMaxContainerSize": 8
     }
   ]
 }
@@ -75,7 +75,7 @@ Lane A is preferred when ChatGPT can pass **`file`** (or Cursor/Codex can push b
 
 Multi-pickup contracts use `from: [...]` plus optional `pickupSplits` when totals are shared across sites.
 
-Always include **`maxContainerScu`** on each intake contract when Details shows a max crate size (common: 1, 4, or 8). Skipping it makes box-split defaults and packing assume the wrong cap.
+Always include **`scuMaxContainerSize`** on each intake contract when Details shows a max crate size (common: 1, 4, or 8). Skipping it makes box-split defaults and packing assume the wrong cap.
 
 Catalog missions (`create_mission`) should pass **`scuSplits[]`** for each Primary Objective line (`kind`, `from`, `to`, `commodity`, `scu`) — sibling of **`scuTotal`** — and **`scuMaxContainerSize`** for the same max-crate value. Optional **`objectives[]`** are screenshot-style text bullets (derived from splits when omitted). Aggregated `cargo` / `from` / `to` can be omitted and will be derived.
 
@@ -156,7 +156,7 @@ Per contract, capture:
 | Pickup location(s) | Details + objectives | Freight elevator sites |
 | Delivery location(s) | Details + objectives | |
 | Commodity + SCU | Primary objectives | Prefer exact labels: `Iron (Ore)`, `Quartz (Raw)` |
-| Max container SCU | Details text (often **blue highlight**) | **Required when shown** — e.g. “Containers at most 8 SCU”. Map to `maxContainerScu` (intake) / `scuMaxContainerSize` (catalog). Allowed: 1 / 2 / 4 / 8 / 16 / 32 |
+| Max container SCU | Details text (often **blue highlight**) | **Required when shown** — e.g. “Containers at most 8 SCU”. Map to `scuMaxContainerSize` (intake + catalog). Allowed: 1 / 2 / 4 / 8 / 16 / 32 |
 | Multi-stop | “any order” / multiple Collect lines | Split cargo across pickup rows when totals are shared |
 
 **Coverage rule:** Sidebar count (e.g. Accepted 9/10) must match detail screenshots. If a contract was only scrolled past in the list, ask for that detail shot or skip it and say so.
@@ -258,6 +258,6 @@ Do not create parallel rows that only restate the same stop for a second contrac
 
 ## Iteration tips
 
-- Keep a short extract table (contract → cargo → from → to → maxContainerScu) before routing.
+- Keep a short extract table (contract → cargo → from → to → scuMaxContainerSize) before routing.
 - When the user sends a new zip/batch: re-extract all Accepted details, rebuild the full route, then `replace_hauling_checklist` (full replace, not patch).
 - Call `get_hauling_intake_playbook` on the MCP server if available so remote clients load this same text.

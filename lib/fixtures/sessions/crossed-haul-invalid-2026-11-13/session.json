@@ -83,7 +83,7 @@
           "commodity": "Stims"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "022a9877-dd30-4f05-813c-a04a741867f3",
       "scuCargoBoxSplits": {
         "stims": {
@@ -203,7 +203,7 @@
           "commodity": "Hydrogen Fuel"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "aaf74800-5379-4f2a-baf5-6ba1f66b21c1",
       "scuCargoBoxSplits": {
         "quantum-fuel": {
@@ -328,7 +328,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "163,750 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "9363be25-072c-4b22-9335-55ae77b7ce69",
       "scuCargoBoxSplits": {
         "quantum-fuel": {
@@ -452,7 +452,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "139,000 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "847803b4-c69b-4bde-9000-ef4545352eb3",
       "scuCargoBoxSplits": {
         "scrap": {
@@ -557,7 +557,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "150,500 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "c91f28dd-afbc-438e-837d-8dc706a3c4ae",
       "scuCargoBoxSplits": {
         "processed-food": {
@@ -665,7 +665,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "153,250 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "56da5f16-925c-4f01-a47a-05d0be40dac7",
       "scuCargoBoxSplits": {
         "quartz-raw": {
@@ -766,7 +766,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "139,000 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "f443e0c6-7c74-4581-a49c-418fdef90f12",
       "scuCargoBoxSplits": {
         "stims": {
@@ -860,7 +860,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "153,250 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "50b717fe-9d67-4a2a-9fbb-3813e0f956bd",
       "scuCargoBoxSplits": {
         "quartz-raw": {
@@ -963,7 +963,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "139,000 aUEC",
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "1220c6b6-83fa-4ae0-9cf7-8c911db409dc",
       "scuCargoBoxSplits": {
         "stims": {
@@ -1083,7 +1083,7 @@
           "commodity": "Corundum (Raw)"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "6521c39a-2866-423b-8fe7-14a4c4790928",
       "scuCargoBoxSplits": {
         "quartz-raw": {
@@ -1216,7 +1216,7 @@
           "commodity": "Processed Food"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "685915ae-c014-44a9-ad4c-3353775e1bcf",
       "scuCargoBoxSplits": {
         "processed-food": {
@@ -1345,7 +1345,7 @@
           "commodity": "Stims"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "e9924e0e-1861-4c06-b452-f74573d99e88",
       "scuCargoBoxSplits": {
         "stims": {
@@ -1466,7 +1466,7 @@
           "commodity": "Hydrogen Fuel"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "69d74d0c-9a6f-4cd0-a83b-006d0c4f4a67",
       "scuCargoBoxSplits": {
         "quantum-fuel": {
@@ -1618,7 +1618,7 @@
           "commodity": "Scrap"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "f3ad75fe-2b86-4335-995a-6df8770720ea",
       "scuCargoBoxSplits": {
         "scrap": {
@@ -1734,7 +1734,7 @@
           "commodity": "Processed Food"
         }
       ],
-      "maxContainerScu": 16,
+      "scuMaxContainerSize": 16,
       "catalogMissionId": "1b86ed1e-15cc-4d27-9978-58c593ece08d",
       "scuCargoBoxSplits": {
         "processed-food": {
@@ -1854,7 +1854,7 @@
           "commodity": "Stims"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "2b2627af-8de0-424c-9ea3-34125e905520",
       "scuCargoBoxSplits": {
         "stims": {
@@ -1972,7 +1972,7 @@
           "commodity": "Hydrogen Fuel"
         }
       ],
-      "maxContainerScu": 4,
+      "scuMaxContainerSize": 4,
       "catalogMissionId": "444e36dc-ce1d-4d44-a58e-7d9c77e12ca8",
       "scuCargoBoxSplits": {
         "quantum-fuel": {
@@ -2460,7 +2460,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "140,000 aUEC",
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "catalogMissionId": "08822efe-0408-41e2-876a-e627ee3bc7ba",
       "scuCargoBoxSplits": {
         "waste": {
@@ -2548,7 +2548,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "140,000 aUEC",
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "catalogMissionId": "9a2da867-d61e-4091-b4bd-acf6c4cb240f",
       "scuCargoBoxSplits": {
         "waste": {
@@ -2634,7 +2634,7 @@
         "scuThirtyTwo": 0
       },
       "rewardDisplay": "138,000 aUEC",
-      "maxContainerScu": 8,
+      "scuMaxContainerSize": 8,
       "catalogMissionId": "cc77610d-7f1e-42bc-bbcf-827d592cb70b",
       "scuCargoBoxSplits": {
         "waste": {

@@ -105,7 +105,7 @@ export function sessionMissionFromCatalog(
     to,
     cargo,
     scuSplits,
-    maxContainerScu: catalog.scuMaxContainerSize ?? payload.scuMaxContainerSize ?? undefined,
+    scuMaxContainerSize: catalog.scuMaxContainerSize ?? payload.scuMaxContainerSize ?? undefined,
     scuBoxSplits: catalog.scuBoxSplits ?? payload.scuBoxSplits,
     scuTotalCertainty:
       catalog.scuTotalCertainty ?? payload.scuTotalCertainty ?? null,

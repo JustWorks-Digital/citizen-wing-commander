@@ -97,16 +97,16 @@ export function formatBreakdownLabel(breakdown: ScuBoxSplits): string {
  */
 export function enumerateBoxBreakdowns(
   scu: number,
-  maxContainerScu?: number | null,
+  scuMaxContainerSize?: number | null,
   limit = 10,
 ): BoxBreakdownOption[] {
   const total = Math.max(0, Math.floor(scu));
   if (total === 0) return [];
 
   const maxAllowed =
-    typeof maxContainerScu === "number" && maxContainerScu > 0
+    typeof scuMaxContainerSize === "number" && scuMaxContainerSize > 0
       ? Math.max(
-          ...CARGO_BOX_SCU.filter((size) => size <= maxContainerScu),
+          ...CARGO_BOX_SCU.filter((size) => size <= scuMaxContainerSize),
           1,
         )
       : DEFAULT_MAX_CARGO_BOX_SCU;
@@ -133,7 +133,7 @@ export function enumerateBoxBreakdowns(
 
   walk(total, 0, emptyScuBoxSplits());
 
-  const defaultBreakdown = scuBoxSplitsForScu(total, maxContainerScu);
+  const defaultBreakdown = scuBoxSplitsForScu(total, scuMaxContainerSize);
   const defaultKey = breakdownKey(defaultBreakdown);
 
   found.sort((a, b) => {

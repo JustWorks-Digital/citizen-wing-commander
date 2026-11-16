@@ -228,7 +228,7 @@ function optimizeRowsIfInvalid(
     checklistRowsFromTripPlan(result.plan),
   );
   for (const mission of missions) {
-    if (!effectiveMissionScuBoxSplits(mission)) continue;
+    if (!cargoBoxSplits.hasSelected(mission)) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
   return nextRows;
@@ -291,7 +291,7 @@ export function rebuildRowsFromMissions(
 
   let nextRows = rows;
   for (const mission of nextMissions) {
-    if (!effectiveMissionScuBoxSplits(mission)) continue;
+    if (!cargoBoxSplits.hasSelected(mission)) continue;
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
   nextRows = mergePreservedQuantumRows(session.rows, nextRows);
@@ -372,36 +372,6 @@ export function removeMissionAndRebuildRoute(
     (mission) => mission.id !== missionId,
   );
   return rebuildRowsFromMissions(session, missions);
-}
-
-/**
- * @deprecated Prefer `cargoBoxSplits.autoSelectedAggregate(mission)`.
- * Aggregate auto mix for icons / older callers.
- */
-export function autoSelectedMissionScuBoxSplits(
-  mission: SessionMission,
-): ScuBoxSplits | null {
-  const map = cargoBoxSplits.autoSelectedForMission(mission);
-  if (Object.keys(map).length === 0) return null;
-  return cargoBoxSplits.aggregate(map);
-}
-
-/**
- * @deprecated Prefer `cargoBoxSplits.selectedAggregate(mission)`.
- * Aggregate selected (or auto) mix for icons / older callers.
- */
-export function effectiveMissionScuBoxSplits(
-  mission: SessionMission,
-): ScuBoxSplits | null {
-  const aggregate = cargoBoxSplits.selectedAggregate(mission);
-  const total =
-    aggregate.scuOne +
-    aggregate.scuTwo +
-    aggregate.scuFour +
-    aggregate.scuEight +
-    aggregate.scuSixteen +
-    aggregate.scuThirtyTwo;
-  return total > 0 ? aggregate : null;
 }
 
 /** Ensure per-cargo maps exist (mission aggregates are derived). */
@@ -573,7 +543,7 @@ export function restampAllMissionBoxSizes(
   const missions = (session.missions ?? []).map(withMissionBoxSplitDefaults);
   let rows = session.rows;
   for (const mission of missions) {
-    if (!effectiveMissionScuBoxSplits(mission)) continue;
+    if (!cargoBoxSplits.hasSelected(mission)) continue;
     rows = stampMissionBoxSizesOntoRows(rows, mission);
   }
   return { ...session, missions, rows };

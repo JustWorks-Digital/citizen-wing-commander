@@ -4,6 +4,8 @@
  * builds a `SessionChecklist` route for the checklist table.
  */
 
+import type { CatalogMissionReward } from "@/lib/missions/catalogMission";
+
 export type HaulingIntakeCargoLine = {
   /** Fixture name, code, or slug (e.g. "Iron (Ore)", "STIM", "waste"). */
   commodity: string;
@@ -20,11 +22,8 @@ export type HaulingIntakeContract = {
    */
   rank?: string | null;
   contractor?: string;
-  /**
-   * @deprecated Prefer `rewards: [{ kind: "auec", amount }]` once intake
-   * emits catalog-shaped payouts; still accepted and mapped on session build.
-   */
-  rewardAuec?: number;
+  /** Payout lines — same shape as catalog `rewards`. */
+  rewards?: CatalogMissionReward[];
   /** Pickup locations (multi-stop contracts list every site). */
   from: string[];
   /** Delivery locations. */
@@ -34,11 +33,8 @@ export type HaulingIntakeContract = {
    * Max crate size from contract Details (e.g. “Containers at most 8 SCU”).
    * Record whenever visible — drives default box splits / bay packing.
    * Allowed sizes: 1 / 2 / 4 / 8 / 16 / 32.
-   *
-   * @deprecated Prefer catalog field name `scuMaxContainerSize` in new intake
-   * JSON when we add it; this key remains the intake contract field today.
    */
-  maxContainerScu?: number;
+  scuMaxContainerSize?: number;
   /**
    * Optional per-site cargo split when totals are shared across pickups
    * (e.g. Lathan + Bezdek). Keys are location names/slugs.
@@ -81,7 +77,7 @@ export function isHaulingContractsIntake(
   value: unknown,
 ): value is HaulingContractsIntake {
   if (!value || typeof value !== "object") return false;
-  const v = value as HaulingContractsIntake;
+  const v = value as Record<string, unknown>;
   return (
     v.kind === "hauling_contracts_intake" &&
     v.version === 1 &&

@@ -4,6 +4,7 @@ import {
   formatAuecAmount,
   formatRewardsLabel,
   normalizeCatalogRewards,
+  rewardsFromAuec,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
@@ -81,10 +82,13 @@ export function enrichSessionMissionFromCatalog(
 
   const catalogRewards = normalizeCatalogRewards(
     catalog.rewards?.length ? catalog.rewards : payload.rewards,
-    mission.rewardAuec,
   );
   const rewards =
-    catalogRewards.length > 0 ? catalogRewards : mission.rewards;
+    catalogRewards.length > 0
+      ? catalogRewards
+      : mission.rewards && mission.rewards.length > 0
+        ? mission.rewards
+        : rewardsFromAuec(mission.rewardAuec);
   const rewardAuecFromCatalog = auecFromRewards(catalogRewards);
   const rewardDisplayFromRewards =
     catalogRewards.length > 0 ? formatRewardsLabel(catalogRewards) : null;
@@ -116,8 +120,8 @@ export function enrichSessionMissionFromCatalog(
     cargoSummary: payload.cargo
       .map((line) => `${line.scu} SCU ${line.commodityName}`)
       .join(" · "),
-    maxContainerScu:
-      catalog.scuMaxContainerSize ?? mission.maxContainerScu,
+    scuMaxContainerSize:
+      catalog.scuMaxContainerSize ?? mission.scuMaxContainerSize,
     scuCargoBoxSplits:
       payload.scuCargoBoxSplits ?? mission.scuCargoBoxSplits,
     scuBoxSplits: catalog.scuBoxSplits ?? mission.scuBoxSplits,

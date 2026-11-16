@@ -17,7 +17,7 @@ const meta = {
   },
   args: {
     totalScu: 24,
-    maxContainerScu: 8,
+    scuMaxContainerSize: 8,
     onSelect: () => {},
   },
 } satisfies Meta<typeof MissionBoxBreakdownPicker>;
@@ -43,7 +43,7 @@ export const Interactive: Story = {
       <div className="max-w-md rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 p-4">
         <MissionBoxBreakdownPicker
           totalScu={32}
-          maxContainerScu={8}
+          scuMaxContainerSize={8}
           autoSelected={autoSelected}
           selected={selected}
           onSelect={setSelected}
@@ -56,7 +56,7 @@ export const Interactive: Story = {
 export const Corrected: Story = {
   args: {
     totalScu: 25,
-    maxContainerScu: 4,
+    scuMaxContainerSize: 4,
     autoSelected: { scuOne: 1, scuTwo: 0, scuFour: 6, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
     selected: { scuOne: 1, scuTwo: 2, scuFour: 5, scuEight: 0, scuSixteen: 0, scuThirtyTwo: 0 },
   },
@@ -65,6 +65,6 @@ export const Corrected: Story = {
 export const MaxContainer2: Story = {
   args: {
     totalScu: 12,
-    maxContainerScu: 2,
+    scuMaxContainerSize: 2,
   },
 };

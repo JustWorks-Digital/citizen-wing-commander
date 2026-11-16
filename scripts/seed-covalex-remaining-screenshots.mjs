@@ -149,12 +149,15 @@ async function main() {
       type: "hauling",
       title: mission.title,
       contractor: mission.contractor || undefined,
-      rewardAuec: mission.rewardAuec ?? undefined,
+      rewards:
+        mission.rewardAuec != null && mission.rewardAuec > 0
+          ? [{ kind: "auec", amount: mission.rewardAuec }]
+          : undefined,
       offerLocation: mission.offerLocationSlug || undefined,
       from: locationsFromSlugs(payload.fromLocationSlugs),
       to: locationsFromSlugs(payload.toLocationSlugs),
       cargo: cargoFromMission(mission),
-      maxContainerScu: mission.maxContainerScu ?? undefined,
+      scuMaxContainerSize: mission.scuMaxContainerSize ?? undefined,
       latestScreenshotPath: up.logicalPath,
     };
     try {

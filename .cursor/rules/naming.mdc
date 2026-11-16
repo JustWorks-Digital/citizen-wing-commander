@@ -107,7 +107,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `isDirect` / `isOnePickup` / `isOneDelivery` (catalog route shape; Non-direct = `!isDirect`) | `routeType` enum alone, `directMission` without the boolean pair |
 | `rewards` (`kind: "auec" \| "blueprint"`; catalog + session; `rewardAuec` / `rewardDisplay` stay derived) | `rewardAuec` as the only payout field |
 
-Legacy / load-time compat (aliases, dual fields, title-parsed rank, `legKind`, `deliverySplits`, `size1…`): mark with `@deprecated` (or an explicit “remove once …” note) at the declaration or shim — do not leave silent forever-fallbacks.
+Legacy / load-time compat (title-parsed rank, `legKind`, `deliverySplits`, bare session `rewardAuec` → `rewards`): mark with `@deprecated` (or an explicit “remove once …” note) at the declaration or shim — do not leave silent forever-fallbacks.
 | `offerStarSystemSlug` (star system where the offer was seen; fixture slug) | bare `system` / `starSystem` without `offer` prefix |
 | `objectives` (catalog text bullets) | Structured split rows (those are `scuSplits`) |
 

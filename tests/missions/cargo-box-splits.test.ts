@@ -22,7 +22,7 @@ function mission(
     cargoSummary: "",
     isCompleted: false,
     screenshots: [],
-    maxContainerScu: 4,
+    scuMaxContainerSize: 4,
     mobiglas: {
       tab: "Accepted",
       category: "Hauling - Local",
@@ -212,7 +212,7 @@ describe("cargoBoxSplits.boxSizesForLine", () => {
         id: "iron",
         from: ["HDMS-Pinewood", "HDMS-Thedus", "HDMS-Stanhope"],
         to: ["HDPC-Farnesway"],
-        maxContainerScu: 8,
+        scuMaxContainerSize: 8,
         cargo: [{ commodity: "Iron (Ore)", scu: 20 }],
         scuCargoBoxSplits: {
           "iron-ore": {
@@ -247,7 +247,7 @@ describe("cargoBoxSplits.boxSizesForLine", () => {
           "Shubin Mining Facility SM0-13",
           "Shubin Mining Facility SM0-22",
         ],
-        maxContainerScu: 4,
+        scuMaxContainerSize: 4,
         cargo: [{ commodity: "Hydrogen Fuel", scu: 8 }],
         scuCargoBoxSplits: {
           "hydrogen-fuel": {
@@ -281,7 +281,7 @@ describe("cargoBoxSplits.propagatePreferredMax", () => {
           { commodity: "Silicon", scu: 12 },
           { commodity: "Titanium", scu: 8 },
         ],
-        maxContainerScu: 8,
+        scuMaxContainerSize: 8,
       }),
     );
     const withSilicon = cargoBoxSplits.setCommodity(base, "silicon", {
@@ -324,7 +324,7 @@ describe("cargoBoxSplits.propagatePreferredMax", () => {
           { commodity: "Silicon", scu: 12 },
           { commodity: "Titanium", scu: 8 },
         ],
-        maxContainerScu: 8,
+        scuMaxContainerSize: 8,
       }),
     );
     const titaniumManual = cargoBoxSplits.setCommodity(base, "titanium", {
@@ -439,14 +439,14 @@ describe("setMissionScuBoxSplits restamp", () => {
       id: "ice-in",
       from: ["Port Tressler"],
       to: ["Everus Harbor"],
-      maxContainerScu: 32,
+      scuMaxContainerSize: 32,
       cargo: [{ commodity: "Pressurized Ice", scu: 32 }],
     });
     const collectIce = mission({
       id: "ice-out",
       from: ["Everus Harbor"],
       to: ["HDPC-Farnesway"],
-      maxContainerScu: 16,
+      scuMaxContainerSize: 16,
       cargo: [{ commodity: "Pressurized Ice", scu: 17 }],
     });
     const stamped = restampAllMissionBoxSizes({

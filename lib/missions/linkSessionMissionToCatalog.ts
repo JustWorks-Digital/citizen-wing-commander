@@ -1,5 +1,5 @@
 import { upsertCatalogMission } from "@/db/queries/catalogMissions";
-import { normalizeCatalogRewards } from "@/lib/missions/catalogMission";
+import { rewardsFromAuec } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import {
   resolveCommoditySlug,
@@ -58,13 +58,16 @@ export async function linkSessionMissionToCatalog(
       rank,
       category: normalizeHaulingCategory(mission.mobiglas.category),
       contractorSlug: resolveContractorSlug(mission.contractor),
-      rewards: normalizeCatalogRewards(mission.rewards, mission.rewardAuec),
+      rewards:
+        mission.rewards && mission.rewards.length > 0
+          ? mission.rewards
+          : rewardsFromAuec(mission.rewardAuec),
       offerLocationSlug,
       fromLocationSlugs,
       toLocationSlugs,
       cargo,
       scuSplits,
-      scuMaxContainerSize: mission.maxContainerScu ?? null,
+      scuMaxContainerSize: mission.scuMaxContainerSize ?? null,
       latestScreenshotPath: mission.screenshots[0] ?? null,
     },
   });

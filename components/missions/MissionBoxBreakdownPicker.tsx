@@ -79,7 +79,7 @@ function boxCountQueryRank(boxCount: number, query: string): number {
 
 export type MissionBoxBreakdownPickerProps = {
   totalScu: number;
-  maxContainerScu?: number | null;
+  scuMaxContainerSize?: number | null;
   selected?: ScuBoxSplits | null;
   /** Captured greedy/capped default for comparison with `selected`. */
   autoSelected?: ScuBoxSplits | null;
@@ -103,7 +103,7 @@ export type MissionBoxBreakdownPickerProps = {
  */
 export function MissionBoxBreakdownPicker({
   totalScu,
-  maxContainerScu = null,
+  scuMaxContainerSize = null,
   selected = null,
   autoSelected = null,
   onSelect,
@@ -125,8 +125,8 @@ export function MissionBoxBreakdownPicker({
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
 
   const enumerated = useMemo(
-    () => enumerateBoxBreakdowns(totalScu, maxContainerScu, optionLimit),
-    [totalScu, maxContainerScu, optionLimit],
+    () => enumerateBoxBreakdowns(totalScu, scuMaxContainerSize, optionLimit),
+    [totalScu, scuMaxContainerSize, optionLimit],
   );
   // Enumerated rows are valid picker options (`value` optional).
   const options: BoxBreakdownPickerOption[] = optionsProp ?? enumerated;
@@ -147,8 +147,8 @@ export function MissionBoxBreakdownPicker({
   const autoId = useMemo(() => {
     if (autoSelected) return breakdownKey(autoSelected);
     if (totalScu <= 0) return null;
-    return breakdownKey(scuBoxSplitsForScu(totalScu, maxContainerScu));
-  }, [autoSelected, totalScu, maxContainerScu]);
+    return breakdownKey(scuBoxSplitsForScu(totalScu, scuMaxContainerSize));
+  }, [autoSelected, totalScu, scuMaxContainerSize]);
 
   const selectedId = useMemo(() => {
     if (selected) return breakdownKey(selected);

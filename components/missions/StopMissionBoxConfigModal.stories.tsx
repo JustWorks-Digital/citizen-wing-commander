@@ -18,7 +18,7 @@ const multiCargoMission: SessionMission = cargoBoxSplits.withDefaults({
     { commodity: "Titanium", scu: 8 },
   ],
   cargoSummary: "12 SCU Silicon · 8 SCU Titanium",
-  maxContainerScu: 4,
+  scuMaxContainerSize: 4,
   scuBoxSplits: undefined,
   scuBoxSplitsAutoSelected: undefined,
   scuCargoBoxSplits: undefined,
@@ -62,7 +62,7 @@ const multiDeliveryMission: SessionMission = cargoBoxSplits.withDefaults({
   screenshots: [
     "f6b69016-01d4-44d3-a7ec-598a70ae71d8/05-ice-food.png",
   ],
-  maxContainerScu: 4,
+  scuMaxContainerSize: 4,
   scuBoxSplits: undefined,
   scuBoxSplitsAutoSelected: undefined,
   scuCargoBoxSplits: undefined,
@@ -189,7 +189,7 @@ export const UserCorrected: Story = {
     mission: cargoBoxSplits.setCommodity(
       cargoBoxSplits.withDefaults({
         ...mission,
-        maxContainerScu: 4,
+        scuMaxContainerSize: 4,
       }),
       cargoBoxSplits.commodityLines(mission)[0]?.commoditySlug ?? "scrap",
       {

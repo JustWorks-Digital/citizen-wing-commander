@@ -1430,12 +1430,10 @@ export async function toolCreateMission(input: {
   rank?: string;
   contractor?: string;
   /**
-   * Payout lines. Prefer over rewardAuec.
+   * Payout lines.
    * Hauling: usually [{ kind: "auec", amount }]. Blueprint for other mission types.
    */
   rewards?: CatalogMissionReward[];
-  /** @deprecated Prefer rewards: [{ kind: "auec", amount }] */
-  rewardAuec?: number;
   /** Where the offer was seen / screenshot taken. */
   offerLocation?: string;
   /** Star system where the offer was seen (Stanton / Pyro / Nyx). */
@@ -1625,7 +1623,7 @@ export async function toolCreateMission(input: {
         rank: normalizeMissionRank(input.rank) ?? undefined,
         category: normalizeHaulingCategory(input.category),
         contractorSlug,
-        rewards: normalizeCatalogRewards(input.rewards, input.rewardAuec),
+        rewards: normalizeCatalogRewards(input.rewards),
         offerLocationSlug,
         offerStarSystemSlug,
         fromLocationSlugs,

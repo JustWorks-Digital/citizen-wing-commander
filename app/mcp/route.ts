@@ -624,11 +624,26 @@ const handler = createMcpHandler(
           "Hauling career rank (Trainee…Master), without the word “Rank”. Extracted from title when omitted.",
         ),
       contractor: z.string().optional(),
-      rewardAuec: z.number().nonnegative().optional(),
+      rewards: z
+        .array(
+          z.discriminatedUnion("kind", [
+            z.object({
+              kind: z.literal("auec"),
+              amount: z.number().nonnegative(),
+            }),
+            z.object({
+              kind: z.literal("blueprint"),
+              name: z.string().min(1),
+              slug: z.string().optional().nullable(),
+            }),
+          ]),
+        )
+        .optional()
+        .describe("Payout lines (auec and/or blueprint)."),
       from: z.array(z.string()).min(1),
       to: z.array(z.string()).min(1),
       cargo: z.array(intakeCargoSchema).min(1),
-      maxContainerScu: z.number().int().positive().optional(),
+      scuMaxContainerSize: z.number().int().positive().optional(),
       pickupSplits: z.record(z.string(), z.array(intakeCargoSchema)).optional(),
       screenshots: z
         .array(z.string())
@@ -1061,14 +1076,7 @@ const handler = createMcpHandler(
               ]),
             )
             .optional()
-            .describe(
-              "Payout lines (auec and/or blueprint). Prefer this over rewardAuec.",
-            ),
-          rewardAuec: z
-            .number()
-            .nonnegative()
-            .optional()
-            .describe("Deprecated: use rewards [{ kind: auec, amount }]"),
+            .describe("Payout lines (auec and/or blueprint)."),
           offerLocation: z
             .string()
             .optional()

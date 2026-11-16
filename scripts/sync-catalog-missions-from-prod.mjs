@@ -198,7 +198,7 @@ try {
           ${mission.offerLocationSlug ?? null},
           ${mission.offerStarSystemSlug ?? payload.offerStarSystemSlug ?? null},
           ${mission.scuTotal ?? mission.totalScu ?? 0},
-          ${mission.scuMaxContainerSize ?? mission.maxContainerScu ?? null},
+          ${mission.scuMaxContainerSize ?? mission.scuMaxContainerSize ?? null},
           ${tx.json(
             mission.scuBoxSplits ??
               mission.boxBreakdown ??
