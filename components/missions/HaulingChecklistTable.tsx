@@ -3603,12 +3603,19 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                         )}
                       />
                     </div>
-                    <div className="mt-2 w-full md:w-1/2 md:pr-2">
-                      <PayoutExpMeta
-                        row={row}
-                        completionAuec={completionAuec}
-                        approxXp={completionXp}
-                        completingMissionCount={expectedCompletions.length}
+                    {/* Same lg split as transfer + Breakdown so width matches Pick up / Drop off. */}
+                    <div className="mt-2 flex w-full min-w-0 flex-col lg:flex-row lg:gap-4">
+                      <div className="min-w-0 w-full lg:flex-1">
+                        <PayoutExpMeta
+                          row={row}
+                          completionAuec={completionAuec}
+                          approxXp={completionXp}
+                          completingMissionCount={expectedCompletions.length}
+                        />
+                      </div>
+                      <div
+                        className="hidden lg:block lg:w-1/2 lg:shrink-0"
+                        aria-hidden
                       />
                     </div>
                     <div className="mt-auto">
