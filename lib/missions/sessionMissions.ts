@@ -3,6 +3,7 @@ import {
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import type { ScuCargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import type { ScuCertainty } from "@/lib/missions/scuCertainty";
 import type {
   HaulingIntakeCargoLine,
   HaulingIntakeContract,
@@ -65,6 +66,15 @@ export type SessionMission = {
    * Aggregate auto mix (sum of `scuCargoBoxSplitsAutoSelected`).
    */
   scuBoxSplitsAutoSelected?: ScuBoxSplits;
+  /**
+   * Certainty that mission cargo SCU totals match the real contract.
+   * See `ScuCertainty` — omitted/null when never asserted.
+   */
+  scuTotalCertainty?: ScuCertainty | null;
+  /**
+   * Certainty that crate mix (`scuBoxSplits` / `scuCargoBoxSplits`) is real.
+   */
+  scuBoxSplitsCertainty?: ScuCertainty | null;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). Optional on older session JSON. */
   cargoSummary?: string;
   isCompleted: boolean;

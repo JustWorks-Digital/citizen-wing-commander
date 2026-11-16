@@ -1,6 +1,7 @@
 import { appApi } from "@/lib/api/appRoutes";
 import type { CatalogMission } from "@/db/schema";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import type { ScuCertainty } from "@/lib/missions/scuCertainty";
 
 export type AddCatalogMissionsToSessionInput = {
   catalogMissionIds: string[];
@@ -108,6 +109,8 @@ export async function updateCatalogMissionScuBoxSplits(input: {
   missionId: string;
   scuBoxSplits: ScuBoxSplits;
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
+  scuBoxSplitsCertainty?: ScuCertainty | null;
+  scuTotalCertainty?: ScuCertainty | null;
 }): Promise<CatalogMission> {
   const res = await fetch(appApi.catalogMissionsScuBoxSplits, {
     method: "POST",

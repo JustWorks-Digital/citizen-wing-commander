@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CommodityIcon } from "@/components/missions/CommodityIcon";
 import { MissionBoxBreakdownPicker } from "@/components/missions/MissionBoxBreakdownPicker";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
@@ -14,7 +14,13 @@ import {
   enumerateBoxBreakdowns,
   type BoxBreakdownOption,
 } from "@/lib/missions/boxBreakdownOptions";
+import {
+  missionScuAmounts,
+  type MissionStationScuLine,
+} from "@/lib/missions/missionScuAmounts";
+import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { missionTotalScu } from "@/lib/missions/sessionMissionObjectives";
 
 export type SelectBoxBreakdownOptions = {
   /** Re-greedy other cargo lines with this mix’s preferred max. */
@@ -28,6 +34,8 @@ export type SelectBoxBreakdownOptions = {
 
 export type StopMissionBoxConfigModalProps = {
   mission: SessionMission;
+  /** Route rows — used for live per-station SCU amounts. */
+  rows?: HaulingChecklistRow[] | null;
   onClose: () => void;
   /**
    * Persist one commodity’s crate mix.
@@ -38,6 +46,15 @@ export type StopMissionBoxConfigModalProps = {
     breakdown: ScuBoxSplits,
     options?: SelectBoxBreakdownOptions,
   ) => void;
+  /** Persist a mission-level commodity SCU total. */
+  onChangeCommodityScu?: (commoditySlug: string, scu: number) => void;
+  /** Persist SCU for one commodity at one collect/deliver station. */
+  onChangeStationScu?: (input: {
+    role: "pickup" | "delivery";
+    locationKey: string;
+    commoditySlug: string;
+    scu: number;
+  }) => void;
 };
 
 type CargoLine = {
@@ -66,14 +83,67 @@ function aggregateSimpleStyleSplits(
   return cargoBoxSplits.aggregate(map);
 }
 
+function ScuAmountInput({
+  value,
+  disabled,
+  ariaLabel,
+  onCommit,
+}: {
+  value: number;
+  disabled?: boolean;
+  ariaLabel: string;
+  onCommit: (scu: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const parsed = Math.max(0, Math.floor(Number(draft) || 0));
+    setDraft(String(parsed));
+    if (parsed !== value) onCommit(parsed);
+  };
+
+  return (
+    <label className="inline-flex items-center gap-1.5">
+      <span className="sr-only">{ariaLabel}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        step={1}
+        disabled={disabled}
+        value={draft}
+        aria-label={ariaLabel}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            (event.target as HTMLInputElement).blur();
+          }
+        }}
+        className="w-16 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2 py-1 font-mono text-sm tabular-nums text-rsi-text outline-none focus:border-rsi-accent disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <span className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+        SCU
+      </span>
+    </label>
+  );
+}
+
 /**
- * Correct crate sizes for a session contract — one tile with dropdowns
- * for the total mix and each cargo type.
+ * Correct crate sizes and SCU amounts for a session contract — mission totals,
+ * per-station collect/deliver amounts, and crate-mix dropdowns.
  */
 export function StopMissionBoxConfigModal({
   mission,
+  rows = null,
   onClose,
   onSelectBoxBreakdown,
+  onChangeCommodityScu,
+  onChangeStationScu,
 }: StopMissionBoxConfigModalProps) {
   const reward =
     mission.rewardDisplay ??
@@ -81,6 +151,8 @@ export function StopMissionBoxConfigModal({
       ? `${mission.rewardAuec.toLocaleString()} aUEC`
       : null);
   const disabled = mission.isCompleted;
+  const canEditScu =
+    !disabled && Boolean(onChangeCommodityScu || onChangeStationScu);
 
   const ready = useMemo(() => cargoBoxSplits.withDefaults(mission), [mission]);
   const lines = useMemo(
@@ -93,6 +165,18 @@ export function StopMissionBoxConfigModal({
   );
   const isMultiCargo = lines.length > 1;
   const primaryLine = lines[0] ?? null;
+  const stationLines = useMemo(
+    () => missionScuAmounts.stationLines(mission, rows),
+    [mission, rows],
+  );
+  const pickupStations = stationLines.filter((line) => line.role === "pickup");
+  const deliveryStations = stationLines.filter(
+    (line) => line.role === "delivery",
+  );
+  const showStations =
+    Boolean(onChangeStationScu) &&
+    (pickupStations.length > 0 || deliveryStations.length > 0);
+  const missionScu = missionTotalScu(mission);
 
   const selectTotalStyle = (breakdown: ScuBoxSplits) => {
     if (!primaryLine) return;
@@ -136,8 +220,13 @@ export function StopMissionBoxConfigModal({
             {mission.title}
           </h2>
           <p className="mt-1 truncate font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-            {[mission.contractor || null, reward].filter(Boolean).join(" · ") ||
-              "—"}
+            {[
+              mission.contractor || null,
+              reward,
+              missionScu > 0 ? `${missionScu} SCU` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "—"}
           </p>
           {mission.cargoSummary ? (
             <p className="mt-1 truncate text-[0.65rem] text-rsi-text-secondary">
@@ -148,9 +237,13 @@ export function StopMissionBoxConfigModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-rsi-text-secondary">
-            {isMultiCargo
-              ? "Set the total crate style, or adjust each cargo type."
-              : "Pick the crate mix that matches the contract."}
+            {canEditScu
+              ? isMultiCargo
+                ? "Correct mission or station SCU, then set crate styles."
+                : "Correct SCU amounts, then pick the crate mix."
+              : isMultiCargo
+                ? "Set the total crate style, or adjust each cargo type."
+                : "Pick the crate mix that matches the contract."}
           </p>
 
           {lines.length === 0 || !primaryLine ? (
@@ -158,7 +251,24 @@ export function StopMissionBoxConfigModal({
               No cargo on this contract.
             </p>
           ) : (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
+              {onChangeCommodityScu ? (
+                <MissionScuSection
+                  lines={lines}
+                  disabled={disabled}
+                  onChange={onChangeCommodityScu}
+                />
+              ) : null}
+
+              {showStations ? (
+                <StationScuSection
+                  pickupStations={pickupStations}
+                  deliveryStations={deliveryStations}
+                  disabled={disabled}
+                  onChange={onChangeStationScu!}
+                />
+              ) : null}
+
               <BoxConfigTile
                 mission={ready}
                 primaryLine={primaryLine}
@@ -172,6 +282,128 @@ export function StopMissionBoxConfigModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function MissionScuSection({
+  lines,
+  disabled,
+  onChange,
+}: {
+  lines: CargoLine[];
+  disabled: boolean;
+  onChange: (commoditySlug: string, scu: number) => void;
+}) {
+  return (
+    <section className="rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
+      <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Mission SCU
+      </p>
+      <ul className="mt-2.5 space-y-2.5">
+        {lines.map((line) => {
+          const cargoColor =
+            resolveCommodityColorHex(null, null, line.commoditySlug) ??
+            "var(--rsi-text-secondary)";
+          return (
+            <li
+              key={line.commoditySlug}
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <CommodityIcon
+                  commoditySlug={line.commoditySlug}
+                  label={line.commodity}
+                  showTooltip={false}
+                />
+                <p
+                  className="truncate text-sm font-medium tracking-wide"
+                  style={{ color: cargoColor }}
+                >
+                  {line.commodity}
+                </p>
+              </div>
+              <ScuAmountInput
+                value={line.scu}
+                disabled={disabled}
+                ariaLabel={`${line.commodity} mission SCU`}
+                onCommit={(scu) => onChange(line.commoditySlug, scu)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function StationScuSection({
+  pickupStations,
+  deliveryStations,
+  disabled,
+  onChange,
+}: {
+  pickupStations: MissionStationScuLine[];
+  deliveryStations: MissionStationScuLine[];
+  disabled: boolean;
+  onChange: (input: {
+    role: "pickup" | "delivery";
+    locationKey: string;
+    commoditySlug: string;
+    scu: number;
+  }) => void;
+}) {
+  const renderGroup = (
+    title: string,
+    stations: MissionStationScuLine[],
+  ) => {
+    if (stations.length === 0) return null;
+    return (
+      <div>
+        <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+          {title}
+        </p>
+        <ul className="mt-2 space-y-2.5">
+          {stations.map((line) => (
+            <li
+              key={`${line.role}:${line.locationSlug}:${line.commoditySlug}`}
+              className="flex flex-wrap items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium tracking-wide text-rsi-text">
+                  {line.locationLabel}
+                </p>
+                <p className="truncate font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+                  {line.commodity}
+                </p>
+              </div>
+              <ScuAmountInput
+                value={line.scu}
+                disabled={disabled}
+                ariaLabel={`${line.locationLabel} ${line.commodity} ${line.role} SCU`}
+                onCommit={(scu) =>
+                  onChange({
+                    role: line.role,
+                    locationKey: line.locationKey,
+                    commoditySlug: line.commoditySlug,
+                    scu,
+                  })
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  return (
+    <section className="space-y-3 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
+      <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Station SCU
+      </p>
+      {renderGroup("Collect", pickupStations)}
+      {renderGroup("Deliver", deliveryStations)}
+    </section>
   );
 }
 

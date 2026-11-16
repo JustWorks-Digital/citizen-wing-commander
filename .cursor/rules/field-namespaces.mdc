@@ -40,6 +40,7 @@ Catalog hauling (current):
 | `scuMaxContainerSize` | `maxContainerScu` |
 | `scuBoxSplits` (`scuOne` / `scuTwo` / `scuFour` / `scuEight` / `scuSixteen` / `scuThirtyTwo`) — mission aggregate | `boxBreakdown`, `size1`, `oneScu` |
 | `scuBoxSplitsAutoSelected` (aggregate greedy/capped default before user correction) | `autoBoxSplits`, `originalBoxSplits`, `defaultBreakdown` |
+| `scuTotalCertainty` / `scuBoxSplitsCertainty` (`known` \| `estimated` \| `unknown`) | `confidence`, `boxCertainty`, `isEstimated` alone |
 | `scuCargoBoxSplits` / `scuCargoBoxSplitsAutoSelected` (`Record<commoditySlug, ScuBoxSplits>`) | per-line mixes buried only on `cargo[]` without `scu` prefix; shared pool across commodities |
 | `missionRunCount` / `missionTotalDurationMs` / `missionAvgDurationMs` | `runCount`, `totalDurationMs`, `avgDurationMs` |
 | `contractorSlug` (FK to `contractors`) | free-text `contractor` on catalog rows |

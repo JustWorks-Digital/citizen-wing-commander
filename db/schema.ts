@@ -19,6 +19,7 @@ import type {
   ScuLocationSplits,
 } from "@/lib/missions/catalogMission";
 import type { MissionRank } from "@/lib/missions/missionRank";
+import type { ScuCertainty } from "@/lib/missions/scuCertainty";
 import type {
   ChecklistItemProgressMeta,
   HaulingMissionPayload,
@@ -379,6 +380,11 @@ export const catalogMissions = pgTable(
      */
     offerStarSystemSlug: text("offer_star_system_slug"),
     scuTotal: integer("scu_total").notNull().default(0),
+    /**
+     * Certainty that `scu_total` is known from screenshot / hangar
+     * (`known` | `estimated` | `unknown`). Null = never asserted.
+     */
+    scuTotalCertainty: text("scu_total_certainty").$type<ScuCertainty | null>(),
     scuMaxContainerSize: integer("scu_max_container_size"),
     /** Crate counts: { scuOne…scuThirtyTwo }. */
     scuBoxSplits: jsonb("scu_box_splits")
@@ -387,6 +393,13 @@ export const catalogMissions = pgTable(
       .default(
         sql`'{"scuOne":0,"scuTwo":0,"scuFour":0,"scuEight":0,"scuSixteen":0,"scuThirtyTwo":0}'::jsonb`,
       ),
+    /**
+     * Certainty that crate mix is known from screenshot / hangar.
+     * Null = never asserted.
+     */
+    scuBoxSplitsCertainty: text("scu_box_splits_certainty").$type<
+      ScuCertainty | null
+    >(),
     /** SCU totals per location: { from: { slug: scu }, to: { slug: scu } }. */
     scuLocationSplits: jsonb("scu_location_splits").$type<ScuLocationSplits | null>(),
     /**

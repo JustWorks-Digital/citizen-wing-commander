@@ -18,6 +18,11 @@ export type RouteChecklistMenuProps = {
   /** Duplicate this trip into a new session tab (progress reset). */
   onCopyTrip?: () => void | Promise<void>;
   /**
+   * When the invalid-trip banner was dismissed: repair from the ⋯ menu.
+   */
+  onRepairTrip?: () => void;
+  isRepairingTrip?: boolean;
+  /**
    * Trip stats that leave the sticky strip on small phones (Distance, aUEC).
    * Hidden from `sm` up when those cells are back in the toolbar.
    */
@@ -27,13 +32,16 @@ export type RouteChecklistMenuProps = {
 
 /**
  * Right-edge ⋯ on the route checklist toolbar.
- * Holds Distance/aUEC on small phones, Copy trip, Hide / Show history, and Controls.
+ * Holds Distance/aUEC on small phones, Copy trip, Hide / Show history,
+ * Repair route (when the invalid banner is dismissed), and Controls.
  */
 export function RouteChecklistMenu({
   hideCompleted,
   completedCount,
   onToggleHistory,
   onCopyTrip,
+  onRepairTrip,
+  isRepairingTrip = false,
   overflowStats = null,
   className,
 }: RouteChecklistMenuProps) {
@@ -141,6 +149,29 @@ export function RouteChecklistMenu({
           >
             {historyLabel}
           </button>
+          {onRepairTrip ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={isRepairingTrip}
+              aria-busy={isRepairingTrip}
+              onClick={() => {
+                onRepairTrip();
+                setOpen(false);
+              }}
+              className={[
+                "flex w-full items-center gap-2 rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-warn transition-colors",
+                "hover:bg-rsi-bg-deep/70 hover:text-rsi-warn",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {isRepairingTrip ? (
+                <Spinner className="size-3" label="Repairing route" />
+              ) : null}
+              Repair route
+            </button>
+          ) : null}
           <p
             id={titleId}
             className="mt-2 mb-1.5 border-t border-rsi-divider pt-2 font-mono text-[0.45rem] uppercase leading-none tracking-[0.16em] text-rsi-text-muted"

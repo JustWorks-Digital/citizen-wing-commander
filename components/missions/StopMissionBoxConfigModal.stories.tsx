@@ -31,7 +31,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "One tile to correct crate mixes (Pickup / Drop off double-click). Total dropdown applies a style to every cargo type; each commodity also has its own combination dropdown (`scuCargoBoxSplits`).",
+          "Correct mission SCU, per-station collect/deliver SCU, and crate mixes (Pickup / Drop off double-click). Total dropdown applies a style to every cargo type; each commodity also has its own combination dropdown (`scuCargoBoxSplits`).",
       },
     },
   },
@@ -66,6 +66,48 @@ function InteractiveModal({
         });
         args.onSelectBoxBreakdown(commoditySlug, breakdown, options);
       }}
+      onChangeCommodityScu={(commoditySlug, scu) => {
+        setDraft((prev) => {
+          const lines = cargoBoxSplits.commodityLines(prev);
+          const match = lines.find(
+            (entry) => entry.commoditySlug === commoditySlug,
+          );
+          if (!match) return prev;
+          return {
+            ...prev,
+            cargo: prev.cargo.map((line) =>
+              line.commodity === match.commodity ? { ...line, scu } : line,
+            ),
+            scuTotalCertainty: "known" as const,
+          };
+        });
+        args.onChangeCommodityScu?.(commoditySlug, scu);
+      }}
+      onChangeStationScu={(input) => {
+        setDraft((prev) => {
+          const field = input.role === "pickup" ? "from" : "to";
+          const splits = (prev.deliverySplits ?? []).map((split) => {
+            const lines = cargoBoxSplits.commodityLines({
+              ...prev,
+              cargo: [{ commodity: split.commodity, scu: split.scu }],
+            });
+            if (lines[0]?.commoditySlug !== input.commoditySlug) return split;
+            if (
+              split[field].trim().toLowerCase() !==
+              input.locationKey.trim().toLowerCase()
+            ) {
+              return split;
+            }
+            return { ...split, scu: input.scu };
+          });
+          return {
+            ...prev,
+            deliverySplits: splits,
+            scuTotalCertainty: "known" as const,
+          };
+        });
+        args.onChangeStationScu?.(input);
+      }}
     />
   );
 }
@@ -75,6 +117,8 @@ export const Default: Story = {
     mission,
     onClose: () => {},
     onSelectBoxBreakdown: () => {},
+    onChangeCommodityScu: () => {},
+    onChangeStationScu: () => {},
   },
   render: (args) => <InteractiveModal args={args} />,
 };
@@ -84,6 +128,8 @@ export const MultiCargo: Story = {
     mission: multiCargoMission,
     onClose: () => {},
     onSelectBoxBreakdown: () => {},
+    onChangeCommodityScu: () => {},
+    onChangeStationScu: () => {},
   },
   render: (args) => <InteractiveModal args={args} />,
 };

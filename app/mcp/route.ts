@@ -445,7 +445,7 @@ const handler = createMcpHandler(
       {
         title: "Set mission crate mix",
         description:
-          "Use this when the player is at a freight elevator / hangar and the in-game UI shows the real crate sizes (1/2/4/8/16/32 SCU). Corrects per-commodity scuCargoBoxSplits (and aggregate scuBoxSplits), restamps boxSizes onto pickup/delivery cargo for Collect pads and bay packing, and updates the linked catalog default when present. Prefer boxes: [{ size, count }, …] matching the terminal list. For multi-cargo missions pass commodity; counts must sum to that commodity’s SCU (or the mission total when single-cargo).",
+          "Use this when the player is at a freight elevator / hangar and the in-game UI shows the real crate sizes (1/2/4/8/16/32 SCU). Corrects per-commodity scuCargoBoxSplits (and aggregate scuBoxSplits), restamps boxSizes onto pickup/delivery cargo for Collect pads and bay packing, and updates the linked catalog default when present. Prefer boxes: [{ size, count }, …] matching the terminal list. For multi-cargo missions pass commodity; counts must sum to that commodity’s SCU (or the mission total when single-cargo). Pass scuBoxSplitsCertainty (and optionally scuTotalCertainty): known for hangar confirmation, estimated for AI guess, unknown when unset.",
         inputSchema: z.object({
           missionId: z
             .string()
@@ -500,6 +500,20 @@ const handler = createMcpHandler(
             .optional()
             .describe(
               "Also write the linked catalog mission default (default true). Set false for session-only.",
+            ),
+          scuBoxSplitsCertainty: z
+            .enum(["known", "estimated", "unknown"])
+            .nullable()
+            .optional()
+            .describe(
+              "Certainty for the crate mix. Pass known for hangar/freight-elevator confirmation; estimated for AI defaults; unknown when not asserted. Null clears.",
+            ),
+          scuTotalCertainty: z
+            .enum(["known", "estimated", "unknown"])
+            .nullable()
+            .optional()
+            .describe(
+              "Certainty for mission SCU totals (same vocabulary as scuBoxSplitsCertainty).",
             ),
           sessionId: sessionIdSchema,
         }),
@@ -993,7 +1007,7 @@ const handler = createMcpHandler(
       {
         title: "Create mission",
         description:
-          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), latestScreenshotPath from store_hauling_screenshot (strongly expected when the user attached an image; omit only for text-only), scuMaxContainerSize, category, variantOf. Same SCU upserts by fingerprint (aUEC-only diffs update the same row). Different SCU creates a linked variant (auto family match or variantOf). Missing latestScreenshotPath still saves but returns screenshotsMissing: true — fix with store_hauling_screenshot then re-create_mission.",
+          "Use this to create or update a catalog mission (not the live checklist). Pass type (default hauling). For hauling prefer scuSplits[] (per-stop commodity+SCU); optional objectives[] as screenshot-style text bullets (derived from scuSplits when omitted). from/to/cargo can be omitted and derived. Optional contractor (prefer search_contractors), offerLocation, offerStarSystem (Stanton/Pyro/Nyx — no default), latestScreenshotPath from store_hauling_screenshot (strongly expected when the user attached an image; omit only for text-only), scuMaxContainerSize, scuTotalCertainty / scuBoxSplitsCertainty (known | estimated | unknown), category, variantOf. Same SCU upserts by fingerprint (aUEC-only diffs update the same row). Different SCU creates a linked variant (auto family match or variantOf). Missing latestScreenshotPath still saves but returns screenshotsMissing: true — fix with store_hauling_screenshot then re-create_mission.",
         inputSchema: z.object({
           type: z
             .enum(["hauling"])
@@ -1123,6 +1137,20 @@ const handler = createMcpHandler(
             .positive()
             .optional()
             .describe("Largest allowed crate size in SCU"),
+          scuTotalCertainty: z
+            .enum(["known", "estimated", "unknown"])
+            .nullable()
+            .optional()
+            .describe(
+              "Certainty that scuTotal matches the real contract: known (readable in screenshot / hangar), estimated (AI inference), unknown (not asserted).",
+            ),
+          scuBoxSplitsCertainty: z
+            .enum(["known", "estimated", "unknown"])
+            .nullable()
+            .optional()
+            .describe(
+              "Certainty that crate mix is real. Use estimated for greedy AI defaults; known when sizes were clearly readable.",
+            ),
           variantOf: uuidString
             .optional()
             .describe(
@@ -1242,12 +1270,12 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.8",
+      version: "0.2.9",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow Lane A (push bytes) vs Lane B (Source handoff).",
-      "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32). For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo).",
+      "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32) and scuBoxSplitsCertainty: known. For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo). On create_mission, pass scuTotalCertainty / scuBoxSplitsCertainty (known | estimated | unknown) when you know how sure the SCU/crate data is.",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
       "Screenshots — Lane A: ChatGPT should pass store_hauling_screenshot `file` (openai/fileParams native attachment with download_url). Other hosts may use fileUrl / readable filePath / imageBase64. create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). Bare ChatGPT /mnt/data paths are NOT reachable — never pass them as filePath. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",

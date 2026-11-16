@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, and Controls.",
+          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), and Controls.",
       },
     },
   },
@@ -47,6 +47,19 @@ export const NoCompletedStops: Story = {
 
 export const WithoutCopyTrip: Story = {
   args: { onCopyTrip: undefined },
+};
+
+export const RepairRoute: Story = {
+  args: {
+    onRepairTrip: () => undefined,
+  },
+};
+
+export const RepairingRoute: Story = {
+  args: {
+    onRepairTrip: () => undefined,
+    isRepairingTrip: true,
+  },
 };
 
 export const Interactive: Story = {

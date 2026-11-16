@@ -1042,6 +1042,13 @@ export async function toolSetMissionScuBoxSplits(input: {
   boxes?: Array<{ size: number; count: number }> | null;
   /** Alternate: explicit scuOne…scuThirtyTwo counts. */
   scuBoxSplits?: Partial<ScuBoxSplits> | null;
+  /**
+   * Certainty for the crate mix: known (hangar/screenshot), estimated (AI),
+   * or unknown. Hangar corrections should pass `known`.
+   */
+  scuBoxSplitsCertainty?: "known" | "estimated" | "unknown" | null;
+  /** Certainty for mission SCU totals (same vocabulary). */
+  scuTotalCertainty?: "known" | "estimated" | "unknown" | null;
   /** When false, skip writing the linked catalog mission default. Default true. */
   updateCatalog?: boolean;
 }) {
@@ -1109,11 +1116,20 @@ export async function toolSetMissionScuBoxSplits(input: {
       });
     }
 
+    const certaintyOptions = {
+      ...(input.scuBoxSplitsCertainty !== undefined
+        ? { scuBoxSplitsCertainty: input.scuBoxSplitsCertainty }
+        : {}),
+      ...(input.scuTotalCertainty !== undefined
+        ? { scuTotalCertainty: input.scuTotalCertainty }
+        : {}),
+    };
     const result = setMissionScuBoxSplits(
       session,
       missionId,
       scuBoxSplits,
       commodityHint,
+      Object.keys(certaintyOptions).length > 0 ? certaintyOptions : undefined,
     );
     if (!result.ok) {
       return textResult({ error: result.error });
@@ -1134,6 +1150,12 @@ export async function toolSetMissionScuBoxSplits(input: {
           missionId: catalogId,
           scuBoxSplits: updated.scuBoxSplits,
           scuCargoBoxSplits: updated.scuCargoBoxSplits,
+          ...(input.scuBoxSplitsCertainty !== undefined
+            ? { scuBoxSplitsCertainty: input.scuBoxSplitsCertainty }
+            : {}),
+          ...(input.scuTotalCertainty !== undefined
+            ? { scuTotalCertainty: input.scuTotalCertainty }
+            : {}),
         });
         catalogUpdated = catalogId;
       } catch (error) {
@@ -1171,6 +1193,8 @@ export async function toolSetMissionScuBoxSplits(input: {
       label: formatBreakdownLabel(scuBoxSplits),
       scuBoxSplits: updated?.scuBoxSplits ?? scuBoxSplits,
       scuCargoBoxSplits: updated?.scuCargoBoxSplits ?? null,
+      scuBoxSplitsCertainty: updated?.scuBoxSplitsCertainty ?? null,
+      scuTotalCertainty: updated?.scuTotalCertainty ?? null,
       boxScu,
       missionScu: lineScu,
       catalogUpdated,
@@ -1333,8 +1357,10 @@ function presentCatalogMission(
         row.offerStarSystemSlug)
       : null,
     scuTotal: row.scuTotal,
+    scuTotalCertainty: row.scuTotalCertainty,
     scuMaxContainerSize: row.scuMaxContainerSize,
     scuBoxSplits: row.scuBoxSplits,
+    scuBoxSplitsCertainty: row.scuBoxSplitsCertainty,
     scuLocationSplits: row.scuLocationSplits,
     category:
       (row.payload as HaulingCatalogMissionPayload | null)?.category ?? null,
@@ -1415,6 +1441,16 @@ export async function toolCreateMission(input: {
    */
   variantOf?: string;
   scuMaxContainerSize?: number;
+  /**
+   * Certainty that scuTotal is known from screenshot / hangar
+   * (`known` | `estimated` | `unknown`).
+   */
+  scuTotalCertainty?: "known" | "estimated" | "unknown" | null;
+  /**
+   * Certainty that crate mix is known (`known` | `estimated` | `unknown`).
+   * Use `estimated` for AI greedy defaults; `known` when sizes were readable.
+   */
+  scuBoxSplitsCertainty?: "known" | "estimated" | "unknown" | null;
   latestScreenshotPath?: string;
   extras?: Record<string, unknown>;
 }) {
@@ -1558,6 +1594,8 @@ export async function toolCreateMission(input: {
         scuLocationSplits: input.scuLocationSplits,
         objectives,
         scuMaxContainerSize: input.scuMaxContainerSize ?? null,
+        scuTotalCertainty: input.scuTotalCertainty,
+        scuBoxSplitsCertainty: input.scuBoxSplitsCertainty,
         latestScreenshotPath: input.latestScreenshotPath ?? null,
         extras: input.extras,
       },

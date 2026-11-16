@@ -4,11 +4,14 @@ import {
   normalizeScuBoxSplits,
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
+import type { ScuCertainty } from "@/lib/missions/scuCertainty";
 
 type Body = {
   missionId?: string;
   scuBoxSplits?: ScuBoxSplits;
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
+  scuBoxSplitsCertainty?: ScuCertainty | null;
+  scuTotalCertainty?: ScuCertainty | null;
 };
 
 /** POST /api/catalog/missions/scu-box-splits — set durable crate-mix default. */
@@ -40,6 +43,12 @@ export async function POST(request: Request) {
             ]),
           )
         : null,
+      ...(body.scuBoxSplitsCertainty !== undefined
+        ? { scuBoxSplitsCertainty: body.scuBoxSplitsCertainty }
+        : {}),
+      ...(body.scuTotalCertainty !== undefined
+        ? { scuTotalCertainty: body.scuTotalCertainty }
+        : {}),
     });
     return NextResponse.json({ ok: true, mission: row });
   } catch (error) {

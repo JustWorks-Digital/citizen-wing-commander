@@ -8,6 +8,10 @@ import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOp
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
+  normalizeScuCertainty,
+  type ScuCertainty,
+} from "@/lib/missions/scuCertainty";
+import {
   intakeContractFromSessionMission,
   type SessionMission,
 } from "@/lib/missions/sessionMissions";
@@ -18,7 +22,16 @@ import type {
   SessionChecklistModel,
 } from "@/lib/missions/mockSession";
 import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
-import { mergePreservedQuantumRows } from "@/lib/missions/quantumTravel";
+import {
+  mergePreservedQuantumRows,
+  recomputeDistances,
+} from "@/lib/missions/quantumTravel";
+import {
+  checklistRowsFromTripPlan,
+  contractLegsFromChecklistRows,
+  optimizeTrip,
+  validateChecklistTripCargo,
+} from "@/lib/missions/tripPlan";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 
 function resolveCargoRole(
@@ -153,10 +166,87 @@ export type RebuildRowsFromMissionsOptions = {
 };
 
 /**
+ * Drop one mission’s cargo from the live route without re-merging intake.
+ * Preserves stop order (important for optimized crossed hauls). Empty cargo
+ * stops are removed; quantum rows stay.
+ */
+export function pruneMissionCargoFromRows(
+  rows: HaulingChecklistRow[],
+  missionId: string,
+): HaulingChecklistRow[] {
+  const next: HaulingChecklistRow[] = [];
+  for (const row of rows) {
+    if (row.routeAction === "quantum") {
+      next.push(row);
+      continue;
+    }
+    const cargoDeliveries = row.cargoDeliveries.filter(
+      (cargo) => cargo.missionId !== missionId,
+    );
+    if (cargoDeliveries.length === 0) continue;
+
+    let hasPickup = false;
+    let hasDelivery = false;
+    for (const cargo of cargoDeliveries) {
+      const role = resolveCargoRole(row.routeAction, cargo.role);
+      if (role === "pickup") hasPickup = true;
+      else if (role === "delivery") hasDelivery = true;
+    }
+    const routeAction: RouteAction =
+      hasPickup && hasDelivery
+        ? "both"
+        : hasPickup
+          ? "pickup"
+          : hasDelivery
+            ? "delivery"
+            : row.routeAction;
+
+    next.push({
+      ...row,
+      routeAction,
+      cargoDeliveries,
+    });
+  }
+  return recomputeDistances(next);
+}
+
+/**
+ * When intake merge order is cargo-illegal (crossed hubs need a re-visit),
+ * replace cargo stops with an optimized legal plan and restamp crate mixes.
+ */
+function optimizeRowsIfInvalid(
+  session: SessionChecklistModel,
+  rows: HaulingChecklistRow[],
+  missions: SessionMission[],
+): HaulingChecklistRow[] {
+  const start = session.startLocationSlug ?? null;
+  if (validateChecklistTripCargo(rows, start).ok) return rows;
+
+  const legs = contractLegsFromChecklistRows(rows);
+  if (legs.length === 0) return rows;
+
+  const result = optimizeTrip(legs, start);
+  if (!result.ok) return rows;
+
+  let nextRows = mergePreservedQuantumRows(
+    session.rows,
+    checklistRowsFromTripPlan(result.plan),
+  );
+  for (const mission of missions) {
+    if (!effectiveMissionScuBoxSplits(mission)) continue;
+    nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
+  }
+  return nextRows;
+}
+
+/**
  * Rebuild checklist legs from session missions.
  * By default, hidden and completed missions stay on the session but drop off
  * the route table. Pass `includeCompleted` for Repair route so Done contracts
  * remain visible as completed stops.
+ *
+ * Intake merge can order crossed hubs illegally; when that happens we fall
+ * back to `optimizeTrip` so hide/complete/remove do not leave an invalid route.
  */
 export function rebuildRowsFromMissions(
   session: SessionChecklistModel,
@@ -210,6 +300,7 @@ export function rebuildRowsFromMissions(
     nextRows = stampMissionBoxSizesOntoRows(nextRows, mission);
   }
   nextRows = mergePreservedQuantumRows(session.rows, nextRows);
+  nextRows = optimizeRowsIfInvalid(session, nextRows, nextMissions);
   if (options?.includeCompleted) {
     nextRows = applyCompletedMissionStopState(nextRows, nextMissions);
   }
@@ -235,6 +326,30 @@ export function setMissionHiddenAndRebuildRoute(
   const missions = (session.missions ?? []).map((mission) =>
     mission.id === missionId ? { ...mission, isHidden } : mission,
   );
+
+  // Hide: strip cargo from the current (often optimized) route first so we do
+  // not replace a legal visit order with intake merge. Fall back to rebuild
+  // (+ optimize) only when the pruned walk is still illegal.
+  if (isHidden) {
+    const counted = countedMissions(missions);
+    const pruned = applySessionCompletionTiming({
+      ...session,
+      missions,
+      missionCount: counted.length,
+      missionsCompleted: counted.filter((mission) => mission.isCompleted)
+        .length,
+      rows: pruneMissionCargoFromRows(session.rows, missionId),
+    });
+    if (
+      validateChecklistTripCargo(
+        pruned.rows,
+        pruned.startLocationSlug ?? null,
+      ).ok
+    ) {
+      return { ok: true, session: pruned };
+    }
+  }
+
   return rebuildRowsFromMissions(session, missions);
 }
 
@@ -300,7 +415,7 @@ export function withMissionBoxSplitDefaults(
  * Stamp per-commodity crate sizes onto route cargo lines for this mission.
  * Pickup lines get that commodity’s mix; deliveries partition across unload amounts.
  */
-function stampMissionBoxSizesOntoRows(
+export function stampMissionBoxSizesOntoRows(
   rows: HaulingChecklistRow[],
   mission: SessionMission,
 ): HaulingChecklistRow[] {
@@ -480,6 +595,10 @@ export type SetMissionScuBoxSplitsOptions = {
    * Simple mode passes false so one pick restyles every cargo type.
    */
   onlyUncorrected?: boolean;
+  /** Certainty for the crate mix (omit to leave unchanged). */
+  scuBoxSplitsCertainty?: ScuCertainty | null;
+  /** Certainty for mission SCU totals (omit to leave unchanged). */
+  scuTotalCertainty?: ScuCertainty | null;
 };
 
 export function setMissionScuBoxSplits(
@@ -534,6 +653,20 @@ export function setMissionScuBoxSplits(
       resolvedSlug,
       { onlyUncorrected: options.onlyUncorrected !== false },
     );
+  }
+  if (options && "scuBoxSplitsCertainty" in options) {
+    nextMission = {
+      ...nextMission,
+      scuBoxSplitsCertainty: normalizeScuCertainty(
+        options.scuBoxSplitsCertainty,
+      ),
+    };
+  }
+  if (options && "scuTotalCertainty" in options) {
+    nextMission = {
+      ...nextMission,
+      scuTotalCertainty: normalizeScuCertainty(options.scuTotalCertainty),
+    };
   }
   const missions = (session.missions ?? []).map((mission) =>
     mission.id === missionId ? nextMission : mission,

@@ -87,6 +87,10 @@ export function sessionMissionFromCatalog(
     deliverySplits,
     maxContainerScu: catalog.scuMaxContainerSize ?? payload.scuMaxContainerSize ?? undefined,
     scuBoxSplits: catalog.scuBoxSplits ?? payload.scuBoxSplits,
+    scuTotalCertainty:
+      catalog.scuTotalCertainty ?? payload.scuTotalCertainty ?? null,
+    scuBoxSplitsCertainty:
+      catalog.scuBoxSplitsCertainty ?? payload.scuBoxSplitsCertainty ?? null,
     cargoSummary,
     isCompleted: false,
     isHidden: false,

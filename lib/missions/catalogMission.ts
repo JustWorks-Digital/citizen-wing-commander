@@ -10,10 +10,16 @@ import {
 } from "@/lib/missions/missionRank";
 import { normalizeStarSystemSlug } from "@/lib/missions/starSystem";
 import {
+  normalizeScuCertainty,
+  type ScuCertainty,
+} from "@/lib/missions/scuCertainty";
+import {
   CARGO_BOX_SCU,
   type CargoBoxScu,
   decomposeScuIntoBoxes,
 } from "@/lib/ships/cargoBoxSizes";
+
+export type { ScuCertainty } from "@/lib/missions/scuCertainty";
 
 /** Counts of each crate size used for a mission’s cargo total. */
 export type ScuBoxSplits = {
@@ -136,6 +142,15 @@ export type HaulingCatalogMissionPayload = {
    * Aggregate `scuBoxSplits` should match the sum of these maps.
    */
   scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
+  /**
+   * Certainty that `scuTotal` matches the real contract (screenshot / hangar).
+   * See `ScuCertainty` — null when never asserted.
+   */
+  scuTotalCertainty?: ScuCertainty | null;
+  /**
+   * Certainty that `scuBoxSplits` / `scuCargoBoxSplits` match real crate sizes.
+   */
+  scuBoxSplitsCertainty?: ScuCertainty | null;
   /** Logical screenshot path under `.data/mcp-screenshots`. */
   latestScreenshotPath?: string | null;
   /** Free-form extras from intake / OCR. */
@@ -520,6 +535,8 @@ export function buildHaulingCatalogMissionPayload(
     /** @deprecated Prefer scuBoxSplits */
     boxBreakdown?: ScuBoxSplits;
     scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
+    scuTotalCertainty?: ScuCertainty | null;
+    scuBoxSplitsCertainty?: ScuCertainty | null;
   },
 ): HaulingCatalogMissionPayload {
   const scuTotal =
@@ -571,6 +588,14 @@ export function buildHaulingCatalogMissionPayload(
       ? normalizeScuBoxSplits(rawSplits)
       : scuBoxSplitsForScu(scuTotal, scuMaxContainerSize),
     scuCargoBoxSplits,
+    scuTotalCertainty:
+      partial.scuTotalCertainty !== undefined
+        ? normalizeScuCertainty(partial.scuTotalCertainty)
+        : null,
+    scuBoxSplitsCertainty:
+      partial.scuBoxSplitsCertainty !== undefined
+        ? normalizeScuCertainty(partial.scuBoxSplitsCertainty)
+        : null,
     latestScreenshotPath: partial.latestScreenshotPath ?? null,
     extras: partial.extras,
   };

@@ -20,6 +20,10 @@ import {
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRouteFlags";
+import {
+  normalizeScuCertainty,
+  type ScuCertainty,
+} from "@/lib/missions/scuCertainty";
 
 export type UpsertHaulingCatalogMissionInput = {
   /** Accepts builder input (including legacy rewardAuec → rewards). */
@@ -50,14 +54,16 @@ export async function upsertCatalogMission(
     .where(eq(catalogMissions.fingerprint, fingerprint))
     .limit(1);
 
-  // Preserve splits / objectives / category / rank when an upsert omits them.
+  // Preserve splits / objectives / category / rank / certainty when an upsert omits them.
   if (
     existingByFingerprint &&
     (payload.scuSplits === undefined ||
       payload.scuLocationSplits === undefined ||
       payload.objectives === undefined ||
       !payload.category ||
-      payload.rank == null)
+      payload.rank == null ||
+      payload.scuTotalCertainty == null ||
+      payload.scuBoxSplitsCertainty == null)
   ) {
     const existingPayload =
       existingByFingerprint.payload as HaulingCatalogMissionPayload | null;
@@ -74,11 +80,29 @@ export async function upsertCatalogMission(
           existingPayload.rank ??
           existingByFingerprint.rank ??
           null,
+        scuTotalCertainty:
+          payload.scuTotalCertainty ??
+          existingPayload.scuTotalCertainty ??
+          existingByFingerprint.scuTotalCertainty ??
+          null,
+        scuBoxSplitsCertainty:
+          payload.scuBoxSplitsCertainty ??
+          existingPayload.scuBoxSplitsCertainty ??
+          existingByFingerprint.scuBoxSplitsCertainty ??
+          null,
       });
     } else if (payload.rank == null && existingByFingerprint.rank) {
       payload = buildHaulingCatalogMissionPayload({
         ...payload,
         rank: existingByFingerprint.rank,
+        scuTotalCertainty:
+          payload.scuTotalCertainty ??
+          existingByFingerprint.scuTotalCertainty ??
+          null,
+        scuBoxSplitsCertainty:
+          payload.scuBoxSplitsCertainty ??
+          existingByFingerprint.scuBoxSplitsCertainty ??
+          null,
       });
     }
   }
@@ -134,8 +158,10 @@ export async function upsertCatalogMission(
     offerLocationSlug: payload.offerLocationSlug ?? null,
     offerStarSystemSlug: payload.offerStarSystemSlug ?? null,
     scuTotal: payload.scuTotal,
+    scuTotalCertainty: payload.scuTotalCertainty ?? null,
     scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
     scuBoxSplits: payload.scuBoxSplits,
+    scuBoxSplitsCertainty: payload.scuBoxSplitsCertainty ?? null,
     scuLocationSplits: payload.scuLocationSplits ?? null,
     isDirect: routeFlags.isDirect,
     isOnePickup: routeFlags.isOnePickup,
@@ -163,8 +189,10 @@ export async function upsertCatalogMission(
       offerLocationSlug: payload.offerLocationSlug ?? null,
       offerStarSystemSlug: payload.offerStarSystemSlug ?? null,
       scuTotal: payload.scuTotal,
+      scuTotalCertainty: payload.scuTotalCertainty ?? null,
       scuMaxContainerSize: payload.scuMaxContainerSize ?? null,
       scuBoxSplits: payload.scuBoxSplits,
+      scuBoxSplitsCertainty: payload.scuBoxSplitsCertainty ?? null,
       scuLocationSplits: payload.scuLocationSplits ?? null,
       isDirect: routeFlags.isDirect,
       isOnePickup: routeFlags.isOnePickup,
@@ -382,6 +410,10 @@ export async function updateCatalogMissionScuBoxSplits(input: {
   scuBoxSplits: ScuBoxSplits;
   /** Per-commodity mixes; written onto payload when provided. */
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
+  /** When set, updates box-mix certainty (pass null to clear). */
+  scuBoxSplitsCertainty?: ScuCertainty | null;
+  /** When set, updates total-SCU certainty (pass null to clear). */
+  scuTotalCertainty?: ScuCertainty | null;
 }): Promise<CatalogMission> {
   const existing = await getCatalogMission(input.missionId);
   if (!existing) {
@@ -397,16 +429,32 @@ export async function updateCatalogMissionScuBoxSplits(input: {
         ]),
       )
     : existingPayload.scuCargoBoxSplits;
+  const scuBoxSplitsCertainty =
+    input.scuBoxSplitsCertainty !== undefined
+      ? normalizeScuCertainty(input.scuBoxSplitsCertainty)
+      : (existingPayload.scuBoxSplitsCertainty ??
+        existing.scuBoxSplitsCertainty ??
+        null);
+  const scuTotalCertainty =
+    input.scuTotalCertainty !== undefined
+      ? normalizeScuCertainty(input.scuTotalCertainty)
+      : (existingPayload.scuTotalCertainty ??
+        existing.scuTotalCertainty ??
+        null);
   const payload = buildHaulingCatalogMissionPayload({
     ...existingPayload,
     scuBoxSplits,
     scuCargoBoxSplits,
+    scuBoxSplitsCertainty,
+    scuTotalCertainty,
   });
   const db = getDb();
   const [row] = await db
     .update(catalogMissions)
     .set({
       scuBoxSplits,
+      scuBoxSplitsCertainty,
+      scuTotalCertainty,
       payload,
       updatedAt: new Date(),
     })

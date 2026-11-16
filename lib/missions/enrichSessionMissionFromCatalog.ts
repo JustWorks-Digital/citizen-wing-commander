@@ -120,6 +120,16 @@ export function enrichSessionMissionFromCatalog(
     scuCargoBoxSplits:
       payload.scuCargoBoxSplits ?? mission.scuCargoBoxSplits,
     scuBoxSplits: catalog.scuBoxSplits ?? mission.scuBoxSplits,
+    scuTotalCertainty:
+      catalog.scuTotalCertainty ??
+      payload.scuTotalCertainty ??
+      mission.scuTotalCertainty ??
+      null,
+    scuBoxSplitsCertainty:
+      catalog.scuBoxSplitsCertainty ??
+      payload.scuBoxSplitsCertainty ??
+      mission.scuBoxSplitsCertainty ??
+      null,
     deliverySplits,
     screenshots: payload.latestScreenshotPath
       ? [payload.latestScreenshotPath]

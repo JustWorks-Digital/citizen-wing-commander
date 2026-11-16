@@ -19,6 +19,7 @@ const meta = {
       },
     ],
     onRepair: () => undefined,
+    onDismiss: () => undefined,
   },
 } satisfies Meta<typeof TripPlanInvalidBanner>;
 
@@ -26,6 +27,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const WithoutDismiss: Story = {
+  args: { onDismiss: undefined },
+};
 
 export const MultipleIssues: Story = {
   args: {

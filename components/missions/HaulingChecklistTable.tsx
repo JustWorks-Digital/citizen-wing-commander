@@ -98,6 +98,9 @@ export type HaulingChecklistTableProps = {
   toolbarEnd?: ReactNode;
   /** ⋯ menu: duplicate this trip into a new session. */
   onCopyTrip?: () => void | Promise<void>;
+  /** ⋯ menu: repair an invalid trip after the banner was dismissed. */
+  onRepairTrip?: () => void;
+  isRepairingTrip?: boolean;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
@@ -153,6 +156,22 @@ export type HaulingChecklistTableProps = {
       onlyUncorrected?: boolean;
     },
   ) => void | Promise<void>;
+  /** Persist mission-level commodity SCU from the box-types modal. */
+  onChangeMissionCommodityScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  /** Persist per-station SCU from the box-types modal. */
+  onChangeMissionStationScu?: (
+    missionId: string,
+    input: {
+      role: "pickup" | "delivery";
+      locationKey: string;
+      commoditySlug: string;
+      scu: number;
+    },
+  ) => void;
   /** True while any session save is awaiting the backend echo. */
   isSaving?: boolean;
   /** True until the first checklist hydrate on page / session change. */
@@ -2760,6 +2779,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   toolbarStart = null,
   toolbarEnd = null,
   onCopyTrip,
+  onRepairTrip,
+  isRepairingTrip = false,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -2774,6 +2795,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   onOpenStops,
   onOpenContracts,
   onSelectBoxBreakdown,
+  onChangeMissionCommodityScu,
+  onChangeMissionStationScu,
   isSaving = false,
   isLoading = false,
 }: HaulingChecklistTableProps) {
@@ -2959,6 +2982,8 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           completedCount={completedCount}
           onToggleHistory={() => setHideCompleted((value) => !value)}
           onCopyTrip={onCopyTrip}
+          onRepairTrip={onRepairTrip}
+          isRepairingTrip={isRepairingTrip}
           overflowStats={toolbarEnd}
         />
       </div>
@@ -3654,6 +3679,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
       {boxEditMission && onSelectBoxBreakdown ? (
         <StopMissionBoxConfigModal
           mission={boxEditMission}
+          rows={rows}
           onClose={() => setBoxEditMissionId(null)}
           onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
             onSelectBoxBreakdown(
@@ -3669,6 +3695,22 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               setBoxEditMissionId(null);
             }
           }}
+          onChangeCommodityScu={
+            onChangeMissionCommodityScu
+              ? (commoditySlug, scu) =>
+                  onChangeMissionCommodityScu(
+                    boxEditMission.id,
+                    commoditySlug,
+                    scu,
+                  )
+              : undefined
+          }
+          onChangeStationScu={
+            onChangeMissionStationScu
+              ? (input) =>
+                  onChangeMissionStationScu(boxEditMission.id, input)
+              : undefined
+          }
         />
       ) : null}
     </div>

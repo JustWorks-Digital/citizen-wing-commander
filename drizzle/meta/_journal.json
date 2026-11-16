@@ -127,6 +127,13 @@
       "when": 1794201600000,
       "tag": "0017_catalog_mission_variants",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794202200000,
+      "tag": "0018_catalog_scu_certainty",
+      "breakpoints": true
     }
   ]
 }

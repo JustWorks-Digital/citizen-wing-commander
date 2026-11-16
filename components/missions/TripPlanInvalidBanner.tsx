@@ -10,6 +10,8 @@ export type TripPlanInvalidBannerProps = {
   isRepairing?: boolean;
   repairError?: string | null;
   onRepair: () => void;
+  /** Hide the banner; Repair remains available from the route ⋯ menu. */
+  onDismiss?: () => void;
 };
 
 function locationLabel(slug: string): string {
@@ -33,6 +35,7 @@ export function TripPlanInvalidBanner({
   isRepairing = false,
   repairError = null,
   onRepair,
+  onDismiss,
 }: TripPlanInvalidBannerProps) {
   const first = issues[0];
   const summary = first
@@ -118,14 +121,26 @@ export function TripPlanInvalidBanner({
           <p className="mt-1 text-xs text-rsi-danger">{repairError}</p>
         ) : null}
       </div>
-      <Button
-        variant="secondary"
-        className="shrink-0 px-3 py-1.5 text-[0.7rem]"
-        disabled={isRepairing}
-        onClick={onRepair}
-      >
-        {isRepairing ? "Repairing…" : "Repair route"}
-      </Button>
+      <div className="flex shrink-0 flex-col gap-2 sm:items-stretch">
+        <Button
+          variant="secondary"
+          className="px-3 py-1.5 text-[0.7rem]"
+          disabled={isRepairing}
+          onClick={onRepair}
+        >
+          {isRepairing ? "Repairing…" : "Repair route"}
+        </Button>
+        {onDismiss ? (
+          <button
+            type="button"
+            disabled={isRepairing}
+            onClick={onDismiss}
+            className="rounded-rsi px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted transition-colors hover:bg-rsi-bg-deep/50 hover:text-rsi-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Dismiss
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

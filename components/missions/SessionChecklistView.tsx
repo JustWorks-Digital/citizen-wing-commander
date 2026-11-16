@@ -42,14 +42,15 @@ import {
 } from "@/lib/missions/mockSession";
 import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
+import { missionScuAmounts } from "@/lib/missions/missionScuAmounts";
 import {
   applyCompletedMissionStopState,
   rebuildRowsFromMissions,
   removeMissionAndRebuildRoute,
   restampAllMissionBoxSizes,
-  setMissionScuBoxSplits,
   setMissionCompletedAndRebuildRoute,
   setMissionHiddenAndRebuildRoute,
+  setMissionScuBoxSplits,
 } from "@/lib/missions/rebuildSessionRoute";
 import { SELECTABLE_SHIP_SLUGS } from "@/lib/ships/selectableShips";
 import {
@@ -156,6 +157,8 @@ export function SessionChecklistView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tripRepairBusy, setTripRepairBusy] = useState(false);
   const [tripRepairError, setTripRepairError] = useState<string | null>(null);
+  /** After Dismiss on the invalid banner, Repair lives in the sticky ⋯ menu. */
+  const [tripInvalidDismissed, setTripInvalidDismissed] = useState(false);
   const [saveInFlight, setSaveInFlight] = useState(0);
   const [shipCatalog, setShipCatalog] = useState<CatalogShip[]>([]);
   const [shipsLoading, setShipsLoading] = useState(true);
@@ -843,6 +846,26 @@ export function SessionChecklistView({
     [persistSession],
   );
 
+  const syncCatalogBoxSplits = useCallback(
+    (missionId: string, nextSession: SessionChecklistModel) => {
+      const updatedMission =
+        nextSession.missions?.find((mission) => mission.id === missionId) ??
+        null;
+      const catalogId = updatedMission?.catalogMissionId ?? null;
+      if (!catalogId || !updatedMission?.scuBoxSplits) return;
+      void updateCatalogMissionScuBoxSplits({
+        missionId: catalogId,
+        scuBoxSplits: updatedMission.scuBoxSplits,
+        scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
+        scuTotalCertainty: updatedMission.scuTotalCertainty,
+        scuBoxSplitsCertainty: updatedMission.scuBoxSplitsCertainty,
+      }).catch(() => {
+        setLoadError("Saved on trip, but failed to update catalog default");
+      });
+    },
+    [],
+  );
+
   const applyBoxBreakdown = useCallback(
     (
       missionId: string,
@@ -865,20 +888,52 @@ export function SessionChecklistView({
         return;
       }
       persistSession(result.session);
-      const updatedMission =
-        result.session.missions?.find((mission) => mission.id === missionId) ??
-        null;
-      const catalogId = updatedMission?.catalogMissionId ?? null;
-      if (!catalogId || !updatedMission?.scuBoxSplits) return;
-      void updateCatalogMissionScuBoxSplits({
-        missionId: catalogId,
-        scuBoxSplits: updatedMission.scuBoxSplits,
-        scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
-      }).catch(() => {
-        setLoadError("Saved on trip, but failed to update catalog default");
-      });
+      syncCatalogBoxSplits(missionId, result.session);
     },
-    [persistSession],
+    [persistSession, syncCatalogBoxSplits],
+  );
+
+  const applyCommodityScu = useCallback(
+    (missionId: string, commoditySlug: string, scu: number) => {
+      const result = missionScuAmounts.setCommodityTotal(
+        sessionRef.current,
+        missionId,
+        commoditySlug,
+        scu,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+      syncCatalogBoxSplits(missionId, result.session);
+    },
+    [persistSession, syncCatalogBoxSplits],
+  );
+
+  const applyStationScu = useCallback(
+    (
+      missionId: string,
+      input: {
+        role: "pickup" | "delivery";
+        locationKey: string;
+        commoditySlug: string;
+        scu: number;
+      },
+    ) => {
+      const result = missionScuAmounts.setStationAmount(
+        sessionRef.current,
+        missionId,
+        input,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      persistSession(result.session);
+      syncCatalogBoxSplits(missionId, result.session);
+    },
+    [persistSession, syncCatalogBoxSplits],
   );
 
   const onOpenContracts = useCallback(
@@ -922,7 +977,10 @@ export function SessionChecklistView({
   );
 
   useEffect(() => {
-    if (tripCargoValidation.ok) setTripRepairError(null);
+    if (tripCargoValidation.ok) {
+      setTripRepairError(null);
+      setTripInvalidDismissed(false);
+    }
   }, [tripCargoValidation.ok]);
 
   const repairInvalidTrip = useCallback(() => {
@@ -1201,12 +1259,13 @@ export function SessionChecklistView({
         ) : null}
       </div>
 
-      {!tripCargoValidation.ok ? (
+      {!tripCargoValidation.ok && !tripInvalidDismissed ? (
         <TripPlanInvalidBanner
           issues={tripCargoValidation.issues}
           isRepairing={tripRepairBusy}
           repairError={tripRepairError}
           onRepair={repairInvalidTrip}
+          onDismiss={() => setTripInvalidDismissed(true)}
         />
       ) : null}
 
@@ -1228,11 +1287,19 @@ export function SessionChecklistView({
         onOpenStops={toggleStops}
         onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
+        onChangeMissionCommodityScu={applyCommodityScu}
+        onChangeMissionStationScu={applyStationScu}
         isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
         toolbarEnd={tripOverflowStats}
         onCopyTrip={initial ? undefined : copyTrip}
+        onRepairTrip={
+          !tripCargoValidation.ok && tripInvalidDismissed
+            ? repairInvalidTrip
+            : undefined
+        }
+        isRepairingTrip={tripRepairBusy}
         onToggle={onToggleStop}
       />
 
@@ -1299,6 +1366,8 @@ export function SessionChecklistView({
         onToggleCompleted={handleMissionToggleCompleted}
         onRemoveMission={handleMissionRemove}
         onSelectBoxBreakdown={applyBoxBreakdown}
+        onChangeMissionCommodityScu={applyCommodityScu}
+        onChangeMissionStationScu={applyStationScu}
       />
     </div>
   );

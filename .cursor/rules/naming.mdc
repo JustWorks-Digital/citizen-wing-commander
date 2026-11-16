@@ -98,7 +98,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `cargoBay.packAtStop(stopId, …)` / `packSuggestedAtStop` / `packByCargoTypeAtStop` / `packDeliveriesFromStop` (entity id first; no `Id` on the method name) | id-last pack args, `packDeliveriesFromStopId`, `plan*Occupancy*`, “mission location” packing jargon |
 | aboard cargo / `aboardCargo` (still on the ship from earlier stops) | stay cargo, `stayCargo` |
 | `Hauling` / `hauling` | `Delivery` as the type name (delivery can be a checklist group) |
-| `scuTotal` / `scuSplits` / `scuLocationSplits` / `scuBoxSplits` / `scuBoxSplitsAutoSelected` / `scuMaxContainerSize` (catalog hauling) | `totalScu`, `boxBreakdown`, `autoBoxSplits`, `originalBoxSplits`, `maxContainerScu`, `size1`; `legs` for per-stop cargo inside a catalog mission |
+| `scuTotal` / `scuSplits` / `scuLocationSplits` / `scuBoxSplits` / `scuBoxSplitsAutoSelected` / `scuMaxContainerSize` / `scuTotalCertainty` / `scuBoxSplitsCertainty` (catalog hauling; certainty = `known` \| `estimated` \| `unknown`) | `totalScu`, `boxBreakdown`, `autoBoxSplits`, `originalBoxSplits`, `maxContainerScu`, `size1`, `confidence`; `legs` for per-stop cargo inside a catalog mission |
 | `rank` (hauling career level: Trainee…Master; no “Rank” suffix in the value) | `repLevel`, `reputationRank`, `Junior Rank` as a stored value |
 | `category` (`Hauling - Local` / `Planetary` / `Stellar` / `Interstellar`) | bare `routeScope`, inventing synonyms for MobiGlas Category |
 | `variantGroupId` / `variantFamilyKey` (SCU variants of one contract; aUEC-only stays one fingerprint) | nesting variants inside one JSON blob, overwriting screenshots |
