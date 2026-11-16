@@ -11,6 +11,7 @@ type Body = {
   scuBoxSplits?: ScuBoxSplits;
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
   scuBoxSplitsCertainty?: ScuCertainty | null;
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null> | null;
   scuTotalCertainty?: ScuCertainty | null;
 };
 
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
         : null,
       ...(body.scuBoxSplitsCertainty !== undefined
         ? { scuBoxSplitsCertainty: body.scuBoxSplitsCertainty }
+        : {}),
+      ...(body.scuCargoBoxSplitsCertainty !== undefined
+        ? { scuCargoBoxSplitsCertainty: body.scuCargoBoxSplitsCertainty }
         : {}),
       ...(body.scuTotalCertainty !== undefined
         ? { scuTotalCertainty: body.scuTotalCertainty }

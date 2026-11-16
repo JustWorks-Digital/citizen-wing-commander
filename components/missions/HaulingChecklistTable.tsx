@@ -717,17 +717,16 @@ function CargoCommodityTile({
   const tileFg = cargoHex
     ? commodityBadgeForeground(cargoHex)
     : "var(--rsi-text-secondary)";
+  const statusSuffix = isCargoPending
+    ? "updating…"
+    : cleared
+      ? `marked ${handledVerb}`
+      : `click to mark ${handledVerb}`;
 
   return (
     <button
       type="button"
-      title={
-        isCargoPending
-          ? `${fullLabel} · updating…`
-          : cleared
-            ? `${fullLabel} · marked ${handledVerb}`
-            : `${fullLabel} · click to mark ${handledVerb}`
-      }
+      title={[fullLabel, statusSuffix].join(" · ")}
       aria-label={fullLabel}
       aria-pressed={cleared}
       aria-busy={isCargoPending}
@@ -2203,7 +2202,7 @@ function PickupTransferBlock({
         />
         <TransferScuLine
           amount={String(transfer.after)}
-          suffix="SCU total"
+          suffix="remaining on ship"
           tone="text-rsi-text"
           strike={strike}
           mute={mute}
@@ -2310,7 +2309,7 @@ function DeliveryTransferBlock({
         />
         <TransferScuLine
           amount={String(transfer.after)}
-          suffix="SCU total"
+          suffix="remaining on ship"
           tone="text-rsi-text"
           strike={strike}
           mute={mute}
@@ -3604,6 +3603,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                           <StopDeliveryBayPreview
                             row={row}
                             rows={rows}
+                            missions={missions}
                             role={role}
                             onEditMissionBoxes={
                               onSelectBoxBreakdown
@@ -3673,6 +3673,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
         <StopMissionBoxConfigModal
           mission={boxEditMission}
           rows={rows}
+          sessionId={sessionId}
           onClose={() => setBoxEditMissionId(null)}
           onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
             onSelectBoxBreakdown(

@@ -51,6 +51,8 @@ export type SessionMissionsModalProps = {
   missions: SessionMission[];
   /** Route rows — used to resolve per-stop SCU splits for Collect/Deliver. */
   rows?: HaulingChecklistRow[];
+  /** Session id — Source screenshot URLs in the box-types modal. */
+  sessionId?: string | null;
   /** When set, scroll to and highlight this contract row. */
   focusMissionId?: string | null;
   onClose: () => void;
@@ -824,6 +826,7 @@ export function SessionMissionsModal({
   open,
   missions,
   rows = [],
+  sessionId = null,
   focusMissionId = null,
   onClose,
   onToggleHidden,
@@ -1280,6 +1283,7 @@ export function SessionMissionsModal({
         <StopMissionBoxConfigModal
           mission={boxEditMission}
           rows={rows}
+          sessionId={sessionId}
           onClose={() => setBoxEditMissionId(null)}
           onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
             onSelectBoxBreakdown(

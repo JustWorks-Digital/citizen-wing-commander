@@ -128,7 +128,14 @@ function InteractiveTable(args: {
         setMissions((prev) =>
           prev.map((mission) =>
             mission.id === missionId
-              ? cargoBoxSplits.setCommodity(mission, commoditySlug, breakdown)
+              ? {
+                  ...cargoBoxSplits.setCommodity(
+                    mission,
+                    commoditySlug,
+                    breakdown,
+                  ),
+                  scuBoxSplitsCertainty: "known" as const,
+                }
               : mission,
           ),
         );
@@ -142,6 +149,21 @@ export const Default: Story = {
     rows: mockSessionChecklist.rows,
     onToggle: () => {},
     missions: mockSessionChecklist.missions,
+    sessionId: mockSessionChecklist.id,
+    startLocationSlug: mockSessionChecklist.startLocationSlug,
+  },
+  render: (args) => <InteractiveTable {...args} />,
+};
+
+/** Crate mix not hangar-confirmed — warn circle on Breakdown under-stack labels. */
+export const EstimatedBoxSplits: Story = {
+  args: {
+    rows: mockSessionChecklist.rows,
+    onToggle: () => {},
+    missions: mockSessionChecklist.missions.map((mission) => ({
+      ...mission,
+      scuBoxSplitsCertainty: "estimated" as const,
+    })),
     sessionId: mockSessionChecklist.id,
     startLocationSlug: mockSessionChecklist.startLocationSlug,
   },

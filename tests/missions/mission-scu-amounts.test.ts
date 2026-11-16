@@ -123,6 +123,32 @@ describe("missionScuAmounts", () => {
     ).toBe(true);
   });
 
+  it("uses route deliveries only — no phantom even-splits for unused destinations", () => {
+    const session = partialMultiDropSession();
+    const draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    expect(draft.commodities).toEqual([
+      {
+        commoditySlug: "quantum-fuel",
+        commodity: "Quantum Fuel",
+        scu: 8,
+      },
+    ]);
+    expect(draft.deliveries).toEqual([
+      {
+        locationKey: "shubin-mining-facility-sm0-22",
+        locationSlug: "shubin-mining-facility-sm0-22",
+        locationLabel: expect.any(String),
+        commoditySlug: "quantum-fuel",
+        commodity: "Quantum Fuel",
+        scu: 8,
+      },
+    ]);
+    expect(missionScuAmounts.validateDraft(draft)).toEqual({ ok: true });
+  });
+
   it("rejects a draft when delivery stops do not sum to the commodity total", () => {
     const session = multiDeliverySession();
     const draft = missionScuAmounts.draftFromMission(
@@ -165,6 +191,83 @@ describe("missionScuAmounts", () => {
     expect(result.session.rows[0]!.cargoDeliveries[0]!.scu).toBe(15);
   });
 });
+
+/** Multi-destination mission whose route only drops one commodity at one stop. */
+function partialMultiDropSession(): SessionChecklistModel {
+  const missions: SessionMission[] = [
+    {
+      id: "fuel-ammo",
+      title: "Fuel haul",
+      contractor: "Covalex",
+      rewardAuec: 1000,
+      from: ["Covalex Distribution Centre S4DC05"],
+      to: [
+        "Shubin Mining Facility SM0-10",
+        "Shubin Mining Facility SM0-13",
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-22",
+      ],
+      cargo: [{ commodity: "Quantum Fuel", scu: 8 }],
+      isCompleted: false,
+      screenshots: [],
+      mobiglas: {
+        tab: "Accepted",
+        category: "Hauling - Planetary",
+        title: "Fuel haul",
+        contractor: "Covalex",
+        rewardAuec: 1000,
+        timeRemaining: null,
+        deadline: null,
+        details: "",
+        objectives: [],
+      },
+    },
+  ];
+  return applySessionCompletionTiming({
+    id: "partial-drop",
+    sessionName: "Partial drop",
+    shipSlugs: ["galaxy"],
+    startLocationSlug: "covalex-distribution-centre-s4dc05",
+    missionCount: 1,
+    missionsCompleted: 0,
+    missions,
+    startedAt: "2026-11-15T00:00:00.000Z",
+    completedAt: null,
+    updatedAt: "2026-11-15T00:00:00.000Z",
+    rows: [
+      makeStop({
+        id: "leg-1",
+        routeAction: "pickup",
+        locationSlug: "covalex-distribution-centre-s4dc05",
+        cargo: [
+          cargo("quantum-fuel", 8, {
+            role: "pickup",
+            missionId: "fuel-ammo",
+          }),
+        ],
+      }),
+      makeStop({
+        id: "leg-2",
+        routeAction: "both",
+        locationSlug: "shubin-mining-facility-sm0-10",
+        cargo: [
+          cargo("stims", 2, { role: "delivery", missionId: "other" }),
+        ],
+      }),
+      makeStop({
+        id: "leg-5",
+        routeAction: "both",
+        locationSlug: "shubin-mining-facility-sm0-22",
+        cargo: [
+          cargo("quantum-fuel", 8, {
+            role: "delivery",
+            missionId: "fuel-ammo",
+          }),
+        ],
+      }),
+    ],
+  });
+}
 
 function multiDeliverySession(): SessionChecklistModel {
   const missions: SessionMission[] = [

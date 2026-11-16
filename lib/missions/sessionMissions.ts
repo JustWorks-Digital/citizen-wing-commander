@@ -73,8 +73,13 @@ export type SessionMission = {
   scuTotalCertainty?: ScuCertainty | null;
   /**
    * Certainty that crate mix (`scuBoxSplits` / `scuCargoBoxSplits`) is real.
+   * Prefer per-commodity `scuCargoBoxSplitsCertainty` when set; this is the rollup.
    */
   scuBoxSplitsCertainty?: ScuCertainty | null;
+  /**
+   * Crate-mix certainty per commodity slug (`known` | `estimated` | `unknown`).
+   */
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null>;
   /** Short cargo summary for tiles (e.g. "96 SCU Stims"). Optional on older session JSON. */
   cargoSummary?: string;
   isCompleted: boolean;

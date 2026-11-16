@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  isScuBoxSplitsUncertain,
   isScuCertainty,
   normalizeScuCertainty,
+  resolveScuBoxSplitsCertainty,
+  rollupScuBoxSplitsCertainty,
 } from "@/lib/missions/scuCertainty";
 import { makeStop, cargo } from "../cargo/fixtures";
 import {
@@ -82,6 +85,52 @@ describe("scuCertainty", () => {
     expect(isScuCertainty("fuzzy")).toBe(false);
   });
 
+  it("treats only known crate mixes as certain for UI", () => {
+    expect(isScuBoxSplitsUncertain("known")).toBe(false);
+    expect(isScuBoxSplitsUncertain("estimated")).toBe(true);
+    expect(isScuBoxSplitsUncertain("unknown")).toBe(true);
+    expect(isScuBoxSplitsUncertain(null)).toBe(true);
+    expect(isScuBoxSplitsUncertain(undefined)).toBe(true);
+  });
+
+  it("resolves per-commodity certainty before mission rollup", () => {
+    const source = {
+      scuBoxSplitsCertainty: "estimated" as const,
+      scuCargoBoxSplitsCertainty: {
+        stims: "known" as const,
+        scrap: null,
+      },
+    };
+    expect(resolveScuBoxSplitsCertainty(source, "stims")).toBe("known");
+    expect(resolveScuBoxSplitsCertainty(source, "scrap")).toBeNull();
+    expect(resolveScuBoxSplitsCertainty(source, "waste")).toBe("estimated");
+    expect(resolveScuBoxSplitsCertainty(source)).toBe("estimated");
+  });
+
+  it("rolls up per-commodity certainty to mission level", () => {
+    expect(
+      rollupScuBoxSplitsCertainty(
+        { stims: "known", scrap: "known" },
+        ["stims", "scrap"],
+      ),
+    ).toBe("known");
+    expect(
+      rollupScuBoxSplitsCertainty(
+        { stims: "known", scrap: "estimated" },
+        ["stims", "scrap"],
+      ),
+    ).toBe("estimated");
+    expect(
+      rollupScuBoxSplitsCertainty({ stims: null }, ["stims", "scrap"]),
+    ).toBeNull();
+    expect(
+      rollupScuBoxSplitsCertainty(
+        { stims: "known", scrap: "unknown" },
+        ["stims", "scrap"],
+      ),
+    ).toBe("unknown");
+  });
+
   it("stamps certainty onto a session mission via setMissionScuBoxSplits", () => {
     const session = sessionWithMission();
     const result = setMissionScuBoxSplits(
@@ -102,6 +151,9 @@ describe("scuCertainty", () => {
     if (!result.ok) return;
     const mission = result.session.missions?.find((entry) => entry.id === "ice");
     expect(mission?.scuBoxSplitsCertainty).toBe("known");
+    expect(mission?.scuCargoBoxSplitsCertainty?.["pressurized-ice"]).toBe(
+      "known",
+    );
     expect(mission?.scuTotalCertainty).toBe("estimated");
   });
 

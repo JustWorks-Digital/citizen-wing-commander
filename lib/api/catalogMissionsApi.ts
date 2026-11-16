@@ -110,6 +110,7 @@ export async function updateCatalogMissionScuBoxSplits(input: {
   scuBoxSplits: ScuBoxSplits;
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
   scuBoxSplitsCertainty?: ScuCertainty | null;
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null> | null;
   scuTotalCertainty?: ScuCertainty | null;
 }): Promise<CatalogMission> {
   const res = await fetch(appApi.catalogMissionsScuBoxSplits, {

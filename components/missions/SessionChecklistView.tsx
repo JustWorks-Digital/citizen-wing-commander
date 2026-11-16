@@ -862,6 +862,7 @@ export function SessionChecklistView({
         scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
         scuTotalCertainty: updatedMission.scuTotalCertainty,
         scuBoxSplitsCertainty: updatedMission.scuBoxSplitsCertainty,
+        scuCargoBoxSplitsCertainty: updatedMission.scuCargoBoxSplitsCertainty,
       }).catch(() => {
         setLoadError("Saved on trip, but failed to update catalog default");
       });
@@ -884,7 +885,11 @@ export function SessionChecklistView({
         missionId,
         breakdown,
         commoditySlug,
-        options,
+        {
+          ...options,
+          // Player-picked crate mix in the box-types modal → confirmed.
+          scuBoxSplitsCertainty: "known",
+        },
       );
       if (!result.ok) {
         setLoadError(result.error);
@@ -1336,6 +1341,7 @@ export function SessionChecklistView({
         open={missionsOpen}
         missions={session.missions ?? []}
         rows={session.rows}
+        sessionId={session.id}
         focusMissionId={missionsFocusId}
         onClose={closeMissions}
         onToggleHidden={handleMissionToggleHidden}

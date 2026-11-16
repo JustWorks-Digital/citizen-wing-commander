@@ -56,3 +56,49 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const UncertainBoxSplits: Story = {
+  args: {
+    plan,
+    boxSplitIndicatorsByMissionId: new Map([
+      ["mission-a::agricultural-supplies", { uncertain: true, overridden: false }],
+      ["mission-a::medical-supplies", { uncertain: true, overridden: false }],
+      ["mission-b::agricultural-supplies", { uncertain: true, overridden: false }],
+    ]),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "Warn circle when crate mix certainty is estimated / unset.",
+      },
+    },
+  },
+};
+
+export const OverriddenBoxSplits: Story = {
+  args: {
+    plan,
+    boxSplitIndicatorsByMissionId: new Map([
+      [
+        "mission-a::agricultural-supplies",
+        { uncertain: true, overridden: true },
+      ],
+      [
+        "mission-a::medical-supplies",
+        { uncertain: true, overridden: false },
+      ],
+      [
+        "mission-b::agricultural-supplies",
+        { uncertain: true, overridden: false },
+      ],
+    ]),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Per-commodity: warn+accent when overwritten; warn alone when still auto.",
+      },
+    },
+  },
+};

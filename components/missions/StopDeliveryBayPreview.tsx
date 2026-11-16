@@ -2,6 +2,13 @@
 
 import { memo, useMemo, useState } from "react";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import {
+  isScuBoxSplitsUncertain,
+  resolveScuBoxSplitsCertainty,
+  type ScuBoxSplitsIndicators,
+} from "@/lib/missions/scuCertainty";
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
   planPickupHangarStacks,
   planStopCargoStacks,
@@ -13,6 +20,8 @@ export type StopDeliveryBayPreviewProps = {
   row: HaulingChecklistRow;
   /** Full route — required for pickup hangar piles by delivery location. */
   rows?: HaulingChecklistRow[];
+  /** Session missions — used for crate-mix certainty on under-stack labels. */
+  missions?: SessionMission[];
   className?: string;
   /** Double-click under-stack cargo label to edit that mission’s box mix. */
   onEditMissionBoxes?: (missionId: string) => void;
@@ -110,6 +119,7 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
 export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   row,
   rows,
+  missions = [],
   className,
   onEditMissionBoxes,
   role,
@@ -120,6 +130,33 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
 
   const showDelivery = role == null || role === "delivery";
   const showPickup = role == null || role === "pickup";
+
+  /**
+   * Keyed by `missionId::commoditySlug`. Certainty + override are both
+   * per commodity (certainty falls back to mission-level when unset).
+   */
+  const boxSplitIndicatorsByMissionId = useMemo(() => {
+    const map = new Map<string, ScuBoxSplitsIndicators>();
+    for (const mission of missions) {
+      const withDefaults = cargoBoxSplits.withDefaults(mission);
+      const lines = Object.keys(withDefaults.scuCargoBoxSplits ?? {});
+      for (const commoditySlug of lines) {
+        const uncertain = isScuBoxSplitsUncertain(
+          resolveScuBoxSplitsCertainty(mission, commoditySlug),
+        );
+        const overridden = cargoBoxSplits.isUserCorrected(
+          mission,
+          commoditySlug,
+        );
+        if (!uncertain && !overridden) continue;
+        map.set(`${mission.id}::${commoditySlug}`, {
+          uncertain,
+          overridden,
+        });
+      }
+    }
+    return map;
+  }, [missions]);
 
   const deliveryPlan = useMemo(
     () => (showDelivery ? planStopCargoStacks(row, "delivery") : null),
@@ -187,6 +224,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               fillAvailableHeight
               className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
+              boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
             />
             {row.isCompleted ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -260,6 +298,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               fillAvailableHeight
               className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
+              boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
             />
             {row.isCompleted ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">

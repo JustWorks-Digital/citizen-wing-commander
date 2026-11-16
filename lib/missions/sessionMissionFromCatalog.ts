@@ -91,6 +91,7 @@ export function sessionMissionFromCatalog(
       catalog.scuTotalCertainty ?? payload.scuTotalCertainty ?? null,
     scuBoxSplitsCertainty:
       catalog.scuBoxSplitsCertainty ?? payload.scuBoxSplitsCertainty ?? null,
+    scuCargoBoxSplitsCertainty: payload.scuCargoBoxSplitsCertainty,
     cargoSummary,
     isCompleted: false,
     isHidden: false,

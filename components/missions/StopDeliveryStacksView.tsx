@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
+import type { ScuBoxSplitsIndicators } from "@/lib/missions/scuCertainty";
 import {
   focusPickupHangarPile,
   type StopCargoStacksPlan,
@@ -28,6 +29,11 @@ export type StopDeliveryStacksViewProps = {
   fillAvailableHeight?: boolean;
   /** Double-click the under-stack cargo label (abbrev + SCU) to edit crate mix. */
   onEditMissionBoxes?: (missionId: string) => void;
+  /**
+   * Per-mission crate-mix dots on under-stack SCU boxes (independent):
+   * warn = AI uncertain, accent = manual overwrite. Both may show.
+   */
+  boxSplitIndicatorsByMissionId?: ReadonlyMap<string, ScuBoxSplitsIndicators>;
 };
 
 type Point = { x: number; y: number };
@@ -224,6 +230,7 @@ export function StopDeliveryStacksView({
   hidePeel = false,
   fillAvailableHeight = false,
   onEditMissionBoxes,
+  boxSplitIndicatorsByMissionId,
 }: StopDeliveryStacksViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(true);
   const peelStack = peelStackProp ?? peelStackInternal;
@@ -659,6 +666,12 @@ export function StopDeliveryStacksView({
               );
               const canEditBoxes =
                 Boolean(onEditMissionBoxes) && Boolean(label.missionId);
+              const boxSplitIndicators =
+                label.missionId != null
+                  ? (boxSplitIndicatorsByMissionId?.get(
+                      `${label.missionId}::${label.commoditySlug}`,
+                    ) ?? null)
+                  : null;
               const scuTitle =
                 displayPlan.action === "pickup"
                   ? `${label.scu} ${SCU_TITLE} collect · ${label.commodityName}`
@@ -666,6 +679,14 @@ export function StopDeliveryStacksView({
               const editHint = canEditBoxes
                 ? " · Double-click to edit box types"
                 : "";
+              const indicatorHints = [
+                boxSplitIndicators?.uncertain ? "Crate mix estimated" : null,
+                boxSplitIndicators?.overridden ? "Crate mix overridden" : null,
+              ].filter(Boolean);
+              const indicatorHint =
+                indicatorHints.length > 0
+                  ? ` · ${indicatorHints.join(" · ")}`
+                  : "";
               const abbrevSize = Math.max(8, Math.round(renderCellPx * 0.55));
               const scuSize = Math.max(9, Math.round(renderCellPx * 0.65));
               const padX = renderCellPx * 0.45;
@@ -685,6 +706,30 @@ export function StopDeliveryStacksView({
               const boxY = foot.y + renderCellPx * 0.85;
               const abbrevY = boxY + padTop;
               const scuY = abbrevY + abbrevSize + renderCellPx * 0.2;
+              const indicatorDotR = Math.max(1.5, renderCellPx * 0.11);
+              const indicatorDotInset = Math.max(2, renderCellPx * 0.14);
+              const indicatorDotGap = indicatorDotR * 2 + renderCellPx * 0.12;
+              const indicatorCy =
+                boxY + boxH - indicatorDotInset - indicatorDotR;
+              const indicatorDots: Array<{
+                key: string;
+                fill: string;
+                title: string;
+              }> = [];
+              if (boxSplitIndicators?.uncertain) {
+                indicatorDots.push({
+                  key: "uncertain",
+                  fill: "var(--rsi-warn)",
+                  title: "Crate mix estimated",
+                });
+              }
+              if (boxSplitIndicators?.overridden) {
+                indicatorDots.push({
+                  key: "overridden",
+                  fill: "var(--rsi-accent)",
+                  title: "Crate mix overridden",
+                });
+              }
               return (
                 <g
                   key={`label-${label.id}`}
@@ -696,7 +741,7 @@ export function StopDeliveryStacksView({
                     onEditMissionBoxes?.(label.missionId);
                   }}
                 >
-                  <title>{`${scuTitle}${editHint}`}</title>
+                  <title>{`${scuTitle}${indicatorHint}${editHint}`}</title>
                   <rect
                     x={boxX}
                     y={boxY}
@@ -707,6 +752,22 @@ export function StopDeliveryStacksView({
                     stroke="var(--rsi-border-strong)"
                     strokeWidth={1}
                   />
+                  {indicatorDots.map((dot, index) => (
+                    <circle
+                      key={dot.key}
+                      cx={
+                        boxX +
+                        indicatorDotInset +
+                        indicatorDotR +
+                        index * indicatorDotGap
+                      }
+                      cy={indicatorCy}
+                      r={indicatorDotR}
+                      fill={dot.fill}
+                    >
+                      <title>{dot.title}</title>
+                    </circle>
+                  ))}
                   <text
                     x={foot.x}
                     y={abbrevY}

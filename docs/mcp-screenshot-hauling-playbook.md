@@ -79,6 +79,30 @@ Always include **`maxContainerScu`** on each intake contract when Details shows 
 
 Catalog missions (`create_mission`) should pass **`scuSplits[]`** for each Primary Objective line (`kind`, `from`, `to`, `commodity`, `scu`) — sibling of **`scuTotal`** — and **`scuMaxContainerSize`** for the same max-crate value. Optional **`objectives[]`** are screenshot-style text bullets (derived from splits when omitted). Aggregated `cargo` / `from` / `to` can be omitted and will be derived.
 
+**Certainty (pass when you know how sure you are):**
+
+| Field | Scope | Values | When |
+| --- | --- | --- | --- |
+| `scuTotalCertainty` | Mission SCU totals | `known` \| `estimated` \| `unknown` | Totals clearly readable → `known`; inferred → `estimated` |
+| `scuBoxSplitsCertainty` | Mission crate-mix **rollup** | same | Fallback / summary only |
+| `scuCargoBoxSplitsCertainty` | **Per commodity** (`{ slug: certainty }`) | same | Prefer this: AI greedy per line → `estimated`; sizes readable in shot → `known` |
+
+Example on `create_mission`:
+
+```json
+{
+  "scuMaxContainerSize": 4,
+  "scuTotalCertainty": "known",
+  "scuCargoBoxSplitsCertainty": {
+    "stims": "estimated",
+    "quartz-raw": "estimated",
+    "waste": "unknown"
+  }
+}
+```
+
+Later hangar correction: `set_mission_scu_box_splits` with `commodity`, `boxes`, and `scuBoxSplitsCertainty: "known"` — stamps that slug in `scuCargoBoxSplitsCertainty` and rolls up the mission field.
+
 Link evidence on each contract:
 
 ```json
@@ -99,7 +123,7 @@ Link evidence on each contract:
 | `get_hauling_screenshot` | Pull one image (base64) for vision — prefer one call per shot |
 | `mark_hauling_screenshots_processed` | After apply — clear pending Source badge |
 | `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
-| `set_mission_scu_box_splits` | Correct crate sizes from freight elevator / hangar UI (`boxes: [{ size, count }]`) |
+| `set_mission_scu_box_splits` | Correct crate sizes from freight elevator / hangar UI (`boxes: [{ size, count }]`; pass `commodity` on multi-cargo). Stamp `scuBoxSplitsCertainty: "known"` (per commodity → `scuCargoBoxSplitsCertainty`) |
 | `clear_hauling_screenshots` | Delete a batch’s temp images |
 
 Web UI **Source** uploads land as **pending**. AI marks them **processed** after intake.

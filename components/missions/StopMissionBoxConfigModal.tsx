@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CommodityIcon } from "@/components/missions/CommodityIcon";
 import { MissionBoxBreakdownPicker } from "@/components/missions/MissionBoxBreakdownPicker";
+import { StopMissionScreenshots } from "@/components/missions/StopMissionScreenshots";
 import { Button } from "@/components/ui/Button";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
@@ -20,6 +21,7 @@ import {
   type MissionScuDraft,
 } from "@/lib/missions/missionScuAmounts";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import { screenshotRefsForMission } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { missionTotalScu } from "@/lib/missions/sessionMissionObjectives";
 
@@ -37,6 +39,8 @@ export type StopMissionBoxConfigModalProps = {
   mission: SessionMission;
   /** Route rows — used for live per-station SCU amounts. */
   rows?: HaulingChecklistRow[] | null;
+  /** Session id — resolves Source screenshot URLs for the header. */
+  sessionId?: string | null;
   onClose: () => void;
   /**
    * Persist one commodity’s crate mix.
@@ -178,6 +182,7 @@ function draftsEqual(a: MissionScuDraft, b: MissionScuDraft): boolean {
 export function StopMissionBoxConfigModal({
   mission,
   rows = null,
+  sessionId = null,
   onClose,
   onSelectBoxBreakdown,
   onSaveScuDraft,
@@ -189,6 +194,10 @@ export function StopMissionBoxConfigModal({
       : null);
   const disabled = mission.isCompleted;
   const canEditScu = !disabled && Boolean(onSaveScuDraft);
+  const sourceRefs = useMemo(
+    () => (sessionId ? screenshotRefsForMission(mission, sessionId) : []),
+    [mission, sessionId],
+  );
 
   const baseline = useMemo(
     () => missionScuAmounts.draftFromMission(mission, rows),
@@ -320,9 +329,18 @@ export function StopMissionBoxConfigModal({
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Box types
           </p>
-          <h2 className="mt-0.5 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
-            {mission.title}
-          </h2>
+          <div className="mt-0.5 flex min-w-0 items-center gap-2">
+            <h2 className="min-w-0 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
+              {mission.title}
+            </h2>
+            {sourceRefs.length > 0 ? (
+              <StopMissionScreenshots
+                refs={sourceRefs}
+                variant="inline"
+                className="shrink-0"
+              />
+            ) : null}
+          </div>
           <p className="mt-1 truncate font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
             {[
               mission.contractor || null,

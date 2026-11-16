@@ -1043,8 +1043,9 @@ export async function toolSetMissionScuBoxSplits(input: {
   /** Alternate: explicit scuOne…scuThirtyTwo counts. */
   scuBoxSplits?: Partial<ScuBoxSplits> | null;
   /**
-   * Certainty for the crate mix: known (hangar/screenshot), estimated (AI),
-   * or unknown. Hangar corrections should pass `known`.
+   * Certainty for this commodity’s crate mix (and mission rollup): known
+   * (hangar/screenshot), estimated (AI), or unknown. Hangar → `known`.
+   * With `commodity`, stamps that slug in `scuCargoBoxSplitsCertainty`.
    */
   scuBoxSplitsCertainty?: "known" | "estimated" | "unknown" | null;
   /** Certainty for mission SCU totals (same vocabulary). */
@@ -1153,6 +1154,11 @@ export async function toolSetMissionScuBoxSplits(input: {
           ...(input.scuBoxSplitsCertainty !== undefined
             ? { scuBoxSplitsCertainty: input.scuBoxSplitsCertainty }
             : {}),
+          ...(updated.scuCargoBoxSplitsCertainty
+            ? {
+                scuCargoBoxSplitsCertainty: updated.scuCargoBoxSplitsCertainty,
+              }
+            : {}),
           ...(input.scuTotalCertainty !== undefined
             ? { scuTotalCertainty: input.scuTotalCertainty }
             : {}),
@@ -1194,6 +1200,7 @@ export async function toolSetMissionScuBoxSplits(input: {
       scuBoxSplits: updated?.scuBoxSplits ?? scuBoxSplits,
       scuCargoBoxSplits: updated?.scuCargoBoxSplits ?? null,
       scuBoxSplitsCertainty: updated?.scuBoxSplitsCertainty ?? null,
+      scuCargoBoxSplitsCertainty: updated?.scuCargoBoxSplitsCertainty ?? null,
       scuTotalCertainty: updated?.scuTotalCertainty ?? null,
       boxScu,
       missionScu: lineScu,
@@ -1361,6 +1368,9 @@ function presentCatalogMission(
     scuMaxContainerSize: row.scuMaxContainerSize,
     scuBoxSplits: row.scuBoxSplits,
     scuBoxSplitsCertainty: row.scuBoxSplitsCertainty,
+    scuCargoBoxSplitsCertainty:
+      (row.payload as HaulingCatalogMissionPayload | null)
+        ?.scuCargoBoxSplitsCertainty ?? null,
     scuLocationSplits: row.scuLocationSplits,
     category:
       (row.payload as HaulingCatalogMissionPayload | null)?.category ?? null,
@@ -1447,10 +1457,18 @@ export async function toolCreateMission(input: {
    */
   scuTotalCertainty?: "known" | "estimated" | "unknown" | null;
   /**
-   * Certainty that crate mix is known (`known` | `estimated` | `unknown`).
-   * Use `estimated` for AI greedy defaults; `known` when sizes were readable.
+   * Mission rollup crate-mix certainty (`known` | `estimated` | `unknown`).
+   * Prefer `scuCargoBoxSplitsCertainty` for per-commodity AI guesses.
    */
   scuBoxSplitsCertainty?: "known" | "estimated" | "unknown" | null;
+  /**
+   * Per-commodity crate-mix certainty (slug → known | estimated | unknown).
+   * Use when some cargo lines are readable and others are AI-estimated.
+   */
+  scuCargoBoxSplitsCertainty?: Record<
+    string,
+    "known" | "estimated" | "unknown" | null
+  > | null;
   latestScreenshotPath?: string;
   extras?: Record<string, unknown>;
 }) {
@@ -1596,6 +1614,7 @@ export async function toolCreateMission(input: {
         scuMaxContainerSize: input.scuMaxContainerSize ?? null,
         scuTotalCertainty: input.scuTotalCertainty,
         scuBoxSplitsCertainty: input.scuBoxSplitsCertainty,
+        scuCargoBoxSplitsCertainty: input.scuCargoBoxSplitsCertainty ?? undefined,
         latestScreenshotPath: input.latestScreenshotPath ?? null,
         extras: input.extras,
       },

@@ -9,6 +9,7 @@ import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import {
   normalizeScuCertainty,
+  rollupScuBoxSplitsCertainty,
   type ScuCertainty,
 } from "@/lib/missions/scuCertainty";
 import {
@@ -655,11 +656,23 @@ export function setMissionScuBoxSplits(
     );
   }
   if (options && "scuBoxSplitsCertainty" in options) {
+    const certainty = normalizeScuCertainty(options.scuBoxSplitsCertainty);
+    const nextMap: Record<string, ScuCertainty | null> = {
+      ...(nextMission.scuCargoBoxSplitsCertainty ?? {}),
+      [resolvedSlug]: certainty,
+    };
+    if (options.applyPreferredMaxToRemaining) {
+      for (const line of cargoBoxSplits.commodityLines(nextMission)) {
+        nextMap[line.commoditySlug] = certainty;
+      }
+    }
+    const slugs = cargoBoxSplits
+      .commodityLines(nextMission)
+      .map((line) => line.commoditySlug);
     nextMission = {
       ...nextMission,
-      scuBoxSplitsCertainty: normalizeScuCertainty(
-        options.scuBoxSplitsCertainty,
-      ),
+      scuCargoBoxSplitsCertainty: nextMap,
+      scuBoxSplitsCertainty: rollupScuBoxSplitsCertainty(nextMap, slugs),
     };
   }
   if (options && "scuTotalCertainty" in options) {

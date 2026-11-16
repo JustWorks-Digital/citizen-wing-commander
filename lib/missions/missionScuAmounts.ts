@@ -275,6 +275,54 @@ function finishMissionUpdate(
   });
 }
 
+/** Station SCU lines from the live route for one mission (no invented stops). */
+function stationLinesFromRows(
+  mission: SessionMission,
+  rows: HaulingChecklistRow[],
+): MissionStationScuLine[] {
+  const commodityBySlug = new Map(
+    mission.cargo.map((line) => [
+      commoditySlugOf(line.commodity),
+      line.commodity,
+    ]),
+  );
+  const byKey = new Map<string, MissionStationScuLine>();
+
+  for (const row of rows) {
+    if (row.routeAction === "quantum") continue;
+    for (const cargo of row.cargoDeliveries) {
+      if (cargo.missionId && cargo.missionId !== mission.id) continue;
+      const commodity = commodityBySlug.get(cargo.commoditySlug);
+      if (!commodity) continue;
+      const role =
+        cargo.role ??
+        (row.routeAction === "pickup" || row.routeAction === "delivery"
+          ? row.routeAction
+          : null);
+      if (role !== "pickup" && role !== "delivery") continue;
+
+      const locationKey = row.locationSlug;
+      const key = `${role}::${locationSlugOf(locationKey)}::${cargo.commoditySlug}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.scu += Math.max(0, Math.floor(cargo.scu));
+      } else {
+        byKey.set(key, {
+          role,
+          locationKey,
+          locationSlug: locationSlugOf(locationKey),
+          locationLabel: locationLabelOf(locationKey),
+          commodity,
+          commoditySlug: cargo.commoditySlug,
+          scu: Math.max(0, Math.floor(cargo.scu)),
+        });
+      }
+    }
+  }
+
+  return [...byKey.values()];
+}
+
 /**
  * Editable SCU lines for the box-types modal: mission cargo totals and
  * per-station collect/deliver amounts.
@@ -472,6 +520,12 @@ export const missionScuAmounts = {
     mission: SessionMission,
     rows?: HaulingChecklistRow[] | null,
   ): MissionStationScuLine[] {
+    // Live route is authoritative: never invent even-split phantoms for
+    // destinations that do not actually move this commodity.
+    if (rows?.length) {
+      return stationLinesFromRows(mission, rows);
+    }
+
     const out: MissionStationScuLine[] = [];
     const splits = mission.deliverySplits ?? [];
 
@@ -551,30 +605,6 @@ export const missionScuAmounts = {
                 : Math.floor(scu / mission.to.length),
           });
         }
-      }
-    }
-
-    if (rows?.length) {
-      for (const line of out) {
-        let sum = 0;
-        let found = false;
-        for (const row of rows) {
-          if (row.routeAction === "quantum") continue;
-          if (!locationMatches(row.locationSlug, line.locationSlug)) continue;
-          for (const cargo of row.cargoDeliveries) {
-            if (cargo.missionId && cargo.missionId !== mission.id) continue;
-            if (cargo.commoditySlug !== line.commoditySlug) continue;
-            const role =
-              cargo.role ??
-              (row.routeAction === "pickup" || row.routeAction === "delivery"
-                ? row.routeAction
-                : null);
-            if (role !== line.role) continue;
-            sum += cargo.scu;
-            found = true;
-          }
-        }
-        if (found) line.scu = sum;
       }
     }
 

@@ -52,6 +52,9 @@ const multiDeliveryMission: SessionMission = cargoBoxSplits.withDefaults({
       scu: 4,
     },
   ],
+  screenshots: [
+    "f6b69016-01d4-44d3-a7ec-598a70ae71d8/05-ice-food.png",
+  ],
   maxContainerScu: 4,
   scuBoxSplits: undefined,
   scuBoxSplitsAutoSelected: undefined,
@@ -67,7 +70,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Condensed cargo SCU with expandable nested delivery amounts. Edits stay in a draft until Save validates that delivery stops sum to each cargo total. Crate-mix dropdowns still apply immediately.",
+          "Condensed cargo SCU with expandable nested delivery amounts. Header uses the same Source icon as mission cards. Edits stay in a draft until Save validates that delivery stops sum to each cargo total. Crate-mix dropdowns still apply immediately.",
       },
     },
   },
@@ -168,6 +171,7 @@ export const MultiCargo: Story = {
 export const NestedDeliveries: Story = {
   args: {
     mission: multiDeliveryMission,
+    sessionId: "f6b69016-01d4-44d3-a7ec-598a70ae71d8",
     onClose: () => {},
     onSelectBoxBreakdown: () => {},
     onSaveScuDraft: () => {},

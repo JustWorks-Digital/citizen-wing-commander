@@ -149,8 +149,13 @@ export type HaulingCatalogMissionPayload = {
   scuTotalCertainty?: ScuCertainty | null;
   /**
    * Certainty that `scuBoxSplits` / `scuCargoBoxSplits` match real crate sizes.
+   * Prefer per-commodity `scuCargoBoxSplitsCertainty` when set; this is the rollup.
    */
   scuBoxSplitsCertainty?: ScuCertainty | null;
+  /**
+   * Crate-mix certainty per commodity slug (`known` | `estimated` | `unknown`).
+   */
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null>;
   /** Logical screenshot path under `.data/mcp-screenshots`. */
   latestScreenshotPath?: string | null;
   /** Free-form extras from intake / OCR. */
@@ -537,6 +542,7 @@ export function buildHaulingCatalogMissionPayload(
     scuCargoBoxSplits?: Record<string, ScuBoxSplits>;
     scuTotalCertainty?: ScuCertainty | null;
     scuBoxSplitsCertainty?: ScuCertainty | null;
+    scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null>;
   },
 ): HaulingCatalogMissionPayload {
   const scuTotal =
@@ -596,6 +602,13 @@ export function buildHaulingCatalogMissionPayload(
       partial.scuBoxSplitsCertainty !== undefined
         ? normalizeScuCertainty(partial.scuBoxSplitsCertainty)
         : null,
+    scuCargoBoxSplitsCertainty: partial.scuCargoBoxSplitsCertainty
+      ? Object.fromEntries(
+          Object.entries(partial.scuCargoBoxSplitsCertainty).map(
+            ([slug, value]) => [slug, normalizeScuCertainty(value)],
+          ),
+        )
+      : undefined,
     latestScreenshotPath: partial.latestScreenshotPath ?? null,
     extras: partial.extras,
   };

@@ -410,8 +410,10 @@ export async function updateCatalogMissionScuBoxSplits(input: {
   scuBoxSplits: ScuBoxSplits;
   /** Per-commodity mixes; written onto payload when provided. */
   scuCargoBoxSplits?: Record<string, ScuBoxSplits> | null;
-  /** When set, updates box-mix certainty (pass null to clear). */
+  /** When set, updates mission rollup box-mix certainty (pass null to clear). */
   scuBoxSplitsCertainty?: ScuCertainty | null;
+  /** Per-commodity box-mix certainty map; merged into payload when provided. */
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null> | null;
   /** When set, updates total-SCU certainty (pass null to clear). */
   scuTotalCertainty?: ScuCertainty | null;
 }): Promise<CatalogMission> {
@@ -429,6 +431,16 @@ export async function updateCatalogMissionScuBoxSplits(input: {
         ]),
       )
     : existingPayload.scuCargoBoxSplits;
+  const scuCargoBoxSplitsCertainty =
+    input.scuCargoBoxSplitsCertainty !== undefined
+      ? input.scuCargoBoxSplitsCertainty
+        ? Object.fromEntries(
+            Object.entries(input.scuCargoBoxSplitsCertainty).map(
+              ([slug, value]) => [slug, normalizeScuCertainty(value)],
+            ),
+          )
+        : undefined
+      : existingPayload.scuCargoBoxSplitsCertainty;
   const scuBoxSplitsCertainty =
     input.scuBoxSplitsCertainty !== undefined
       ? normalizeScuCertainty(input.scuBoxSplitsCertainty)
@@ -446,6 +458,7 @@ export async function updateCatalogMissionScuBoxSplits(input: {
     scuBoxSplits,
     scuCargoBoxSplits,
     scuBoxSplitsCertainty,
+    scuCargoBoxSplitsCertainty,
     scuTotalCertainty,
   });
   const db = getDb();
