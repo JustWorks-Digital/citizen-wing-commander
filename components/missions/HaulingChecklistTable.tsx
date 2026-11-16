@@ -360,7 +360,7 @@ function CondensedRowTrailing({
 }) {
   const titleText =
     hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
-  const stackBadgesOnMobile = routeAction === "both";
+  const stackBadgesOnMobile = routeAction === "pickup_delivery";
   return (
     <div className="grid w-[11.25rem] shrink-0 grid-cols-[minmax(3.75rem,1fr)_2.75rem_3.5rem] items-center gap-x-1.5 md:w-[18.75rem] md:grid-cols-[minmax(0,1fr)_3.5rem_4.75rem] md:gap-x-2.5">
       <div

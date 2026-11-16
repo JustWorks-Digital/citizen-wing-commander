@@ -37,7 +37,7 @@ describe("peak stop on a trip", () => {
       },
       {
         id: "leg-everus",
-        routeAction: "both" as const,
+        routeAction: "pickup_delivery" as const,
         locationSlug: "everus-harbor",
         cargoDeliveries: [
           {

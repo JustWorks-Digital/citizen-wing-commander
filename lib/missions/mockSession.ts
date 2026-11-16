@@ -100,7 +100,7 @@ export const mockSessionChecklist: SessionChecklist = {
     },
     {
       id: "leg-3",
-      routeAction: "both",
+      routeAction: "pickup_delivery",
       locationSlug: "orison",
       cargoDeliveries: [
         {

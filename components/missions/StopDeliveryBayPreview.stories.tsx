@@ -20,7 +20,7 @@ const pickupRow =
 
 const bothRow: HaulingChecklistRow = {
   id: "leg-both",
-  routeAction: "both",
+  routeAction: "pickup_delivery",
   locationSlug: "orison",
   shipStorageLocation: "front",
   distanceToNext: null,

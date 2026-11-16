@@ -469,7 +469,7 @@ describe("setMissionScuBoxSplits restamp", () => {
         }),
         makeStop({
           id: "leg-everus",
-          routeAction: "both",
+          routeAction: "pickup_delivery",
           locationSlug: "everus-harbor",
           cargo: [
             cargo("pressurized-ice", 32, {

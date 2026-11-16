@@ -39,7 +39,7 @@ describe("trip plan cargo validation", () => {
     const rows = [
       makeStop({
         id: "leg-1",
-        routeAction: "both",
+        routeAction: "pickup_delivery",
         locationSlug: "covalex-distribution-centre-s4dc05",
         cargo: [
           cargo("scrap", 10, { role: "delivery", missionId: "back" }),
@@ -48,7 +48,7 @@ describe("trip plan cargo validation", () => {
       }),
       makeStop({
         id: "leg-2",
-        routeAction: "both",
+        routeAction: "pickup_delivery",
         locationSlug: "shubin-mining-facility-sm0-10",
         cargo: [
           cargo("hydrogen-fuel", 20, { role: "delivery", missionId: "out" }),

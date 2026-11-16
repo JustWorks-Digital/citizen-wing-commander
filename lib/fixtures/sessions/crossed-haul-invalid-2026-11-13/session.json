@@ -2673,7 +2673,7 @@
     {
       "id": "leg-1",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "covalex-distribution-centre-s4dc05",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -2829,7 +2829,7 @@
     {
       "id": "leg-2",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "shubin-mining-facility-sm0-10",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -2971,7 +2971,7 @@
     {
       "id": "leg-3",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "shubin-mining-facility-sm0-13",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -3115,7 +3115,7 @@
     {
       "id": "leg-4",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "shubin-mining-facility-sm0-18",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -3215,7 +3215,7 @@
     {
       "id": "leg-5",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "shubin-mining-facility-sm0-22",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -3435,7 +3435,7 @@
     {
       "id": "leg-10",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "everus-harbor",
       "distanceToNext": null,
       "cargoDeliveries": [
@@ -3577,7 +3577,7 @@
     {
       "id": "leg-11",
       "isCompleted": false,
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "hdpc-farnesway",
       "distanceToNext": null,
       "cargoDeliveries": [

@@ -36,7 +36,7 @@ export type SessionStopsTimelineModalProps = {
 function routeActionLabel(kind: RouteAction | null): string | null {
   if (kind === "pickup") return "Pickup";
   if (kind === "delivery") return "Delivery";
-  if (kind === "both") return "Pickup · Delivery";
+  if (kind === "pickup_delivery") return "Pickup · Delivery";
   return null;
 }
 

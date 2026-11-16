@@ -189,7 +189,7 @@ export function pruneMissionCargoFromRows(
     }
     const routeAction: RouteAction =
       hasPickup && hasDelivery
-        ? "both"
+        ? "pickup_delivery"
         : hasPickup
           ? "pickup"
           : hasDelivery

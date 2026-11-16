@@ -59,7 +59,7 @@ function crossedHaulSession(): SessionChecklist {
     }),
     makeStop({
       id: "leg-2",
-      routeAction: "both",
+      routeAction: "pickup_delivery",
       locationSlug: "shubin-mining-facility-sm0-10",
       cargo: [
         cargo("hydrogen-fuel", 8, { role: "delivery", missionId: "out" }),

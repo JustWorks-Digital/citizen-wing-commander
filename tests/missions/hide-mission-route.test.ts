@@ -59,7 +59,7 @@ function crossedHaulSession(): SessionChecklist {
     }),
     makeStop({
       id: "leg-2",
-      routeAction: "both",
+      routeAction: "pickup_delivery",
       locationSlug: "shubin-mining-facility-sm0-10",
       cargo: [
         cargo("hydrogen-fuel", 8, { role: "delivery", missionId: "out" }),
@@ -186,7 +186,7 @@ describe("setMissionHiddenAndRebuildRoute", () => {
       rows: [
         makeStop({
           id: "leg-1",
-          routeAction: "both",
+          routeAction: "pickup_delivery",
           locationSlug: "covalex-distribution-centre-s4dc05",
           cargo: [
             cargo("scrap", 6, { role: "delivery", missionId: "back" }),
@@ -195,7 +195,7 @@ describe("setMissionHiddenAndRebuildRoute", () => {
         }),
         makeStop({
           id: "leg-2",
-          routeAction: "both",
+          routeAction: "pickup_delivery",
           locationSlug: "shubin-mining-facility-sm0-10",
           cargo: [
             cargo("hydrogen-fuel", 8, { role: "delivery", missionId: "out" }),

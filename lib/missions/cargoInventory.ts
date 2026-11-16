@@ -12,7 +12,7 @@ function applyCargoToOnboard(
   for (const row of rows) {
     if (options?.stopAfterIncomplete && !row.isCompleted) break;
     if (row.routeAction === "quantum") continue;
-    const fallback = row.routeAction === "both" ? null : row.routeAction;
+    const fallback = row.routeAction === "pickup_delivery" ? null : row.routeAction;
     for (const cargo of row.cargoDeliveries) {
       const role = cargo.role ?? fallback;
       if (role === "pickup") current += cargo.scu;
@@ -89,7 +89,7 @@ export const cargoInventory = {
       let pickupAmount = 0;
       let deliveryAmount = 0;
       if (row.routeAction !== "quantum") {
-        const fallback = row.routeAction === "both" ? null : row.routeAction;
+        const fallback = row.routeAction === "pickup_delivery" ? null : row.routeAction;
         for (const cargo of row.cargoDeliveries) {
           const role = cargo.role ?? fallback;
           if (role !== "pickup" && role !== "delivery") continue;
@@ -189,7 +189,7 @@ export const cargoInventory = {
     row: HaulingChecklistRow | null | undefined,
   ): StopTransferCommodityScu[] {
     if (!row || row.routeAction === "quantum") return [];
-    const fallback = row.routeAction === "both" ? null : row.routeAction;
+    const fallback = row.routeAction === "pickup_delivery" ? null : row.routeAction;
     const byKey = new Map<string, StopTransferCommodityScu>();
     for (const cargo of row.cargoDeliveries) {
       const role = cargo.role ?? fallback;
@@ -248,7 +248,7 @@ export const cargoInventory = {
 
     let pickupTotal = 0;
     for (const row of rows) {
-      const fallback = row.routeAction === "both" ? null : row.routeAction;
+      const fallback = row.routeAction === "pickup_delivery" ? null : row.routeAction;
       for (const cargo of row.cargoDeliveries) {
         const role = cargo.role ?? fallback;
         if (role === "pickup") pickupTotal += cargo.scu;

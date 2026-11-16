@@ -319,7 +319,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
         error: `Unknown commodity: ${line.commodity}`,
       };
     }
-    if (leg.routeAction === "both" && !line.role) {
+    if (leg.routeAction === "pickup_delivery" && !line.role) {
       return {
         ok: false as const,
         error: `Cargo lines on both stops need role pickup or delivery (${line.commodity})`,
@@ -338,7 +338,7 @@ export function resolveIncomingLeg(leg: IncomingLeg, index: number) {
         };
       }
       lineStorage = resolvedLineStorage;
-    } else if (leg.routeAction === "both") {
+    } else if (leg.routeAction === "pickup_delivery") {
       return {
         ok: false as const,
         error: `Cargo lines on both stops need shipStorageLocation (${line.commodity})`,

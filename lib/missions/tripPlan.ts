@@ -496,7 +496,7 @@ export function checklistRowsFromTripPlan(
     const hasP = stop.pickups.length > 0;
     const hasD = stop.deliveries.length > 0;
     const routeAction =
-      hasP && hasD ? "both" : hasP ? "pickup" : "delivery";
+      hasP && hasD ? "pickup_delivery" : hasP ? "pickup" : "delivery";
     // Delivery before pickup (unload then load) for transfer ledger / UI.
     const cargoDeliveries = [
       ...coalesceCargoLines(stop.deliveries).map((line) => ({

@@ -46,7 +46,7 @@
     },
     {
       "id": "leg-4",
-      "routeAction": "both",
+      "routeAction": "pickup_delivery",
       "locationSlug": "everus-harbor",
       "cargoDeliveries": [
         { "commoditySlug": "iron-ore", "scu": 89, "role": "delivery", "shipStorageLocation": "middle" },

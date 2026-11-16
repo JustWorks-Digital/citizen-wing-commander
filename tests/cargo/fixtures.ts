@@ -64,7 +64,7 @@ const stopFixtures = {
     }),
     makeStop({
       id: "stop-2",
-      routeAction: "both",
+      routeAction: "pickup_delivery",
       locationSlug: "orison",
       cargo: [
         cargo("pressurized-ice", 10, {
@@ -120,7 +120,7 @@ const stopFixtures = {
     }),
     makeStop({
       id: "stop-2",
-      routeAction: "both",
+      routeAction: "pickup_delivery",
       locationSlug: "orison",
       cargo: [
         cargo("scrap", 24, {

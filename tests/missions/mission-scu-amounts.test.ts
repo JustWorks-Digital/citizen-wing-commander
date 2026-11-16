@@ -332,7 +332,7 @@ function partialMultiDropSession(): SessionChecklist {
       }),
       makeStop({
         id: "leg-2",
-        routeAction: "both",
+        routeAction: "pickup_delivery",
         locationSlug: "shubin-mining-facility-sm0-10",
         cargo: [
           cargo("stims", 2, { role: "delivery", missionId: "other" }),
@@ -340,7 +340,7 @@ function partialMultiDropSession(): SessionChecklist {
       }),
       makeStop({
         id: "leg-5",
-        routeAction: "both",
+        routeAction: "pickup_delivery",
         locationSlug: "shubin-mining-facility-sm0-22",
         cargo: [
           cargo("quantum-fuel", 8, {

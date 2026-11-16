@@ -95,7 +95,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | `Mission` | `Job`, `Quest`, `Task` (task = checklist step) |
 | `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |
 | `route checklist` (stacked stop cards; code `HaulingChecklistTable`; sticky bar is the checklist toolbar) | contracts table, missions table, jobs list |
-| `routeAction` (`pickup` / `delivery` / `both` / `quantum`) | `legKind`, `stopKind`, `LegKind` (temporary read/MCP aliases — remove after migrate) |
+| `routeAction` (`pickup` / `delivery` / `pickup_delivery` / `quantum`) | `legKind`, `stopKind`, `LegKind`; `both` (temporary alias → `pickup_delivery` — remove after migrate) |
 | `cargoInventory.transferLedgerByStop` / `StopTransferLedger` / `ScuTransfer` (`pickup` / `delivery` as `ScuTransfer \| false`; see [`optional-transfers.mdc`](./optional-transfers.mdc), [`helper-namespaces.mdc`](./helper-namespaces.mdc)) | “inventory” / `CargoBayStopInventory` / `onboardReceipt` for transfer amounts; zero stubs / `null` for idle |
 | `cargoBay.packAtStop(stopId, …)` / `packSuggestedAtStop` / `packByCargoTypeAtStop` / `packDeliveriesFromStop` (entity id first; no `Id` on the method name) | id-last pack args, `packDeliveriesFromStopId`, `plan*Occupancy*`, “mission location” packing jargon |
 | aboard cargo / `aboardCargo` (still on the ship from earlier stops) | stay cargo, `stayCargo` |

@@ -1203,7 +1203,7 @@ export async function toolSetMissionScuBoxSplits(input: {
               cargo.missionId === missionId &&
               (cargo.role === "pickup" ||
                 row.routeAction === "pickup" ||
-                row.routeAction === "both"),
+                row.routeAction === "pickup_delivery"),
           )
           .map((cargo) => ({
             locationSlug: row.locationSlug,

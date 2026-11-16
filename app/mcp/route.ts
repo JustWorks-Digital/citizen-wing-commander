@@ -74,12 +74,12 @@ const cargoLineSchema = z.object({
     .enum(["pickup", "delivery"])
     .optional()
     .describe(
-      "Required when routeAction is both: whether this cargo line is picked up or delivered at the stop.",
+      "Required when routeAction is pickup_delivery: whether this cargo line is picked up or delivered at the stop.",
     ),
   shipStorageLocation: shipStorageSchema
     .optional()
     .describe(
-      "Bay zone for this cargo line. Required when routeAction is both and pickup/delivery use different zones; otherwise falls back to the stop shipStorageLocation.",
+      "Bay zone for this cargo line. Required when routeAction is pickup_delivery and pickup/delivery use different zones; otherwise falls back to the stop shipStorageLocation.",
     ),
 });
 
@@ -95,19 +95,24 @@ const legSchema = z.preprocess(
       return value;
     }
     const row = value as Record<string, unknown>;
+    let next = { ...row };
     // @deprecated Prefer routeAction — temporary alias for old clients.
-    if (row.routeAction == null && typeof row.legKind === "string") {
-      const { legKind, ...rest } = row;
-      return { ...rest, routeAction: legKind };
+    if (next.routeAction == null && typeof next.legKind === "string") {
+      const { legKind, ...rest } = next;
+      next = { ...rest, routeAction: legKind };
     }
-    return value;
+    // @deprecated Prefer pickup_delivery — temporary alias for old clients.
+    if (next.routeAction === "both") {
+      next = { ...next, routeAction: "pickup_delivery" };
+    }
+    return next;
   },
   z.object({
     id: z.string().optional().describe("Stable row id; auto-generated if omitted"),
     routeAction: z
-      .enum(["pickup", "delivery", "both", "quantum"])
+      .enum(["pickup", "delivery", "pickup_delivery", "quantum"])
       .describe(
-        "What this checklist row does on the route (pickup / delivery / both / quantum). Deprecated alias: legKind (will be removed).",
+        "What this checklist row does on the route (pickup / delivery / pickup_delivery / quantum). Deprecated aliases: legKind; both→pickup_delivery.",
       ),
     location: z
       .string()

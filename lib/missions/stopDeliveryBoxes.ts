@@ -69,7 +69,7 @@ function matchesCargoRole(
   // Unlabeled: pickup-only legs → pickup; delivery or both → delivery.
   // On `both`, pickup lines must set role explicitly.
   if (role === "pickup") return row.routeAction === "pickup";
-  return row.routeAction === "delivery" || row.routeAction === "both";
+  return row.routeAction === "delivery" || row.routeAction === "pickup_delivery";
 }
 
 function groupKey(

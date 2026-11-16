@@ -27,7 +27,7 @@ export type CargoDelivery = {
   commoditySlug: string;
   scu: number;
   /**
-   * For `routeAction: "both"` stops, mark each line as pickup or delivery.
+   * For `routeAction: "pickup_delivery"` stops, mark each line as pickup or delivery.
    * Optional on pure pickup/delivery stops.
    */
   role?: "pickup" | "delivery";
@@ -57,9 +57,28 @@ export type CargoDelivery = {
 
 /**
  * What this checklist row does on the route:
- * pickup / delivery / both at a location, or quantum travel.
+ * pickup / delivery / pickup_delivery at a location, or quantum travel.
  */
-export type RouteAction = "pickup" | "delivery" | "both" | "quantum";
+export type RouteAction = "pickup" | "delivery" | "pickup_delivery" | "quantum";
+
+const ROUTE_ACTIONS = new Set<RouteAction>([
+  "pickup",
+  "delivery",
+  "pickup_delivery",
+  "quantum",
+]);
+
+/**
+ * Coerce stored / MCP routeAction (and deprecated aliases) to the live union.
+ * Still maps deprecated `"both"` → `"pickup_delivery"` — remove once JSON is migrated.
+ */
+export function normalizeRouteAction(raw: unknown): RouteAction {
+  if (raw === "both") return "pickup_delivery";
+  if (typeof raw === "string" && ROUTE_ACTIONS.has(raw as RouteAction)) {
+    return raw as RouteAction;
+  }
+  return "pickup";
+}
 
 /**
  * Cargo bay zone on the ship (front / mid / aft).
@@ -265,7 +284,7 @@ export function describeShipStorageLines(
       role,
       location,
       label:
-        role && row.routeAction === "both"
+        role && row.routeAction === "pickup_delivery"
           ? `${role === "pickup" ? "Pickup" : "Delivery"} · ${zone}`
           : zone,
     });
@@ -285,31 +304,24 @@ export function describeShipStorageLines(
   return lines;
 }
 
-const ROUTE_ACTIONS = new Set<RouteAction>([
-  "pickup",
-  "delivery",
-  "both",
-  "quantum",
-]);
-
 /**
  * Normalize one checklist row for load.
  *
- * Still maps deprecated `legKind` → `routeAction`. Remove that branch (and
- * MCP preprocess in `app/mcp/route.ts`) once all `delivery_sessions`
- * checklist JSON uses `routeAction` only.
+ * Still maps deprecated `legKind` → `routeAction` and `"both"` →
+ * `"pickup_delivery"`. Remove those branches (and MCP preprocess) once stored
+ * JSON / clients only use the live `routeAction` values.
  */
 function normalizeChecklistRow(raw: unknown): HaulingChecklistRow {
   const row = (raw ?? {}) as Record<string, unknown>;
   /** @deprecated Prefer `routeAction` — temporary load-time alias. */
   const legacy = row.legKind;
-  const next = row.routeAction;
-  const routeAction =
-    typeof next === "string" && ROUTE_ACTIONS.has(next as RouteAction)
-      ? (next as RouteAction)
-      : typeof legacy === "string" && ROUTE_ACTIONS.has(legacy as RouteAction)
-        ? (legacy as RouteAction)
-        : "pickup";
+  const routeAction = normalizeRouteAction(
+    typeof row.routeAction === "string"
+      ? row.routeAction
+      : typeof legacy === "string"
+        ? legacy
+        : null,
+  );
   const { legKind: _legacy, ...rest } = row;
   return {
     ...(rest as Omit<HaulingChecklistRow, "routeAction">),

@@ -156,7 +156,7 @@ function rowCargoForRole(
   role: "pickup" | "delivery",
 ): CargoDelivery[] {
   if (row.routeAction === role) return row.cargoDeliveries;
-  if (row.routeAction === "both") {
+  if (row.routeAction === "pickup_delivery") {
     return row.cargoDeliveries.filter(
       (cargo) => cargo.role === role || cargo.role == null,
     );
@@ -371,25 +371,25 @@ export function isMissionLocationCompleted(
           locationMatchesRow(loc, row.locationSlug),
         )
       ) {
-        return row.routeAction === "pickup" || row.routeAction === "both";
+        return row.routeAction === "pickup" || row.routeAction === "pickup_delivery";
       }
       return Boolean(
         mission.scuSplits?.some((split) =>
           locationMatchesRow(split.fromLocationSlug, row.locationSlug),
         ) &&
-          (row.routeAction === "pickup" || row.routeAction === "both"),
+          (row.routeAction === "pickup" || row.routeAction === "pickup_delivery"),
       );
     }
     if (
       mission.to.some((loc) => locationMatchesRow(loc, row.locationSlug))
     ) {
-      return row.routeAction === "delivery" || row.routeAction === "both";
+      return row.routeAction === "delivery" || row.routeAction === "pickup_delivery";
     }
     return Boolean(
       mission.scuSplits?.some((split) =>
         locationMatchesRow(split.toLocationSlug, row.locationSlug),
       ) &&
-        (row.routeAction === "delivery" || row.routeAction === "both"),
+        (row.routeAction === "delivery" || row.routeAction === "pickup_delivery"),
     );
   });
 
