@@ -90,6 +90,7 @@ Folders for features: short **plural domain** names when grouping (`components/u
 | --- | --- |
 | `Session` | `Room`, `Lobby`, `Game` |
 | `SessionChecklist` (`lib/missions/sessionChecklist.ts`; fixture in `mockSession.ts`) | `SessionChecklistModel`, types/helpers living in `mockSession` |
+| `MissionLocationScuLine` / `missionLocationScu.locationLines` (per-location Collect/Deliver SCU) | `MissionStationScuLine`, `stationLines` |
 | `Player` | `User` (until auth exists), `Member` alone |
 | `Mission` | `Job`, `Quest`, `Task` (task = checklist step) |
 | `ChecklistItem` / `itemKey` | `Todo`, `StepId` without context |

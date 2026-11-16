@@ -93,8 +93,8 @@ describe("missionScuAmounts", () => {
     expect(result.session.rows[1]!.cargoDeliveries[0]!.scu).toBe(40);
   });
 
-  it("updates a deliver station and keeps pickup aligned", () => {
-    const result = missionScuAmounts.setStationAmount(sessionFixture(), "ice", {
+  it("updates a deliver location and keeps pickup aligned", () => {
+    const result = missionScuAmounts.setLocationAmount(sessionFixture(), "ice", {
       role: "delivery",
       locationKey: "Everus Harbor",
       commoditySlug: "pressurized-ice",
@@ -109,9 +109,9 @@ describe("missionScuAmounts", () => {
     expect(result.session.rows[0]!.cargoDeliveries[0]!.scu).toBe(24);
   });
 
-  it("lists collect and deliver station lines", () => {
+  it("lists collect and deliver location lines", () => {
     const session = sessionFixture();
-    const lines = missionScuAmounts.stationLines(
+    const lines = missionScuAmounts.locationLines(
       session.missions![0]!,
       session.rows,
     );
@@ -150,7 +150,7 @@ describe("missionScuAmounts", () => {
     expect(missionScuAmounts.validateDraft(draft)).toEqual({ ok: true });
   });
 
-  it("rebalances unlocked delivery stops after a player override", () => {
+  it("rebalances unlocked delivery locations after a player override", () => {
     const session = multiDeliverySession();
     let draft = missionScuAmounts.draftFromMission(
       session.missions![0]!,
@@ -231,7 +231,7 @@ describe("missionScuAmounts", () => {
     expect(mission?.scuSplits?.[1]?.isUserCorrected).toBeFalsy();
   });
 
-  it("rejects a draft when delivery stops do not sum to the commodity total", () => {
+  it("rejects a draft when delivery locations do not sum to the commodity total", () => {
     const session = multiDeliverySession();
     const draft = missionScuAmounts.draftFromMission(
       session.missions![0]!,
@@ -241,13 +241,15 @@ describe("missionScuAmounts", () => {
     const check = missionScuAmounts.validateDraft(draft);
     expect(check.ok).toBe(false);
     if (check.ok) return;
-    expect(check.error).toMatch(/delivery stops total 16 SCU but mission total is 11 SCU/);
+    expect(check.error).toMatch(
+      /delivery locations total 16 SCU but mission total is 11 SCU/,
+    );
 
     const applied = missionScuAmounts.applyDraft(session, "food", draft);
     expect(applied.ok).toBe(false);
   });
 
-  it("applies a balanced draft to mission cargo and delivery stops", () => {
+  it("applies a balanced draft to mission cargo and delivery locations", () => {
     const session = multiDeliverySession();
     const draft = missionScuAmounts.draftFromMission(
       session.missions![0]!,
