@@ -8,7 +8,11 @@ export const CARGO_BOX_SCU = [32, 16, 8, 4, 2, 1] as const;
 
 export type CargoBoxScu = (typeof CARGO_BOX_SCU)[number];
 
-/** Default largest crate when no contract max is set (legacy hauling mix). */
+/**
+ * Default largest crate when no contract max is set.
+ * @deprecated Prefer an explicit per-mission / catalog `scuMaxContainerSize`
+ * (or intake max). Hard-coded 8 SCU is a legacy hauling assumption.
+ */
 export const DEFAULT_MAX_CARGO_BOX_SCU: CargoBoxScu = 8;
 
 /** Axis-aligned box size in 1 SCU cells (X length, Y width, Z height). */

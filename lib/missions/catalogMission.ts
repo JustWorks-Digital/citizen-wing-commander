@@ -67,7 +67,8 @@ export type ScuSplit = CatalogMissionScuSplit;
 
 /**
  * Total SCU keyed by location slug for pickups (`from`) and deliveries (`to`).
- * Sibling of `scuSplits` — usually derived by summing split lines.
+ * Sibling of `scuSplits` — derived by summing split lines for query/UI.
+ * Prefer editing `scuSplits`; do not invent mission quantities from this alone.
  */
 export type ScuLocationSplits = {
   from: Record<string, number>;
@@ -126,6 +127,8 @@ export type HaulingCatalogMissionPayload = {
   /**
    * SCU totals per location: `{ from: { slug: scu }, to: { slug: scu } }`.
    * Also denormalized on `catalog_missions.scu_location_splits`.
+   * Derived from `scuSplits` for query/UI — do not treat as the edit source
+   * of truth (prefer `scuSplits`).
    */
   scuLocationSplits?: ScuLocationSplits;
   /**
@@ -146,7 +149,8 @@ export type HaulingCatalogMissionPayload = {
   scuMaxContainerSize?: number | null;
   /**
    * Aggregate crate-size counts for the contract total (1/2/4/8/16/32 SCU).
-   * Prefer `scuCargoBoxSplits` when cargo has multiple commodities.
+   * Catalog column / rollup — for multi-commodity prefer
+   * `scuCargoBoxSplits` (per-slug) and derive this aggregate at write/sync.
    */
   scuBoxSplits: ScuBoxSplits;
   /**
@@ -190,14 +194,24 @@ export function emptyScuBoxSplits(): ScuBoxSplits {
 /** @deprecated Prefer `emptyScuBoxSplits` */
 export const emptyBoxBreakdown = emptyScuBoxSplits;
 
-/** Accept current keys or legacy `size1`/`size2`/`size4`/`size8`. */
+/**
+ * Accept current `scuOne`… keys.
+ * Also reads deprecated `size1`/`size2`/`size4`/`size8`/`size16`/`size32` —
+ * drop those aliases once no callers/fixtures emit them.
+ */
 export function normalizeScuBoxSplits(
   raw: Partial<ScuBoxSplits> & {
+    /** @deprecated Prefer `scuOne`. */
     size1?: number;
+    /** @deprecated Prefer `scuTwo`. */
     size2?: number;
+    /** @deprecated Prefer `scuFour`. */
     size4?: number;
+    /** @deprecated Prefer `scuEight`. */
     size8?: number;
+    /** @deprecated Prefer `scuSixteen`. */
     size16?: number;
+    /** @deprecated Prefer `scuThirtyTwo`. */
     size32?: number;
   } | null | undefined,
 ): ScuBoxSplits {
@@ -338,6 +352,29 @@ export function normalizeCatalogRewards(
 ): CatalogMissionReward[] {
   if (rewards && rewards.length > 0) return rewards;
   return rewardsFromAuec(rewardAuec);
+}
+
+/** Human label for payout lines (aUEC + blueprint names). */
+export function formatRewardsLabel(
+  rewards: CatalogMissionReward[] | null | undefined,
+  options?: { includeAuecUnit?: boolean },
+): string {
+  if (!rewards?.length) return "—";
+  const parts: string[] = [];
+  for (const reward of rewards) {
+    if (reward.kind === "auec") {
+      if (reward.amount <= 0) continue;
+      parts.push(
+        formatAuecAmount(reward.amount, {
+          includeUnit: options?.includeAuecUnit,
+        }),
+      );
+      continue;
+    }
+    const name = reward.name?.trim();
+    if (name) parts.push(name);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 /** Aggregate commodity totals from SCU splits. */

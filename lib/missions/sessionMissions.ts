@@ -1,5 +1,10 @@
 import {
+  auecFromRewards,
   formatAuecAmount,
+  formatRewardsLabel,
+  normalizeCatalogRewards,
+  rewardsFromAuec,
+  type CatalogMissionReward,
   type ScuBoxSplits,
   type ScuSplit,
 } from "@/lib/missions/catalogMission";
@@ -33,7 +38,20 @@ export type SessionMission = {
    */
   rank?: MissionRank | null;
   contractor: string;
+  /**
+   * Payout lines — same shape as catalog `rewards` (aUEC + blueprint).
+   * Source of truth; `rewardAuec` / `rewardDisplay` stay in sync via normalize.
+   */
+  rewards?: CatalogMissionReward[];
+  /**
+   * @deprecated Prefer `rewards` / `auecFromRewards(mission.rewards)`.
+   * Sum of aUEC lines — kept for legacy session JSON + dense UI; synced on normalize.
+   */
   rewardAuec: number;
+  /**
+   * @deprecated Prefer `formatRewardsLabel(mission.rewards)` / `missionRewardLabel`.
+   * Display string synced from `rewards` on normalize.
+   */
   rewardDisplay?: string;
   from: string[];
   to: string[];
@@ -44,6 +62,10 @@ export type SessionMission = {
    * Drives Collect / Deliver objectives and Mission SCU edits.
    */
   scuSplits?: ScuSplit[];
+  /**
+   * @deprecated Prefer catalog-aligned `scuMaxContainerSize` naming when
+   * rewriting session JSON; still the live session field today.
+   */
   maxContainerScu?: number;
   /**
    * Selected crate mix per commodity slug (source of truth for restamp).
@@ -157,12 +179,45 @@ export function normalizeSessionMissionRankFields(
   };
 }
 
-/** Rank + legacy `deliverySplits` → `scuSplits` (checklist load). */
+/**
+ * Prefer `rewards[]`; hydrate from `rewardAuec` when missing; keep aUEC
+ * display fields aligned.
+ */
+export function normalizeSessionMissionRewards(
+  mission: SessionMission,
+): SessionMission {
+  const rewards = normalizeCatalogRewards(mission.rewards, mission.rewardAuec);
+  const rewardAuec = auecFromRewards(rewards);
+  const rewardDisplay =
+    rewards.length > 0
+      ? formatRewardsLabel(rewards)
+      : mission.rewardDisplay?.trim() ||
+        (rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined);
+  const sameRewards =
+    JSON.stringify(mission.rewards ?? []) === JSON.stringify(rewards);
+  if (
+    sameRewards &&
+    rewardAuec === mission.rewardAuec &&
+    rewardDisplay === mission.rewardDisplay
+  ) {
+    return mission;
+  }
+  return {
+    ...mission,
+    rewards,
+    rewardAuec,
+    rewardDisplay: rewardDisplay === "—" ? undefined : rewardDisplay,
+  };
+}
+
+/** Rank + rewards + legacy `deliverySplits` → `scuSplits` (checklist load). */
 export function normalizeSessionMission(
   mission: SessionMission,
 ): SessionMission {
   return normalizeSessionMissionScuSplits(
-    normalizeSessionMissionRankFields(mission),
+    normalizeSessionMissionRewards(
+      normalizeSessionMissionRankFields(mission),
+    ),
   );
 }
 
@@ -176,16 +231,17 @@ export function sessionMissionFromIntakeContract(
   const rank =
     normalizeMissionRank(contract.rank) ?? stripped.rank;
   const title = stripped.title || contract.title;
-  const base = {
+  const rewardAuec = contract.rewardAuec ?? 0;
+  const rewards = rewardsFromAuec(rewardAuec);
+  const base: SessionMission = {
     id,
     title,
     rank,
     contractor: contract.contractor ?? "Unknown contractor",
-    rewardAuec: contract.rewardAuec ?? 0,
+    rewards,
+    rewardAuec,
     rewardDisplay:
-      contract.rewardAuec != null
-        ? formatAuecAmount(contract.rewardAuec)
-        : undefined,
+      rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined,
     from: [...contract.from],
     to: [...contract.to],
     cargo: contract.cargo.map((line) => ({ ...line })),
@@ -206,7 +262,7 @@ export function sessionMissionFromIntakeContract(
     mobiglas: mobiglas ?? synthesizeMobiglas({ ...contract, title }),
   };
   if (mobiglas) {
-    return normalizeSessionMissionRankFields({
+    return normalizeSessionMission({
       ...base,
       mobiglas: {
         ...mobiglas,
@@ -214,13 +270,13 @@ export function sessionMissionFromIntakeContract(
       },
     });
   }
-  return base;
+  return normalizeSessionMission(base);
 }
 
 export function intakeContractFromSessionMission(
   mission: SessionMission,
 ): HaulingIntakeContract {
-  const normalized = normalizeSessionMissionRankFields(mission);
+  const normalized = normalizeSessionMission(mission);
   return {
     id: normalized.id,
     title: normalized.title,

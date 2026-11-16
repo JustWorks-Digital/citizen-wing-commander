@@ -17,6 +17,7 @@ export const mockSessionChecklist: SessionChecklist = {
       title: "Direct Medium Cargo Haul",
       rank: "Junior",
       contractor: "Covalex Independent Contractors",
+      rewards: [{ kind: "auec", amount: 80000 }],
       rewardAuec: 80000,
       rewardDisplay: "80,000 aUEC",
       from: ["Area18"],

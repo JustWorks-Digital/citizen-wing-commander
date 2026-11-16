@@ -83,13 +83,19 @@ const cargoLineSchema = z.object({
     ),
 });
 
-// TODO: remove legKind preprocess once MCP clients send routeAction only.
+/**
+ * Checklist stop schema for MCP replace/apply tools.
+ *
+ * Still accepts deprecated `legKind` via preprocess. Remove that alias once
+ * MCP clients send `routeAction` only (pair with `normalizeChecklistRow`).
+ */
 const legSchema = z.preprocess(
   (value) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return value;
     }
     const row = value as Record<string, unknown>;
+    // @deprecated Prefer routeAction — temporary alias for old clients.
     if (row.routeAction == null && typeof row.legKind === "string") {
       const { legKind, ...rest } = row;
       return { ...rest, routeAction: legKind };
@@ -101,7 +107,7 @@ const legSchema = z.preprocess(
     routeAction: z
       .enum(["pickup", "delivery", "both", "quantum"])
       .describe(
-        "What this checklist row does on the route (pickup / delivery / both / quantum). Legacy alias: legKind.",
+        "What this checklist row does on the route (pickup / delivery / both / quantum). Deprecated alias: legKind (will be removed).",
       ),
     location: z
       .string()

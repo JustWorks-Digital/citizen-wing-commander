@@ -195,7 +195,8 @@ export const cargoBoxSplits = {
       (line) => mission.scuCargoBoxSplitsAutoSelected?.[line.commoditySlug],
     );
 
-    // Legacy: only mission-level mix, single cargo → copy into that slug.
+    // @deprecated mission-level scuBoxSplits hydrate — single cargo only.
+    // Remove once sessions always store scuCargoBoxSplits.
     if (
       !hasAnySelected &&
       !hasAnyAutoMap &&
@@ -209,7 +210,7 @@ export const cargoBoxSplits = {
       }
     }
 
-    // Fill missing selected from auto (multi-cargo legacy mission-level is ignored).
+    // Fill missing selected from auto (mission-level aggregate ignored for multi-cargo).
     for (const line of lines) {
       if (!selected[line.commoditySlug]) {
         selected[line.commoditySlug] = auto[line.commoditySlug]!;

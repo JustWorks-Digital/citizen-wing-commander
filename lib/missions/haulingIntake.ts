@@ -20,6 +20,10 @@ export type HaulingIntakeContract = {
    */
   rank?: string | null;
   contractor?: string;
+  /**
+   * @deprecated Prefer `rewards: [{ kind: "auec", amount }]` once intake
+   * emits catalog-shaped payouts; still accepted and mapped on session build.
+   */
   rewardAuec?: number;
   /** Pickup locations (multi-stop contracts list every site). */
   from: string[];
@@ -29,7 +33,10 @@ export type HaulingIntakeContract = {
   /**
    * Max crate size from contract Details (e.g. “Containers at most 8 SCU”).
    * Record whenever visible — drives default box splits / bay packing.
-   * Allowed sizes: 1 / 2 / 4 / 8 / 16 / 32. Catalog field: `scuMaxContainerSize`.
+   * Allowed sizes: 1 / 2 / 4 / 8 / 16 / 32.
+   *
+   * @deprecated Prefer catalog field name `scuMaxContainerSize` in new intake
+   * JSON when we add it; this key remains the intake contract field today.
    */
   maxContainerScu?: number;
   /**

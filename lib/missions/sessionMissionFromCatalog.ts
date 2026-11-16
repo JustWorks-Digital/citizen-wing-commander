@@ -2,6 +2,8 @@ import type { CatalogMission } from "@/db/schema";
 import {
   auecFromRewards,
   formatAuecAmount,
+  formatRewardsLabel,
+  normalizeCatalogRewards,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
@@ -36,7 +38,16 @@ export function sessionMissionFromCatalog(
   }
   const payload = catalog.payload;
   const extras = payload.extras ?? {};
-  const rewardAuec = auecFromRewards(catalog.rewards?.length ? catalog.rewards : payload.rewards);
+  const rewards = normalizeCatalogRewards(
+    catalog.rewards?.length ? catalog.rewards : payload.rewards,
+  );
+  const rewardAuec = auecFromRewards(rewards);
+  const rewardDisplay =
+    rewards.length > 0
+      ? formatRewardsLabel(rewards)
+      : rewardAuec > 0
+        ? formatAuecAmount(rewardAuec)
+        : undefined;
   const contractor = catalog.contractorSlug
     ? (getContractorBySlug(catalog.contractorSlug)?.name ??
       catalog.contractorSlug)
@@ -87,8 +98,9 @@ export function sessionMissionFromCatalog(
     title: catalog.title || payload.title,
     rank,
     contractor,
+    rewards,
     rewardAuec,
-    rewardDisplay: rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined,
+    rewardDisplay: rewardDisplay === "—" ? undefined : rewardDisplay,
     from,
     to,
     cargo,
@@ -110,7 +122,12 @@ export function sessionMissionFromCatalog(
       title: catalog.title || payload.title,
       contractor,
       rewardAuec,
-      rewardDisplay: rewardAuec > 0 ? formatAuecAmount(rewardAuec) : undefined,
+      rewardDisplay:
+        rewardDisplay && rewardDisplay !== "—"
+          ? rewardDisplay
+          : rewardAuec > 0
+            ? formatAuecAmount(rewardAuec)
+            : undefined,
       timeRemaining: null,
       deadline: null,
       details: `Haul ${cargoSummary} from ${from.join(", ")} to ${to.join(", ")}.${

@@ -11,6 +11,7 @@ import {
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
 
+/** UI option for crate-mix pickers (`breakdown` = `ScuBoxSplits`). */
 export type BoxBreakdownOption = {
   id: string;
   breakdown: ScuBoxSplits;
@@ -90,7 +91,8 @@ export function formatBreakdownLabel(breakdown: ScuBoxSplits): string {
 
 /**
  * Ways to fill `scu` with crates of size ≤ maxContainer (from allowed set).
- * Without a max, stays at the legacy 8 SCU cap. Sorted fewest crates first;
+ * Without a max, uses deprecated `DEFAULT_MAX_CARGO_BOX_SCU` (8). Prefer
+ * passing an explicit contract/catalog max. Sorted fewest crates first;
  * capped for UI. Stops once enough options are found (largest-first DFS).
  */
 export function enumerateBoxBreakdowns(

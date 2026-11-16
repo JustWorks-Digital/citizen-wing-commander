@@ -11,7 +11,10 @@ import {
   resolveLocationSlug,
 } from "@/lib/sessions/resolveRefs";
 
-/** Legacy session / extras shape (display names or slugs mixed). */
+/**
+ * @deprecated Prefer `ScuSplit` / `scuSplits`. Old session + catalog `extras`
+ * shape (display names or slugs mixed). Removed on normalize after migrate.
+ */
 export type LegacyDeliverySplit = {
   from: string;
   to: string;
@@ -36,7 +39,10 @@ function commodityNameOf(nameOrSlug: string): string {
   return getCommodityBySlug(slug)?.name ?? nameOrSlug;
 }
 
-/** Convert legacy `deliverySplits` rows into canonical `scuSplits`. */
+/**
+ * @deprecated Prefer writing `scuSplits` directly.
+ * Convert legacy `deliverySplits` rows into canonical `scuSplits`.
+ */
 export function scuSplitsFromLegacyDeliverySplits(
   splits: LegacyDeliverySplit[],
   options?: { kind?: CatalogMissionScuSplit["kind"] },
@@ -65,8 +71,9 @@ export function scuSplitsFromLegacyDeliverySplits(
 
 /**
  * Expand `{ from, to }` location maps into deliver-kind split lines.
+ * Load-time compat when `scuSplits` are missing — prefer persisted `scuSplits`.
  * Uses a single commodity when only one cargo line exists; otherwise skips
- * ambiguous multi-cargo location maps (caller should prefer real `scuSplits`).
+ * ambiguous multi-cargo location maps.
  */
 export function scuSplitsFromLocationSplits(
   locSplits: ScuLocationSplits,
@@ -112,10 +119,15 @@ export function scuSplitsFromLocationSplits(
   return lines.length > 0 ? lines : null;
 }
 
-/** Resolve catalog / extras / legacy into canonical `scuSplits`. */
+/**
+ * Resolve catalog / extras into canonical `scuSplits`.
+ * `legacyDeliverySplits` / inventing splits from `scuLocationSplits` alone are
+ * load-time compat — prefer persisted `scuSplits`.
+ */
 export function resolveScuSplits(input: {
   scuSplits?: ScuSplit[] | null;
   scuLocationSplits?: ScuLocationSplits | null;
+  /** @deprecated Prefer `scuSplits`. */
   legacyDeliverySplits?: LegacyDeliverySplit[] | null;
   cargo?: Array<{
     commoditySlug?: string;
@@ -144,12 +156,14 @@ export function resolveScuSplits(input: {
 
 /**
  * Normalize a session mission onto `scuSplits`.
- * Migrates legacy `deliverySplits` and strips that field.
+ * Migrates deprecated `deliverySplits` and strips that field (remove migrate
+ * once stored sessions no longer carry it).
  */
 export function normalizeSessionMissionScuSplits(
   mission: SessionMission,
 ): SessionMission {
   const raw = mission as SessionMission & {
+    /** @deprecated Prefer `scuSplits`. */
     deliverySplits?: LegacyDeliverySplit[];
   };
   const scuSplits = resolveScuSplits({

@@ -374,7 +374,10 @@ export function removeMissionAndRebuildRoute(
   return rebuildRowsFromMissions(session, missions);
 }
 
-/** Aggregate auto mix for icons / legacy callers. */
+/**
+ * @deprecated Prefer `cargoBoxSplits.autoSelectedAggregate(mission)`.
+ * Aggregate auto mix for icons / older callers.
+ */
 export function autoSelectedMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {
@@ -383,7 +386,10 @@ export function autoSelectedMissionScuBoxSplits(
   return cargoBoxSplits.aggregate(map);
 }
 
-/** Aggregate selected (or auto) mix for icons / legacy callers. */
+/**
+ * @deprecated Prefer `cargoBoxSplits.selectedAggregate(mission)`.
+ * Aggregate selected (or auto) mix for icons / older callers.
+ */
 export function effectiveMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {

@@ -2,6 +2,8 @@ import type { CatalogMission } from "@/db/schema";
 import {
   auecFromRewards,
   formatAuecAmount,
+  formatRewardsLabel,
+  normalizeCatalogRewards,
   type HaulingCatalogMissionPayload,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
@@ -77,6 +79,16 @@ export function enrichSessionMissionFromCatalog(
     (catalog.title?.trim() || stripRankFromTitle(mission.title).title).trim() ||
     mission.title;
 
+  const catalogRewards = normalizeCatalogRewards(
+    catalog.rewards?.length ? catalog.rewards : payload.rewards,
+    mission.rewardAuec,
+  );
+  const rewards =
+    catalogRewards.length > 0 ? catalogRewards : mission.rewards;
+  const rewardAuecFromCatalog = auecFromRewards(catalogRewards);
+  const rewardDisplayFromRewards =
+    catalogRewards.length > 0 ? formatRewardsLabel(catalogRewards) : null;
+
   return {
     ...mission,
     catalogMissionId: catalog.id,
@@ -86,14 +98,15 @@ export function enrichSessionMissionFromCatalog(
       ? (getContractorBySlug(catalog.contractorSlug)?.name ??
         catalog.contractorSlug)
       : mission.contractor,
-    rewardAuec: (() => {
-      const auec = auecFromRewards(catalog.rewards);
-      return auec > 0 ? auec : mission.rewardAuec;
-    })(),
-    rewardDisplay: (() => {
-      const auec = auecFromRewards(catalog.rewards);
-      return auec > 0 ? formatAuecAmount(auec) : mission.rewardDisplay;
-    })(),
+    rewards,
+    rewardAuec:
+      rewardAuecFromCatalog > 0 ? rewardAuecFromCatalog : mission.rewardAuec,
+    rewardDisplay:
+      rewardDisplayFromRewards && rewardDisplayFromRewards !== "—"
+        ? rewardDisplayFromRewards
+        : rewardAuecFromCatalog > 0
+          ? formatAuecAmount(rewardAuecFromCatalog)
+          : mission.rewardDisplay,
     from: payload.fromLocationSlugs.map(locationDisplay),
     to: payload.toLocationSlugs.map(locationDisplay),
     cargo: payload.cargo.map((line) => ({

@@ -293,11 +293,15 @@ const ROUTE_ACTIONS = new Set<RouteAction>([
 ]);
 
 /**
- * Map legacy `legKind` on stored rows to `routeAction`.
- * TODO: remove once all delivery_sessions checklist JSON uses routeAction only.
+ * Normalize one checklist row for load.
+ *
+ * Still maps deprecated `legKind` → `routeAction`. Remove that branch (and
+ * MCP preprocess in `app/mcp/route.ts`) once all `delivery_sessions`
+ * checklist JSON uses `routeAction` only.
  */
 function normalizeChecklistRow(raw: unknown): HaulingChecklistRow {
   const row = (raw ?? {}) as Record<string, unknown>;
+  /** @deprecated Prefer `routeAction` — temporary load-time alias. */
   const legacy = row.legKind;
   const next = row.routeAction;
   const routeAction =

@@ -1,6 +1,8 @@
 import { getLocationBySlug } from "@/lib/fixtures";
 import {
+  auecFromRewards,
   formatAuecAmount,
+  formatRewardsLabel,
   type ScuSplit,
 } from "@/lib/missions/catalogMission";
 import type { HaulingIntakeCargoLine } from "@/lib/missions/haulingIntake";
@@ -56,8 +58,10 @@ export function missionTotalScu(mission: SessionMission): number {
   return mission.cargo.reduce((sum, line) => sum + Math.max(0, line.scu), 0);
 }
 
-/** Numeric aUEC from rewardAuec or rewardDisplay (0 when unknown). */
+/** Numeric aUEC from rewards / rewardAuec / rewardDisplay (0 when unknown). */
 export function missionAuecAmount(mission: SessionMission): number {
+  const fromRewards = auecFromRewards(mission.rewards);
+  if (fromRewards > 0) return fromRewards;
   if (mission.rewardAuec > 0) return mission.rewardAuec;
   const fromDisplay = mission.rewardDisplay?.match(/([\d,]+)\s*aUEC/i);
   if (fromDisplay?.[1]) {
@@ -68,6 +72,10 @@ export function missionAuecAmount(mission: SessionMission): number {
 }
 
 export function missionRewardLabel(mission: SessionMission): string {
+  if (mission.rewards?.length) {
+    const label = formatRewardsLabel(mission.rewards);
+    if (label !== "—") return label;
+  }
   if (mission.rewardDisplay?.trim()) return mission.rewardDisplay.trim();
   if (mission.rewardAuec > 0) {
     return formatAuecAmount(mission.rewardAuec);

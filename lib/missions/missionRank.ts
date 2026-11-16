@@ -105,13 +105,18 @@ export function normalizeCatalogMissionTitle(title: string): string {
     .join("");
 }
 
-/** Prefer stored `rank`, else parse from title (legacy session JSON). */
+/**
+ * Prefer stored `rank`.
+ * Title parsing is a deprecated fallback for legacy session JSON that still
+ * embeds “X Rank - …” in `title` — remove once rows are backfilled.
+ */
 export function resolveMissionRank(mission: {
   title?: string | null;
   rank?: MissionRank | string | null;
 }): MissionRank | null {
   return (
     normalizeMissionRank(mission.rank) ??
+    // @deprecated Prefer mission.rank — title-embedded rank will be removed.
     (mission.title ? parseRankFromTitle(mission.title) : null)
   );
 }
