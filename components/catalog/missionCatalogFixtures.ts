@@ -14,9 +14,23 @@ function haulingPayload(
 function withRouteFlags(
   row: Omit<
     CatalogMission,
-    "isDirect" | "isOnePickup" | "isOneDelivery" | "variantGroupId" | "variantFamilyKey"
+    | "isDirect"
+    | "isOnePickup"
+    | "isOneDelivery"
+    | "variantGroupId"
+    | "variantFamilyKey"
+    | "scuTotalCertainty"
+    | "scuBoxSplitsCertainty"
   > &
-    Partial<Pick<CatalogMission, "variantGroupId" | "variantFamilyKey">>,
+    Partial<
+      Pick<
+        CatalogMission,
+        | "variantGroupId"
+        | "variantFamilyKey"
+        | "scuTotalCertainty"
+        | "scuBoxSplitsCertainty"
+      >
+    >,
 ): CatalogMission {
   const flags = catalogRouteFlagsFromLocationSplits(
     row.scuLocationSplits ?? row.payload.scuLocationSplits,
@@ -28,6 +42,8 @@ function withRouteFlags(
   return {
     ...row,
     ...flags,
+    scuTotalCertainty: row.scuTotalCertainty ?? null,
+    scuBoxSplitsCertainty: row.scuBoxSplitsCertainty ?? null,
     variantGroupId: row.variantGroupId ?? row.id,
     variantFamilyKey: row.variantFamilyKey ?? row.fingerprint,
   };
