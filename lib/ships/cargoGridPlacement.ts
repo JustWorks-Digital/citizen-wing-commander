@@ -36,12 +36,8 @@ import {
 } from "@/lib/ships/packSlotPolicy";
 import { orderPackItemsByProgram } from "@/lib/ships/packItemOrder";
 import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
-import type {
-  CargoDelivery,
-  HaulingChecklistRow,
-  RouteAction,
-  ShipStorageLocation,
-} from "@/lib/missions/mockSession";
+import type { CargoDelivery, HaulingChecklistRow, RouteAction, ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 
 export type CargoPlacementSegment = {
   /** Explicit crates; when set, skips greedy decompose. */

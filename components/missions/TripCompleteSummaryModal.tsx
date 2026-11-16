@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
-import { type DistanceToNext } from "@/lib/missions/mockSession";
+import type { DistanceToNext } from "@/lib/missions/sessionChecklist";
+
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 export type TripCompleteSummaryModalProps = {

@@ -1,13 +1,11 @@
-import type {
-  CargoDelivery,
-  HaulingChecklistRow,
-  SessionChecklistModel,
-  SessionMission,
-} from "@/lib/missions/mockSession";
 import {
   createSessionId,
   normalizeSessionChecklist,
+  type CargoDelivery,
+  type HaulingChecklistRow,
+  type SessionChecklist,
 } from "@/lib/missions/sessionChecklist";
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 /** Trailing copy marker: `Trip name · a7f3`. */
 const COPY_SUFFIX_RE = /\s·\s[a-f0-9]{4}$/i;
@@ -52,9 +50,9 @@ function resetMission(mission: SessionMission): SessionMission {
  * new id + name marker, same route/ships/box mixes, progress cleared.
  */
 export function copySessionChecklist(
-  source: SessionChecklistModel,
+  source: SessionChecklist,
   options?: { now?: Date },
-): SessionChecklistModel {
+): SessionChecklist {
   const now = options?.now ?? new Date();
   const nowIso = now.toISOString();
   const id = createSessionId();

@@ -1,9 +1,7 @@
 import { appApi } from "@/lib/api/appRoutes";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
-import type { SessionTabSummary } from "@/lib/missions/sessionChecklist";
-
+import type { SessionChecklist, SessionTabSummary } from "@/lib/missions/sessionChecklist";
 export type ChecklistFetchResult = {
-  session: SessionChecklistModel | null;
+  session: SessionChecklist | null;
   etag: string | null;
   notModified: boolean;
 };
@@ -38,14 +36,14 @@ export async function fetchChecklist(
   if (!res.ok) {
     throw new Error(`Checklist load failed (${res.status})`);
   }
-  const session = (await res.json()) as SessionChecklistModel;
+  const session = (await res.json()) as SessionChecklist;
   return { session, etag: nextEtag, notModified: false };
 }
 
 /** Persist a checklist session (uses `session.id`). */
 export async function saveChecklist(
-  session: SessionChecklistModel,
-): Promise<{ session: SessionChecklistModel; etag: string | null }> {
+  session: SessionChecklist,
+): Promise<{ session: SessionChecklist; etag: string | null }> {
   const res = await fetch(checklistUrl(session.id), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -55,7 +53,7 @@ export async function saveChecklist(
     throw new Error(`Checklist save failed (${res.status})`);
   }
   return {
-    session: (await res.json()) as SessionChecklistModel,
+    session: (await res.json()) as SessionChecklist,
     etag: res.headers.get("ETag"),
   };
 }
@@ -72,7 +70,7 @@ export async function fetchChecklistSessions(): Promise<ChecklistSessionsList> {
 /** Create a new empty session and activate it. */
 export async function createChecklistSession(input?: {
   sessionName?: string;
-}): Promise<SessionChecklistModel> {
+}): Promise<SessionChecklist> {
   const res = await fetch(appApi.checklistSessions, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -84,26 +82,26 @@ export async function createChecklistSession(input?: {
   if (!res.ok) {
     throw new Error(`Checklist session create failed (${res.status})`);
   }
-  return (await res.json()) as SessionChecklistModel;
+  return (await res.json()) as SessionChecklist;
 }
 
 /** Make a session the active one (MCP default + UI focus). */
 export async function activateChecklistSession(
   sessionId: string,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const res = await fetch(appApi.checklistSessionActivate(sessionId), {
     method: "POST",
   });
   if (!res.ok) {
     throw new Error(`Checklist session activate failed (${res.status})`);
   }
-  return (await res.json()) as SessionChecklistModel;
+  return (await res.json()) as SessionChecklist;
 }
 
 /** Duplicate a trip into a new session (progress reset, config kept). */
 export async function copyChecklistSession(
   sessionId: string,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const res = await fetch(appApi.checklistSessionCopy(sessionId), {
     method: "POST",
   });
@@ -115,7 +113,7 @@ export async function copyChecklistSession(
       body?.error ?? `Checklist session copy failed (${res.status})`,
     );
   }
-  return (await res.json()) as SessionChecklistModel;
+  return (await res.json()) as SessionChecklist;
 }
 
 export type DeleteChecklistSessionResult = {

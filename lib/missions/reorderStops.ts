@@ -1,8 +1,4 @@
-import type {
-  HaulingChecklistRow,
-  SessionChecklistModel,
-} from "@/lib/missions/mockSession";
-import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type HaulingChecklistRow, type SessionChecklist } from "@/lib/missions/sessionChecklist";
 import { recomputeDistances } from "@/lib/missions/quantumTravel";
 import { rebuildRowsFromMissions } from "@/lib/missions/rebuildSessionRoute";
 
@@ -34,8 +30,8 @@ function cargoHandledLooseKey(
  * Cargo handled flags are preserved across the rebuild when keys still match.
  */
 export function resetTripProgress(
-  session: SessionChecklistModel,
-): SessionChecklistModel {
+  session: SessionChecklist,
+): SessionChecklist {
   const rows = session.rows.map((row) => ({
     ...row,
     isCompleted: false,

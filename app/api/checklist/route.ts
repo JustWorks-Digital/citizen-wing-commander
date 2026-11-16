@@ -5,11 +5,12 @@ import {
   saveChecklistSession,
 } from "@/lib/sessions/checklistStore";
 import { backfillSessionMissionRanksFromCatalog } from "@/lib/missions/backfillSessionMissionRanks";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import type { SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import { withPerfRoute } from "@/lib/perf/withPerfRoute";
 
 function withSyncHeaders(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   init?: ResponseInit,
 ): NextResponse {
   const etag = checklistEtag(session);
@@ -60,7 +61,7 @@ export const GET = withPerfRoute("checklist.get", async (request: Request) => {
 
 export const PUT = withPerfRoute("checklist.put", async (request: Request) => {
   try {
-    const body = (await request.json()) as SessionChecklistModel;
+    const body = (await request.json()) as SessionChecklist;
     if (!body?.sessionName || !Array.isArray(body.rows)) {
       return NextResponse.json(
         { error: "Expected { sessionName, rows }" },

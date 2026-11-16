@@ -39,7 +39,8 @@ import { catalogSelectionTotals } from "@/lib/missions/catalogSelectionTotals";
 import {
   formatHaulingRepXp,
 } from "@/lib/missions/haulingRepXp";
-import { formatDistanceToNext } from "@/lib/missions/mockSession";
+import { formatDistanceToNext } from "@/lib/missions/sessionChecklist";
+
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {

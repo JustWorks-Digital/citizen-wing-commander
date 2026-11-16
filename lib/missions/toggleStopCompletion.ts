@@ -2,10 +2,8 @@ import {
   reconcileMissionCompletionFromStops,
   syncMissionsForStopCompletion,
 } from "@/lib/missions/expectedCompletions";
-import {
-  applySessionCompletionTiming,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 
 /**
  * Toggle one checklist stop Done / open and mirror contract completion.
@@ -13,9 +11,9 @@ import {
  * could replace a legal optimized route with an invalid intake merge order.
  */
 export function toggleStopCompletion(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   rowId: string,
-): SessionChecklistModel | null {
+): SessionChecklist | null {
   const target = session.rows.find((row) => row.id === rowId);
   if (!target) return null;
 

@@ -11,7 +11,7 @@ import {
 } from "../lib/ships/cargoGrids";
 import { placementPlanLegend } from "../lib/ships/cargoGridPlacement";
 import { cargoBay } from "../lib/ships/cargoBay";
-import type { HaulingChecklistRow } from "../lib/missions/mockSession";
+import type { HaulingChecklistRow } from "../lib/missions/sessionChecklist";
 import type { PlacedCargoBox } from "../lib/ships/cargoGridPlacement";
 
 const sessionId =

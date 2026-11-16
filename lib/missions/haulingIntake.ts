@@ -1,7 +1,7 @@
 /**
  * Accepted intermediate JSON for screenshot / contract intake.
  * LLMs and MCP clients should emit this; the app resolves fixtures and
- * builds a `SessionChecklistModel` route for the checklist table.
+ * builds a `SessionChecklist` route for the checklist table.
  */
 
 export type HaulingIntakeCargoLine = {

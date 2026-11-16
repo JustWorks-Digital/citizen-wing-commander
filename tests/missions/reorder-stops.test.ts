@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import {
   isTripStarted,
   moveStopIdBefore,

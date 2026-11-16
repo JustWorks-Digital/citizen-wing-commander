@@ -50,7 +50,8 @@ import {
   missionTotalScu,
 } from "@/lib/missions/sessionMissionObjectives";
 import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
@@ -310,13 +311,19 @@ function MissionActionsMenu({
 }
 
 function resolvedBoxSplits(mission: SessionMission): ScuBoxSplits {
-  const ready = cargoBoxSplits.withDefaults(mission);
-  return (
-    ready.scuBoxSplits ??
-    cargoBoxSplits.aggregate(
-      cargoBoxSplits.autoSelectedForMission(mission),
-    ) ??
-    scuBoxSplitsForScu(missionTotalScu(mission), mission.maxContainerScu)
+  const aggregate = cargoBoxSplits.selectedAggregate(mission);
+  const hasBoxes =
+    aggregate.scuOne +
+      aggregate.scuTwo +
+      aggregate.scuFour +
+      aggregate.scuEight +
+      aggregate.scuSixteen +
+      aggregate.scuThirtyTwo >
+    0;
+  if (hasBoxes) return aggregate;
+  return scuBoxSplitsForScu(
+    missionTotalScu(mission),
+    mission.maxContainerScu,
   );
 }
 

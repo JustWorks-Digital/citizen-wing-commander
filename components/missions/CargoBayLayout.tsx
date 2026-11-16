@@ -16,7 +16,8 @@ import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
 import { getLocationBySlug } from "@/lib/fixtures";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import {
   cargoBayModalShellMaxHeightPx,
   MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,

@@ -4,11 +4,8 @@ import {
   type ScuSplit,
 } from "@/lib/missions/catalogMission";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
-import {
-  applySessionCompletionTiming,
-  type HaulingChecklistRow,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type HaulingChecklistRow, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import { stampMissionBoxSizesOntoRows } from "@/lib/missions/rebuildSessionRoute";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
@@ -350,11 +347,11 @@ function cargoFromDeliverySplitSums(
 }
 
 function finishMissionUpdate(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missionId: string,
   mission: SessionMission,
   rows: HaulingChecklistRow[],
-): SessionChecklistModel {
+): SessionChecklist {
   const stamped = stampMissionBoxSizesOntoRows(rows, mission);
   return applySessionCompletionTiming({
     ...session,
@@ -535,10 +532,10 @@ export const missionScuAmounts = {
    * do not match each commodity total.
    */
   applyDraft(
-    session: SessionChecklistModel,
+    session: SessionChecklist,
     missionId: string,
     draft: MissionScuDraft,
-  ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
     const check = missionScuAmounts.validateDraft(draft);
     if (!check.ok) return check;
 
@@ -788,11 +785,11 @@ export const missionScuAmounts = {
    * Set one commodity’s mission-total SCU; scale station splits + route cargo.
    */
   setCommodityTotal(
-    session: SessionChecklistModel,
+    session: SessionChecklist,
     missionId: string,
     commoditySlug: string,
     scu: number,
-  ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
     const slug =
       resolveCommoditySlug(commoditySlug) ?? commoditySlug.trim().toLowerCase();
     const amount = Math.max(0, Math.floor(Number(scu) || 0));
@@ -877,7 +874,7 @@ export const missionScuAmounts = {
    * the opposite role is scaled to match.
    */
   setStationAmount(
-    session: SessionChecklistModel,
+    session: SessionChecklist,
     missionId: string,
     input: {
       role: "pickup" | "delivery";
@@ -885,7 +882,7 @@ export const missionScuAmounts = {
       commoditySlug: string;
       scu: number;
     },
-  ): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
     const slug =
       resolveCommoditySlug(input.commoditySlug) ??
       input.commoditySlug.trim().toLowerCase();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import {
   copySessionChecklist,
   sessionNameForCopy,

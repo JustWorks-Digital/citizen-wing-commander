@@ -1,4 +1,5 @@
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {

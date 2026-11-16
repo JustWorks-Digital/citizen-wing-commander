@@ -37,6 +37,11 @@ import {
   breakdownFromBoxSizes,
   formatBreakdownLabel,
 } from "@/lib/missions/boxBreakdownOptions";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import {
+  clearCatalogMissionLink,
+  isCatalogMissionNotFoundError,
+} from "@/lib/missions/clearCatalogMissionLink";
 import {
   cargoFromScuSplits,
   locationsFromScuSplits,
@@ -62,7 +67,8 @@ import {
   formatSessionDuration,
   getSessionElapsedMs,
   shipStorageLocationLabels,
-} from "@/lib/missions/mockSession";
+  type SessionChecklist,
+} from "@/lib/missions/sessionChecklist";
 import {
   createChecklistSession,
   getChecklistSession,
@@ -105,7 +111,6 @@ import {
 } from "@/lib/sessions/resolveRefs";
 import type { CatalogMissionNoteSentiment } from "@/lib/missions/catalogMission";
 import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
 import { linkSessionMissionsToCatalog } from "@/lib/missions/linkSessionMissionToCatalog";
 import { buildSessionMissionsFromIntake } from "@/lib/missions/sessionMissionsFromIntake";
 import { cargoPlacementRules } from "@/lib/ships/cargoGridPlacementRules";
@@ -193,7 +198,7 @@ const cargoGridCoordinateSystem = {
   note: "Do not invent grid sizes. Prefer these sketches when packing; ships without a sketch have no bay geometry yet.",
 };
 
-function presentSession(session: SessionChecklistModel) {
+function presentSession(session: SessionChecklist) {
   const startSlug = session.startLocationSlug;
   const startLoc = startSlug ? getLocationBySlug(startSlug) : null;
   return {
@@ -469,7 +474,7 @@ export async function toolReplaceHaulingChecklist(input: {
   resetTimer?: boolean;
   missionCount?: number;
   missionsCompleted?: number;
-  missions?: SessionChecklistModel["missions"];
+  missions?: SessionChecklist["missions"];
 }) {
   const rows = [];
   for (const [index, leg] of input.legs.entries()) {
@@ -1145,13 +1150,18 @@ export async function toolSetMissionScuBoxSplits(input: {
 
     let catalogUpdated: string | null = null;
     let catalogError: string | null = null;
+    let sessionOut = next;
+    let updatedOut = updated;
     const catalogId = updated?.catalogMissionId ?? null;
     const shouldUpdateCatalog = input.updateCatalog !== false;
-    if (shouldUpdateCatalog && catalogId && updated?.scuBoxSplits) {
+    const missionAggregate = updated
+      ? cargoBoxSplits.selectedAggregate(updated)
+      : scuBoxSplits;
+    if (shouldUpdateCatalog && catalogId && updated) {
       try {
         await updateCatalogMissionScuBoxSplits({
           missionId: catalogId,
-          scuBoxSplits: updated.scuBoxSplits,
+          scuBoxSplits: missionAggregate,
           scuCargoBoxSplits: updated.scuCargoBoxSplits,
           ...(input.scuBoxSplitsCertainty !== undefined
             ? { scuBoxSplitsCertainty: input.scuBoxSplitsCertainty }
@@ -1167,14 +1177,25 @@ export async function toolSetMissionScuBoxSplits(input: {
         });
         catalogUpdated = catalogId;
       } catch (error) {
-        catalogError =
-          error instanceof Error
-            ? error.message
-            : "Failed to update catalog scuBoxSplits";
+        if (isCatalogMissionNotFoundError(error)) {
+          sessionOut = await saveChecklistSession(
+            clearCatalogMissionLink(next, missionId),
+          );
+          updatedOut = (sessionOut.missions ?? []).find(
+            (entry) => entry.id === missionId,
+          );
+          catalogUpdated = null;
+          catalogError = null;
+        } else {
+          catalogError =
+            error instanceof Error
+              ? error.message
+              : "Failed to update catalog scuBoxSplits";
+        }
       }
     }
 
-    const stampedPickup = next.rows
+    const stampedPickup = sessionOut.rows
       .flatMap((row) =>
         row.cargoDeliveries
           .filter(
@@ -1195,15 +1216,16 @@ export async function toolSetMissionScuBoxSplits(input: {
 
     return textResult({
       ok: true,
-      sessionId: next.id,
+      sessionId: sessionOut.id,
       missionId,
       commodity: commodityHint,
       label: formatBreakdownLabel(scuBoxSplits),
-      scuBoxSplits: updated?.scuBoxSplits ?? scuBoxSplits,
-      scuCargoBoxSplits: updated?.scuCargoBoxSplits ?? null,
-      scuBoxSplitsCertainty: updated?.scuBoxSplitsCertainty ?? null,
-      scuCargoBoxSplitsCertainty: updated?.scuCargoBoxSplitsCertainty ?? null,
-      scuTotalCertainty: updated?.scuTotalCertainty ?? null,
+      scuBoxSplits: missionAggregate,
+      scuCargoBoxSplits: updatedOut?.scuCargoBoxSplits ?? null,
+      scuBoxSplitsCertainty: updatedOut?.scuBoxSplitsCertainty ?? null,
+      scuCargoBoxSplitsCertainty: updatedOut?.scuCargoBoxSplitsCertainty ?? null,
+      scuTotalCertainty: updatedOut?.scuTotalCertainty ?? null,
+      catalogMissionId: updatedOut?.catalogMissionId ?? null,
       boxScu,
       missionScu: lineScu,
       catalogUpdated,

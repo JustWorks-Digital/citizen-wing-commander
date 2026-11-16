@@ -1,5 +1,6 @@
 import locationPositionsFixture from "@/lib/fixtures/locationPositions.json";
-import type { DistanceToNext } from "@/lib/missions/mockSession";
+import type { DistanceToNext } from "@/lib/missions/sessionChecklist";
+
 
 export type LocationPositionMeters = {
   slug: string;

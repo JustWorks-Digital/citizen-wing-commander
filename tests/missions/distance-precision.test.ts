@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatDistanceToNext } from "@/lib/missions/mockSession";
+import { formatDistanceToNext } from "@/lib/missions/sessionChecklist";
+
 import {
   kmToDistanceToNext,
   sumDistanceToNext,

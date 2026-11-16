@@ -1,9 +1,5 @@
-import type {
-  CargoDelivery,
-  HaulingChecklistRow,
-  RouteAction,
-  ShipStorageLocation,
-} from "@/lib/missions/mockSession";
+import type { CargoDelivery, HaulingChecklistRow, RouteAction, ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 import type { CargoGridPlacementPlan } from "@/lib/ships/cargoGridPlacement";
 
 export type MakeStopInput = {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { reconcileMissionCompletionFromStops } from "@/lib/missions/expectedCompletions";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 function mission(

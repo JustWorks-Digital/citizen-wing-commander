@@ -9,7 +9,8 @@ import {
   resolveCommoditySlug,
   resolveLocationSlug,
 } from "@/lib/sessions/resolveRefs";
-import type { ShipStorageLocation } from "@/lib/missions/mockSession";
+import type { ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 
 type StopBucket = {
   location: string;

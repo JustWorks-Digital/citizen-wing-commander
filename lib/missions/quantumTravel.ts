@@ -1,8 +1,4 @@
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
-import {
-  isQuantumTravelRow,
-  rowPresenceLocationSlug,
-} from "@/lib/missions/mockSession";
+import { isQuantumTravelRow, rowPresenceLocationSlug, type HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import {
   distanceBetweenLocationSlugs,
   sumDistanceToNext,

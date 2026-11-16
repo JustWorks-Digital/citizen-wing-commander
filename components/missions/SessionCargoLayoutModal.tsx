@@ -11,7 +11,8 @@ import {
 } from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { useSessionCargoBayLayoutWidth } from "@/hooks/useSessionCargoBayLayoutWidth";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import {
   MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
   MIN_CARGO_BAY_LAYOUT_WIDTH_PX,

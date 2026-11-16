@@ -1,12 +1,13 @@
 import { getCatalogMissionsByIds } from "@/db/queries/catalogMissions";
 import { applyCatalogRanksToSessionMissions } from "@/lib/missions/applyCatalogRanksToSessionMissions";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import type { SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 
 /** Load catalog ranks for linked missions and stamp them onto the session. */
 export async function backfillSessionMissionRanksFromCatalog(
-  session: SessionChecklistModel,
-): Promise<{ session: SessionChecklistModel; changed: boolean }> {
+  session: SessionChecklist,
+): Promise<{ session: SessionChecklist; changed: boolean }> {
   const missions = session.missions ?? [];
   const ids = [
     ...new Set(

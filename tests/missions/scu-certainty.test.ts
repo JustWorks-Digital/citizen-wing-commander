@@ -7,14 +7,12 @@ import {
   rollupScuBoxSplitsCertainty,
 } from "@/lib/missions/scuCertainty";
 import { makeStop, cargo } from "../cargo/fixtures";
-import {
-  applySessionCompletionTiming,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { setMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
 
-function sessionWithMission(): SessionChecklistModel {
+function sessionWithMission(): SessionChecklist {
   const missions: SessionMission[] = [
     {
       id: "ice",

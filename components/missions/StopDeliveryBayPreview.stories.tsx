@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import {
-  mockSessionChecklist,
-  type HaulingChecklistRow,
-} from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 
 const deliveryRow =

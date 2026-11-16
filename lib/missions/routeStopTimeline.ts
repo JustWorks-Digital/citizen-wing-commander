@@ -1,10 +1,5 @@
 import { getLocationBySlug } from "@/lib/fixtures";
-import type {
-  DistanceToNext,
-  HaulingChecklistRow,
-  RouteAction,
-} from "@/lib/missions/mockSession";
-import { isQuantumTravelRow } from "@/lib/missions/mockSession";
+import { isQuantumTravelRow, type DistanceToNext, type HaulingChecklistRow, type RouteAction } from "@/lib/missions/sessionChecklist";
 import { quantumStopDistance } from "@/lib/missions/quantumTravel";
 import {
   distanceBetweenLocationSlugs,

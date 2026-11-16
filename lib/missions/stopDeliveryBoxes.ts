@@ -1,5 +1,6 @@
 import { getCommodityBySlug, getLocationShortName } from "@/lib/fixtures";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import {
   decomposeScuIntoBoxes,
   type CargoBoxFootprint,

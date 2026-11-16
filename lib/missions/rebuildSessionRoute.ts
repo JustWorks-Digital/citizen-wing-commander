@@ -16,13 +16,7 @@ import {
   intakeContractFromSessionMission,
   type SessionMission,
 } from "@/lib/missions/sessionMissions";
-import type {
-  CargoDelivery,
-  HaulingChecklistRow,
-  RouteAction,
-  SessionChecklistModel,
-} from "@/lib/missions/mockSession";
-import { applySessionCompletionTiming } from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type CargoDelivery, type HaulingChecklistRow, type RouteAction, type SessionChecklist } from "@/lib/missions/sessionChecklist";
 import {
   mergePreservedQuantumRows,
   recomputeDistances,
@@ -131,9 +125,9 @@ export function applyCompletedMissionStopState(
  * Append missions (skipping duplicates by id / catalogMissionId) and rebuild legs.
  */
 export function addMissionsAndRebuildRoute(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   incoming: SessionMission[],
-): { ok: true; session: SessionChecklistModel; added: number; skipped: number } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist; added: number; skipped: number } | { ok: false; error: string } {
   const existing = session.missions ?? [];
   const known = new Set<string>();
   for (const mission of existing) {
@@ -216,7 +210,7 @@ export function pruneMissionCargoFromRows(
  * replace cargo stops with an optimized legal plan and restamp crate mixes.
  */
 function optimizeRowsIfInvalid(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   rows: HaulingChecklistRow[],
   missions: SessionMission[],
 ): HaulingChecklistRow[] {
@@ -250,10 +244,10 @@ function optimizeRowsIfInvalid(
  * back to `optimizeTrip` so hide/complete/remove do not leave an invalid route.
  */
 export function rebuildRowsFromMissions(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missions: SessionMission[],
   options?: RebuildRowsFromMissionsOptions,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
   const nextMissions = missions.map(withMissionBoxSplitDefaults);
   const counted = countedMissions(nextMissions);
   const active = routeMissions(nextMissions, options);
@@ -320,10 +314,10 @@ export function rebuildRowsFromMissions(
 
 /** Hide/show a mission; hidden ones drop out of N/M and the route table. */
 export function setMissionHiddenAndRebuildRoute(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missionId: string,
   isHidden: boolean,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
   const missions = (session.missions ?? []).map((mission) =>
     mission.id === missionId ? { ...mission, isHidden } : mission,
   );
@@ -356,10 +350,10 @@ export function setMissionHiddenAndRebuildRoute(
 
 /** Complete/reopen a mission; completed cargo is removed from the route table. */
 export function setMissionCompletedAndRebuildRoute(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missionId: string,
   isCompleted: boolean,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
   const missions = (session.missions ?? []).map((mission) =>
     mission.id === missionId ? { ...mission, isCompleted } : mission,
   );
@@ -371,9 +365,9 @@ export function setMissionCompletedAndRebuildRoute(
  * ordered from the session start location when set.
  */
 export function removeMissionAndRebuildRoute(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missionId: string,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
   const missions = (session.missions ?? []).filter(
     (mission) => mission.id !== missionId,
   );
@@ -393,19 +387,18 @@ export function autoSelectedMissionScuBoxSplits(
 export function effectiveMissionScuBoxSplits(
   mission: SessionMission,
 ): ScuBoxSplits | null {
-  const withDefaults = cargoBoxSplits.withDefaults(mission);
-  if (!withDefaults.scuBoxSplits) return null;
+  const aggregate = cargoBoxSplits.selectedAggregate(mission);
   const total =
-    withDefaults.scuBoxSplits.scuOne +
-    withDefaults.scuBoxSplits.scuTwo +
-    withDefaults.scuBoxSplits.scuFour +
-    withDefaults.scuBoxSplits.scuEight +
-    withDefaults.scuBoxSplits.scuSixteen +
-    withDefaults.scuBoxSplits.scuThirtyTwo;
-  return total > 0 ? withDefaults.scuBoxSplits : null;
+    aggregate.scuOne +
+    aggregate.scuTwo +
+    aggregate.scuFour +
+    aggregate.scuEight +
+    aggregate.scuSixteen +
+    aggregate.scuThirtyTwo;
+  return total > 0 ? aggregate : null;
 }
 
-/** Ensure per-cargo maps + aggregates exist. */
+/** Ensure per-cargo maps exist (mission aggregates are derived). */
 export function withMissionBoxSplitDefaults(
   mission: SessionMission,
 ): SessionMission {
@@ -569,8 +562,8 @@ export function stampMissionBoxSizesOntoRows(
 
 /** Re-apply every mission's crate mix onto route cargo (pickup + deliveries). */
 export function restampAllMissionBoxSizes(
-  session: SessionChecklistModel,
-): SessionChecklistModel {
+  session: SessionChecklist,
+): SessionChecklist {
   const missions = (session.missions ?? []).map(withMissionBoxSplitDefaults);
   let rows = session.rows;
   for (const mission of missions) {
@@ -603,12 +596,12 @@ export type SetMissionScuBoxSplitsOptions = {
 };
 
 export function setMissionScuBoxSplits(
-  session: SessionChecklistModel,
+  session: SessionChecklist,
   missionId: string,
   scuBoxSplits: ScuBoxSplits,
   commoditySlug?: string | null,
   options?: SetMissionScuBoxSplitsOptions,
-): { ok: true; session: SessionChecklistModel } | { ok: false; error: string } {
+): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
   const existing = (session.missions ?? []).find(
     (entry) => entry.id === missionId,
   );

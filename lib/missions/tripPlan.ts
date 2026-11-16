@@ -1,4 +1,5 @@
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import {
   shipCargo,
   type ShipCargo,

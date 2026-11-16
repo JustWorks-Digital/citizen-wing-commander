@@ -1,4 +1,5 @@
-import type { CargoDelivery, HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { CargoDelivery, HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
   resolveCommoditySlug,

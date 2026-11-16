@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { cargo, makeStop } from "../cargo/fixtures";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import type { SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import {
   restampAllMissionBoxSizes,
   setMissionScuBoxSplits,
@@ -37,7 +38,7 @@ function mission(
   };
 }
 
-function multiCargoSession(): SessionChecklistModel {
+function multiCargoSession(): SessionChecklist {
   const m = mission({
     cargo: [
       { commodity: "Silicon", scu: 12 },
@@ -132,7 +133,8 @@ describe("cargoBoxSplits.withDefaults", () => {
       scuSixteen: 0,
       scuThirtyTwo: 0,
     });
-    expect(ready.scuBoxSplits).toEqual({
+    expect(ready.scuBoxSplits).toBeUndefined();
+    expect(cargoBoxSplits.selectedAggregate(ready)).toEqual({
       scuOne: 0,
       scuTwo: 0,
       scuFour: 5,
@@ -196,8 +198,10 @@ describe("cargoBoxSplits.setCommodity", () => {
       scuSixteen: 0,
       scuThirtyTwo: 0,
     });
-    expect(next.scuBoxSplits?.scuTwo).toBe(4);
-    expect(next.scuBoxSplits?.scuFour).toBe(3);
+    expect(next.scuBoxSplits).toBeUndefined();
+    const aggregate = cargoBoxSplits.selectedAggregate(next);
+    expect(aggregate.scuTwo).toBe(4);
+    expect(aggregate.scuFour).toBe(3);
   });
 });
 

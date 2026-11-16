@@ -20,7 +20,8 @@ import {
   missionScuAmounts,
   type MissionScuDraft,
 } from "@/lib/missions/missionScuAmounts";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { screenshotRefsForMission } from "@/lib/missions/rowMissionScreenshots";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { missionTotalScu } from "@/lib/missions/sessionMissionObjectives";
@@ -648,13 +649,8 @@ function BoxConfigTile({
     mission.scuCargoBoxSplitsAutoSelected?.[primaryLine.commoditySlug] ??
     scuBoxSplitsForScu(primaryLine.scu, mission.maxContainerScu ?? null);
 
-  const totalAuto =
-    mission.scuBoxSplitsAutoSelected ??
-    cargoBoxSplits.aggregate(mission.scuCargoBoxSplitsAutoSelected);
-  const totalSelected =
-    mission.scuBoxSplits ??
-    cargoBoxSplits.aggregate(mission.scuCargoBoxSplits) ??
-    totalAuto;
+  const totalAuto = cargoBoxSplits.autoSelectedAggregate(mission);
+  const totalSelected = cargoBoxSplits.selectedAggregate(mission);
 
   const totalStyleOptions = useMemo(() => {
     const primaryOptions = enumerateBoxBreakdowns(

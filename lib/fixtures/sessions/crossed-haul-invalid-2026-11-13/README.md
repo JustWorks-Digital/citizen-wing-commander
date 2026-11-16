@@ -10,7 +10,7 @@ Opposite-direction Covalex S4DC05 ↔ Shubin SM0-* contracts were merged so **st
 
 | File | Contents |
 | --- | --- |
-| `session.json` | Full `SessionChecklistModel` (24 missions, 14 stops) |
+| `session.json` | Full `SessionChecklist` (24 missions, 14 stops) |
 | `trip-cargo-issues.json` | `validateChecklistTripCargo` output at snapshot time (31 issues) |
 
 ## Load in tests

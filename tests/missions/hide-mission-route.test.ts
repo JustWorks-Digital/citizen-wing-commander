@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStop, cargo } from "../cargo/fixtures";
-import {
-  applySessionCompletionTiming,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
   setMissionHiddenAndRebuildRoute,
@@ -37,7 +35,7 @@ function mission(
 }
 
 /** Legal Covalex ↔ Shubin crossed haul (pickup first, then both, then return). */
-function crossedHaulSession(): SessionChecklistModel {
+function crossedHaulSession(): SessionChecklist {
   const missions = [
     mission({
       id: "out",

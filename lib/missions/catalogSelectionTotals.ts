@@ -3,7 +3,8 @@ import { auecFromRewards } from "@/lib/missions/catalogMission";
 import { catalogPayload } from "@/lib/missions/catalogMissionDisplay";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import { estimateMissionsHaulingRepXp } from "@/lib/missions/haulingRepXp";
-import type { DistanceToNext, HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { DistanceToNext, HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { sessionMissionFromCatalog } from "@/lib/missions/sessionMissionFromCatalog";
 import { intakeContractFromSessionMission } from "@/lib/missions/sessionMissions";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";

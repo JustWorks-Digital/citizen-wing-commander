@@ -1,4 +1,5 @@
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { interpretCargoBayPackProgram } from "@/lib/ships/cargoBayPackInterpret";
 import {
   compilePackProgramForMode,

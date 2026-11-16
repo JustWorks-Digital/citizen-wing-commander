@@ -77,7 +77,8 @@ function mapsEqualEnough(
 
 /**
  * Per-commodity crate-mix helpers (selected + auto-selected maps).
- * Mission-level `scuBoxSplits` stays as the aggregate of those maps.
+ * Mission rollups (`scuBoxSplits` / `scuBoxSplitsAutoSelected`) are derived via
+ * `aggregate` / `selectedAggregate` — do not dual-write them on the session.
  */
 export const cargoBoxSplits = {
   autoSelectedForMission(mission: SessionMission): ScuCargoBoxSplits {
@@ -96,6 +97,18 @@ export const cargoBoxSplits = {
       total = sumScuBoxSplits(total, normalizeScuBoxSplits(splits));
     }
     return total;
+  },
+
+  /** Mission selected mix = sum of per-cargo selected maps. */
+  selectedAggregate(mission: SessionMission): ScuBoxSplits {
+    const ready = cargoBoxSplits.withDefaults(mission);
+    return cargoBoxSplits.aggregate(ready.scuCargoBoxSplits);
+  },
+
+  /** Mission auto mix = sum of per-cargo auto maps. */
+  autoSelectedAggregate(mission: SessionMission): ScuBoxSplits {
+    const ready = cargoBoxSplits.withDefaults(mission);
+    return cargoBoxSplits.aggregate(ready.scuCargoBoxSplitsAutoSelected);
   },
 
   forCommodity(
@@ -218,15 +231,17 @@ export const cargoBoxSplits = {
       Object.entries(auto).filter(([slug]) => keep.has(slug)),
     );
 
-    const aggregateSelected = cargoBoxSplits.aggregate(selected);
-    const aggregateAuto = cargoBoxSplits.aggregate(autoKept);
+    // Drop stored mission aggregates — readers use selectedAggregate().
+    const {
+      scuBoxSplits: _aggregateSelected,
+      scuBoxSplitsAutoSelected: _aggregateAuto,
+      ...rest
+    } = mission;
 
     return {
-      ...mission,
+      ...rest,
       scuCargoBoxSplitsAutoSelected: autoKept,
       scuCargoBoxSplits: selected,
-      scuBoxSplitsAutoSelected: aggregateAuto,
-      scuBoxSplits: aggregateSelected,
     };
   },
 
@@ -250,7 +265,6 @@ export const cargoBoxSplits = {
     return {
       ...withAuto,
       scuCargoBoxSplits: nextSelected,
-      scuBoxSplits: cargoBoxSplits.aggregate(nextSelected),
     };
   },
 

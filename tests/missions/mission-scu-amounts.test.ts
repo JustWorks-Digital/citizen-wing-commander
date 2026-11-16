@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { makeStop, cargo } from "../cargo/fixtures";
-import {
-  applySessionCompletionTiming,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { applySessionCompletionTiming, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import { missionScuAmounts } from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
-function sessionFixture(): SessionChecklistModel {
+function sessionFixture(): SessionChecklist {
   const missions: SessionMission[] = [
     {
       id: "ice",
@@ -277,7 +275,7 @@ describe("missionScuAmounts", () => {
 });
 
 /** Multi-destination mission whose route only drops one commodity at one stop. */
-function partialMultiDropSession(): SessionChecklistModel {
+function partialMultiDropSession(): SessionChecklist {
   const missions: SessionMission[] = [
     {
       id: "fuel-ammo",
@@ -353,7 +351,7 @@ function partialMultiDropSession(): SessionChecklistModel {
   });
 }
 
-function multiDeliverySession(): SessionChecklistModel {
+function multiDeliverySession(): SessionChecklist {
   const missions: SessionMission[] = [
     {
       id: "food",

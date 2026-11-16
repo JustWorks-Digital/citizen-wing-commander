@@ -9,11 +9,8 @@ import {
 } from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { getLocationImageSrc } from "@/lib/fixtures";
-import {
-  formatDistanceToNext,
-  type HaulingChecklistRow,
-  type RouteAction,
-} from "@/lib/missions/mockSession";
+import { formatDistanceToNext, type HaulingChecklistRow, type RouteAction } from "@/lib/missions/sessionChecklist";
+
 import {
   isTripStarted,
   moveStopIdBefore,

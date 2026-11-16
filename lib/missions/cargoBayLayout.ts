@@ -1,10 +1,6 @@
 import { getCommodityBySlug, getLocationBySlug } from "@/lib/fixtures";
-import {
-  shipStorageLocationValues,
-  type HaulingChecklistRow,
-  type RouteAction,
-  type ShipStorageLocation,
-} from "@/lib/missions/mockSession";
+import { shipStorageLocationValues, type HaulingChecklistRow, type RouteAction, type ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 
 export type CargoBayCommodity = {
   commoditySlug: string;

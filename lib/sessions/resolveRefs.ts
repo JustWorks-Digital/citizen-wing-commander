@@ -9,12 +9,8 @@ import {
   listShips,
 } from "@/lib/fixtures";
 import { resolveLocationShopSlug } from "@/lib/fixtures/locationShops";
-import {
-  shipStorageLocationValues,
-  type CargoDelivery,
-  type RouteAction,
-  type ShipStorageLocation,
-} from "@/lib/missions/mockSession";
+import { shipStorageLocationValues, type CargoDelivery, type RouteAction, type ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 
 function normalize(value: string | null | undefined): string {
   if (value == null) return "";

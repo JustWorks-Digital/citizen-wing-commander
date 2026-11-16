@@ -11,27 +11,24 @@ import {
   softDeleteDeliverySession,
   updateDeliverySessionChecklist,
 } from "@/db/queries/deliverySessions";
-import type {
-  HaulingChecklistRow,
-  SessionChecklistModel,
-  SessionMission,
-} from "@/lib/missions/mockSession";
 import { copySessionChecklist } from "@/lib/missions/copySessionChecklist";
 import {
   emptySessionChecklist,
   summarizeSessionChecklist,
+  type HaulingChecklistRow,
+  type SessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
-
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 export type { SessionTabSummary };
 
-export function checklistEtag(session: SessionChecklistModel): string {
+export function checklistEtag(session: SessionChecklist): string {
   const basis = `${session.id}:${session.updatedAt}`;
   const hash = createHash("sha1").update(basis).digest("hex").slice(0, 16);
   return `"${hash}"`;
 }
 
-async function ensureAtLeastOneSession(): Promise<SessionChecklistModel> {
+async function ensureAtLeastOneSession(): Promise<SessionChecklist> {
   const selected = await getSelectedDeliverySession();
   if (selected) {
     return rowToChecklist(selected);
@@ -64,7 +61,7 @@ export async function listChecklistSessions(): Promise<{
 
 export async function getChecklistSession(
   sessionId?: string | null,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const id = sessionId?.trim();
   if (id) {
     const row = await getDeliverySession(id);
@@ -78,7 +75,7 @@ export async function getChecklistSession(
 
 export async function setActiveChecklistSession(
   sessionId: string,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const row = await selectDeliverySession(sessionId);
   if (!row) {
     throw new Error(`Unknown session id: ${sessionId}`);
@@ -89,7 +86,7 @@ export async function setActiveChecklistSession(
 export async function createChecklistSession(input?: {
   sessionName?: string;
   activate?: boolean;
-}): Promise<SessionChecklistModel> {
+}): Promise<SessionChecklist> {
   const sessionName = input?.sessionName?.trim() || "New trip";
   const row = await createDeliverySession({
     name: sessionName,
@@ -106,7 +103,7 @@ export async function createChecklistSession(input?: {
 export async function duplicateChecklistSession(
   sessionId: string,
   input?: { activate?: boolean },
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const source = await getChecklistSession(sessionId);
   const checklist = copySessionChecklist(source);
   const row = await createDeliverySession({
@@ -137,8 +134,8 @@ export async function deleteChecklistSession(sessionId: string): Promise<{
 }
 
 export async function saveChecklistSession(
-  session: SessionChecklistModel,
-): Promise<SessionChecklistModel> {
+  session: SessionChecklist,
+): Promise<SessionChecklist> {
   const id = session.id?.trim();
   if (!id) {
     const created = await createDeliverySession({
@@ -173,7 +170,7 @@ export async function replaceChecklistRows(
     missionsCompleted?: number;
     missions?: SessionMission[];
   },
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const current = await getChecklistSession(options?.sessionId);
   const now = new Date().toISOString();
   const missions =
@@ -207,7 +204,7 @@ export async function setLegCompleted(
   rowId: string,
   isCompleted: boolean,
   sessionId?: string | null,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const current = await getChecklistSession(sessionId);
   const rows = current.rows.map((row) =>
     row.id === rowId ? { ...row, isCompleted } : row,
@@ -218,7 +215,7 @@ export async function setLegCompleted(
 export async function setSessionName(
   sessionName: string,
   sessionId?: string | null,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const current = await getChecklistSession(sessionId);
   return saveChecklistSession({
     ...current,
@@ -229,7 +226,7 @@ export async function setSessionName(
 export async function setSessionShips(
   shipSlugs: string[],
   sessionId?: string | null,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const current = await getChecklistSession(sessionId);
   return saveChecklistSession({
     ...current,
@@ -240,7 +237,7 @@ export async function setSessionShips(
 export async function setSessionStartLocation(
   startLocationSlug: string | null,
   sessionId?: string | null,
-): Promise<SessionChecklistModel> {
+): Promise<SessionChecklist> {
   const current = await getChecklistSession(sessionId);
   return saveChecklistSession({
     ...current,

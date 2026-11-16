@@ -1,10 +1,6 @@
 import { getCommodityBySlug } from "@/lib/fixtures";
-import {
-  shipStorageLocationLabels,
-  shipStorageLocationValues,
-  type HaulingChecklistRow,
-  type ShipStorageLocation,
-} from "@/lib/missions/mockSession";
+import { shipStorageLocationLabels, shipStorageLocationValues, type HaulingChecklistRow, type ShipStorageLocation } from "@/lib/missions/sessionChecklist";
+
 
 export type ShipStorageBarSegment = {
   commoditySlug: string;

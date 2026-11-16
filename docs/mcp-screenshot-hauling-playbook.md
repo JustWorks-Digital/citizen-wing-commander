@@ -46,7 +46,7 @@ Lane A is preferred when ChatGPT can pass **`file`** (or Cursor/Codex can push b
 3. Put each shot’s **`logicalPath`** on that contract’s **`screenshots: [...]`** (session) or **`latestScreenshotPath`** (catalog). Never invent paths. Omit screenshots **only** for text-only intake.
 4. Write a **`mobiglas_contract_transcript`** (`lib/missions/mobiglasTranscript.ts`) mirroring the Contracts Manager panel and listing those logical screenshot paths when useful.
 5. Resolve names against fixtures (`search_locations`, `search_commodities`, `search_ships`).
-6. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklistModel`.
+6. **Merge** contracts into an **optimized stop order** (not one row per mission) as `SessionChecklist`.
 7. Write with **`apply_hauling_contracts_intake`** (preferred: contracts + optimized `legs`) or `replace_hauling_checklist` / local `PUT /api/checklist`.
 8. Confirm with `get_hauling_checklist`. Mark Source shots processed when done.
 

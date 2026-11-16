@@ -24,6 +24,11 @@ import {
   type CatalogShip,
 } from "@/lib/api/shipsApi";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
+import {
+  clearCatalogMissionLink,
+  isCatalogMissionNotFoundError,
+} from "@/lib/missions/clearCatalogMissionLink";
 import { appPaths } from "@/lib/appPaths";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import { ShipSelect } from "@/components/ui/ShipSelect";
@@ -36,10 +41,13 @@ import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import {
   applySessionCompletionTiming,
   areAllLegsComplete,
+  emptySessionChecklist,
   formatSessionDuration,
   getSessionElapsedMs,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+  summarizeSessionChecklist,
+  type SessionChecklist,
+  type SessionTabSummary,
+} from "@/lib/missions/sessionChecklist";
 import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
@@ -56,11 +64,6 @@ import {
   setMissionScuBoxSplits,
 } from "@/lib/missions/rebuildSessionRoute";
 import { SELECTABLE_SHIP_SLUGS } from "@/lib/ships/selectableShips";
-import {
-  emptySessionChecklist,
-  summarizeSessionChecklist,
-  type SessionTabSummary,
-} from "@/lib/missions/sessionChecklist";
 import { SessionCreatedLabel } from "./SessionCreatedLabel";
 import {
   insertQuantumTravelAfter,
@@ -114,7 +117,7 @@ export type SessionChecklistViewProps = {
   /** Route param — which session this page is showing. */
   sessionId?: string;
   /** Storybook / offline override (skips network). */
-  initial?: SessionChecklistModel;
+  initial?: SessionChecklist;
 };
 
 /** Near-live while the tab is focused; slower when backgrounded. */
@@ -128,7 +131,7 @@ export function SessionChecklistView({
   initial,
 }: SessionChecklistViewProps) {
   const router = useRouter();
-  const [session, setSession] = useState<SessionChecklistModel>(
+  const [session, setSession] = useState<SessionChecklist>(
     initial ??
       emptySessionChecklist({
         id: routeSessionId,
@@ -311,7 +314,7 @@ export function SessionChecklistView({
       }
     };
 
-    const applyRemote = (next: SessionChecklistModel) => {
+    const applyRemote = (next: SessionChecklist) => {
       if (savingRef.current) return;
       if (next.id !== routeSessionId) return;
       const current = sessionRef.current;
@@ -492,7 +495,7 @@ export function SessionChecklistView({
     ? getLocationBySlug(session.startLocationSlug)
     : undefined;
 
-  const persistSession = useCallback((next: SessionChecklistModel) => {
+  const persistSession = useCallback((next: SessionChecklist) => {
     // Never PUT the Loading… placeholder — that would wipe a real trip.
     if (!initial && !hydratedFromServerRef.current) {
       return Promise.resolve();
@@ -500,7 +503,7 @@ export function SessionChecklistView({
     savingRef.current = true;
     setSaveInFlight((count) => count + 1);
     // Stamp locally so in-flight polls can't overwrite with a pre-save body.
-    const stamped: SessionChecklistModel = {
+    const stamped: SessionChecklist = {
       ...next,
       updatedAt: new Date().toISOString(),
     };
@@ -850,31 +853,46 @@ export function SessionChecklistView({
   );
 
   const syncCatalogBoxSplits = useCallback(
-    (missionId: string, nextSession: SessionChecklistModel) => {
+    (missionId: string, nextSession: SessionChecklist) => {
       const updatedMission =
         nextSession.missions?.find((mission) => mission.id === missionId) ??
         null;
       const catalogId = updatedMission?.catalogMissionId ?? null;
-      if (!catalogId || !updatedMission?.scuBoxSplits) return;
+      if (!catalogId || !updatedMission) return;
+      const scuBoxSplits = cargoBoxSplits.selectedAggregate(updatedMission);
+      const hasBoxes =
+        scuBoxSplits.scuOne +
+          scuBoxSplits.scuTwo +
+          scuBoxSplits.scuFour +
+          scuBoxSplits.scuEight +
+          scuBoxSplits.scuSixteen +
+          scuBoxSplits.scuThirtyTwo >
+        0;
+      if (!hasBoxes && !updatedMission.scuCargoBoxSplits) return;
       void updateCatalogMissionScuBoxSplits({
         missionId: catalogId,
-        scuBoxSplits: updatedMission.scuBoxSplits,
+        scuBoxSplits,
         scuCargoBoxSplits: updatedMission.scuCargoBoxSplits,
         scuTotalCertainty: updatedMission.scuTotalCertainty,
         scuBoxSplitsCertainty: updatedMission.scuBoxSplitsCertainty,
         scuCargoBoxSplitsCertainty: updatedMission.scuCargoBoxSplitsCertainty,
       }).catch((error: unknown) => {
+        // Stale catalogMissionId (e.g. prod trip on local DB) — clear so we
+        // stop retrying; relink from catalog/prod explicitly later.
+        if (isCatalogMissionNotFoundError(error)) {
+          void persistSession(
+            clearCatalogMissionLink(sessionRef.current, missionId),
+          );
+          return;
+        }
         const message =
           error instanceof Error ? error.message : String(error);
-        // Stale catalogMissionId (e.g. prod-linked trip on a local DB) — trip
-        // already saved; there is no catalog row to update.
-        if (/catalog mission not found/i.test(message)) return;
         setLoadError(
           `Saved on trip, but failed to update catalog default: ${message}`,
         );
       });
     },
-    [],
+    [persistSession],
   );
 
   const applyBoxBreakdown = useCallback(

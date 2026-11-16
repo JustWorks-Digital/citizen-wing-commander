@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import { SessionInventoryStat } from "./SessionStatsStrip";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 

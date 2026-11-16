@@ -46,12 +46,8 @@ import {
   estimateMissionsHaulingRepXp,
   formatHaulingRepXp,
 } from "@/lib/missions/haulingRepXp";
-import {
-  formatDistanceToNext,
-  isQuantumTravelRow,
-  type HaulingChecklistRow,
-  type RouteAction,
-} from "@/lib/missions/mockSession";
+import { formatDistanceToNext, isQuantumTravelRow, type HaulingChecklistRow, type RouteAction } from "@/lib/missions/sessionChecklist";
+
 import {
   cargoInventory,
   type ScuTransfer,

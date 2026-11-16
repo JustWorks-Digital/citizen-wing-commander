@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState, type ComponentProps } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";

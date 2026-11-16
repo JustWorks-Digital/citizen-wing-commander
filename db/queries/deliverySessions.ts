@@ -1,16 +1,10 @@
 import { and, desc, eq, ne } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deliverySessions, type DeliverySession } from "@/db/schema";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
-import {
-  emptySessionChecklist,
-  normalizeSessionChecklist,
-  summarizeSessionChecklist,
-  type SessionTabSummary,
-} from "@/lib/missions/sessionChecklist";
+import { emptySessionChecklist, normalizeSessionChecklist, summarizeSessionChecklist, type SessionChecklist, type SessionTabSummary } from "@/lib/missions/sessionChecklist";
 import { timeDbQuery } from "@/lib/perf/timeDb";
 
-function rowToChecklist(row: DeliverySession): SessionChecklistModel {
+function rowToChecklist(row: DeliverySession): SessionChecklist {
   return normalizeSessionChecklist(row.checklist ?? {}, {
     preferId: row.id,
   });
@@ -82,7 +76,7 @@ export async function getSelectedDeliverySession() {
 
 export async function createDeliverySession(input?: {
   name?: string;
-  checklist?: SessionChecklistModel;
+  checklist?: SessionChecklist;
   select?: boolean;
 }) {
   return timeDbQuery("deliverySessions.create", async () => {
@@ -155,7 +149,7 @@ export async function selectDeliverySession(id: string) {
 
 export async function updateDeliverySessionChecklist(
   id: string,
-  checklist: SessionChecklistModel,
+  checklist: SessionChecklist,
 ) {
   return timeDbQuery("deliverySessions.updateChecklist", async () => {
     const db = getDb();

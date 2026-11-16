@@ -14,10 +14,8 @@ import type {
 } from "@/lib/missions/cargoInventory";
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import { resolveMissionTitle } from "@/lib/missions/missionRank";
-import {
-  formatDistanceToNext,
-  type DistanceToNext,
-} from "@/lib/missions/mockSession";
+import { formatDistanceToNext, type DistanceToNext } from "@/lib/missions/sessionChecklist";
+
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 function StatLabel({

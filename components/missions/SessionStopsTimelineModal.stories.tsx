@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+
 import { reorderChecklistStops } from "@/lib/missions/reorderStops";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 

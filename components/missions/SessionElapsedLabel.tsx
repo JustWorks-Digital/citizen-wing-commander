@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  formatSessionDuration,
-  getSessionElapsedMs,
-  type SessionChecklistModel,
-} from "@/lib/missions/mockSession";
+import { formatSessionDuration, getSessionElapsedMs, type SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 
 export type SessionElapsedLabelProps = {
-  session: Pick<SessionChecklistModel, "startedAt" | "completedAt">;
+  session: Pick<SessionChecklist, "startedAt" | "completedAt">;
   /**
    * `default` — “Time …” line for the ⋯ menu.
    * `value` — duration only for the route toolbar Time cell.

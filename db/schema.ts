@@ -12,7 +12,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { SessionChecklistModel } from "@/lib/missions/mockSession";
+import type { SessionChecklist } from "@/lib/missions/sessionChecklist";
+
 import type {
   CatalogMissionNoteSentiment,
   HaulingCatalogMissionPayload,
@@ -101,7 +102,7 @@ export const deliverySessions = pgTable(
     isSelected: boolean("is_selected").notNull().default(false),
     /** Checklist document: ships + hauling rows. */
     checklist: jsonb("checklist")
-      .$type<SessionChecklistModel>()
+      .$type<SessionChecklist>()
       .notNull()
       .default(
         sql`'{"id":"","sessionName":"","shipSlugs":[],"startLocationSlug":null,"missionCount":0,"missionsCompleted":0,"missions":[],"rows":[]}'::jsonb`,

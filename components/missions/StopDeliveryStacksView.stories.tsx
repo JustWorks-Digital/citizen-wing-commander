@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { planStopCargoStacks } from "@/lib/missions/stopDeliveryBoxes";
 import { StopDeliveryStacksView } from "./StopDeliveryStacksView";
 

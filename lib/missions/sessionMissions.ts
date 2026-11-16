@@ -55,12 +55,12 @@ export type SessionMission = {
    */
   scuCargoBoxSplitsAutoSelected?: ScuCargoBoxSplits;
   /**
-   * Aggregate crate mix (sum of `scuCargoBoxSplits`). Kept for catalog column,
-   * compact icons, and legacy single-mix callers.
+   * @deprecated Derived — use `cargoBoxSplits.selectedAggregate(mission)`.
+   * Still accepted on load for legacy single-cargo hydrate into `scuCargoBoxSplits`.
    */
   scuBoxSplits?: ScuBoxSplits;
   /**
-   * Aggregate auto mix (sum of `scuCargoBoxSplitsAutoSelected`).
+   * @deprecated Derived — use `cargoBoxSplits.autoSelectedAggregate(mission)`.
    */
   scuBoxSplitsAutoSelected?: ScuBoxSplits;
   /**

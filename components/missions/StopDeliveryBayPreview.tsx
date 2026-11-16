@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useMemo, useState } from "react";
-import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import {
   isScuBoxSplitsUncertain,
