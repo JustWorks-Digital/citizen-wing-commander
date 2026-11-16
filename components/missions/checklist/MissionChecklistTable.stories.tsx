@@ -13,13 +13,13 @@ import { syncMissionsForStopCompletion } from "@/lib/missions/expectedCompletion
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
-  HaulingChecklistTable,
+  MissionChecklistTable,
   QUANTUM_ORIGIN_ROW_ID,
-} from "./HaulingChecklistTable";
+} from "./MissionChecklistTable";
 
 const meta = {
-  title: "Missions/HaulingChecklistTable",
-  component: HaulingChecklistTable,
+  title: "Missions/MissionChecklistTable",
+  component: MissionChecklistTable,
   parameters: {
     layout: "padded",
     docs: {
@@ -29,7 +29,7 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof HaulingChecklistTable>;
+} satisfies Meta<typeof MissionChecklistTable>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -54,7 +54,7 @@ function InteractiveTable(args: {
   );
 
   return (
-    <HaulingChecklistTable
+    <MissionChecklistTable
       rows={rows}
       focusedStopId={focusedStopId}
       onFocusStop={setFocusedStopId}

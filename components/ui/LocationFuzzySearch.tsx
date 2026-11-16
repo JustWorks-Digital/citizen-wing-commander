@@ -126,7 +126,7 @@ export function LocationFuzzySearch({
       ref={rootRef}
       className={[
         "relative w-full md:max-w-md",
-        // Above HaulingChecklistTable sticky toolbar (z-20) while the menu is open.
+        // Above MissionChecklistTable sticky toolbar (z-20) while the menu is open.
         menuOpen ? "z-30" : "z-0",
       ].join(" ")}
       onMouseDown={(event) => {

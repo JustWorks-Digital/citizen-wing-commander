@@ -1,0 +1,249 @@
+"use client";
+
+import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { listLocationShops } from "@/lib/fixtures/locationShops";
+import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
+import {
+  missionScuAmounts,
+  type MissionScuDraft,
+} from "@/lib/missions/missionScuAmounts";
+import {
+  insertQuantumTravelAfter,
+  updateChecklistRowLocation,
+  updateQuantumTravelEndpoints,
+} from "@/lib/missions/quantumTravel";
+import { setMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
+import {
+  reorderChecklistStops,
+  resetTripProgress,
+} from "@/lib/missions/reorderStops";
+import {
+  applySessionCompletionTiming,
+  type SessionChecklist,
+} from "@/lib/missions/sessionChecklist";
+import { toggleStopCompletion } from "@/lib/missions/toggleStopCompletion";
+import { QUANTUM_ORIGIN_ROW_ID } from "@/components/missions/checklist/MissionChecklistTable";
+
+type PersistSession = (next: SessionChecklist) => Promise<void>;
+
+/**
+ * Route / trip edits: cargo handled, stop done, quantum, reorder, reset,
+ * box mixes and mission SCU drafts.
+ */
+export function useSessionRouteEdits(input: {
+  sessionRef: { current: SessionChecklist };
+  persistSession: PersistSession;
+  setLoadError: Dispatch<SetStateAction<string | null>>;
+  setQuantumOriginDeparted: Dispatch<SetStateAction<boolean>>;
+  syncCatalogBoxSplits: (
+    missionId: string,
+    nextSession: SessionChecklist,
+  ) => void;
+}) {
+  const {
+    sessionRef,
+    persistSession,
+    setLoadError,
+    setQuantumOriginDeparted,
+    syncCatalogBoxSplits,
+  } = input;
+
+  const onToggleCargoHandled = useCallback(
+    (rowId: string, cargoIndex: number) =>
+      persistSession(
+        applySessionCompletionTiming({
+          ...sessionRef.current,
+          shipSlugs: sessionRef.current.shipSlugs ?? [],
+          startLocationSlug: sessionRef.current.startLocationSlug ?? null,
+          rows: sessionRef.current.rows.map((row) => {
+            if (row.id !== rowId) return row;
+            return {
+              ...row,
+              cargoDeliveries: row.cargoDeliveries.map((cargo, index) =>
+                index === cargoIndex
+                  ? { ...cargo, isHandled: !cargo.isHandled }
+                  : cargo,
+              ),
+            };
+          }),
+        }),
+      ),
+    [persistSession, sessionRef],
+  );
+
+  const onToggleStop = useCallback(
+    (rowId: string) => {
+      const next = toggleStopCompletion(sessionRef.current, rowId);
+      if (!next) return Promise.resolve();
+      return persistSession(next);
+    },
+    [persistSession, sessionRef],
+  );
+
+  const onInsertQuantumTravel = useCallback(
+    (travel: {
+      afterRowId: string;
+      fromSlug: string;
+      toSlug: string;
+      reasonShopSlug?: string | null;
+    }) => {
+      const current = sessionRef.current;
+      return persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: insertQuantumTravelAfter(current.rows, travel.afterRowId, {
+            fromSlug: travel.fromSlug,
+            toSlug: travel.toSlug,
+            reasonShopSlug: travel.reasonShopSlug ?? null,
+          }),
+        }),
+      );
+    },
+    [persistSession, sessionRef],
+  );
+
+  const onUpdateQuantumTravel = useCallback(
+    (travel: { rowId: string; fromSlug?: string; toSlug?: string }) => {
+      const current = sessionRef.current;
+
+      if (travel.rowId === QUANTUM_ORIGIN_ROW_ID) {
+        let startLocationSlug = current.startLocationSlug ?? null;
+        let rows = current.rows;
+        if (travel.fromSlug) {
+          startLocationSlug = travel.fromSlug;
+        }
+        if (travel.toSlug && rows[0]) {
+          const updated = updateChecklistRowLocation(
+            rows,
+            rows[0].id,
+            travel.toSlug,
+          );
+          if (!updated.ok) {
+            setLoadError(updated.error);
+            return Promise.resolve();
+          }
+          rows = updated.rows;
+        }
+        return persistSession(
+          applySessionCompletionTiming({
+            ...current,
+            shipSlugs: current.shipSlugs ?? [],
+            startLocationSlug,
+            rows,
+          }),
+        );
+      }
+
+      const updated = updateQuantumTravelEndpoints(
+        current.rows,
+        travel.rowId,
+        {
+          fromSlug: travel.fromSlug,
+          toSlug: travel.toSlug,
+        },
+        {
+          isReasonValidAtDestination: (reasonShopSlug, toSlug) =>
+            listLocationShops(toSlug).some(
+              (shop) => shop.slug === reasonShopSlug,
+            ),
+        },
+      );
+      if (!updated.ok) {
+        setLoadError(updated.error);
+        return Promise.resolve();
+      }
+      return persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: updated.rows,
+        }),
+      );
+    },
+    [persistSession, sessionRef, setLoadError],
+  );
+
+  const applyBoxBreakdown = useCallback(
+    (
+      missionId: string,
+      commoditySlug: string,
+      breakdown: ScuBoxSplits,
+      options?: {
+        applyPreferredMaxToRemaining?: boolean;
+        onlyUncorrected?: boolean;
+      },
+    ) => {
+      const result = setMissionScuBoxSplits(
+        sessionRef.current,
+        missionId,
+        breakdown,
+        commoditySlug,
+        {
+          ...options,
+          scuBoxSplitsCertainty: "known",
+        },
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      void persistSession(result.session);
+      syncCatalogBoxSplits(missionId, result.session);
+    },
+    [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
+  );
+
+  const applyMissionScuDraft = useCallback(
+    (missionId: string, draft: MissionScuDraft) => {
+      const result = missionScuAmounts.applyDraft(
+        sessionRef.current,
+        missionId,
+        draft,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      void persistSession(result.session);
+      syncCatalogBoxSplits(missionId, result.session);
+    },
+    [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
+  );
+
+  const onReorderStops = useCallback(
+    (orderedIds: string[]) => {
+      const current = sessionRef.current;
+      const result = reorderChecklistStops(current.rows, orderedIds);
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      void persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          rows: result.rows,
+        }),
+      );
+    },
+    [persistSession, sessionRef, setLoadError],
+  );
+
+  const onResetTrip = useCallback(() => {
+    setQuantumOriginDeparted(false);
+    void persistSession(resetTripProgress(sessionRef.current));
+  }, [persistSession, sessionRef, setQuantumOriginDeparted]);
+
+  return {
+    onToggleCargoHandled,
+    onToggleStop,
+    onInsertQuantumTravel,
+    onUpdateQuantumTravel,
+    applyBoxBreakdown,
+    applyMissionScuDraft,
+    onReorderStops,
+    onResetTrip,
+  };
+}
