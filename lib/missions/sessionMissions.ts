@@ -1,6 +1,7 @@
 import {
   formatAuecAmount,
   type ScuBoxSplits,
+  type ScuSplit,
 } from "@/lib/missions/catalogMission";
 import type { ScuCargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import type { ScuCertainty } from "@/lib/missions/scuCertainty";
@@ -15,6 +16,7 @@ import {
   stripRankFromTitle,
   type MissionRank,
 } from "@/lib/missions/missionRank";
+import { normalizeSessionMissionScuSplits } from "@/lib/missions/missionScuSplits";
 
 /** Mission card stored on the active checklist session for UI / MCP. */
 export type SessionMission = {
@@ -38,15 +40,10 @@ export type SessionMission = {
   cargo: HaulingIntakeCargoLine[];
   pickupSplits?: Record<string, HaulingIntakeCargoLine[]>;
   /**
-   * Per-leg collect→deliver splits (from catalog / OCR extras).
-   * When present, drives Collect / Deliver objective lines in the modal.
+   * Per-leg SCU amounts (canonical; same shape as catalog `scuSplits`).
+   * Drives Collect / Deliver objectives and Mission SCU edits.
    */
-  deliverySplits?: Array<{
-    from: string;
-    to: string;
-    commodity: string;
-    scu: number;
-  }>;
+  scuSplits?: ScuSplit[];
   maxContainerScu?: number;
   /**
    * Selected crate mix per commodity slug (source of truth for restamp).
@@ -158,6 +155,15 @@ export function normalizeSessionMissionRankFields(
       ? { ...mission.mobiglas, title: nextMobiglasTitle }
       : mission.mobiglas,
   };
+}
+
+/** Rank + legacy `deliverySplits` → `scuSplits` (checklist load). */
+export function normalizeSessionMission(
+  mission: SessionMission,
+): SessionMission {
+  return normalizeSessionMissionScuSplits(
+    normalizeSessionMissionRankFields(mission),
+  );
 }
 
 export function sessionMissionFromIntakeContract(

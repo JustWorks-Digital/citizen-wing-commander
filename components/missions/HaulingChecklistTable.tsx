@@ -2052,6 +2052,15 @@ function TransferBlockFrame({
   );
 }
 
+function transferScuDigitCols(transfer: ScuTransfer): number {
+  return Math.max(
+    String(transfer.before).length,
+    String(transfer.amount).length,
+    String(transfer.after).length,
+    1,
+  );
+}
+
 function TransferScuLine({
   amount,
   suffix,
@@ -2059,6 +2068,7 @@ function TransferScuLine({
   strike,
   mute,
   isDone,
+  digitCols = null,
 }: {
   amount: string;
   suffix: string;
@@ -2066,10 +2076,16 @@ function TransferScuLine({
   strike: string;
   mute: string;
   isDone: boolean;
+  /**
+   * When set (column has a number above), right-align digits so ones line up
+   * (e.g. 6 under 36). Omit when the signed line stands alone — keep ± flush.
+   */
+  digitCols?: number | null;
 }) {
   const signed = /^([+−+-])(.*)$/.exec(amount);
   const sign = signed?.[1] ?? "";
   const digits = signed?.[2] ?? amount;
+  const alignUnder = digitCols != null && digitCols > 0;
 
   return (
     <p
@@ -2079,10 +2095,17 @@ function TransferScuLine({
         strike,
       ].join(" ")}
     >
-      {/* Fixed sign gutter so digits line up with unsigned rows above/below. */}
-      <span className="inline-grid grid-cols-[1ch_auto] items-baseline">
+      {/* Sign gutter; optional fixed digit width when stacking under before/after. */}
+      <span
+        className="inline-grid items-baseline"
+        style={{
+          gridTemplateColumns: alignUnder
+            ? `1ch ${digitCols}ch`
+            : "1ch auto",
+        }}
+      >
         <span className="text-end">{sign}</span>
-        <span>{digits}</span>
+        <span className={alignUnder ? "text-end" : undefined}>{digits}</span>
       </span>
       {suffix ? (
         <span
@@ -2121,6 +2144,7 @@ function PickupTransferBlock({
   isDone: boolean;
 }) {
   const { strike, mute } = transferToneClasses(isDone);
+  const digitCols = transferScuDigitCols(transfer);
   const stationShortName = getLocationShortName(locationSlug);
   const stationImageSrc = getLocationImageSrc(locationSlug);
   const shipImageSrc = getShipIconSrc(shipSlug);
@@ -2164,6 +2188,7 @@ function PickupTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
 
@@ -2188,6 +2213,7 @@ function PickupTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
 
@@ -2207,6 +2233,7 @@ function PickupTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
     </TransferBlockFrame>
@@ -2229,6 +2256,7 @@ function DeliveryTransferBlock({
   isDone: boolean;
 }) {
   const { strike, mute } = transferToneClasses(isDone);
+  const digitCols = transferScuDigitCols(transfer);
   const stationShortName = getLocationShortName(locationSlug);
   const stationImageSrc = getLocationImageSrc(locationSlug);
   const shipImageSrc = getShipIconSrc(shipSlug);
@@ -2271,6 +2299,7 @@ function DeliveryTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
       <span aria-hidden className="col-start-3" />
@@ -2283,6 +2312,7 @@ function DeliveryTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
       <div className="col-start-2 flex items-center justify-center self-center">
@@ -2314,6 +2344,7 @@ function DeliveryTransferBlock({
           strike={strike}
           mute={mute}
           isDone={isDone}
+          digitCols={digitCols}
         />
       </div>
       <span aria-hidden className="col-start-3" />

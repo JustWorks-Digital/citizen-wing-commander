@@ -12,6 +12,10 @@ import {
   type ReactNode,
 } from "react";
 import type { CatalogMission } from "@/db/schema";
+import {
+  CargoAmountBadges,
+  CatalogLocationBadges,
+} from "@/components/catalog/CatalogRouteBadges";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { fetchCatalogMissionsByIds } from "@/lib/api/catalogMissionsApi";
@@ -23,6 +27,10 @@ import {
   scuBoxSplitsForScu,
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
+import {
+  catalogLocationBadgeLabel,
+  type CatalogLocationBadgeItem,
+} from "@/lib/missions/catalogMissionDisplay";
 import { enrichSessionMissionFromCatalog } from "@/lib/missions/enrichSessionMissionFromCatalog";
 import {
   resolveMissionRank,
@@ -44,6 +52,7 @@ import {
 import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { HaulingChecklistRow } from "@/lib/missions/mockSession";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 
 export type SessionMissionsModalProps = {
@@ -147,44 +156,16 @@ function CompleteIcon({ isCompleted }: { isCompleted: boolean }) {
   );
 }
 
-function LocationList({
-  items,
-}: {
-  items: Array<{ label: string; isCompleted: boolean }>;
-}) {
-  if (items.length === 0) return <span>—</span>;
-  if (items.length === 1) {
-    const item = items[0]!;
-    return (
-      <span
-        className={[
-          "break-words",
-          item.isCompleted
-            ? "text-rsi-text-muted line-through decoration-rsi-success/50"
-            : "",
-        ].join(" ")}
-      >
-        {item.label}
-      </span>
-    );
-  }
-  return (
-    <ul className="list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug">
-      {items.map((item, index) => (
-        <li
-          key={`${item.label}-${index}`}
-          className={[
-            "break-words",
-            item.isCompleted
-              ? "text-rsi-text-muted line-through decoration-rsi-success/50"
-              : "",
-          ].join(" ")}
-        >
-          {item.label}
-        </li>
-      ))}
-    </ul>
-  );
+function sessionLocationBadge(
+  locationNameOrSlug: string,
+  isCompleted: boolean,
+): CatalogLocationBadgeItem {
+  const slug =
+    resolveLocationSlug(locationNameOrSlug) ?? locationNameOrSlug;
+  return {
+    ...catalogLocationBadgeLabel(slug),
+    isCompleted,
+  };
 }
 
 function formatRewardCell(mission: SessionMission): string {
@@ -376,8 +357,8 @@ type MissionContractViewModel = {
     scu: number;
   }>;
   readyBoxes: ReturnType<typeof cargoBoxSplits.withDefaults>;
-  fromLocations: Array<{ label: string; isCompleted: boolean }>;
-  toLocations: Array<{ label: string; isCompleted: boolean }>;
+  fromLocations: CatalogLocationBadgeItem[];
+  toLocations: CatalogLocationBadgeItem[];
   statusBadge: ReactNode;
 };
 
@@ -428,24 +409,28 @@ function missionContractView(
     exp: estimateMissionHaulingRepXp(mission),
     cargoBoxLines,
     readyBoxes,
-    fromLocations: collect.map((line) => ({
-      label: line.locationLabel,
-      isCompleted: isMissionLocationCompleted(
-        mission,
-        rows,
+    fromLocations: collect.map((line) =>
+      sessionLocationBadge(
         line.locationLabel,
-        "pickup",
+        isMissionLocationCompleted(
+          mission,
+          rows,
+          line.locationLabel,
+          "pickup",
+        ),
       ),
-    })),
-    toLocations: deliver.map((line) => ({
-      label: line.locationLabel,
-      isCompleted: isMissionLocationCompleted(
-        mission,
-        rows,
+    ),
+    toLocations: deliver.map((line) =>
+      sessionLocationBadge(
         line.locationLabel,
-        "delivery",
+        isMissionLocationCompleted(
+          mission,
+          rows,
+          line.locationLabel,
+          "delivery",
+        ),
       ),
-    })),
+    ),
     statusBadge,
   };
 }
@@ -603,18 +588,16 @@ const MissionContractCard = memo(function MissionContractCard({
           >
             {title}
           </p>
-          <ul
-            className={[
-              "mt-1 list-disc space-y-0.5 pl-3 text-[0.7rem] leading-snug text-rsi-text-muted",
-              isCompleted ? "line-through opacity-80" : "",
-            ].join(" ")}
-          >
-            {cargoLinesOrFallback(view).map((line) => (
-              <li key={line.commoditySlug} className="break-words">
-                {line.scu} SCU {line.commodity}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-0.5">
+            <CargoAmountBadges
+              items={cargoLinesOrFallback(view).map((line) => ({
+                commoditySlug: line.commoditySlug,
+                commodityName: line.commodity,
+                scu: line.scu,
+                isCompleted,
+              }))}
+            />
+          </div>
         </div>
         <MissionActionsMenu
           mission={mission}
@@ -664,7 +647,7 @@ const MissionContractCard = memo(function MissionContractCard({
             From
           </p>
           <div className="mt-0.5">
-            <LocationList items={fromLocations} />
+            <CatalogLocationBadges items={fromLocations} tone="from" />
           </div>
         </div>
         <div className="min-w-0">
@@ -672,7 +655,7 @@ const MissionContractCard = memo(function MissionContractCard({
             To
           </p>
           <div className="mt-0.5">
-            <LocationList items={toLocations} />
+            <CatalogLocationBadges items={toLocations} tone="to" />
           </div>
         </div>
       </div>
@@ -759,18 +742,16 @@ const MissionContractRow = memo(function MissionContractRow({
         >
           {title}
         </p>
-        <ul
-          className={[
-            "mt-0.5 list-disc space-y-0.5 pl-3 text-[0.65rem] leading-snug text-rsi-text-muted",
-            isCompleted ? "line-through opacity-80" : "",
-          ].join(" ")}
-        >
-          {cargoLinesOrFallback(view).map((line) => (
-            <li key={line.commoditySlug} className="break-words">
-              {line.scu} SCU {line.commodity}
-            </li>
-          ))}
-        </ul>
+        <div className="mt-0.5">
+          <CargoAmountBadges
+            items={cargoLinesOrFallback(view).map((line) => ({
+              commoditySlug: line.commoditySlug,
+              commodityName: line.commodity,
+              scu: line.scu,
+              isCompleted,
+            }))}
+          />
+        </div>
         {statusBadge ? <div className="mt-0.5">{statusBadge}</div> : null}
       </td>
       <td
@@ -794,10 +775,10 @@ const MissionContractRow = memo(function MissionContractRow({
         {exp != null ? formatHaulingRepXp(exp) : "—"}
       </td>
       <td className={tdClass}>
-        <LocationList items={fromLocations} />
+        <CatalogLocationBadges items={fromLocations} tone="from" />
       </td>
       <td className={tdClass}>
-        <LocationList items={toLocations} />
+        <CatalogLocationBadges items={toLocations} tone="to" />
       </td>
       <td className={tdClass}>
         <MissionBoxesButton

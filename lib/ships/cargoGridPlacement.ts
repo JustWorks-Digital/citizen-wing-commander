@@ -13,6 +13,7 @@ import {
 } from "@/lib/ships/cargoGridCoords";
 import {
   cargoGridMaxWidth,
+  cargoGridZoneSpans,
   cargoGridZoneWidth,
   type CargoGridStorageLocation,
   type ShipCargoGridSketch,
@@ -101,21 +102,16 @@ function boundsForZoneEntry(
   sketch: ShipCargoGridSketch,
   targetId: string,
 ): ZoneBounds | null {
-  const maxWidth = cargoGridMaxWidth(sketch);
-  let x = 0;
-  for (const entry of sketch.zones) {
-    const width = cargoGridZoneWidth(sketch, entry);
-    const yStart = Math.floor((maxWidth - width) / 2);
-    if (entry.id === targetId && entry.kind === "cargo") {
+  for (const span of cargoGridZoneSpans(sketch)) {
+    if (span.zone.id === targetId && span.zone.kind === "cargo") {
       return {
-        xStart: x,
-        xEnd: x + entry.lengthCells,
-        yStart,
-        yEnd: yStart + width,
-        zEnd: sketch.heightCells,
+        xStart: span.xStart,
+        xEnd: span.xEnd,
+        yStart: span.yStart,
+        yEnd: span.yEnd,
+        zEnd: span.zEnd,
       };
     }
-    x += entry.lengthCells;
   }
   return null;
 }
@@ -129,24 +125,19 @@ function zoneBoundsForStorage(
   sketch: ShipCargoGridSketch,
   zone: CargoGridStorageLocation,
 ): ZoneBounds | null {
-  const maxWidth = cargoGridMaxWidth(sketch);
-  let x = 0;
-  for (const entry of sketch.zones) {
-    const width = cargoGridZoneWidth(sketch, entry);
-    const yStart = Math.floor((maxWidth - width) / 2);
+  for (const span of cargoGridZoneSpans(sketch)) {
     if (
-      entry.kind === "cargo" &&
-      cargoGridZoneStorageLocation(entry) === zone
+      span.zone.kind === "cargo" &&
+      cargoGridZoneStorageLocation(span.zone) === zone
     ) {
       return {
-        xStart: x,
-        xEnd: x + entry.lengthCells,
-        yStart,
-        yEnd: yStart + width,
-        zEnd: sketch.heightCells,
+        xStart: span.xStart,
+        xEnd: span.xEnd,
+        yStart: span.yStart,
+        yEnd: span.yEnd,
+        zEnd: span.zEnd,
       };
     }
-    x += entry.lengthCells;
   }
 
   // Fallback order when the requested bay isn't on this ship's grid.
@@ -1460,15 +1451,15 @@ type LotCellRef = {
 
 type GapXRange = { xStart: number; xEnd: number };
 
-/** Nose→ramp X spans of gap / walkway zones (e.g. C2 mid-gap). */
+/** Nose→ramp X spans of full-width gap / walkway zones (e.g. C2 mid-gap, Galaxy door). */
 function gapXRangesForSketch(sketch: ShipCargoGridSketch): GapXRange[] {
+  const maxWidth = cargoGridMaxWidth(sketch);
   const ranges: GapXRange[] = [];
-  let x = 0;
-  for (const zone of sketch.zones) {
-    if (zone.kind === "gap") {
-      ranges.push({ xStart: x, xEnd: x + zone.lengthCells });
-    }
-    x += zone.lengthCells;
+  for (const span of cargoGridZoneSpans(sketch)) {
+    if (span.zone.kind !== "gap") continue;
+    // Side gaps (beside a lift) are not full-bay walkway breaks.
+    if (span.yEnd - span.yStart < maxWidth) continue;
+    ranges.push({ xStart: span.xStart, xEnd: span.xEnd });
   }
   return ranges;
 }

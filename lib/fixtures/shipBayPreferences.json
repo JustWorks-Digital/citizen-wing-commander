@@ -44,7 +44,7 @@
     {
       "shipSlug": "galaxy",
       "payload": {
-        "notes": "RSI Galaxy (cargo module): C2-style front/gap/rear with two equal 360 SCU holds (10×9×4 inset in a 12-wide envelope). Prefer flat layers; keep the mid-gap clear.",
+        "notes": "RSI Galaxy: Lift cluster (Lift L/R + Lift) toward nose, Door, then Hangar (tapered empty floor + Hangar L/R). Packable 720 SCU excludes hangar floor.",
         "preferredZoneOrder": ["rear", "middle", "front"],
         "preferredRuleIds": [
           "prefer-flat-layers",
@@ -53,9 +53,9 @@
         ],
         "commodityZoneHints": {},
         "guidelines": [
-          "Front and rear holds are equal (360 SCU each; 720 total).",
-          "Load from the ramp (rear) first when stacking deep.",
-          "Keep full-height stacks toward the back of each hold; do not block the mid-gap."
+          "Packable zones: Lift L/R (256 each), Lift (144), Hangar L/R (32 each) = 720.",
+          "Hangar main is an empty floor grid (12→6 width taper); do not pack into it yet.",
+          "Keep the Door and lift side gaps clear."
         ]
       }
     }

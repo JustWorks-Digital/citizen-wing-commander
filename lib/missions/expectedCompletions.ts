@@ -24,8 +24,8 @@ function missionDeliversAt(
     return true;
   }
   return Boolean(
-    mission.deliverySplits?.some((split) =>
-      locationMatchesRow(split.to, rowLocationSlug),
+    mission.scuSplits?.some((split) =>
+      locationMatchesRow(split.toLocationSlug, rowLocationSlug),
     ),
   );
 }
@@ -46,10 +46,11 @@ function missionCommoditySlugs(mission: SessionMission): Set<string> {
       line.commodity.trim().toLowerCase();
     if (slug) slugs.add(slug);
   }
-  for (const split of mission.deliverySplits ?? []) {
+  for (const split of mission.scuSplits ?? []) {
     const slug =
-      resolveCommoditySlug(split.commodity) ??
-      split.commodity.trim().toLowerCase();
+      split.commoditySlug ||
+      resolveCommoditySlug(split.commodityName) ||
+      split.commodityName.trim().toLowerCase();
     if (slug) slugs.add(slug);
   }
   return slugs;

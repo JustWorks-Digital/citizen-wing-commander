@@ -7,7 +7,8 @@ import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
   cargoGridMaxWidth,
   cargoGridTotalLength,
-  cargoGridZoneWidth,
+  cargoGridZoneHeight,
+  cargoGridZoneSpans,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
 import {
@@ -500,34 +501,33 @@ function buildCubes(
   highlightKeys: Set<string>,
   placementBoxes: PlacedCargoBox[] = [],
 ): IsoCube[] {
-  const maxWidth = cargoGridMaxWidth(sketch);
   const cubes: IsoCube[] = [];
-  let lengthOffset = 0;
 
-  for (const zone of sketch.zones) {
-    const zoneWidth = cargoGridZoneWidth(sketch, zone);
-    const widthOffset = Math.floor((maxWidth - zoneWidth) / 2);
-    const zoneX0 = lengthOffset;
-    const zoneX1 = lengthOffset + zone.lengthCells;
-    const zoneY0 = widthOffset;
-    const zoneY1 = widthOffset + zoneWidth;
+  for (const span of cargoGridZoneSpans(sketch)) {
+    const { zone } = span;
+    const zoneX0 = span.xStart;
+    const zoneX1 = span.xEnd;
+    const zoneY0 = span.yStart;
+    const zoneY1 = span.yEnd;
+    const zoneWidth = zoneY1 - zoneY0;
+    const zoneLength = zoneX1 - zoneX0;
+    const zoneHeight = cargoGridZoneHeight(sketch, zone);
 
     if (mode === "placement") {
-      // Gaps stay empty — only advance length so bay spacing is preserved.
-      if (zone.kind === "cargo") {
-        // Deck floor under cargo bays (even where crates sit).
-        for (let lx = 0; lx < zone.lengthCells; lx += 1) {
+      // Gaps stay empty. Cargo + empty hangar get a deck floor.
+      if (zone.kind === "cargo" || zone.kind === "empty") {
+        for (let lx = 0; lx < zoneLength; lx += 1) {
           for (let wy = 0; wy < zoneWidth; wy += 1) {
             const coord = {
-              x: lengthOffset + lx,
-              y: widthOffset + wy,
+              x: zoneX0 + lx,
+              y: zoneY0 + wy,
               z: 0,
             };
             cubes.push({
               key: `floor-${zone.id}-${coord.x}-${coord.y}`,
               coord,
-              lx: lengthOffset + lx,
-              wy: widthOffset + wy,
+              lx: coord.x,
+              wy: coord.y,
               hz: 0,
               zoneId: zone.id,
               kind: "floor",
@@ -535,6 +535,8 @@ function buildCubes(
             });
           }
         }
+
+        if (zone.kind !== "cargo") continue;
 
         // Structured placement list (may be empty after location filters).
         // Do not fall back to highlightKeys — an empty filter must show no crates.
@@ -601,31 +603,29 @@ function buildCubes(
           }
         }
       }
-    } else if (zone.kind === "cargo") {
-      for (let lx = 0; lx < zone.lengthCells; lx += 1) {
+    } else if (zone.kind === "cargo" || zone.kind === "empty") {
+      for (let lx = 0; lx < zoneLength; lx += 1) {
         for (let wy = 0; wy < zoneWidth; wy += 1) {
-          for (let hz = 0; hz < sketch.heightCells; hz += 1) {
+          for (let hz = 0; hz < zoneHeight; hz += 1) {
             const coord = {
-              x: lengthOffset + lx,
-              y: widthOffset + wy,
+              x: zoneX0 + lx,
+              y: zoneY0 + wy,
               z: hz,
             };
             cubes.push({
               key: `${zone.id}-${coord.x}-${coord.y}-${coord.z}`,
               coord,
-              lx: lengthOffset + lx,
-              wy: widthOffset + wy,
+              lx: coord.x,
+              wy: coord.y,
               hz,
               zoneId: zone.id,
-              kind: "cargo",
+              kind: zone.kind === "empty" ? "floor" : "cargo",
               footprint: UNIT_FOOTPRINT,
             });
           }
         }
       }
     }
-
-    lengthOffset += zone.lengthCells;
   }
 
   // Mirror length so the front bay faces the opposite way (ramp←nose visual).

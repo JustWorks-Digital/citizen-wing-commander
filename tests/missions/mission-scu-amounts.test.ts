@@ -17,11 +17,13 @@ function sessionFixture(): SessionChecklistModel {
       from: ["Port Tressler"],
       to: ["Everus Harbor"],
       cargo: [{ commodity: "Pressurized Ice", scu: 32 }],
-      deliverySplits: [
+      scuSplits: [
         {
-          from: "Port Tressler",
-          to: "Everus Harbor",
-          commodity: "Pressurized Ice",
+          kind: "deliver",
+          fromLocationSlug: "port-tressler",
+          toLocationSlug: "everus-harbor",
+          commoditySlug: "pressurized-ice",
+          commodityName: "Pressurized Ice",
           scu: 32,
         },
       ],
@@ -88,7 +90,7 @@ describe("missionScuAmounts", () => {
     const mission = result.session.missions?.find((entry) => entry.id === "ice");
     expect(mission?.cargo[0]?.scu).toBe(40);
     expect(mission?.scuTotalCertainty).toBe("known");
-    expect(mission?.deliverySplits?.[0]?.scu).toBe(40);
+    expect(mission?.scuSplits?.[0]?.scu).toBe(40);
     expect(result.session.rows[0]!.cargoDeliveries[0]!.scu).toBe(40);
     expect(result.session.rows[1]!.cargoDeliveries[0]!.scu).toBe(40);
   });
@@ -144,9 +146,91 @@ describe("missionScuAmounts", () => {
         commoditySlug: "quantum-fuel",
         commodity: "Quantum Fuel",
         scu: 8,
+        isUserCorrected: false,
       },
     ]);
     expect(missionScuAmounts.validateDraft(draft)).toEqual({ ok: true });
+  });
+
+  it("rebalances unlocked delivery stops after a player override", () => {
+    const session = multiDeliverySession();
+    let draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    // Even 4/4/3 → force even 4/4/4 for a clean story (fixture may differ).
+    const slug = draft.commodities[0]!.commoditySlug;
+    draft = {
+      ...draft,
+      commodities: [{ ...draft.commodities[0]!, scu: 12 }],
+      deliveries: draft.deliveries.map((line, index) => ({
+        ...line,
+        scu: 4,
+        isUserCorrected: false,
+        locationSlug: line.locationSlug || `stop-${index}`,
+      })),
+    };
+    expect(draft.deliveries).toHaveLength(3);
+
+    draft = missionScuAmounts.setDeliveryScuInDraft(
+      draft,
+      slug,
+      draft.deliveries[0]!.locationSlug,
+      2,
+    );
+    expect(draft.deliveries[0]!.scu).toBe(2);
+    expect(draft.deliveries[0]!.isUserCorrected).toBe(true);
+    expect(draft.deliveries[1]!.scu).toBe(5);
+    expect(draft.deliveries[2]!.scu).toBe(5);
+    expect(draft.deliveries[1]!.isUserCorrected).toBe(false);
+
+    draft = missionScuAmounts.setDeliveryScuInDraft(
+      draft,
+      slug,
+      draft.deliveries[1]!.locationSlug,
+      8,
+    );
+    expect(draft.deliveries.map((line) => line.scu)).toEqual([2, 8, 2]);
+    expect(draft.deliveries.map((line) => Boolean(line.isUserCorrected))).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(missionScuAmounts.validateDraft(draft)).toEqual({ ok: true });
+  });
+
+  it("persists isUserCorrected on scuSplits when applying a draft", () => {
+    const session = multiDeliverySession();
+    let draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    const slug = draft.commodities[0]!.commoditySlug;
+    draft = {
+      ...draft,
+      commodities: [{ ...draft.commodities[0]!, scu: 12 }],
+      deliveries: draft.deliveries.map((line) => ({
+        ...line,
+        scu: 4,
+        isUserCorrected: false,
+      })),
+    };
+    draft = missionScuAmounts.setDeliveryScuInDraft(
+      draft,
+      slug,
+      draft.deliveries[0]!.locationSlug,
+      2,
+    );
+    const result = missionScuAmounts.applyDraft(
+      session,
+      session.missions![0]!.id,
+      draft,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const mission = result.session.missions?.[0];
+    expect(mission?.scuSplits?.[0]?.isUserCorrected).toBe(true);
+    expect(mission?.scuSplits?.[1]?.isUserCorrected).toBeFalsy();
   });
 
   it("rejects a draft when delivery stops do not sum to the commodity total", () => {
@@ -181,7 +265,7 @@ describe("missionScuAmounts", () => {
     if (!result.ok) return;
     const mission = result.session.missions?.find((entry) => entry.id === "food");
     expect(mission?.cargo[0]?.scu).toBe(15);
-    expect(mission?.deliverySplits?.map((split) => split.scu)).toEqual([6, 5, 4]);
+    expect(mission?.scuSplits?.map((split) => split.scu)).toEqual([6, 5, 4]);
     expect(mission?.scuTotalCertainty).toBe("known");
     expect(
       result.session.rows
@@ -279,23 +363,29 @@ function multiDeliverySession(): SessionChecklistModel {
       from: ["Port Tressler"],
       to: ["Everus Harbor", "Baijini Point", "Area 18"],
       cargo: [{ commodity: "Processed Food", scu: 11 }],
-      deliverySplits: [
+      scuSplits: [
         {
-          from: "Port Tressler",
-          to: "Everus Harbor",
-          commodity: "Processed Food",
+          kind: "deliver",
+          fromLocationSlug: "port-tressler",
+          toLocationSlug: "everus-harbor",
+          commoditySlug: "processed-food",
+          commodityName: "Processed Food",
           scu: 4,
         },
         {
-          from: "Port Tressler",
-          to: "Baijini Point",
-          commodity: "Processed Food",
+          kind: "deliver",
+          fromLocationSlug: "port-tressler",
+          toLocationSlug: "baijini-point",
+          commoditySlug: "processed-food",
+          commodityName: "Processed Food",
           scu: 3,
         },
         {
-          from: "Port Tressler",
-          to: "Area 18",
-          commodity: "Processed Food",
+          kind: "deliver",
+          fromLocationSlug: "port-tressler",
+          toLocationSlug: "area-18",
+          commoditySlug: "processed-food",
+          commodityName: "Processed Food",
           scu: 4,
         },
       ],

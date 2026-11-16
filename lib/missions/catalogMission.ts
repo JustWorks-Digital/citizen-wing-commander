@@ -43,6 +43,7 @@ export type CatalogMissionCargoLine = {
 /**
  * Structured per-stop cargo amount (how much of which commodity goes where).
  * Sibling of `scuTotal` on the hauling catalog payload.
+ * Canonical route-split shape for catalog + session (`scuSplits`).
  */
 export type CatalogMissionScuSplit = {
   kind: "deliver" | "collect";
@@ -50,8 +51,19 @@ export type CatalogMissionScuSplit = {
   toLocationSlug: string;
   commoditySlug: string;
   commodityName: string;
+  /** Effective SCU for this leg (trip + catalog default). */
   scu: number;
+  /**
+   * Auto / OCR amount before the player pinned this stop.
+   * Set when `isUserCorrected` becomes true; used for reporting.
+   */
+  scuAutoSelected?: number;
+  /** Player pinned this stop — rebalance must not change `scu`. */
+  isUserCorrected?: boolean;
 };
+
+/** Alias for the canonical split line (`scuSplits[]`). */
+export type ScuSplit = CatalogMissionScuSplit;
 
 /**
  * Total SCU keyed by location slug for pickups (`from`) and deliveries (`to`).

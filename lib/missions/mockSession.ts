@@ -151,19 +151,15 @@ export type SessionChecklistModel = {
   rows: HaulingChecklistRow[];
 };
 
+/** Round to nearest hundredth; drop trailing zeros (1.50 → 1.5). */
 function formatDistanceValue(value: number): string {
   if (value === 0) return "0";
-  const abs = Math.abs(value);
-  const decimals = abs >= 100 ? 2 : abs >= 10 ? 3 : 4;
-  return value.toFixed(decimals).replace(/\.?0+$/, "");
+  return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
-/** Shorter decimals for narrow UI (mobile checklist / toolbar). */
+/** Same hundredth rounding for narrow UI (mobile checklist / toolbar). */
 function formatDistanceValueCompact(value: number): string {
-  if (value === 0) return "0";
-  const abs = Math.abs(value);
-  const decimals = abs >= 100 ? 0 : 1;
-  return value.toFixed(decimals).replace(/\.?0+$/, "");
+  return formatDistanceValue(value);
 }
 
 export function formatDistanceToNext(

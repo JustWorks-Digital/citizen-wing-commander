@@ -32,23 +32,29 @@ const multiDeliveryMission: SessionMission = cargoBoxSplits.withDefaults({
   cargoSummary: "11 SCU Processed Food",
   from: ["Port Tressler"],
   to: ["Everus Harbor", "Baijini Point", "Area 18"],
-  deliverySplits: [
+  scuSplits: [
     {
-      from: "Port Tressler",
-      to: "Everus Harbor",
-      commodity: "Processed Food",
+      kind: "deliver",
+      fromLocationSlug: "port-tressler",
+      toLocationSlug: "everus-harbor",
+      commoditySlug: "processed-food",
+      commodityName: "Processed Food",
       scu: 4,
     },
     {
-      from: "Port Tressler",
-      to: "Baijini Point",
-      commodity: "Processed Food",
+      kind: "deliver",
+      fromLocationSlug: "port-tressler",
+      toLocationSlug: "baijini-point",
+      commoditySlug: "processed-food",
+      commodityName: "Processed Food",
       scu: 3,
     },
     {
-      from: "Port Tressler",
-      to: "Area 18",
-      commodity: "Processed Food",
+      kind: "deliver",
+      fromLocationSlug: "port-tressler",
+      toLocationSlug: "area-18",
+      commoditySlug: "processed-food",
+      commodityName: "Processed Food",
       scu: 4,
     },
   ],
@@ -70,7 +76,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Condensed cargo SCU with expandable nested delivery amounts. Header uses the same Source icon as mission cards. Edits stay in a draft until Save validates that delivery stops sum to each cargo total. Crate-mix dropdowns still apply immediately.",
+          "Condensed cargo SCU with expandable nested delivery amounts. Click a stop SCU to override it (accent border); other stops rebalance to the cargo total. Header uses the same Source icon as mission cards. Edits stay in a draft until Save. Crate-mix dropdowns still apply immediately.",
       },
     },
   },
@@ -120,21 +126,19 @@ function InteractiveModal({
               );
             return match ? { ...line, scu: match.scu } : line;
           });
-          const deliverySplits =
-            prev.deliverySplits?.map((split) => {
+          const scuSplits =
+            prev.scuSplits?.map((split) => {
               const match = scuDraft.deliveries.find(
                 (entry) =>
-                  entry.commodity.toLowerCase() ===
-                    split.commodity.toLowerCase() &&
-                  entry.locationKey.trim().toLowerCase() ===
-                    split.to.trim().toLowerCase(),
+                  entry.commoditySlug === split.commoditySlug &&
+                  entry.locationSlug === split.toLocationSlug,
               );
               return match ? { ...split, scu: match.scu } : split;
-            }) ?? prev.deliverySplits;
+            }) ?? prev.scuSplits;
           return {
             ...prev,
             cargo,
-            deliverySplits,
+            scuSplits,
             cargoSummary: cargo
               .filter((line) => line.scu > 0)
               .map((line) => `${line.scu} SCU ${line.commodity}`)

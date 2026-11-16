@@ -10,6 +10,7 @@ import {
   parseRankFromTitle,
   stripRankFromTitle,
 } from "@/lib/missions/missionRank";
+import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -30,6 +31,7 @@ function locationDisplay(slug: string): string {
 /**
  * Overlay durable catalog fields onto a session mission for the missions modal.
  * Session flags (completed / hidden) and id stay from the session row.
+ * Trip `scuSplits` (incl. player corrections) win when present.
  */
 export function enrichSessionMissionFromCatalog(
   mission: SessionMission,
@@ -38,43 +40,29 @@ export function enrichSessionMissionFromCatalog(
   if (!catalog || !isHaulingPayload(catalog.payload)) return mission;
   const payload = catalog.payload;
   const extras = payload.extras ?? {};
-  const fromScuSplits =
-    payload.scuSplits && payload.scuSplits.length > 0
-      ? payload.scuSplits.map((split) => ({
-          from: locationDisplay(split.fromLocationSlug),
-          to: locationDisplay(split.toLocationSlug),
-          commodity: split.commodityName,
-          scu: split.scu,
-        }))
-      : null;
-  const fromLocationSplits = (() => {
-    if (fromScuSplits) return null;
-    const locSplits =
-      catalog.scuLocationSplits ?? payload.scuLocationSplits ?? null;
-    if (!locSplits) return null;
-    const fromSlug =
-      Object.keys(locSplits.from)[0] ?? payload.fromLocationSlugs[0] ?? "";
-    const commodity =
-      payload.cargo[0]?.commodityName ?? mission.cargo[0]?.commodity ?? "Cargo";
-    const lines: NonNullable<SessionMission["deliverySplits"]> = [];
-    for (const [toSlug, scu] of Object.entries(locSplits.to)) {
-      if (scu <= 0) continue;
-      lines.push({
-        from: locationDisplay(fromSlug),
-        to: locationDisplay(toSlug),
-        commodity,
-        scu,
-      });
-    }
-    return lines.length > 0 ? lines : null;
-  })();
-  const deliverySplits = fromScuSplits
-    ? fromScuSplits
-    : fromLocationSplits
-      ? fromLocationSplits
-      : Array.isArray(extras.deliverySplits)
-        ? (extras.deliverySplits as SessionMission["deliverySplits"])
-        : mission.deliverySplits;
+  const legacyDeliverySplits = Array.isArray(extras.deliverySplits)
+    ? (extras.deliverySplits as Array<{
+        from: string;
+        to: string;
+        commodity: string;
+        scu: number;
+        isUserCorrected?: boolean;
+        scuAutoSelected?: number;
+      }>)
+    : null;
+  const fromCatalog = resolveScuSplits({
+    scuSplits: payload.scuSplits,
+    scuLocationSplits:
+      catalog.scuLocationSplits ?? payload.scuLocationSplits ?? null,
+    legacyDeliverySplits,
+    cargo: payload.cargo,
+    fromFallbackSlug: payload.fromLocationSlugs[0],
+  });
+  // Trip edits (incl. isUserCorrected) stay authoritative when present.
+  const scuSplits =
+    mission.scuSplits && mission.scuSplits.length > 0
+      ? mission.scuSplits
+      : fromCatalog;
 
   const category =
     normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;
@@ -133,7 +121,7 @@ export function enrichSessionMissionFromCatalog(
     scuCargoBoxSplitsCertainty:
       payload.scuCargoBoxSplitsCertainty ??
       mission.scuCargoBoxSplitsCertainty,
-    deliverySplits,
+    scuSplits,
     screenshots: payload.latestScreenshotPath
       ? [payload.latestScreenshotPath]
       : mission.screenshots,

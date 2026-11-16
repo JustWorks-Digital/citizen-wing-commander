@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
+  CargoAmountBadges,
   CatalogCargoBadges,
   CatalogLocationBadges,
 } from "./CatalogRouteBadges";
@@ -29,6 +30,12 @@ export const FromToAndCargo: Story = {
               name: "Port Tressler",
               label: "Tressler",
             },
+            {
+              slug: "lorville",
+              name: "Lorville",
+              label: "Lorville",
+              isCompleted: true,
+            },
           ]}
           tone="from"
         />
@@ -53,6 +60,26 @@ export const FromToAndCargo: Story = {
           Cargo
         </p>
         <CatalogCargoBadges mission={mission} />
+      </div>
+      <div>
+        <p className="mb-1 font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+          Amounts
+        </p>
+        <CargoAmountBadges
+          items={[
+            {
+              commoditySlug: "quartz",
+              commodityName: "Quartz (Raw)",
+              scu: 5,
+            },
+            {
+              commoditySlug: "waste",
+              commodityName: "Waste",
+              scu: 2,
+              isCompleted: true,
+            },
+          ]}
+        />
       </div>
     </div>
   ),

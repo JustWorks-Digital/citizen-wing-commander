@@ -1,5 +1,8 @@
-import { getLocationBySlug } from "@/lib/fixtures";
-import { scuBoxSplitsForScu } from "@/lib/missions/catalogMission";
+import { getCommodityBySlug, getLocationBySlug } from "@/lib/fixtures";
+import {
+  scuBoxSplitsForScu,
+  type ScuSplit,
+} from "@/lib/missions/catalogMission";
 import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import {
   applySessionCompletionTiming,
@@ -39,6 +42,8 @@ export type MissionScuDraftDelivery = {
   commoditySlug: string;
   commodity: string;
   scu: number;
+  /** Player overrode this stop — rebalance must not change it. */
+  isUserCorrected?: boolean;
 };
 
 export type MissionScuDraft = {
@@ -131,6 +136,91 @@ function scalePositiveParts(parts: number[], newTotal: number): number[] {
     index += 1;
   }
   return scaled;
+}
+
+/**
+ * Keep user-corrected delivery stops fixed; split the leftover SCU across
+ * the other stops for this commodity (weighted by their current amounts).
+ */
+export function rebalanceDraftDeliveries(
+  deliveries: MissionScuDraftDelivery[],
+  commoditySlug: string,
+  commodityTotal: number,
+): MissionScuDraftDelivery[] {
+  const indexes: number[] = [];
+  for (const [index, line] of deliveries.entries()) {
+    if (line.commoditySlug === commoditySlug) indexes.push(index);
+  }
+  if (indexes.length === 0) return deliveries;
+
+  const lockedIndexes = indexes.filter(
+    (index) => deliveries[index]!.isUserCorrected,
+  );
+  const unlockedIndexes = indexes.filter(
+    (index) => !deliveries[index]!.isUserCorrected,
+  );
+  if (unlockedIndexes.length === 0) return deliveries;
+
+  const lockedSum = lockedIndexes.reduce(
+    (sum, index) =>
+      sum + Math.max(0, Math.floor(Number(deliveries[index]!.scu) || 0)),
+    0,
+  );
+  const remainder = Math.max(0, Math.floor(commodityTotal) - lockedSum);
+  const parts = unlockedIndexes.map((index) =>
+    Math.max(0, Math.floor(Number(deliveries[index]!.scu) || 0)),
+  );
+  const scaled = scalePositiveParts(parts, remainder);
+
+  return deliveries.map((line, index) => {
+    const unlockAt = unlockedIndexes.indexOf(index);
+    if (unlockAt < 0) return line;
+    return { ...line, scu: scaled[unlockAt]! };
+  });
+}
+
+
+function makeDeliverSplit(input: {
+  from: string;
+  to: string;
+  commodity: string;
+  scu: number;
+  isUserCorrected?: boolean;
+  previousScu?: number;
+}): ScuSplit {
+  const commoditySlug = commoditySlugOf(input.commodity);
+  const line: ScuSplit = {
+    kind: "deliver",
+    fromLocationSlug: locationSlugOf(input.from),
+    toLocationSlug: locationSlugOf(input.to),
+    commoditySlug,
+    commodityName:
+      getCommodityBySlug(commoditySlug)?.name ?? input.commodity,
+    scu: Math.max(0, Math.floor(Number(input.scu) || 0)),
+  };
+  if (input.isUserCorrected) {
+    line.isUserCorrected = true;
+    const auto =
+      input.previousScu != null
+        ? Math.max(0, Math.floor(Number(input.previousScu) || 0))
+        : undefined;
+    if (auto != null) line.scuAutoSelected = auto;
+  }
+  return line;
+}
+
+function deliverySplitIsUserCorrected(
+  mission: SessionMission,
+  locationKey: string,
+  commoditySlug: string,
+): boolean {
+  for (const split of mission.scuSplits ?? []) {
+    if (split.commoditySlug !== commoditySlug &&
+        commoditySlugOf(split.commodityName) !== commoditySlug) continue;
+    if (!locationMatches(split.toLocationSlug, locationKey)) continue;
+    if (split.isUserCorrected) return true;
+  }
+  return false;
 }
 
 type CargoHit = { rowIndex: number; cargoIndex: number; scu: number };
@@ -233,15 +323,15 @@ function setRouteStationCommodityScu(
 
 function cargoFromDeliverySplitSums(
   mission: SessionMission,
-  deliverySplits: NonNullable<SessionMission["deliverySplits"]>,
+  scuSplits: NonNullable<SessionMission["scuSplits"]>,
 ): SessionMission["cargo"] {
   const byCommodity = new Map<string, { commodity: string; scu: number }>();
-  for (const split of deliverySplits) {
-    const slug = commoditySlugOf(split.commodity);
+  for (const split of scuSplits) {
+    const slug = split.commoditySlug || commoditySlugOf(split.commodityName);
     const prev = byCommodity.get(slug);
     const scu = Math.max(0, Math.floor(Number(split.scu) || 0));
     if (prev) prev.scu += scu;
-    else byCommodity.set(slug, { commodity: split.commodity, scu });
+    else byCommodity.set(slug, { commodity: split.commodityName, scu });
   }
 
   const next: SessionMission["cargo"] = [];
@@ -350,7 +440,65 @@ export const missionScuAmounts = {
         commoditySlug: line.commoditySlug,
         commodity: line.commodity,
         scu: line.scu,
+        isUserCorrected: deliverySplitIsUserCorrected(
+          mission,
+          line.locationKey,
+          line.commoditySlug,
+        ),
       })),
+    };
+  },
+
+  /**
+   * Mark a delivery stop as player-overwritten and rebalance the other stops
+   * for that commodity so they still sum to the mission total.
+   */
+  setDeliveryScuInDraft(
+    draft: MissionScuDraft,
+    commoditySlug: string,
+    locationSlug: string,
+    scu: number,
+  ): MissionScuDraft {
+    const amount = Math.max(0, Math.floor(scu));
+    const deliveries = draft.deliveries.map((line) =>
+      line.commoditySlug === commoditySlug &&
+      line.locationSlug === locationSlug
+        ? { ...line, scu: amount, isUserCorrected: true }
+        : line,
+    );
+    const commodityTotal =
+      draft.commodities.find((line) => line.commoditySlug === commoditySlug)
+        ?.scu ?? 0;
+    return {
+      ...draft,
+      deliveries: rebalanceDraftDeliveries(
+        deliveries,
+        commoditySlug,
+        commodityTotal,
+      ),
+    };
+  },
+
+  /**
+   * Update a commodity total and rebalance only non-overwritten delivery stops.
+   */
+  setCommodityScuInDraft(
+    draft: MissionScuDraft,
+    commoditySlug: string,
+    scu: number,
+  ): MissionScuDraft {
+    const amount = Math.max(0, Math.floor(scu));
+    const commodities = draft.commodities.map((line) =>
+      line.commoditySlug === commoditySlug ? { ...line, scu: amount } : line,
+    );
+    return {
+      ...draft,
+      commodities,
+      deliveries: rebalanceDraftDeliveries(
+        draft.deliveries,
+        commoditySlug,
+        amount,
+      ),
     };
   },
 
@@ -411,53 +559,77 @@ export const missionScuAmounts = {
       return next ? { ...line, scu: Math.max(0, Math.floor(next.scu)) } : line;
     });
 
-    let deliverySplits = [...(existing.deliverySplits ?? [])];
-    if (deliverySplits.length === 0 && draft.deliveries.length > 0) {
+    let scuSplits = [...(existing.scuSplits ?? [])];
+    if (scuSplits.length === 0 && draft.deliveries.length > 0) {
       const fromDefault = existing.from[0] ?? draft.deliveries[0]!.locationKey;
       for (const delivery of draft.deliveries) {
-        deliverySplits.push({
-          from: fromDefault,
-          to: delivery.locationKey,
-          commodity: delivery.commodity,
-          scu: Math.max(0, Math.floor(delivery.scu)),
-        });
+        scuSplits.push(
+          makeDeliverSplit({
+            from: fromDefault,
+            to: delivery.locationKey,
+            commodity: delivery.commodity,
+            scu: delivery.scu,
+            isUserCorrected: Boolean(delivery.isUserCorrected) || undefined,
+          }),
+        );
       }
-    } else if (deliverySplits.length > 0) {
+    } else if (scuSplits.length > 0) {
       // Pin delivery (`to`) amounts from the draft; leave unmatched splits.
       for (const delivery of draft.deliveries) {
         const amount = Math.max(0, Math.floor(delivery.scu));
         const matchingIndexes: number[] = [];
-        for (const [index, split] of deliverySplits.entries()) {
-          if (commoditySlugOf(split.commodity) !== delivery.commoditySlug) {
+        for (const [index, split] of scuSplits.entries()) {
+          if (
+            split.commoditySlug !== delivery.commoditySlug &&
+            commoditySlugOf(split.commodityName) !== delivery.commoditySlug
+          ) {
             continue;
           }
-          if (!locationMatches(split.to, delivery.locationKey)) continue;
+          if (!locationMatches(split.toLocationSlug, delivery.locationKey)) {
+            continue;
+          }
           matchingIndexes.push(index);
         }
+        const corrected = Boolean(delivery.isUserCorrected) || undefined;
         if (matchingIndexes.length === 0) {
-          deliverySplits.push({
-            from: existing.from[0] ?? delivery.locationKey,
-            to: delivery.locationKey,
-            commodity: delivery.commodity,
-            scu: amount,
-          });
+          scuSplits.push(
+            makeDeliverSplit({
+              from: existing.from[0] ?? delivery.locationKey,
+              to: delivery.locationKey,
+              commodity: delivery.commodity,
+              scu: amount,
+              isUserCorrected: corrected,
+            }),
+          );
           continue;
         }
         if (matchingIndexes.length === 1) {
           const index = matchingIndexes[0]!;
-          deliverySplits[index] = {
-            ...deliverySplits[index]!,
+          const prev = scuSplits[index]!;
+          scuSplits[index] = {
+            ...prev,
             scu: amount,
+            isUserCorrected: corrected,
+            scuAutoSelected:
+              corrected && prev.scuAutoSelected == null
+                ? prev.scu
+                : prev.scuAutoSelected,
           };
         } else {
           const parts = matchingIndexes.map(
-            (index) => deliverySplits[index]!.scu,
+            (index) => scuSplits[index]!.scu,
           );
           const scaled = scalePositiveParts(parts, amount);
           matchingIndexes.forEach((index, i) => {
-            deliverySplits[index] = {
-              ...deliverySplits[index]!,
+            const prev = scuSplits[index]!;
+            scuSplits[index] = {
+              ...prev,
               scu: scaled[i]!,
+              isUserCorrected: corrected,
+              scuAutoSelected:
+                corrected && prev.scuAutoSelected == null
+                  ? prev.scu
+                  : prev.scuAutoSelected,
             };
           });
         }
@@ -467,7 +639,7 @@ export const missionScuAmounts = {
     let mission: SessionMission = {
       ...existing,
       cargo,
-      deliverySplits: deliverySplits.length > 0 ? deliverySplits : existing.deliverySplits,
+      scuSplits: scuSplits.length > 0 ? scuSplits : existing.scuSplits,
       cargoSummary: cargoSummaryFor({ ...existing, cargo }),
       scuTotalCertainty: "known",
     };
@@ -527,15 +699,16 @@ export const missionScuAmounts = {
     }
 
     const out: MissionStationScuLine[] = [];
-    const splits = mission.deliverySplits ?? [];
+    const splits = mission.scuSplits ?? [];
 
     if (splits.length > 0) {
       const pickupKey = new Map<string, MissionStationScuLine>();
       const deliveryKey = new Map<string, MissionStationScuLine>();
       for (const split of splits) {
-        const commoditySlug = commoditySlugOf(split.commodity);
-        const fromKey = split.from.trim();
-        const toKey = split.to.trim();
+        const commoditySlug =
+          split.commoditySlug || commoditySlugOf(split.commodityName);
+        const fromKey = split.fromLocationSlug.trim();
+        const toKey = split.toLocationSlug.trim();
         if (fromKey) {
           const key = `${locationSlugOf(fromKey)}::${commoditySlug}`;
           const existing = pickupKey.get(key);
@@ -547,7 +720,7 @@ export const missionScuAmounts = {
               locationKey: fromKey,
               locationSlug: locationSlugOf(fromKey),
               locationLabel: locationLabelOf(fromKey),
-              commodity: split.commodity,
+              commodity: split.commodityName,
               commoditySlug,
               scu: Math.max(0, Math.floor(split.scu)),
             });
@@ -564,7 +737,7 @@ export const missionScuAmounts = {
               locationKey: toKey,
               locationSlug: locationSlugOf(toKey),
               locationLabel: locationLabelOf(toKey),
-              commodity: split.commodity,
+              commodity: split.commodityName,
               commoditySlug,
               scu: Math.max(0, Math.floor(split.scu)),
             });
@@ -641,23 +814,25 @@ export const missionScuAmounts = {
       };
     }
 
-    let deliverySplits = existing.deliverySplits;
-    if (deliverySplits && deliverySplits.length > 0) {
-      const matching = deliverySplits
+    let scuSplits = existing.scuSplits;
+    if (scuSplits && scuSplits.length > 0) {
+      const matching = scuSplits
         .map((split, index) => ({
           index,
           scu: Math.max(0, Math.floor(split.scu)),
-          match: commoditySlugOf(split.commodity) === slug,
+          match:
+            split.commoditySlug === slug ||
+            commoditySlugOf(split.commodityName) === slug,
         }))
         .filter((entry) => entry.match);
       const scaled = scalePositiveParts(
         matching.map((entry) => entry.scu),
         amount,
       );
-      deliverySplits = deliverySplits.map((split) => ({ ...split }));
+      scuSplits = scuSplits.map((split) => ({ ...split }));
       matching.forEach((entry, index) => {
-        deliverySplits![entry.index] = {
-          ...deliverySplits![entry.index]!,
+        scuSplits![entry.index] = {
+          ...scuSplits![entry.index]!,
           scu: scaled[index]!,
         };
       });
@@ -665,20 +840,20 @@ export const missionScuAmounts = {
       const commodity =
         cargo.find((line) => commoditySlugOf(line.commodity) === slug)
           ?.commodity ?? commoditySlug;
-      deliverySplits = [
-        {
+      scuSplits = [
+        makeDeliverSplit({
           from: existing.from[0]!,
           to: existing.to[0]!,
           commodity,
           scu: amount,
-        },
+        }),
       ];
     }
 
     let mission: SessionMission = {
       ...existing,
       cargo,
-      deliverySplits,
+      scuSplits,
       cargoSummary: cargoSummaryFor({ ...existing, cargo }),
       scuTotalCertainty: "known",
     };
@@ -726,52 +901,65 @@ export const missionScuAmounts = {
       existing.cargo.find((line) => commoditySlugOf(line.commodity) === slug)
         ?.commodity ?? input.commoditySlug;
 
-    let deliverySplits = [...(existing.deliverySplits ?? [])];
-    if (deliverySplits.length === 0) {
+    let scuSplits = [...(existing.scuSplits ?? [])];
+    if (scuSplits.length === 0) {
       const current =
         existing.cargo.find((line) => commoditySlugOf(line.commodity) === slug)
           ?.scu ?? amount;
       for (const from of existing.from.length ? existing.from : [input.locationKey]) {
         for (const to of existing.to.length ? existing.to : [input.locationKey]) {
-          deliverySplits.push({
-            from,
-            to,
-            commodity,
-            scu: current,
-          });
+          scuSplits.push(
+            makeDeliverSplit({ from, to, commodity, scu: current }),
+          );
         }
       }
     }
 
-    const field = input.role === "pickup" ? "from" : "to";
+    const locField =
+      input.role === "pickup" ? "fromLocationSlug" : "toLocationSlug";
     let touched = false;
-    deliverySplits = deliverySplits.map((split) => {
-      if (commoditySlugOf(split.commodity) !== slug) return split;
-      if (!locationMatches(split[field], input.locationKey)) return split;
+    scuSplits = scuSplits.map((split) => {
+      if (
+        split.commoditySlug !== slug &&
+        commoditySlugOf(split.commodityName) !== slug
+      ) {
+        return split;
+      }
+      if (!locationMatches(split[locField], input.locationKey)) return split;
       touched = true;
       return { ...split, scu: amount };
     });
     if (!touched) {
       if (input.role === "pickup") {
-        deliverySplits.push({
-          from: input.locationKey,
-          to: existing.to[0] ?? deliverySplits[0]?.to ?? input.locationKey,
-          commodity,
-          scu: amount,
-        });
+        scuSplits.push(
+          makeDeliverSplit({
+            from: input.locationKey,
+            to:
+              existing.to[0] ??
+              scuSplits[0]?.toLocationSlug ??
+              input.locationKey,
+            commodity,
+            scu: amount,
+          }),
+        );
       } else {
-        deliverySplits.push({
-          from: existing.from[0] ?? deliverySplits[0]?.from ?? input.locationKey,
-          to: input.locationKey,
-          commodity,
-          scu: amount,
-        });
+        scuSplits.push(
+          makeDeliverSplit({
+            from:
+              existing.from[0] ??
+              scuSplits[0]?.fromLocationSlug ??
+              input.locationKey,
+            to: input.locationKey,
+            commodity,
+            scu: amount,
+          }),
+        );
       }
     }
 
     // Mission total from the edited role’s station sums.
     const stationLines = missionScuAmounts.stationLines(
-      { ...existing, deliverySplits },
+      { ...existing, scuSplits },
       null,
     );
     const roleTotal = stationLines
@@ -787,14 +975,16 @@ export const missionScuAmounts = {
         : line,
     );
 
-    // Keep deliverySplits delivering-side sums aligned when editing pickups:
+    // Keep scuSplits delivering-side sums aligned when editing pickups:
     // scale opposite-field splits to roleTotal.
     if (input.role === "pickup") {
-      const deliveryMatches = deliverySplits
+      const deliveryMatches = scuSplits
         .map((split, index) => ({
           index,
           scu: Math.max(0, Math.floor(split.scu)),
-          match: commoditySlugOf(split.commodity) === slug,
+          match:
+            split.commoditySlug === slug ||
+            commoditySlugOf(split.commodityName) === slug,
         }))
         .filter((entry) => entry.match);
       // Re-sum pickup-side: we already set matching froms; scale `to` rows by
@@ -806,18 +996,20 @@ export const missionScuAmounts = {
       deliveryMatches.forEach((entry, index) => {
         // Preserve the edited from-station amount(s): only rescale splits that
         // do not match the edited location on from.
-        const split = deliverySplits[entry.index]!;
-        if (locationMatches(split.from, input.locationKey)) {
-          deliverySplits[entry.index] = { ...split, scu: amount };
+        const split = scuSplits[entry.index]!;
+        if (locationMatches(split.fromLocationSlug, input.locationKey)) {
+          scuSplits[entry.index] = { ...split, scu: amount };
         } else {
-          deliverySplits[entry.index] = { ...split, scu: scaled[index]! };
+          scuSplits[entry.index] = { ...split, scu: scaled[index]! };
         }
       });
       // Fix remainder so sum of this commodity’s splits == roleTotal.
-      const commoditySplits = deliverySplits
+      const commoditySplits = scuSplits
         .map((split, index) => ({ split, index }))
         .filter(
-          ({ split }) => commoditySlugOf(split.commodity) === slug,
+          ({ split }) =>
+            split.commoditySlug === slug ||
+            commoditySlugOf(split.commodityName) === slug,
         );
       const sumNow = commoditySplits.reduce(
         (acc, { split }) => acc + Math.max(0, Math.floor(split.scu)),
@@ -827,13 +1019,14 @@ export const missionScuAmounts = {
       if (delta !== 0 && commoditySplits.length > 0) {
         const adjustable =
           commoditySplits.find(
-            ({ split }) => !locationMatches(split.from, input.locationKey),
+            ({ split }) =>
+              !locationMatches(split.fromLocationSlug, input.locationKey),
           ) ?? commoditySplits[0]!;
-        deliverySplits[adjustable.index] = {
-          ...deliverySplits[adjustable.index]!,
+        scuSplits[adjustable.index] = {
+          ...scuSplits[adjustable.index]!,
           scu: Math.max(
             0,
-            Math.floor(deliverySplits[adjustable.index]!.scu) + delta,
+            Math.floor(scuSplits[adjustable.index]!.scu) + delta,
           ),
         };
       }
@@ -844,13 +1037,13 @@ export const missionScuAmounts = {
 
     const cargoFinal =
       input.role === "delivery"
-        ? cargoFromDeliverySplitSums(existing, deliverySplits)
+        ? cargoFromDeliverySplitSums(existing, scuSplits)
         : cargo;
 
     let mission: SessionMission = {
       ...existing,
       cargo: cargoFinal,
-      deliverySplits,
+      scuSplits,
       cargoSummary: cargoSummaryFor({ ...existing, cargo: cargoFinal }),
       scuTotalCertainty: "known",
     };

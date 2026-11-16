@@ -8,7 +8,7 @@
 
 import cargoGridsFixture from "@/lib/fixtures/cargoGrids.json";
 
-export type CargoGridZoneKind = "cargo" | "gap";
+export type CargoGridZoneKind = "cargo" | "gap" | "empty";
 
 /** Coarse bay — mirrors checklist `ShipStorageLocation`. */
 export type CargoGridStorageLocation = "front" | "middle" | "rear";
@@ -20,12 +20,27 @@ export type CargoGridZone = {
   lengthCells: number;
   /**
    * Width (port ↔ starboard). Defaults to sketch `widthCells` when omitted.
-   * Narrower zones are centered in Y within max width (C2 front bay is 6; back is 8).
+   * Narrower zones are centered in Y within max width unless `yStartCells` is set.
    */
   widthCells?: number;
   /**
-   * `cargo` counts toward SCU capacity.
-   * `gap` is empty bay length between sections (walkways, structure, etc.).
+   * Stack height for this zone. Defaults to sketch `heightCells`.
+   * Use when holds differ (e.g. Galaxy lift is 2, hangar sides are 4).
+   */
+  heightCells?: number;
+  /**
+   * Absolute nose→ramp origin. When any zone sets this, length is the max
+   * occupied X rather than a simple sum (side-by-side / overlapping X spans).
+   */
+  xStartCells?: number;
+  /**
+   * Absolute port→starboard origin. When omitted, the zone is centered in Y.
+   */
+  yStartCells?: number;
+  /**
+   * `cargo` counts toward SCU capacity and is packable.
+   * `gap` is walkway / door / structure (not packable).
+   * `empty` draws a floor grid but is not packable and has 0 SCU (e.g. hangar).
    */
   kind: CargoGridZoneKind;
   /**
@@ -107,8 +122,65 @@ export function cargoGridZoneWidth(
   return zone.widthCells ?? sketch.widthCells;
 }
 
+export function cargoGridZoneHeight(
+  sketch: ShipCargoGridSketch,
+  zone: CargoGridZone,
+): number {
+  return zone.heightCells ?? sketch.heightCells;
+}
+
+/** True when zones use absolute X/Y (side-by-side bays, tapered hangar, etc.). */
+export function cargoGridHasExplicitPlacement(
+  sketch: ShipCargoGridSketch,
+): boolean {
+  return sketch.zones.some(
+    (zone) => zone.xStartCells != null || zone.yStartCells != null,
+  );
+}
+
+export type CargoGridZoneSpan = {
+  zone: CargoGridZone;
+  xStart: number;
+  xEnd: number;
+  yStart: number;
+  yEnd: number;
+  zEnd: number;
+};
+
+/**
+ * Resolve each zone’s floor rectangle. Sequential sketches advance X;
+ * explicit `xStartCells` / `yStartCells` allow side-by-side layout.
+ */
+export function cargoGridZoneSpans(
+  sketch: ShipCargoGridSketch,
+): CargoGridZoneSpan[] {
+  const maxWidth = cargoGridMaxWidth(sketch);
+  const spans: CargoGridZoneSpan[] = [];
+  let autoX = 0;
+  for (const zone of sketch.zones) {
+    const width = cargoGridZoneWidth(sketch, zone);
+    const xStart = zone.xStartCells ?? autoX;
+    const yStart =
+      zone.yStartCells ?? Math.floor((maxWidth - width) / 2);
+    const xEnd = xStart + zone.lengthCells;
+    spans.push({
+      zone,
+      xStart,
+      xEnd,
+      yStart,
+      yEnd: yStart + width,
+      zEnd: cargoGridZoneHeight(sketch, zone),
+    });
+    autoX = zone.xStartCells == null ? xEnd : Math.max(autoX, xEnd);
+  }
+  return spans;
+}
+
 export function cargoGridTotalLength(sketch: ShipCargoGridSketch): number {
-  return sketch.zones.reduce((sum, zone) => sum + zone.lengthCells, 0);
+  return cargoGridZoneSpans(sketch).reduce(
+    (max, span) => Math.max(max, span.xEnd),
+    0,
+  );
 }
 
 export function cargoGridCargoLength(sketch: ShipCargoGridSketch): number {
@@ -123,7 +195,9 @@ export function cargoGridZoneScu(
 ): number {
   if (zone.kind !== "cargo") return 0;
   return (
-    cargoGridZoneWidth(sketch, zone) * zone.lengthCells * sketch.heightCells
+    cargoGridZoneWidth(sketch, zone) *
+    zone.lengthCells *
+    cargoGridZoneHeight(sketch, zone)
   );
 }
 
@@ -135,8 +209,13 @@ export function cargoGridTotalScu(sketch: ShipCargoGridSketch): number {
 }
 
 export function cargoGridMaxWidth(sketch: ShipCargoGridSketch): number {
-  return sketch.zones.reduce(
-    (max, zone) => Math.max(max, cargoGridZoneWidth(sketch, zone)),
-    sketch.widthCells,
-  );
+  let max = sketch.widthCells;
+  for (const zone of sketch.zones) {
+    const width = cargoGridZoneWidth(sketch, zone);
+    max = Math.max(max, width);
+    if (zone.yStartCells != null) {
+      max = Math.max(max, zone.yStartCells + width);
+    }
+  }
+  return max;
 }

@@ -1,5 +1,8 @@
 import { getLocationBySlug } from "@/lib/fixtures";
-import { formatAuecAmount } from "@/lib/missions/catalogMission";
+import {
+  formatAuecAmount,
+  type ScuSplit,
+} from "@/lib/missions/catalogMission";
 import type { HaulingIntakeCargoLine } from "@/lib/missions/haulingIntake";
 import type {
   CargoDelivery,
@@ -18,9 +21,8 @@ export type MissionObjectiveLine = {
   cargoItems: string[];
 };
 
-export type SessionMissionDeliverySplit = NonNullable<
-  SessionMission["deliverySplits"]
->[number];
+/** @deprecated Prefer `ScuSplit` — kept for older call-site imports. */
+export type SessionMissionDeliverySplit = ScuSplit;
 
 function locationLabel(nameOrSlug: string): string {
   const bySlug = getLocationBySlug(nameOrSlug);
@@ -113,10 +115,11 @@ function missionCommoditySlugs(mission: SessionMission): Set<string> {
       line.commodity.trim().toLowerCase();
     if (slug) slugs.add(slug);
   }
-  for (const split of mission.deliverySplits ?? []) {
+  for (const split of mission.scuSplits ?? []) {
     const slug =
-      resolveCommoditySlug(split.commodity) ??
-      split.commodity.trim().toLowerCase();
+      split.commoditySlug ||
+      resolveCommoditySlug(split.commodityName) ||
+      split.commodityName.trim().toLowerCase();
     if (slug) slugs.add(slug);
   }
   return slugs;
@@ -132,11 +135,12 @@ function commodityDisplayName(
       line.commodity.trim().toLowerCase();
     if (slug === commoditySlug) return line.commodity;
   }
-  for (const split of mission.deliverySplits ?? []) {
+  for (const split of mission.scuSplits ?? []) {
     const slug =
-      resolveCommoditySlug(split.commodity) ??
-      split.commodity.trim().toLowerCase();
-    if (slug === commoditySlug) return split.commodity;
+      split.commoditySlug ||
+      resolveCommoditySlug(split.commodityName) ||
+      split.commodityName.trim().toLowerCase();
+    if (slug === commoditySlug) return split.commodityName;
   }
   return commoditySlug;
 }
@@ -168,20 +172,20 @@ function defaultFromLocation(mission: SessionMission): string {
 }
 
 /**
- * Prefer stored `deliverySplits`; otherwise rebuild from route cargo lines
+ * Prefer stored `scuSplits`; otherwise rebuild from route cargo lines
  * (per-stop SCU already on the checklist).
  */
 export function resolveMissionDeliverySplits(
   mission: SessionMission,
   rows?: HaulingChecklistRow[] | null,
-): SessionMissionDeliverySplit[] | null {
-  if (mission.deliverySplits && mission.deliverySplits.length > 0) {
-    return mission.deliverySplits;
+): ScuSplit[] | null {
+  if (mission.scuSplits && mission.scuSplits.length > 0) {
+    return mission.scuSplits;
   }
   if (!rows?.length) return null;
 
   const fromDefault = defaultFromLocation(mission);
-  const derived: SessionMissionDeliverySplit[] = [];
+  const derived: ScuSplit[] = [];
 
   for (const row of rows) {
     const deliversHere =
@@ -193,12 +197,14 @@ export function resolveMissionDeliverySplits(
     for (const cargo of deliveries) {
       if (!cargoBelongsToMission(mission, cargo)) continue;
       if (cargo.scu <= 0) continue;
-      const toName =
-        getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug;
+      const commodityName = commodityDisplayName(mission, cargo.commoditySlug);
       derived.push({
-        from: fromDefault,
-        to: toName,
-        commodity: commodityDisplayName(mission, cargo.commoditySlug),
+        kind: "deliver",
+        fromLocationSlug:
+          resolveLocationSlug(fromDefault) ?? fromDefault.trim().toLowerCase(),
+        toLocationSlug: row.locationSlug,
+        commoditySlug: cargo.commoditySlug,
+        commodityName,
         scu: cargo.scu,
       });
     }
@@ -208,8 +214,8 @@ export function resolveMissionDeliverySplits(
 }
 
 function objectivesFromDeliverySplits(
-  splits: SessionMissionDeliverySplit[],
-  field: "from" | "to",
+  splits: ScuSplit[],
+  field: "fromLocationSlug" | "toLocationSlug",
 ): MissionObjectiveLine[] | null {
   if (splits.length === 0) return null;
   const byLocation = new Map<
@@ -220,7 +226,7 @@ function objectivesFromDeliverySplits(
     const key = split[field]?.trim();
     if (!key || split.scu <= 0) continue;
     const bucket = byLocation.get(key) ?? [];
-    bucket.push({ commodity: split.commodity, scu: split.scu });
+    bucket.push({ commodity: split.commodityName, scu: split.scu });
     byLocation.set(key, bucket);
   }
   if (byLocation.size === 0) return null;
@@ -284,7 +290,7 @@ export function missionCollectObjectives(
 ): MissionObjectiveLine[] {
   const splits = resolveMissionDeliverySplits(mission, rows);
   if (splits) {
-    const fromSplits = objectivesFromDeliverySplits(splits, "from");
+    const fromSplits = objectivesFromDeliverySplits(splits, "fromLocationSlug");
     if (fromSplits) return fromSplits;
   }
 
@@ -314,7 +320,7 @@ export function missionDeliverObjectives(
 ): MissionObjectiveLine[] {
   const splits = resolveMissionDeliverySplits(mission, rows);
   if (splits) {
-    const toSplits = objectivesFromDeliverySplits(splits, "to");
+    const toSplits = objectivesFromDeliverySplits(splits, "toLocationSlug");
     if (toSplits) return toSplits;
   }
 
@@ -362,8 +368,8 @@ export function isMissionLocationCompleted(
         return row.routeAction === "pickup" || row.routeAction === "both";
       }
       return Boolean(
-        mission.deliverySplits?.some((split) =>
-          locationMatchesRow(split.from, row.locationSlug),
+        mission.scuSplits?.some((split) =>
+          locationMatchesRow(split.fromLocationSlug, row.locationSlug),
         ) &&
           (row.routeAction === "pickup" || row.routeAction === "both"),
       );
@@ -374,8 +380,8 @@ export function isMissionLocationCompleted(
       return row.routeAction === "delivery" || row.routeAction === "both";
     }
     return Boolean(
-      mission.deliverySplits?.some((split) =>
-        locationMatchesRow(split.to, row.locationSlug),
+      mission.scuSplits?.some((split) =>
+        locationMatchesRow(split.toLocationSlug, row.locationSlug),
       ) &&
         (row.routeAction === "delivery" || row.routeAction === "both"),
     );

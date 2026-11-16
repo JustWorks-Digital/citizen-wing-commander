@@ -18,6 +18,8 @@ export type CatalogLocationBadgeItem = {
   name: string;
   /** Badge label — fixture shortName, or full name when no short label exists. */
   label: string;
+  /** Session contracts: mark a stop done without changing catalog table rows. */
+  isCompleted?: boolean;
 };
 
 export function catalogPayload(

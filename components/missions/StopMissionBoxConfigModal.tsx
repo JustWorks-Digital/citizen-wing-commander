@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CommodityIcon } from "@/components/missions/CommodityIcon";
 import { MissionBoxBreakdownPicker } from "@/components/missions/MissionBoxBreakdownPicker";
 import { StopMissionScreenshots } from "@/components/missions/StopMissionScreenshots";
@@ -89,16 +89,32 @@ function ScuAmountInput({
   disabled,
   ariaLabel,
   onCommit,
+  unlockOnClick = false,
+  isUserCorrected = false,
 }: {
   value: number;
   disabled?: boolean;
   ariaLabel: string;
   onCommit: (scu: number) => void;
+  /** Location SCU: stay locked until the player clicks to edit. */
+  unlockOnClick?: boolean;
+  /** Player has overridden this stop (kept out of auto-rebalance). */
+  isUserCorrected?: boolean;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(String(value));
+  const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
     setText(String(value));
   }, [value]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const node = inputRef.current;
+    if (!node) return;
+    node.focus();
+    node.select();
+  }, [isEditing]);
 
   const commit = () => {
     const parsed = Math.max(0, Math.floor(Number(text) || 0));
@@ -106,26 +122,63 @@ function ScuAmountInput({
     if (parsed !== value) onCommit(parsed);
   };
 
+  const isLocked = Boolean(unlockOnClick && !isEditing && !disabled);
+
   return (
     <label className="inline-flex items-center gap-1.5">
       <span className="sr-only">{ariaLabel}</span>
       <input
+        ref={inputRef}
         type="number"
         inputMode="numeric"
         min={0}
         step={1}
         disabled={disabled}
+        readOnly={isLocked}
         value={text}
         aria-label={ariaLabel}
-        onChange={(event) => setText(event.target.value)}
-        onBlur={commit}
+        aria-readonly={isLocked || undefined}
+        title={
+          isLocked
+            ? "Click to edit — remaining stops rebalance"
+            : isUserCorrected
+              ? "Player override — excluded from auto-rebalance"
+              : undefined
+        }
+        onPointerDown={(event) => {
+          if (!isLocked) return;
+          // Unlock before the browser treats the click as a dead read-only hit.
+          event.preventDefault();
+          setIsEditing(true);
+        }}
+        onChange={(event) => {
+          if (isLocked) return;
+          setText(event.target.value);
+        }}
+        onBlur={() => {
+          commit();
+          if (unlockOnClick) setIsEditing(false);
+        }}
         onKeyDown={(event) => {
+          if (isLocked) {
+            event.preventDefault();
+            return;
+          }
           if (event.key === "Enter") {
             event.preventDefault();
             (event.target as HTMLInputElement).blur();
           }
         }}
-        className="w-16 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2 py-1 font-mono text-sm tabular-nums text-rsi-text outline-none focus:border-rsi-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className={[
+          "w-16 rounded-rsi border bg-rsi-bg-deep/60 px-2 py-1 font-mono text-sm tabular-nums text-rsi-text outline-none",
+          isUserCorrected || isEditing
+            ? "border-rsi-accent/55"
+            : "border-rsi-border",
+          isLocked
+            ? "cursor-pointer hover:border-rsi-accent/40"
+            : "focus:border-rsi-accent",
+          disabled ? "cursor-not-allowed opacity-50" : "",
+        ].join(" ")}
       />
       <span className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
         SCU
@@ -166,7 +219,8 @@ function draftsEqual(a: MissionScuDraft, b: MissionScuDraft): boolean {
     if (
       line.commoditySlug !== other.commoditySlug ||
       line.locationSlug !== other.locationSlug ||
-      line.scu !== other.scu
+      line.scu !== other.scu ||
+      Boolean(line.isUserCorrected) !== Boolean(other.isUserCorrected)
     ) {
       return false;
     }
@@ -255,12 +309,9 @@ export function StopMissionBoxConfigModal({
 
   const setCommodityScu = (commoditySlug: string, scu: number) => {
     setSaveError(null);
-    setDraft((prev) => ({
-      ...prev,
-      commodities: prev.commodities.map((line) =>
-        line.commoditySlug === commoditySlug ? { ...line, scu } : line,
-      ),
-    }));
+    setDraft((prev) =>
+      missionScuAmounts.setCommodityScuInDraft(prev, commoditySlug, scu),
+    );
   };
 
   const setDeliveryScu = (
@@ -269,15 +320,14 @@ export function StopMissionBoxConfigModal({
     scu: number,
   ) => {
     setSaveError(null);
-    setDraft((prev) => ({
-      ...prev,
-      deliveries: prev.deliveries.map((line) =>
-        line.commoditySlug === commoditySlug &&
-        line.locationSlug === locationSlug
-          ? { ...line, scu }
-          : line,
+    setDraft((prev) =>
+      missionScuAmounts.setDeliveryScuInDraft(
+        prev,
+        commoditySlug,
+        locationSlug,
+        scu,
       ),
-    }));
+    );
   };
 
   const toggleExpanded = (commoditySlug: string) => {
@@ -362,7 +412,7 @@ export function StopMissionBoxConfigModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-rsi-text-secondary">
             {canEditScu
-              ? "Edit cargo totals, expand a type to set delivery SCU, then Save. Delivery stops must sum to each cargo total."
+              ? "Edit cargo totals, expand a type, click a stop SCU to override it — other stops rebalance. Save when delivery stops sum to each cargo total."
               : isMultiCargo
                 ? "Set the total crate style, or adjust each cargo type."
                 : "Pick the crate mix that matches the contract."}
@@ -380,9 +430,13 @@ export function StopMissionBoxConfigModal({
                   draft={draft}
                   expandedSlugs={expandedSlugs}
                   disabled={disabled}
+                  isDirty={isDirty}
+                  saveError={saveError}
                   onToggle={toggleExpanded}
                   onChangeCommodity={setCommodityScu}
                   onChangeDelivery={setDeliveryScu}
+                  onReset={handleCancelDraft}
+                  onSave={handleSave}
                 />
               ) : null}
 
@@ -397,38 +451,6 @@ export function StopMissionBoxConfigModal({
             </div>
           )}
         </div>
-
-        {canEditScu ? (
-          <footer className="shrink-0 space-y-2 border-t border-rsi-divider px-4 py-3 sm:px-6">
-            {saveError ? (
-              <p className="text-sm text-rsi-danger" role="alert">
-                {saveError}
-              </p>
-            ) : isDirty ? (
-              <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                Unsaved SCU changes
-              </p>
-            ) : null}
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={!isDirty}
-                onClick={handleCancelDraft}
-              >
-                Reset
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={!isDirty}
-                onClick={handleSave}
-              >
-                Save SCU
-              </Button>
-            </div>
-          </footer>
-        ) : null}
       </div>
     </div>
   );
@@ -439,14 +461,20 @@ function CargoScuDraftSection({
   draft,
   expandedSlugs,
   disabled,
+  isDirty,
+  saveError,
   onToggle,
   onChangeCommodity,
   onChangeDelivery,
+  onReset,
+  onSave,
 }: {
   lines: CargoLine[];
   draft: MissionScuDraft;
   expandedSlugs: Set<string>;
   disabled: boolean;
+  isDirty: boolean;
+  saveError: string | null;
   onToggle: (commoditySlug: string) => void;
   onChangeCommodity: (commoditySlug: string, scu: number) => void;
   onChangeDelivery: (
@@ -454,6 +482,8 @@ function CargoScuDraftSection({
     locationSlug: string,
     scu: number,
   ) => void;
+  onReset: () => void;
+  onSave: () => void;
 }) {
   return (
     <section className="rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
@@ -522,7 +552,7 @@ function CargoScuDraftSection({
                             : "text-rsi-danger",
                         ].join(" ")}
                       >
-                        Deliveries {deliverySum} / {line.scu}
+                        Total SCU: {deliverySum}/{line.scu}
                       </p>
                     ) : null}
                   </div>
@@ -548,6 +578,8 @@ function CargoScuDraftSection({
                       <ScuAmountInput
                         value={delivery.scu}
                         disabled={disabled}
+                        unlockOnClick
+                        isUserCorrected={Boolean(delivery.isUserCorrected)}
                         ariaLabel={`${delivery.locationLabel} ${delivery.commodity} delivery SCU`}
                         onCommit={(scu) =>
                           onChangeDelivery(
@@ -565,6 +597,28 @@ function CargoScuDraftSection({
           );
         })}
       </ul>
+
+      {isDirty || saveError ? (
+        <div className="mt-3 space-y-2 border-t border-rsi-border/40 pt-3">
+          {saveError ? (
+            <p className="text-sm text-rsi-danger" role="alert">
+              {saveError}
+            </p>
+          ) : (
+            <p className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+              Unsaved SCU changes
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onReset}>
+              Reset
+            </Button>
+            <Button type="button" variant="primary" onClick={onSave}>
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -27,12 +27,14 @@ export type RowMissionScreenshotRef = {
 
 /** Compact per-stop / cargo SCU lines for session mission screenshot captions. */
 export function sessionMissionScuSplitsCaption(mission: SessionMission): string {
-  if (mission.deliverySplits && mission.deliverySplits.length > 0) {
-    return mission.deliverySplits
+  if (mission.scuSplits && mission.scuSplits.length > 0) {
+    return mission.scuSplits
       .map((split) => {
-        const cargo = `${split.scu} SCU ${split.commodity}`;
-        if (split.from === split.to) return `${cargo} · ${split.to}`;
-        return `${cargo} · ${split.from} → ${split.to}`;
+        const cargo = `${split.scu} SCU ${split.commodityName}`;
+        const from = split.fromLocationSlug;
+        const to = split.toLocationSlug;
+        if (from === to) return `${cargo} · ${to}`;
+        return `${cargo} · ${from} → ${to}`;
       })
       .join("\n");
   }
@@ -68,8 +70,8 @@ function missionCollectsAt(
   if (mission.from.some((loc) => locationMatchesRow(loc, rowLocationSlug))) {
     return true;
   }
-  const splits = mission.deliverySplits;
-  if (splits?.some((split) => locationMatchesRow(split.from, rowLocationSlug))) {
+  const splits = mission.scuSplits;
+  if (splits?.some((split) => locationMatchesRow(split.fromLocationSlug, rowLocationSlug))) {
     return true;
   }
   if (mission.pickupSplits) {
@@ -87,9 +89,9 @@ function missionDeliversAt(
   if (mission.to.some((loc) => locationMatchesRow(loc, rowLocationSlug))) {
     return true;
   }
-  const splits = mission.deliverySplits;
+  const splits = mission.scuSplits;
   return Boolean(
-    splits?.some((split) => locationMatchesRow(split.to, rowLocationSlug)),
+    splits?.some((split) => locationMatchesRow(split.toLocationSlug, rowLocationSlug)),
   );
 }
 
@@ -150,8 +152,10 @@ export function missionCarriesCommodity(
     return true;
   }
   if (
-    mission.deliverySplits?.some(
-      (split) => commoditySlugOf(split.commodity) === want,
+    mission.scuSplits?.some(
+      (split) =>
+        split.commoditySlug === want ||
+        commoditySlugOf(split.commodityName) === want,
     )
   ) {
     return true;

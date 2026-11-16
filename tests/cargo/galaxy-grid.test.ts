@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cargoGridTotalLength,
   cargoGridTotalScu,
   cargoGridZoneScu,
   getCargoGridSketchBySlug,
@@ -7,7 +8,7 @@ import {
 import { getShipBySlug } from "@/lib/fixtures";
 
 describe("RSI Galaxy cargo grid", () => {
-  it("uses cargo-module total SCU with two equal front/rear zones", () => {
+  it("uses cargo-module 720 SCU with lift + hangar-side zones", () => {
     const ship = getShipBySlug("galaxy");
     // Hangar 64 + cargo module 656 = 720 (UEX hull-only is 64).
     expect(ship?.cargoScu).toBe(720);
@@ -15,14 +16,22 @@ describe("RSI Galaxy cargo grid", () => {
     const sketch = getCargoGridSketchBySlug("galaxy");
     expect(sketch).not.toBeNull();
     expect(cargoGridTotalScu(sketch!)).toBe(720);
+    expect(cargoGridTotalLength(sketch!)).toBe(31);
+
+    const byId = Object.fromEntries(
+      sketch!.zones.map((zone) => [zone.id, zone]),
+    );
+    expect(cargoGridZoneScu(sketch!, byId["lift-l"]!)).toBe(256);
+    expect(cargoGridZoneScu(sketch!, byId["lift-r"]!)).toBe(256);
+    expect(cargoGridZoneScu(sketch!, byId["lift"]!)).toBe(144);
+    expect(cargoGridZoneScu(sketch!, byId["hangar-l"]!)).toBe(32);
+    expect(cargoGridZoneScu(sketch!, byId["hangar-r"]!)).toBe(32);
+    expect(cargoGridZoneScu(sketch!, byId["hangar-wide"]!)).toBe(0);
+    expect(cargoGridZoneScu(sketch!, byId["hangar-narrow"]!)).toBe(0);
 
     const cargoZones = sketch!.zones.filter((zone) => zone.kind === "cargo");
-    expect(cargoZones).toHaveLength(2);
-    expect(cargoZones.map((zone) => zone.storageLocation)).toEqual([
-      "front",
-      "rear",
-    ]);
-    expect(cargoGridZoneScu(sketch!, cargoZones[0]!)).toBe(360);
-    expect(cargoGridZoneScu(sketch!, cargoZones[1]!)).toBe(360);
+    expect(cargoZones).toHaveLength(5);
+    expect(byId["door"]?.kind).toBe("gap");
+    expect(byId["hangar-wide"]?.kind).toBe("empty");
   });
 });

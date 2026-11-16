@@ -7,6 +7,7 @@ import {
 } from "@/lib/sessions/resolveRefs";
 import { getCommodityBySlug } from "@/lib/fixtures";
 import { resolveMissionRank } from "@/lib/missions/missionRank";
+import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 /**
@@ -43,10 +44,9 @@ export async function linkSessionMissionToCatalog(
     ? (resolveLocationSlug(offerLocation) ?? null)
     : null;
 
-  const extras: Record<string, unknown> = {};
-  if (mission.deliverySplits?.length) {
-    extras.deliverySplits = mission.deliverySplits;
-  }
+  const scuSplits = resolveScuSplits({
+    scuSplits: mission.scuSplits,
+  });
 
   const rank = resolveMissionRank(mission);
 
@@ -65,9 +65,9 @@ export async function linkSessionMissionToCatalog(
       fromLocationSlugs,
       toLocationSlugs,
       cargo,
+      scuSplits,
       scuMaxContainerSize: mission.maxContainerScu ?? null,
       latestScreenshotPath: mission.screenshots[0] ?? null,
-      extras: Object.keys(extras).length > 0 ? extras : undefined,
     },
   });
 
@@ -75,6 +75,7 @@ export async function linkSessionMissionToCatalog(
     ...mission,
     catalogMissionId: row.id,
     rank: rank ?? mission.rank ?? null,
+    ...(scuSplits ? { scuSplits } : {}),
   };
 }
 

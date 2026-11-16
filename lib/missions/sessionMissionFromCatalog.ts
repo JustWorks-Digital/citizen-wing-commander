@@ -6,6 +6,7 @@ import {
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
+import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -49,17 +50,24 @@ export function sessionMissionFromCatalog(
   const cargoSummary = cargo
     .map((line) => `${line.scu} SCU ${line.commodity}`)
     .join(" · ");
-  const deliverySplits =
-    payload.scuSplits && payload.scuSplits.length > 0
-      ? payload.scuSplits.map((split) => ({
-          from: locationDisplay(split.fromLocationSlug),
-          to: locationDisplay(split.toLocationSlug),
-          commodity: split.commodityName,
-          scu: split.scu,
-        }))
-      : Array.isArray(extras.deliverySplits)
-        ? (extras.deliverySplits as SessionMission["deliverySplits"])
-        : undefined;
+  const legacyDeliverySplits = Array.isArray(extras.deliverySplits)
+    ? (extras.deliverySplits as Array<{
+        from: string;
+        to: string;
+        commodity: string;
+        scu: number;
+        isUserCorrected?: boolean;
+        scuAutoSelected?: number;
+      }>)
+    : null;
+  const scuSplits = resolveScuSplits({
+    scuSplits: payload.scuSplits,
+    scuLocationSplits:
+      catalog.scuLocationSplits ?? payload.scuLocationSplits ?? null,
+    legacyDeliverySplits,
+    cargo: payload.cargo,
+    fromFallbackSlug: payload.fromLocationSlugs[0],
+  });
 
   const screenshots = payload.latestScreenshotPath
     ? [payload.latestScreenshotPath]
@@ -84,7 +92,7 @@ export function sessionMissionFromCatalog(
     from,
     to,
     cargo,
-    deliverySplits,
+    scuSplits,
     maxContainerScu: catalog.scuMaxContainerSize ?? payload.scuMaxContainerSize ?? undefined,
     scuBoxSplits: catalog.scuBoxSplits ?? payload.scuBoxSplits,
     scuTotalCertainty:

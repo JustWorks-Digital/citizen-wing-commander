@@ -12,10 +12,13 @@ import {
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
 import {
   cargoGridCargoLength,
+  cargoGridHasExplicitPlacement,
   cargoGridMaxWidth,
   cargoGridTotalLength,
   cargoGridTotalScu,
+  cargoGridZoneHeight,
   cargoGridZoneScu,
+  cargoGridZoneSpans,
   cargoGridZoneWidth,
   getCargoGridViewScale,
   type CargoGridZone,
@@ -212,6 +215,9 @@ const CARGO_ZONE_FILL = [
 function zoneFillClass(zone: CargoGridZone, cargoIndex: number): string {
   if (zone.kind === "gap") {
     return "border-dashed border-rsi-border-strong bg-rsi-bg/50";
+  }
+  if (zone.kind === "empty") {
+    return "border-rsi-border/60 bg-rsi-bg-deep/30";
   }
   return CARGO_ZONE_FILL[cargoIndex % CARGO_ZONE_FILL.length] ?? CARGO_ZONE_FILL[0];
 }
@@ -448,15 +454,13 @@ export function CargoGridSketch({
     return !collapsedLegendSections.has(key);
   }
 
-  const zoneLogicalX0 = useMemo(() => {
-    const map = new Map<string, number>();
-    let offset = 0;
-    for (const zone of sketch.zones) {
-      map.set(zone.id, offset);
-      offset += zone.lengthCells;
-    }
+  const zoneSpans = useMemo(() => cargoGridZoneSpans(sketch), [sketch]);
+  const zoneSpanById = useMemo(() => {
+    const map = new Map<string, (typeof zoneSpans)[number]>();
+    for (const span of zoneSpans) map.set(span.zone.id, span);
     return map;
-  }, [sketch.zones]);
+  }, [zoneSpans]);
+  const useAbsoluteFloor = cargoGridHasExplicitPlacement(sketch);
   const cargoZoneIndex = useMemo(() => {
     const map = new Map<string, number>();
     let index = 0;
@@ -465,10 +469,10 @@ export function CargoGridSketch({
     }
     return map;
   }, [sketch.zones]);
-  /** Ramp → nose on screen (front bay on the right). */
+  /** Ramp → nose on screen for sequential sketches (front bay on the right). */
   const topViewZones = useMemo(
-    () => [...sketch.zones].reverse(),
-    [sketch.zones],
+    () => (useAbsoluteFloor ? sketch.zones : [...sketch.zones].reverse()),
+    [sketch.zones, useAbsoluteFloor],
   );
 
   const z = Math.min(Math.max(activeZ, 0), sketch.heightCells - 1);
@@ -1212,19 +1216,38 @@ export function CargoGridSketch({
                 compact={isSplit}
                 squareDegrees={topFacingDegrees}
               >
-              <div className="flex items-center">
+              <div
+                className={useAbsoluteFloor ? "relative" : "flex items-center"}
+                style={
+                  useAbsoluteFloor
+                    ? {
+                        width: totalLength * viewCellPx,
+                        height: maxWidth * viewCellPx,
+                      }
+                    : undefined
+                }
+              >
               {(() => {
                 let displayBayNumber = 0;
                 return topViewZones.map((zone) => {
+                const span = zoneSpanById.get(zone.id);
                 const zoneWidth = cargoGridZoneWidth(sketch, zone);
-                const yOffset = Math.floor((maxWidth - zoneWidth) / 2);
-                const zoneX0 = zoneLogicalX0.get(zone.id) ?? 0;
+                const yOffset =
+                  span?.yStart ?? Math.floor((maxWidth - zoneWidth) / 2);
+                const zoneX0 = span?.xStart ?? 0;
                 const fillClass = zoneFillClass(
                   zone,
                   zone.kind === "cargo" ? (cargoZoneIndex.get(zone.id) ?? 0) : 0,
                 );
                 if (zone.kind === "cargo") displayBayNumber += 1;
                 const bayNumber = displayBayNumber;
+                const absoluteStyle = useAbsoluteFloor
+                  ? ({
+                      position: "absolute" as const,
+                      left: (totalLength - zoneX0 - zone.lengthCells) * viewCellPx,
+                      top: yOffset * viewCellPx,
+                    } as const)
+                  : undefined;
                 const cells: { x: number; y: number; localIndex: number }[] =
                   [];
                 // Columns run ramp→nose so the front bay faces the opposite side.
@@ -1277,6 +1300,7 @@ export function CargoGridSketch({
                 );
 
                 if (zone.kind === "gap") {
+                  const isDoor = zone.id === "door";
                   const gapGrid = (
                       <div
                         title="Grid break"
@@ -1290,8 +1314,25 @@ export function CargoGridSketch({
                           height: zoneWidth * viewCellPx,
                         }}
                       >
-                        <span className="pointer-events-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                          <span className="rounded-sm bg-rsi-bg-deep/75 px-1.5 py-0.5">
+                        <span
+                          className={[
+                            "pointer-events-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted",
+                            isDoor ? "absolute inset-0 flex items-center justify-center" : "",
+                          ].join(" ")}
+                        >
+                          <span
+                            className="rounded-sm bg-rsi-bg-deep/75 px-1.5 py-0.5"
+                            style={
+                              isDoor
+                                ? {
+                                    // Run along the door strip; nudge screen-right.
+                                    transform: `translateX(${viewCellPx}px) rotate(-90deg)`,
+                                    transformOrigin: "center",
+                                    whiteSpace: "nowrap",
+                                  }
+                                : undefined
+                            }
+                          >
                             {zone.label}
                           </span>
                         </span>
@@ -1300,14 +1341,17 @@ export function CargoGridSketch({
                   return (
                     <div
                       key={zone.id}
-                      className={bayLabelChrome.columnClass}
+                      className={
+                        useAbsoluteFloor ? undefined : bayLabelChrome.columnClass
+                      }
+                      style={absoluteStyle}
                     >
                       {/* Match Zone N chrome so the gap sits with cargo grids. */}
-                      {bayLabelChrome.labelBeforeGrid
+                      {!useAbsoluteFloor && bayLabelChrome.labelBeforeGrid
                         ? bayLabel("Zone 0", true)
                         : null}
                       {gapGrid}
-                      {!bayLabelChrome.labelBeforeGrid
+                      {!useAbsoluteFloor && !bayLabelChrome.labelBeforeGrid
                         ? bayLabel("Zone 0", true)
                         : null}
                     </div>
@@ -1665,17 +1709,25 @@ export function CargoGridSketch({
                   </div>
                 );
 
+                const zoneLabelText =
+                  zone.kind === "empty"
+                    ? zone.label
+                    : zoneOrdinalLabel(bayNumber);
+
                 return (
                   <div
                     key={zone.id}
-                    className={bayLabelChrome.columnClass}
+                    className={
+                      useAbsoluteFloor ? undefined : bayLabelChrome.columnClass
+                    }
+                    style={absoluteStyle}
                   >
-                    {bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(zoneOrdinalLabel(bayNumber), false)
+                    {!useAbsoluteFloor && bayLabelChrome.labelBeforeGrid
+                      ? bayLabel(zoneLabelText, false)
                       : null}
                     {cargoGrid}
-                    {!bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(zoneOrdinalLabel(bayNumber), false)
+                    {!useAbsoluteFloor && !bayLabelChrome.labelBeforeGrid
+                      ? bayLabel(zoneLabelText, false)
                       : null}
                   </div>
                 );
@@ -1770,14 +1822,20 @@ export function CargoGridSketch({
               <ul className="mt-1 space-y-1">
                 {sketch.zones.map((zone) => {
                   const zoneWidth = cargoGridZoneWidth(sketch, zone);
+                  const zoneHeight = cargoGridZoneHeight(sketch, zone);
                   const scu = cargoGridZoneScu(sketch, zone);
+                  const kindNote =
+                    zone.kind === "gap"
+                      ? " (gap)"
+                      : zone.kind === "empty"
+                        ? " (empty)"
+                        : "";
                   return (
                     <li key={zone.id} className="tabular-nums">
                       {zone.label}
-                      {zone.kind === "gap" ? " (gap)" : ""}: {zoneWidth}×
-                      {zone.lengthCells}
+                      {kindNote}: {zoneWidth}×{zone.lengthCells}
                       {zone.kind === "cargo"
-                        ? `×${sketch.heightCells} = ${scu} SCU`
+                        ? `×${zoneHeight} = ${scu} SCU`
                         : " · 0 SCU"}
                     </li>
                   );

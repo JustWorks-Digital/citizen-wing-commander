@@ -85,7 +85,8 @@ const cellClass =
 
 const interactiveCellClass = [
   cellClass,
-  "transition-colors hover:bg-rsi-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+  // Raised fill vs strip `bg-rsi-bg-deep` so Contract / Stop / Bay read as clickable.
+  "bg-rsi-surface/80 transition-colors hover:bg-rsi-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
 ].join(" ");
 
 export type SessionSourceStatProps = {

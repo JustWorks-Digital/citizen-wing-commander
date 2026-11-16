@@ -1,7 +1,7 @@
 import {
   cargoGridMaxWidth,
   cargoGridTotalLength,
-  cargoGridZoneWidth,
+  cargoGridZoneSpans,
   type CargoGridStorageLocation,
   type CargoGridZone,
   type ShipCargoGridSketch,
@@ -14,7 +14,7 @@ import {
  * - **y** — port → starboard (width), `0` at port edge of the max bay span
  * - **z** — deck → ceiling (height), `0` at deck
  *
- * Narrower zones are centered in Y within `cargoGridMaxWidth(sketch)`.
+ * Narrower zones are centered in Y unless `yStartCells` is set on the zone.
  */
 export type CargoGridCoord = {
   x: number;
@@ -80,34 +80,11 @@ export function cargoGridZoneStorageLocation(
   }
 }
 
-type ZoneSpan = {
-  zone: CargoGridZone;
-  xStart: number;
-  xEnd: number;
-  yStart: number;
-  yEnd: number;
-};
-
-function zoneSpans(sketch: ShipCargoGridSketch): ZoneSpan[] {
-  const maxWidth = cargoGridMaxWidth(sketch);
-  const spans: ZoneSpan[] = [];
-  let x = 0;
-  for (const zone of sketch.zones) {
-    const width = cargoGridZoneWidth(sketch, zone);
-    const yStart = Math.floor((maxWidth - width) / 2);
-    spans.push({
-      zone,
-      xStart: x,
-      xEnd: x + zone.lengthCells,
-      yStart,
-      yEnd: yStart + width,
-    });
-    x += zone.lengthCells;
-  }
-  return spans;
-}
-
-function spanContainsXY(span: ZoneSpan, x: number, y: number): boolean {
+function spanContainsXY(
+  span: { xStart: number; xEnd: number; yStart: number; yEnd: number },
+  x: number,
+  y: number,
+): boolean {
   return (
     x >= span.xStart &&
     x < span.xEnd &&
@@ -122,10 +99,15 @@ export function cargoGridZoneAtXY(
   x: number,
   y: number,
 ): CargoGridZone | null {
-  for (const span of zoneSpans(sketch)) {
-    if (spanContainsXY(span, x, y)) return span.zone;
+  // Prefer cargo over empty/gap when rectangles overlap (shouldn’t, but be safe).
+  const spans = cargoGridZoneSpans(sketch);
+  let fallback: CargoGridZone | null = null;
+  for (const span of spans) {
+    if (!spanContainsXY(span, x, y)) continue;
+    if (span.zone.kind === "cargo") return span.zone;
+    fallback ??= span.zone;
   }
-  return null;
+  return fallback;
 }
 
 export function isValidCargoGridCoord(
@@ -139,9 +121,14 @@ export function isValidCargoGridCoord(
   ) {
     return false;
   }
-  if (coord.z < 0 || coord.z >= sketch.heightCells) return false;
-  const zone = cargoGridZoneAtXY(sketch, coord.x, coord.y);
-  return zone != null && zone.kind === "cargo";
+  if (coord.z < 0) return false;
+  const spans = cargoGridZoneSpans(sketch);
+  for (const span of spans) {
+    if (!spanContainsXY(span, coord.x, coord.y)) continue;
+    if (span.zone.kind !== "cargo") return false;
+    return coord.z < span.zEnd;
+  }
+  return false;
 }
 
 export function cargoGridCellAt(
@@ -163,12 +150,12 @@ export function cargoGridEnumerateCells(
   sketch: ShipCargoGridSketch,
 ): CargoGridCell[] {
   const cells: CargoGridCell[] = [];
-  for (const span of zoneSpans(sketch)) {
+  for (const span of cargoGridZoneSpans(sketch)) {
     if (span.zone.kind !== "cargo") continue;
     const storageLocation = cargoGridZoneStorageLocation(span.zone);
     for (let x = span.xStart; x < span.xEnd; x += 1) {
       for (let y = span.yStart; y < span.yEnd; y += 1) {
-        for (let z = 0; z < sketch.heightCells; z += 1) {
+        for (let z = 0; z < span.zEnd; z += 1) {
           cells.push({
             coord: { x, y, z },
             zoneId: span.zone.id,

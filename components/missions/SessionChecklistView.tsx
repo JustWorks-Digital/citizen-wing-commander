@@ -863,8 +863,15 @@ export function SessionChecklistView({
         scuTotalCertainty: updatedMission.scuTotalCertainty,
         scuBoxSplitsCertainty: updatedMission.scuBoxSplitsCertainty,
         scuCargoBoxSplitsCertainty: updatedMission.scuCargoBoxSplitsCertainty,
-      }).catch(() => {
-        setLoadError("Saved on trip, but failed to update catalog default");
+      }).catch((error: unknown) => {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        // Stale catalogMissionId (e.g. prod-linked trip on a local DB) — trip
+        // already saved; there is no catalog row to update.
+        if (/catalog mission not found/i.test(message)) return;
+        setLoadError(
+          `Saved on trip, but failed to update catalog default: ${message}`,
+        );
       });
     },
     [],

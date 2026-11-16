@@ -59,35 +59,114 @@
     {
       "shipSlug": "galaxy",
       "shipName": "RSI Galaxy",
-      "widthCells": 12,
+      "widthCells": 18,
       "heightCells": 4,
       "zones": [
         {
-          "id": "forward",
-          "label": "Front bay",
-          "lengthCells": 9,
-          "widthCells": 10,
+          "id": "lift-l",
+          "label": "Lift L",
+          "lengthCells": 16,
+          "widthCells": 4,
+          "heightCells": 4,
+          "xStartCells": 0,
+          "yStartCells": 0,
           "kind": "cargo",
           "storageLocation": "front"
         },
         {
-          "id": "mid-gap",
-          "label": "Gap",
-          "lengthCells": 3,
-          "widthCells": 12,
+          "id": "lift-gap-l",
+          "label": "Lift gap",
+          "lengthCells": 12,
+          "widthCells": 2,
+          "xStartCells": 0,
+          "yStartCells": 4,
           "kind": "gap"
         },
         {
-          "id": "rear",
-          "label": "Back bay",
-          "lengthCells": 9,
-          "widthCells": 10,
+          "id": "lift",
+          "label": "Lift",
+          "lengthCells": 12,
+          "widthCells": 6,
+          "heightCells": 2,
+          "xStartCells": 0,
+          "yStartCells": 6,
+          "kind": "cargo",
+          "storageLocation": "front"
+        },
+        {
+          "id": "lift-gap-r",
+          "label": "Lift gap",
+          "lengthCells": 12,
+          "widthCells": 2,
+          "xStartCells": 0,
+          "yStartCells": 12,
+          "kind": "gap"
+        },
+        {
+          "id": "lift-r",
+          "label": "Lift R",
+          "lengthCells": 16,
+          "widthCells": 4,
+          "heightCells": 4,
+          "xStartCells": 0,
+          "yStartCells": 14,
+          "kind": "cargo",
+          "storageLocation": "front"
+        },
+        {
+          "id": "door",
+          "label": "Door",
+          "lengthCells": 3,
+          "widthCells": 18,
+          "xStartCells": 16,
+          "yStartCells": 0,
+          "kind": "gap"
+        },
+        {
+          "id": "hangar-narrow",
+          "label": "Hangar",
+          "lengthCells": 6,
+          "widthCells": 6,
+          "heightCells": 4,
+          "xStartCells": 19,
+          "yStartCells": 6,
+          "kind": "empty"
+        },
+        {
+          "id": "hangar-wide",
+          "label": "Hangar",
+          "lengthCells": 6,
+          "widthCells": 12,
+          "heightCells": 4,
+          "xStartCells": 25,
+          "yStartCells": 3,
+          "kind": "empty"
+        },
+        {
+          "id": "hangar-l",
+          "label": "Hangar L",
+          "lengthCells": 4,
+          "widthCells": 2,
+          "heightCells": 4,
+          "xStartCells": 27,
+          "yStartCells": 1,
+          "kind": "cargo",
+          "storageLocation": "rear"
+        },
+        {
+          "id": "hangar-r",
+          "label": "Hangar R",
+          "lengthCells": 4,
+          "widthCells": 2,
+          "heightCells": 4,
+          "xStartCells": 27,
+          "yStartCells": 15,
           "kind": "cargo",
           "storageLocation": "rear"
         }
       ],
       "notes": [
-        "Same orientation / skeleton as C2 (front + mid-gap + rear, height 4). Cargo-module config 720 SCU (64 hangar + 656 module); two equal holds 10×9×4 = 360 SCU each. Holds are inset 1 cell in Y within a 12-wide envelope so the mid-gap sits flush to port (one cell higher than a flush 10-wide gap)."
+        "Cargo-module packable 720 SCU: Lift L/R 4×16×4 (256×2), Lift 6×12×2 (144), Hangar L/R 2×4×4 (32×2). Hangar floor is empty (not in 720): length 12 with width 12 on the rear half and 6 on the door half. Sketch height capped at 4 for now (hangar’s real 8-high stack deferred). Layout nose→ramp: Lift cluster (Lift L | 2-gap | Lift | 2-gap | Lift R), Door (3), Hangar."
       ]
     }
   ]
