@@ -950,7 +950,7 @@ function CargoGroups({
               </span>
             ) : null}
             {sectionTransfer}
-            <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
               {missionBuckets.map((bucket) => {
                 const mission =
                   bucket.missionId != null
@@ -1126,6 +1126,7 @@ function LocationHeader({
   showTravelChevron = false,
   travelChevronClassName = "",
   nameTrailing = null,
+  titleBelow = null,
 }: {
   row: HaulingChecklistRow;
   location: string;
@@ -1141,6 +1142,8 @@ function LocationHeader({
   travelChevronClassName?: string;
   /** Sits immediately after the location name (e.g. QT ship badge). */
   nameTrailing?: ReactNode;
+  /** Directly under the full location title (e.g. quantum hop distance). */
+  titleBelow?: ReactNode;
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const imageSrc = getLocationImageSrc(row.locationSlug);
@@ -1291,6 +1294,9 @@ function LocationHeader({
             </span>
           ) : null}
         </div>
+        {titleBelow ? (
+          <div className="mt-0.5 min-w-0">{titleBelow}</div>
+        ) : null}
         {showRouteAction || showLocationTags ? (
           <div
             className={[
@@ -1636,24 +1642,56 @@ function QuantumTravelRow({
           isCopied={false}
           onCopy={() => undefined}
           compact
+          titleBelow={
+            hopDistance ? (
+              <p
+                className={[
+                  "font-mono text-[0.65rem] tabular-nums tracking-wide",
+                  isCompleted
+                    ? "text-rsi-text-muted"
+                    : "text-rsi-text-secondary",
+                ].join(" ")}
+                title={`Quantum hop ${hopLabel}`}
+              >
+                <span className="md:hidden">{hopLabelCompact}</span>
+                <span className="hidden md:inline">
+                  Distance · {hopLabel}
+                </span>
+              </p>
+            ) : null
+          }
         />
       </div>
     ) : (
-      <p
-        className={[
-          "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
-          isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
-        ].join(" ")}
-      >
-        <span
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <p
           className={[
-            "min-w-0 break-words [overflow-wrap:anywhere]",
-            isCompleted ? "" : "text-rsi-text-secondary",
+            "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
+            isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
           ].join(" ")}
         >
-          {destinationName}
-        </span>
-      </p>
+          <span
+            className={[
+              "min-w-0 break-words [overflow-wrap:anywhere]",
+              isCompleted ? "" : "text-rsi-text-secondary",
+            ].join(" ")}
+          >
+            {destinationName}
+          </span>
+        </p>
+        {hopDistance ? (
+          <p
+            className={[
+              "font-mono text-[0.65rem] tabular-nums tracking-wide",
+              isCompleted ? "text-rsi-text-muted" : "text-rsi-text-secondary",
+            ].join(" ")}
+            title={`Quantum hop ${hopLabel}`}
+          >
+            <span className="md:hidden">{hopLabelCompact}</span>
+            <span className="hidden md:inline">Distance · {hopLabel}</span>
+          </p>
+        ) : null}
+      </div>
     );
 
   return (
@@ -1710,22 +1748,6 @@ function QuantumTravelRow({
             </div>
             <div className="flex min-w-0 flex-col gap-1 md:pl-6 lg:pl-8">
               {toBlock}
-              {hopDistance ? (
-                <p
-                  className={[
-                    "font-mono text-[0.65rem] tabular-nums tracking-wide",
-                    isCompleted
-                      ? "text-rsi-text-muted"
-                      : "text-rsi-text-secondary",
-                  ].join(" ")}
-                  title={`Quantum hop ${hopLabel}`}
-                >
-                  <span className="md:hidden">{hopLabelCompact}</span>
-                  <span className="hidden md:inline">
-                    Distance · {hopLabel}
-                  </span>
-                </p>
-              ) : null}
               {reasonLabel ? (
                 <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                   Reason · {reasonLabel}
@@ -1922,8 +1944,8 @@ function TransferColumnLabel({ children }: { children: ReactNode }) {
 
 /**
  * Station / ship thumb + endpoint name.
- * Name beside the thumb from ~450px–lg (same band as 2+ mission cards);
- * stacked under on narrower / wider layouts.
+ * Name beside the thumb from ~450px up (pickup / drop-off endpoints);
+ * stacked under on narrower phones.
  */
 function TransferEndpointName({
   kind,
@@ -1941,7 +1963,7 @@ function TransferEndpointName({
   strike: string;
 }) {
   return (
-    <div className="mb-2.5 flex min-w-0 flex-col items-start gap-1.5 self-stretch min-[450px]:max-lg:flex-row min-[450px]:max-lg:items-center min-[450px]:max-lg:gap-2">
+    <div className="mb-2.5 flex min-w-0 flex-col items-start gap-1.5 self-stretch min-[450px]:flex-row min-[450px]:items-center min-[450px]:gap-2">
       <span
         aria-hidden
         className={[
@@ -1970,7 +1992,7 @@ function TransferEndpointName({
       </span>
       <p
         className={[
-          "min-w-0 w-full break-words text-left text-sm font-medium leading-5 min-[450px]:max-lg:flex-1",
+          "min-w-0 w-full break-words text-left text-sm font-medium leading-5 min-[450px]:flex-1",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -2691,7 +2713,7 @@ function NextDistanceMeta({
         </p>
         <p
           className={[
-            "mt-0.5 text-sm leading-snug break-words [overflow-wrap:anywhere]",
+            "mt-0.5 text-sm font-medium leading-snug tracking-wide break-words [overflow-wrap:anywhere]",
             isBridge
               ? "text-rsi-text"
               : row.isCompleted
@@ -2699,16 +2721,17 @@ function NextDistanceMeta({
                 : "text-rsi-text-secondary",
           ].join(" ")}
         >
-          <span className="font-medium tracking-wide">{nextLocationName}</span>
-          <span className="text-rsi-text-muted"> – </span>
-          <span
-            className="font-mono tabular-nums text-rsi-text-secondary"
+          {nextLocationName}
+        </p>
+        {distance ? (
+          <p
+            className="mt-0.5 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-secondary"
             title={distance}
           >
             <span className="md:hidden">{distanceCompact}</span>
             <span className="hidden md:inline">{distance}</span>
-          </span>
-        </p>
+          </p>
+        ) : null}
       </div>
     </>
   );
