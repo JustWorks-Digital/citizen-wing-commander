@@ -75,8 +75,9 @@ export function RouteChecklistMenu({
         aria-label="Route checklist menu"
         onClick={() => setOpen((value) => !value)}
         className={[
-          "inline-flex size-7 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 font-mono text-sm leading-none tracking-[0.2em] text-rsi-text-secondary shadow-rsi-panel transition-colors",
-          "hover:border-rsi-border-strong hover:text-rsi-text",
+          // Match Distance/aUEC/Time strip height + border/chrome.
+          "inline-flex h-[2.375rem] items-center justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 px-2.5 font-mono text-sm leading-none tracking-[0.2em] text-rsi-text-secondary transition-colors sm:h-[2.875rem] sm:px-3",
+          "hover:text-rsi-text",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         ].join(" ")}
       >
@@ -86,7 +87,7 @@ export function RouteChecklistMenu({
         <div
           role="menu"
           aria-label="Route checklist menu"
-          className="absolute top-full right-0 z-40 mt-1.5 w-52 rounded-rsi border border-rsi-border bg-rsi-surface px-2.5 py-2 shadow-rsi-panel"
+          className="absolute top-full right-0 z-50 mt-1.5 w-52 rounded-rsi border border-rsi-border bg-rsi-surface px-2.5 py-2 shadow-rsi-panel"
         >
           {overflowStats ? (
             <div className="mb-2 border-b border-rsi-divider px-1.5 pb-2 sm:hidden">

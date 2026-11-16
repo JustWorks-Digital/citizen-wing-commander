@@ -145,11 +145,20 @@ export function LocationFuzzySearch({
           {label}
         </label>
       </div>
-      <div className="relative">
+      <div
+        className={[
+          "relative flex w-full items-center gap-2 rounded-rsi border border-rsi-border bg-rsi-bg-deep",
+          showSelectedThumb ? "pl-2.5" : "pl-3",
+          showClear ? "pr-9" : "pr-3",
+          "focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--rsi-ring)]",
+          disabled ? "cursor-not-allowed opacity-50" : "",
+        ].join(" ")}
+      >
         {showSelectedThumb ? (
-          <span className="pointer-events-none absolute top-1/2 left-2.5 z-[1] -translate-y-1/2">
-            <LocationThumb slug={valueSlug} />
-          </span>
+          <LocationThumb
+            slug={valueSlug}
+            className="pointer-events-none h-6 w-10"
+          />
         ) : null}
         <input
           ref={inputRef}
@@ -164,12 +173,9 @@ export function LocationFuzzySearch({
           placeholder={placeholder}
           autoComplete="off"
           className={[
-            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep py-2",
-            showSelectedThumb ? "pl-14" : "pl-3",
-            showClear ? "pr-9" : "pr-3",
-            "font-sans text-sm text-rsi-text placeholder:text-rsi-text-muted",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "min-w-0 flex-1 border-0 bg-transparent py-2 font-sans text-sm text-rsi-text placeholder:text-rsi-text-muted",
+            "focus-visible:outline-none",
+            disabled ? "cursor-not-allowed" : "",
           ].join(" ")}
           onFocus={() => setIsOpen(true)}
           onChange={(event) => {

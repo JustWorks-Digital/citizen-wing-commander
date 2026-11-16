@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Fuzzy location search with location thumbs in the field and list. Clear (X) when a value or query is present. Click empty chrome on the label row to blur.",
+          "Fuzzy location search with location thumbs vertically centered beside the closed-field text and in the list. Clear (X) when a value or query is present. Click empty chrome on the label row to blur.",
       },
     },
   },

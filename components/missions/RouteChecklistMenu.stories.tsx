@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, and Controls.",
+          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, and Controls.",
       },
     },
   },
@@ -66,3 +66,4 @@ export const Interactive: Story = {
     );
   },
 };
+

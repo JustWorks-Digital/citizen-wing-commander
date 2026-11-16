@@ -156,11 +156,17 @@ export function ShipSelect({
           {label}
         </label>
       </div>
-      <div className="relative">
+      <div
+        className={[
+          "relative flex w-full items-center gap-2 rounded-rsi border border-rsi-border bg-rsi-bg-deep",
+          !open && selected ? "pl-2.5" : "pl-3",
+          canClear ? "pr-9" : "pr-3",
+          "focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--rsi-ring)]",
+          isDisabled ? "cursor-not-allowed opacity-60" : "",
+        ].join(" ")}
+      >
         {!open && selected ? (
-          <span className="pointer-events-none absolute top-1/2 left-2.5 z-[1] -translate-y-1/2">
-            <ShipThumb slug={selected.slug} />
-          </span>
+          <ShipThumb slug={selected.slug} className="pointer-events-none h-6 w-10" />
         ) : null}
         <input
           ref={inputRef}
@@ -212,11 +218,9 @@ export function ShipSelect({
             }
           }}
           className={[
-            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep py-2 text-sm text-rsi-text placeholder:text-rsi-text-muted",
-            !open && selected ? "pl-14" : "pl-3",
-            canClear ? "pr-9" : "pr-3",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-            isDisabled ? "cursor-not-allowed opacity-60" : "",
+            "min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-rsi-text placeholder:text-rsi-text-muted",
+            "focus-visible:outline-none",
+            isDisabled ? "cursor-not-allowed" : "",
           ].join(" ")}
         />
         {canClear ? (

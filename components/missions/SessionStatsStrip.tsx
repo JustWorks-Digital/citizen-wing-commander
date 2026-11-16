@@ -185,10 +185,9 @@ export type SessionRouteProgressStatsProps = {
    * Kept for callers; toolbar label is Bay / Bays.
    */
   cargoBayCount?: number;
-  /**
   /** Trip elapsed — Time cell in the Distance / aUEC / Time strip. */
   elapsed?: ReactNode;
-  /** Optional control rendered just right of the route progress strip. */
+  /** Optional control to the right of the trip strip (kept outside overflow). */
   trailing?: ReactNode;
   className?: string;
 };
@@ -420,7 +419,7 @@ export function SessionRouteProgressStats({
       </div>
       {showTripGroup ? (
         <div
-          className={[stripClass, "!w-fit max-w-full"].join(" ")}
+          className={[stripClass, "ml-auto !w-fit max-w-full"].join(" ")}
           role="group"
           aria-label="Distance payout and time"
         >

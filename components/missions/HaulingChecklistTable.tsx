@@ -2952,7 +2952,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   const toolbar = (
     <div
       ref={stickyToolbarRef}
-      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 overflow-x-clip border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-2"
+      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-2"
     >
       <div className="min-w-0 flex-1">{toolbarStart}</div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
