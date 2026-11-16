@@ -171,6 +171,7 @@ export function formatDistanceToNext(
   options?: { compact?: boolean },
 ): string {
   if (!distance) return "—";
+  if (distance.value === 0) return "0";
   const value = options?.compact
     ? formatDistanceValueCompact(distance.value)
     : formatDistanceValue(distance.value);

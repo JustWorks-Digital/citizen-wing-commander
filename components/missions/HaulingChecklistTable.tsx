@@ -936,19 +936,6 @@ function CargoGroups({
 
         const sectionBody = (
           <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-1">
-            {group.role ? (
-              <span
-                className={[
-                  "mb-1 w-fit border-b pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]",
-                  roleClass,
-                  group.role === "pickup"
-                    ? "border-rsi-accent/45"
-                    : "border-rsi-gold/45",
-                ].join(" ")}
-              >
-                {group.role === "pickup" ? "Pick up" : "Drop off"}
-              </span>
-            ) : null}
             {sectionTransfer}
             <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
               {missionBuckets.map((bucket) => {
@@ -1074,19 +1061,35 @@ function CargoGroups({
           <div
             key={`${row.id}-cargo-${group.role ?? "none"}`}
             className={[
-              // Keep mission cards full-width longer; bay sits beside from lg.
-              "flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4",
+              "flex flex-col gap-2",
               showRoleDivider
                 ? "border-t border-rsi-divider pt-2 lg:pt-1.5"
                 : "",
             ].join(" ")}
           >
-            {sectionBody}
-            {sectionAside ? (
-              <div className="flex w-full min-w-0 flex-col lg:w-1/2 lg:shrink-0">
-                {sectionAside}
-              </div>
+            {group.role ? (
+              <span
+                className={[
+                  "w-fit border-b pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]",
+                  roleClass,
+                  group.role === "pickup"
+                    ? "border-rsi-accent/45"
+                    : "border-rsi-gold/45",
+                ].join(" ")}
+              >
+                {group.role === "pickup" ? "Pick up" : "Drop off"}
+              </span>
             ) : null}
+            {/* Role label sits above so transfer + Breakdown tops line up;
+                stretch keeps the pad graph filling the left column height. */}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
+              {sectionBody}
+              {sectionAside ? (
+                <div className="flex min-h-0 w-full min-w-0 flex-col lg:w-1/2 lg:shrink-0 lg:[&>*]:h-full lg:[&>*]:min-h-0">
+                  {sectionAside}
+                </div>
+              ) : null}
+            </div>
           </div>
         );
       })}
@@ -2144,7 +2147,7 @@ function PickupTransferBlock({
       <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={String(transfer.before)}
-          suffix=""
+          suffix="SCU"
           tone="text-rsi-text-muted"
           strike={strike}
           mute={mute}
@@ -2155,7 +2158,7 @@ function PickupTransferBlock({
       <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={`−${transfer.amount}`}
-          suffix="supply"
+          suffix="withdrawal"
           tone="text-rsi-danger"
           strike={strike}
           mute={mute}
@@ -2168,7 +2171,7 @@ function PickupTransferBlock({
       <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={`+${transfer.amount}`}
-          suffix="receiving"
+          suffix="deposit"
           tone="text-rsi-success"
           strike={strike}
           mute={mute}
@@ -2187,7 +2190,7 @@ function PickupTransferBlock({
         />
         <TransferScuLine
           amount={String(transfer.after)}
-          suffix="SCU"
+          suffix="SCU total"
           tone="text-rsi-text"
           strike={strike}
           mute={mute}
@@ -2251,7 +2254,7 @@ function DeliveryTransferBlock({
       <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={String(transfer.before)}
-          suffix=""
+          suffix="SCU"
           tone="text-rsi-text-muted"
           strike={strike}
           mute={mute}
@@ -2263,7 +2266,7 @@ function DeliveryTransferBlock({
       <div className="col-start-1 min-w-0">
         <TransferScuLine
           amount={`−${transfer.amount}`}
-          suffix="delivering"
+          suffix="withdrawal"
           tone="text-rsi-danger"
           strike={strike}
           mute={mute}
@@ -2276,7 +2279,7 @@ function DeliveryTransferBlock({
       <div className="col-start-3 min-w-0">
         <TransferScuLine
           amount={`+${transfer.amount}`}
-          suffix="receiving"
+          suffix="deposit"
           tone="text-rsi-success"
           strike={strike}
           mute={mute}
@@ -2294,7 +2297,7 @@ function DeliveryTransferBlock({
         />
         <TransferScuLine
           amount={String(transfer.after)}
-          suffix="SCU remaining"
+          suffix="SCU total"
           tone="text-rsi-text"
           strike={strike}
           mute={mute}
@@ -2631,22 +2634,7 @@ function NextDistanceMeta({
   const isBridge = variant === "bridge";
   const shipIconSrc = getShipIconSrc(shipSlug);
   const isLastStop = nextLocationSlug == null && nextLocationName == null;
-  if (isLastStop) {
-    return (
-      <div className={isBridge ? "py-3 text-sm" : "pt-5 text-sm"}>
-        <p
-          className={[
-            "font-mono text-[0.65rem] uppercase tracking-[0.16em]",
-            isBridge || !row.isCompleted
-              ? "text-rsi-success"
-              : "text-rsi-text-muted",
-          ].join(" ")}
-        >
-          Trip complete
-        </p>
-      </div>
-    );
-  }
+  if (isLastStop) return null;
 
   const starmapDistance = distanceBetweenLocationSlugs(
     row.locationSlug,

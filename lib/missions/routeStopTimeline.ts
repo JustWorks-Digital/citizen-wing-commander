@@ -152,11 +152,15 @@ export function buildRouteStopTimeline(input: {
     }
   }
 
+  const total = sumDistanceToNext(totalParts);
+  const traveled = sumDistanceToNext(traveledParts);
   return {
     nodes,
-    traveled: sumDistanceToNext(traveledParts),
+    // Before any leg is done, show 0 in the total’s unit (not "—").
+    traveled:
+      traveled ?? (total ? { value: 0, unit: total.unit } : null),
     remaining: sumDistanceToNext(remainingParts),
-    total: sumDistanceToNext(totalParts),
+    total,
     completedStopCount: rows.filter((row) => row.isCompleted).length,
     totalStopCount: rows.length,
   };
