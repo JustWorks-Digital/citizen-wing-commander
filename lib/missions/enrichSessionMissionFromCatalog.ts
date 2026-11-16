@@ -10,7 +10,6 @@ import {
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import {
   normalizeMissionRank,
-  parseRankFromTitle,
   stripRankFromTitle,
 } from "@/lib/missions/missionRank";
 import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
@@ -70,11 +69,10 @@ export function enrichSessionMissionFromCatalog(
   const category =
     normalizeHaulingCategory(payload.category) ?? mission.mobiglas.category;
 
-  // Catalog stores rank separately and titles without "X Rank - …".
+  // Prefer catalog DB/payload rank; session rank is already load-normalized.
   const rank =
     normalizeMissionRank(catalog.rank) ??
     normalizeMissionRank(payload.rank) ??
-    parseRankFromTitle(mission.title) ??
     normalizeMissionRank(mission.rank);
   const title =
     (catalog.title?.trim() || stripRankFromTitle(mission.title).title).trim() ||

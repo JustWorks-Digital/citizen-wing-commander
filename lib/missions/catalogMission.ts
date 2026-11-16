@@ -31,9 +31,6 @@ export type ScuBoxSplits = {
   scuThirtyTwo: number;
 };
 
-/** @deprecated Prefer `ScuBoxSplits` */
-export type CargoBoxBreakdown = ScuBoxSplits;
-
 export type CatalogMissionCargoLine = {
   commoditySlug: string;
   commodityName: string;

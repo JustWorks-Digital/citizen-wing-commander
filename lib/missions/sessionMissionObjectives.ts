@@ -21,9 +21,6 @@ export type MissionObjectiveLine = {
   cargoItems: string[];
 };
 
-/** @deprecated Prefer `ScuSplit` — kept for older call-site imports. */
-export type SessionMissionDeliverySplit = ScuSplit;
-
 function locationLabel(nameOrSlug: string): string {
   const bySlug = getLocationBySlug(nameOrSlug);
   if (bySlug) return bySlug.name;

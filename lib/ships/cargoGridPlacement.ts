@@ -36,6 +36,7 @@ import {
 } from "@/lib/ships/packSlotPolicy";
 import { orderPackItemsByProgram } from "@/lib/ships/packItemOrder";
 import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
+import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
 import type { CargoDelivery, HaulingChecklistRow, RouteAction, ShipStorageLocation } from "@/lib/missions/sessionChecklist";
 
 
@@ -2176,31 +2177,6 @@ export function pickupHangarPileSegments(
 }
 
 /**
- * Partition explicit crate sizes across location SCU splits when every box
- * fits a remaining destination; otherwise null (caller decomposes per split).
- */
-function partitionBoxSizesAcrossLocationSplits(
-  boxSizes: CargoBoxScu[],
-  splits: DeliveryLocationScuSplit[],
-): Array<{ locationSlug: string; sizes: CargoBoxScu[] }> | null {
-  if (boxSizes.length === 0 || splits.length === 0) return null;
-  const ordered = [...boxSizes].sort((a, b) => b - a);
-  const alloc = splits.map((split) => ({
-    locationSlug: split.locationSlug,
-    remaining: split.scu,
-    sizes: [] as CargoBoxScu[],
-  }));
-  for (const box of ordered) {
-    const hit = alloc.find((entry) => entry.remaining >= box);
-    if (!hit) return null;
-    hit.sizes.push(box);
-    hit.remaining -= box;
-  }
-  if (alloc.some((entry) => entry.remaining !== 0)) return null;
-  return alloc.map(({ locationSlug, sizes }) => ({ locationSlug, sizes }));
-}
-
-/**
  * Build per-destination crate lists from route location splits so each box
  * can be filtered by delivery stop.
  */
@@ -2232,11 +2208,16 @@ function sizesByDeliveryLocation(
     ];
   }
   if (segment.boxSizes && segment.boxSizes.length > 0) {
-    const partitioned = partitionBoxSizesAcrossLocationSplits(
+    const buckets = partitionBoxSizesAcrossScuAmounts(
       segment.boxSizes,
-      splits,
+      splits.map((split) => split.scu),
     );
-    if (partitioned) return partitioned;
+    if (buckets) {
+      return buckets.map((sizes, index) => ({
+        locationSlug: splits[index]!.locationSlug,
+        sizes,
+      }));
+    }
   }
   // Keep contract max container size when partition cannot assign whole crates.
   const maxBox = maxCargoBoxScu(segment.boxSizes);

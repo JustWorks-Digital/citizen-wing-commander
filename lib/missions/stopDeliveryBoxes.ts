@@ -31,9 +31,6 @@ export type StopCargoBoxGroup = {
   isSplitMission: boolean;
 };
 
-/** @deprecated Use StopCargoBoxGroup */
-export type StopDeliveryBoxGroup = StopCargoBoxGroup;
-
 /** Empty cells between mission/commodity stacks on the reference pad. */
 const STACK_GAP_CELLS = 2;
 /** Extra empty cells between delivery-location hangar piles. */
@@ -290,13 +287,6 @@ export function stopCargoBoxGroups(
   }));
 }
 
-/** @deprecated Use stopCargoBoxGroups(row, "delivery") */
-export function stopDeliveryBoxGroups(
-  row: HaulingChecklistRow,
-): StopCargoBoxGroup[] {
-  return stopCargoBoxGroups(row, "delivery");
-}
-
 export type StopCargoStackLabel = {
   id: string;
   /** Stack origin X on the pad (left edge of first column). */
@@ -386,9 +376,6 @@ export function abbreviateCommodityName(
     .slice(0, limit);
 }
 
-/** @deprecated Use StopCargoStacksPlan */
-export type StopDeliveryStacksPlan = StopCargoStacksPlan;
-
 /**
  * Generic pad (not a ship bay): one stack group per mission+commodity.
  * Columns wrap beside each other after {@link MAX_COLUMN_BOXES} crates so
@@ -476,13 +463,6 @@ export function planStopCargoStacks(
     stackLabels,
     legendItems,
   };
-}
-
-/** @deprecated Use planStopCargoStacks(row, "delivery") */
-export function planStopDeliveryStacks(
-  row: HaulingChecklistRow,
-): StopCargoStacksPlan | null {
-  return planStopCargoStacks(row, "delivery");
 }
 
 /**
