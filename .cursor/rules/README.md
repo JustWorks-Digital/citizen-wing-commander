@@ -23,6 +23,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`railway-proactive.mdc`](./railway-proactive.mdc) | Trust Railway auto-deploy — don’t poll deploys after every push; only follow through when production work is needed |
 | [`commit-push-deploy.mdc`](./commit-push-deploy.mdc) | “Commit and push” vs “commit, push, and deploy” — push to origin; track Railway only when “and deploy” (no manual redeploy) |
 | [`cargo-placement.mdc`](./cargo-placement.mdc) | Ship bay packer rules (`cargoGridPlacementRules.ts`) |
+| [`session-fixtures.mdc`](./session-fixtures.mdc) | Live session test packs + feature-flagged UI recorder |
 
 Also see:
 

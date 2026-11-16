@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const fixturePath = join(
   root,
-  "lib/fixtures/sessions/crossed-haul-invalid-2026-11-13/session.json",
+  "tests/sessions/crossed-haul-invalid-2026-11-13/session.json",
 );
 const session = JSON.parse(readFileSync(fixturePath, "utf8"));
 const sessionId = session.id;

@@ -1,0 +1,12 @@
+{
+  "sessionName": "Crossed haul invalid route (backup)",
+  "startLocationSlug": "everus-harbor",
+  "missionCount": 24,
+  "rowCount": 14,
+  "peakStopId": "leg-9",
+  "peakScu": 466,
+  "tripCargo": {
+    "ok": false,
+    "issueCount": 31
+  }
+}

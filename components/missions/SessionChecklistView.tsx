@@ -870,7 +870,11 @@ export function SessionChecklistView({
   };
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip">
+    <div
+      className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip"
+      data-testid="session-checklist"
+      data-session-id={session.id}
+    >
       <SessionTabs
         sessions={tabs}
         activeSessionId={routeSessionId ?? activeSessionId ?? session.id}

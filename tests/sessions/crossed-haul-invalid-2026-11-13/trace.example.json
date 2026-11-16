@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "startedAt": "2026-11-16T20:00:00.000Z",
+  "viewport": { "w": 1280, "h": 800 },
+  "sessionId": "4b6fff2c-aa42-428c-ab43-3e8ec291ca41",
+  "actions": [
+    {
+      "ts": 0,
+      "type": "navigate",
+      "url": "http://localhost:3000/sessions/4b6fff2c-aa42-428c-ab43-3e8ec291ca41"
+    },
+    {
+      "ts": 1,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "div",
+      "name": "Trip"
+    }
+  ]
+}

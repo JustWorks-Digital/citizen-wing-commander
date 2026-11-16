@@ -1,0 +1,12 @@
+---
+description: Live session fixture packs and UI action recorder for regression tests
+alwaysApply: false
+---
+
+# Session fixtures + recorder
+
+- Curated packs live in **`tests/sessions/<slug>/`** (`session.json`, `expectations.json`, `meta.json`, optional `trace.json` / `assets/`).
+- Capture with `npm run session:capture-fixture` (not a full `.data` dump). Prefer allowlisted assets only.
+- Domain tests use `loadSessionFixture(slug)` and **concrete** `expectations.json` values.
+- Playwright: `npm run test:e2e`; seed only against localhost. Prod `PLAYWRIGHT_BASE_URL` is read-only.
+- Recorder: app-wide `SessionRecorderHost`, gated by `SESSION_RECORDER_ENABLED` (dev on by default). UI Start/Stop; listeners only while recording. Export `trace.json` into the pack; convert to e2e specs (see `docs/session-fixture-recorder.md`).
