@@ -1241,7 +1241,7 @@ function LocationHeader({
       </div>
       <div
         className={[
-          "flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-0",
+          "flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-1",
           align === "end" ? "items-stretch" : "",
           showTravelChevron ? "" : "sm:min-h-14",
         ].join(" ")}
@@ -1254,7 +1254,7 @@ function LocationHeader({
         >
           <span
             className={[
-              "inline-flex min-w-0 max-w-full items-center gap-2 text-left text-base font-semibold tracking-wide sm:text-xl",
+              "inline-flex min-w-0 max-w-full items-center gap-2 text-left text-sm font-semibold tracking-wide sm:text-base",
               showTravelChevron || nameTrailing
                 ? "flex-1"
                 : "flex-1 sm:truncate",
@@ -1666,7 +1666,7 @@ function QuantumTravelRow({
       <div className="flex min-w-0 flex-col gap-0.5">
         <p
           className={[
-            "flex min-h-8 min-w-0 items-center text-sm tracking-wide sm:text-lg md:h-14 md:text-base",
+            "flex min-h-8 min-w-0 items-center text-sm tracking-wide md:h-14 md:text-sm",
             isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
           ].join(" ")}
         >
