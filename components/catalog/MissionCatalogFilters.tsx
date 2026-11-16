@@ -31,7 +31,7 @@ export type MissionCatalogFiltersProps = {
 const fieldInputClass = [
   "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2.5 py-1.5",
   "text-xs text-rsi-text placeholder:text-rsi-text-muted",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
 ].join(" ");
 
 const DROPDOWN_FIELDS: Array<{

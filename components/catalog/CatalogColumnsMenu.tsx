@@ -61,7 +61,7 @@ export function CatalogColumnsMenu({
         className={[
           "inline-flex items-center gap-1.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 px-2 py-1 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted transition-colors",
           "hover:border-rsi-border-strong hover:text-rsi-text",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
           open ? "border-rsi-accent/50 text-rsi-accent" : "",
         ].join(" ")}
       >

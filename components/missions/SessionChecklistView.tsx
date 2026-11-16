@@ -67,10 +67,7 @@ import {
   reorderChecklistStops,
   resetTripProgress,
 } from "@/lib/missions/reorderStops";
-import {
-  reconcileMissionCompletionFromStops,
-  syncMissionsForStopCompletion,
-} from "@/lib/missions/expectedCompletions";
+import { toggleStopCompletion } from "@/lib/missions/toggleStopCompletion";
 import { listLocationShops } from "@/lib/fixtures/locationShops";
 import {
   defaultFocusedStopId,
@@ -101,6 +98,7 @@ import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObject
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
   SessionInventoryStat,
+  RouteTripOverflowStats,
   SessionRouteProgressStats,
   SessionSourceStat,
 } from "./SessionStatsStrip";
@@ -662,6 +660,14 @@ export function SessionChecklistView({
     };
   }, [session.rows, session.startLocationSlug, isStartLegCompleted]);
 
+  const elapsedSession = useMemo(
+    () => ({
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+    }),
+    [session.startedAt, session.completedAt],
+  );
+
   const routeProgressStats = useMemo(
     () => (
       <SessionRouteProgressStats
@@ -680,6 +686,7 @@ export function SessionChecklistView({
         onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
         cargoBayCount={cargoBayCount}
+        elapsed={<SessionElapsedLabel session={elapsedSession} variant="value" />}
       />
     ),
     [
@@ -698,19 +705,20 @@ export function SessionChecklistView({
       openStops,
       openCargoLayout,
       cargoBayCount,
+      elapsedSession,
     ],
   );
 
-  const elapsedToolbar = useMemo(
+  const tripOverflowStats = useMemo(
     () => (
-      <SessionElapsedLabel
-        session={{
-          startedAt: session.startedAt,
-          completedAt: session.completedAt,
-        }}
+      <RouteTripOverflowStats
+        auecEarned={auecEarned}
+        auecProjected={auecProjected}
+        distanceTraveled={routeDistance.traveled}
+        distanceTotal={routeDistance.total}
       />
     ),
-    [session.startedAt, session.completedAt],
+    [auecEarned, auecProjected, routeDistance.traveled, routeDistance.total],
   );
 
   const onToggleCargoHandled = useCallback(
@@ -738,65 +746,8 @@ export function SessionChecklistView({
 
   const onToggleStop = useCallback(
     (rowId: string) => {
-      const current = sessionRef.current;
-      const target = current.rows.find((row) => row.id === rowId);
-      if (!target) return Promise.resolve();
-      const stopIsCompleted = !target.isCompleted;
-      const rows = current.rows.map((row) =>
-        row.id === rowId ? { ...row, isCompleted: stopIsCompleted } : row,
-      );
-      // Stop sync first, then full reconcile so off-route completed contracts
-      // clear when every stop is open (avoids stuck Contracts N/M).
-      const synced = syncMissionsForStopCompletion({
-        missions: current.missions ?? [],
-        rows,
-        rowId,
-        stopIsCompleted,
-      });
-      const missions = reconcileMissionCompletionFromStops(synced, rows);
-      const counted = missions.filter((mission) => !mission.isHidden);
-      const activeBefore = new Set(
-        (current.missions ?? [])
-          .filter((mission) => !mission.isHidden && !mission.isCompleted)
-          .map((mission) => mission.id),
-      );
-      const activeAfter = new Set(
-        missions
-          .filter((mission) => !mission.isHidden && !mission.isCompleted)
-          .map((mission) => mission.id),
-      );
-      // Only rebuild when contracts reopen onto the route. Completing them must
-      // keep the checklist rows so a finished trip still shows Done history.
-      const needsRebuildForReopened = [...activeAfter].some(
-        (id) => !activeBefore.has(id),
-      );
-
-      let next = applySessionCompletionTiming({
-        ...current,
-        shipSlugs: current.shipSlugs ?? [],
-        startLocationSlug: current.startLocationSlug ?? null,
-        rows,
-        missions,
-        missionCount: counted.length,
-        missionsCompleted: counted.filter((mission) => mission.isCompleted)
-          .length,
-      });
-      if (needsRebuildForReopened) {
-        const rebuilt = rebuildRowsFromMissions(next, missions);
-        if (rebuilt.ok) {
-          // Keep the stop completion the pilot just toggled; rebuild resets rows.
-          next = {
-            ...rebuilt.session,
-            rows: rebuilt.session.rows.map((row) => {
-              const prior = rows.find((entry) => entry.id === row.id);
-              return prior
-                ? { ...row, isCompleted: prior.isCompleted }
-                : row;
-            }),
-          };
-          next = applySessionCompletionTiming(next);
-        }
-      }
+      const next = toggleStopCompletion(sessionRef.current, rowId);
+      if (!next) return Promise.resolve();
       return persistSession(next);
     },
     [persistSession],
@@ -1223,7 +1174,7 @@ export function SessionChecklistView({
               </p>
             )}
           </div>
-          <div className="flex min-w-0 flex-1 md:justify-end">
+          <div className="min-w-0 w-full flex-1 md:flex md:justify-end">
             <ShipSelect
               valueSlug={selectedShipSlug}
               options={shipCatalog.map((ship) => ({
@@ -1280,7 +1231,7 @@ export function SessionChecklistView({
         isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
-        toolbarEnd={elapsedToolbar}
+        toolbarEnd={tripOverflowStats}
         onCopyTrip={initial ? undefined : copyTrip}
         onToggle={onToggleStop}
       />

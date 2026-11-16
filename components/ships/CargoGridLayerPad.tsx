@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/Switch";
 
 /**
  * Bottom-center Z-layer controls for 2D (single active layer) and 3D
- * (multi-layer visibility toggles).
+ * (multi-layer visibility toggles). Facing pad sits bottom-left; zoom bottom-right.
  */
 
 export type CargoGridLayerPadProps = {
@@ -56,7 +56,7 @@ export function CargoGridLayerPad({
       role={mode === "select" ? "radiogroup" : "group"}
       aria-label={ariaLabel}
       className={[
-        "pointer-events-auto absolute bottom-2 left-1.5 z-20 flex max-w-[calc(100%-4.75rem)] flex-nowrap items-center justify-start gap-1 overflow-x-auto sm:left-1/2 sm:max-w-[calc(100%-5.75rem)] sm:-translate-x-1/2 sm:justify-center",
+        "pointer-events-auto absolute bottom-2 left-1/2 z-20 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-nowrap items-center justify-center gap-1 overflow-x-auto sm:max-w-[calc(100%-8.5rem)]",
         className,
       ]
         .filter(Boolean)

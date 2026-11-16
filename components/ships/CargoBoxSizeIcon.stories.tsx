@@ -19,7 +19,7 @@ export const Sizes: Story = {
     <div className="flex items-end gap-3 rounded-rsi border border-rsi-border bg-rsi-bg-deep p-4">
       {([32, 16, 8, 4, 2, 1] as const).map((size) => (
         <div key={size} className="flex flex-col items-center gap-1">
-          <CargoBoxSizeIcon size={size} color="#6b8cae" className="size-6" />
+          <CargoBoxSizeIcon size={size} color="#6b8cae" className="h-6 w-auto" />
           <span className="font-mono text-[0.6rem] text-rsi-text-muted">
             {size} SCU
           </span>

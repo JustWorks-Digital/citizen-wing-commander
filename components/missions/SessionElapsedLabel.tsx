@@ -9,13 +9,21 @@ import {
 
 export type SessionElapsedLabelProps = {
   session: Pick<SessionChecklistModel, "startedAt" | "completedAt">;
+  /**
+   * `default` — “Time …” line for the ⋯ menu.
+   * `value` — duration only for the route toolbar Time cell.
+   */
+  variant?: "default" | "value";
 };
 
 /**
  * Live session timer — owns its 1s tick so the parent (cargo grid / checklist)
  * does not re-render every second.
  */
-export function SessionElapsedLabel({ session }: SessionElapsedLabelProps) {
+export function SessionElapsedLabel({
+  session,
+  variant = "default",
+}: SessionElapsedLabelProps) {
   const isComplete = Boolean(session.completedAt);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -29,6 +37,18 @@ export function SessionElapsedLabel({ session }: SessionElapsedLabelProps) {
   }, [isComplete, session.startedAt, session.completedAt]);
 
   const label = formatSessionDuration(getSessionElapsedMs(session, nowMs));
+  const display = `${label}${isComplete ? " · done" : ""}`;
+
+  if (variant === "value") {
+    return (
+      <span
+        className={isComplete ? "text-rsi-success" : undefined}
+        title="Total time"
+      >
+        {display}
+      </span>
+    );
+  }
 
   return (
     <p
@@ -39,8 +59,7 @@ export function SessionElapsedLabel({ session }: SessionElapsedLabelProps) {
       title="Total time"
     >
       <span className="text-rsi-text-muted">Time </span>
-      {label}
-      {isComplete ? " · done" : ""}
+      {display}
     </p>
   );
 }

@@ -616,7 +616,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   })}
                 </div>
               </div>
-              <div className="pointer-events-auto absolute top-2 left-2 z-30 flex items-center gap-1">
+              <div className="pointer-events-auto absolute top-2 left-2 z-30 flex flex-col items-start gap-1 sm:flex-row sm:items-center">
                 <button
                   type="button"
                   aria-pressed={!sortingHidden}
@@ -666,7 +666,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 <div
                   role="region"
                   aria-label="Cargo packing"
-                  className="pointer-events-auto absolute top-8 left-2 z-40 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel"
+                  className={[
+                    "pointer-events-auto absolute left-2 z-40 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-2 overflow-y-auto overscroll-contain rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
+                    showPeelToggle ? "top-14 sm:top-8" : "top-8",
+                  ].join(" ")}
                 >
                   <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
                     Pack mode

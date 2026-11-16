@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Isolated session timer so the 1s tick does not re-render the cargo grid or checklist.",
+          "Isolated session timer so the 1s tick does not re-render the cargo grid or checklist. `variant=\"value\"` is duration-only for the desktop toolbar Time cell.",
       },
     },
   },
@@ -32,5 +32,11 @@ export const Complete: Story = {
       startedAt: new Date(Date.now() - 12 * 60_000).toISOString(),
       completedAt: new Date().toISOString(),
     },
+  },
+};
+
+export const ToolbarValue: Story = {
+  args: {
+    variant: "value",
   },
 };

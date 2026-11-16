@@ -92,7 +92,7 @@ export type CargoGridIsoViewProps = {
   /** Controls stacked above Peel (e.g. cargo grouping). */
   toolbarBelow?: ReactNode;
   /**
-   * Bottom-left Up / Down / Left / Right facing pad.
+   * Bottom-left facing pad (view arrows).
    * On for cargo-layout 3D; off for other embeds if needed.
    */
   showFacingPad?: boolean;
@@ -112,7 +112,7 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
-  /** Show bottom-center layer pad on the grid (default on). */
+  /** Show bottom-center Z-layer pad on the grid (default on). */
   showLayerPad?: boolean;
   onShowLayerPadChange?: (value: boolean) => void;
   /**
@@ -1157,7 +1157,7 @@ export function CargoGridIsoView({
         />
       ) : null}
       {toolbarExtra ? (
-        <div className="pointer-events-auto absolute right-1.5 bottom-10 z-30 sm:right-2 sm:bottom-12">
+        <div className="pointer-events-auto absolute right-1.5 bottom-2 z-30 sm:right-2">
           {toolbarExtra}
         </div>
       ) : null}
@@ -1286,7 +1286,7 @@ export function CargoGridIsoView({
                       <CargoBoxCountIcons
                         boxCounts={item.boxCounts!}
                         color={hex}
-                        className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
+                        className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:h-3.5 [&_svg]:w-auto [&_span]:text-[0.55rem]"
                       />
                     ) : null}
                   </span>

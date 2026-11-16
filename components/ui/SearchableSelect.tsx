@@ -169,7 +169,7 @@ export function SearchableSelect({
           className={[
             "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 py-1.5 pl-2.5 text-xs text-rsi-text placeholder:text-rsi-text-muted",
             canClear ? "pr-7" : "pr-2.5",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
             disabled ? "cursor-not-allowed opacity-60" : "",
           ].join(" ")}
         />

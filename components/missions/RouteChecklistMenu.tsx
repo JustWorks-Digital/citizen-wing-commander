@@ -17,21 +17,24 @@ export type RouteChecklistMenuProps = {
   onToggleHistory: () => void;
   /** Duplicate this trip into a new session tab (progress reset). */
   onCopyTrip?: () => void | Promise<void>;
-  /** Trip elapsed time (shown at the top of the menu). */
-  elapsed?: ReactNode;
+  /**
+   * Trip stats that leave the sticky strip on small phones (Distance, aUEC).
+   * Hidden from `sm` up when those cells are back in the toolbar.
+   */
+  overflowStats?: ReactNode;
   className?: string;
 };
 
 /**
  * Right-edge ⋯ on the route checklist toolbar.
- * Holds trip time, Copy trip, Hide / Show history, and the keyboard Controls list.
+ * Holds Distance/aUEC on small phones, Copy trip, Hide / Show history, and Controls.
  */
 export function RouteChecklistMenu({
   hideCompleted,
   completedCount,
   onToggleHistory,
   onCopyTrip,
-  elapsed = null,
+  overflowStats = null,
   className,
 }: RouteChecklistMenuProps) {
   const [open, setOpen] = useState(false);
@@ -85,9 +88,9 @@ export function RouteChecklistMenu({
           aria-label="Route checklist menu"
           className="absolute top-full right-0 z-40 mt-1.5 w-52 rounded-rsi border border-rsi-border bg-rsi-surface px-2.5 py-2 shadow-rsi-panel"
         >
-          {elapsed ? (
-            <div className="mb-2 border-b border-rsi-divider px-1.5 pb-2">
-              {elapsed}
+          {overflowStats ? (
+            <div className="mb-2 border-b border-rsi-divider px-1.5 pb-2 sm:hidden">
+              {overflowStats}
             </div>
           ) : null}
           {onCopyTrip ? (

@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), Contracts/Stops/Bay/Distance/aUEC (route checklist toolbar; distance values compact on mobile), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
+          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), route toolbar as two strips — Contract/Stop/Bay and Distance/aUEC/Time (below sm, Distance/aUEC move to ⋯ and Time stays in the strip), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
       },
     },
   },
@@ -47,6 +47,7 @@ export const RouteProgress: Story = {
       distanceTotal={{ value: 48.2, unit: "Mm" }}
       onStopsClick={() => {}}
       onCapacityClick={() => {}}
+      elapsed={<span>12m</span>}
     />
   ),
 };

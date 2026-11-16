@@ -47,7 +47,7 @@ function StatValue({
   return (
     <p
       className={[
-        "mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1.5 sm:text-sm",
+        "mt-1 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1.5 sm:text-sm",
         className,
       ]
         .filter(Boolean)
@@ -81,7 +81,7 @@ const stripClass =
   "flex w-full min-w-0 max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto overscroll-x-contain rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 const cellClass =
-  "flex shrink-0 flex-col justify-center px-2 py-1 text-left first:pl-2.5 last:pr-2.5 sm:min-w-[4.5rem] sm:px-3 sm:py-2 sm:first:pl-3.5 sm:last:pr-3.5";
+  "flex shrink-0 flex-col justify-center px-2.5 py-1.5 text-left first:pl-3 last:pr-3 sm:min-w-[4.5rem] sm:px-3 sm:py-2 sm:first:pl-3.5 sm:last:pr-3.5";
 
 const interactiveCellClass = [
   cellClass,
@@ -185,6 +185,9 @@ export type SessionRouteProgressStatsProps = {
    * Kept for callers; toolbar label is Bay / Bays.
    */
   cargoBayCount?: number;
+  /**
+  /** Trip elapsed — Time cell in the Distance / aUEC / Time strip. */
+  elapsed?: ReactNode;
   /** Optional control rendered just right of the route progress strip. */
   trailing?: ReactNode;
   className?: string;
@@ -209,7 +212,72 @@ function formatToolbarAuec(amount: number): string {
   return `${String(tenths).replace(/\.0$/, "")}M`;
 }
 
-/** Contracts + Stops + Cargo bays + Distance + aUEC for the checklist toolbar. */
+/**
+ * Distance + aUEC for the ⋯ menu on small phones (hidden from the strip below `sm`).
+ */
+export function RouteTripOverflowStats({
+  auecEarned = 0,
+  auecProjected = 0,
+  distanceTraveled = null,
+  distanceTotal = null,
+}: Pick<
+  SessionRouteProgressStatsProps,
+  "auecEarned" | "auecProjected" | "distanceTraveled" | "distanceTotal"
+>) {
+  const showAuec = auecProjected > 0 || auecEarned > 0;
+  const showDistance = Boolean(distanceTotal || distanceTraveled);
+  if (!showDistance && !showAuec) return null;
+
+  const traveledCompact = formatDistanceToNext(distanceTraveled, {
+    compact: true,
+  });
+  const totalDistanceCompact = formatDistanceToNext(distanceTotal, {
+    compact: true,
+  });
+  const traveledLabel = formatDistanceToNext(distanceTraveled);
+  const totalDistanceLabel = formatDistanceToNext(distanceTotal);
+
+  return (
+    <div className="flex flex-col gap-1.5 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text">
+      {showDistance ? (
+        <div
+          title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
+        >
+          <span className="text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+            Dist{" "}
+          </span>
+          <Fraction current={traveledCompact} total={totalDistanceCompact} />
+        </div>
+      ) : null}
+      {showAuec ? (
+        <div
+          title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+        >
+          <span
+            className="text-[0.45rem] tracking-[0.14em] text-rsi-text-muted"
+            title={AUEC_TITLE}
+          >
+            aUEC{" "}
+          </span>
+          <Fraction
+            current={formatToolbarAuec(auecEarned)}
+            total={formatToolbarAuec(auecProjected)}
+            currentClassName={
+              auecEarned > 0 && auecEarned >= auecProjected
+                ? "text-rsi-success"
+                : undefined
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Contracts / Stops / Bay strip, then Distance / aUEC / Time.
+ * Below `sm`, Distance + aUEC move to the ⋯ menu; Time stays in the strip.
+ */
 export function SessionRouteProgressStats({
   completedLegs,
   totalLegs,
@@ -226,6 +294,7 @@ export function SessionRouteProgressStats({
   onStopsClick,
   onCapacityClick,
   cargoBayCount: _cargoBayCount = 1,
+  elapsed = null,
   trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
@@ -301,6 +370,8 @@ export function SessionRouteProgressStats({
     </>
   );
 
+  const showTripGroup = showDistance || showAuec || Boolean(elapsed);
+
   return (
     <div
       className={["flex w-full min-w-0 max-w-full items-center gap-2", className]
@@ -310,7 +381,7 @@ export function SessionRouteProgressStats({
       <div
         className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
-        aria-label="Route progress"
+        aria-label="Contracts stops and bay"
       >
         <button
           type="button"
@@ -346,25 +417,43 @@ export function SessionRouteProgressStats({
         ) : (
           <div className={cellClass}>{capacityBody}</div>
         )}
-        {showDistance ? (
-          <div
-            className={cellClass}
-            title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
-            aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
-          >
-            {distanceBody}
-          </div>
-        ) : null}
-        {showAuec ? (
-          <div
-            className={[cellClass, "shrink-0"].join(" ")}
-            title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
-            aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
-          >
-            {auecBody}
-          </div>
-        ) : null}
       </div>
+      {showTripGroup ? (
+        <div
+          className={[stripClass, "!w-fit max-w-full"].join(" ")}
+          role="group"
+          aria-label="Distance payout and time"
+        >
+          {showDistance ? (
+            <div
+              className={[cellClass, "hidden sm:flex"].join(" ")}
+              title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
+              aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
+            >
+              {distanceBody}
+            </div>
+          ) : null}
+          {showAuec ? (
+            <div
+              className={[cellClass, "hidden shrink-0 sm:flex"].join(" ")}
+              title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+              aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
+            >
+              {auecBody}
+            </div>
+          ) : null}
+          {elapsed ? (
+            <div
+              className={[cellClass, "shrink-0"].join(" ")}
+              title="Total time"
+              aria-label="Trip time"
+            >
+              <StatLabel>Time</StatLabel>
+              <StatValue>{elapsed}</StatValue>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {trailing}
     </div>
   );

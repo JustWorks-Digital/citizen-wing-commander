@@ -739,7 +739,7 @@ export function CargoGridSketch({
                 <CargoBoxCountIcons
                   boxCounts={item.boxCounts!}
                   color={hex}
-                  className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:size-3.5 [&_span]:text-[0.55rem]"
+                  className="ml-4 shrink-0 justify-end gap-x-1 pl-1 [&_svg]:h-3.5 [&_svg]:w-auto [&_span]:text-[0.55rem]"
                 />
               ) : null}
             </button>
@@ -1121,7 +1121,7 @@ export function CargoGridSketch({
           className={[
             "relative min-w-0 flex-1",
             isSplit
-              ? "grid grid-cols-2 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50"
+              ? "grid grid-cols-1 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 sm:grid-cols-2"
               : "flex flex-col gap-4",
           ].join(" ")}
         >
@@ -1130,7 +1130,7 @@ export function CargoGridSketch({
             className={[
               "relative flex min-w-0 flex-col overflow-hidden p-3 pb-12 sm:pb-14",
               isSplit
-                ? "border-r border-rsi-border"
+                ? "border-b border-rsi-border sm:border-r sm:border-b-0"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
             ].join(" ")}
             style={{ height: panelHeightPx }}
@@ -1162,7 +1162,7 @@ export function CargoGridSketch({
                 ) : null}
               </div>
             ) : null}
-            <div className="pointer-events-auto absolute right-1.5 bottom-10 z-30 sm:right-2 sm:bottom-12">
+            <div className="pointer-events-auto absolute right-1.5 bottom-2 z-30 sm:right-2">
               {topZoomControls}
             </div>
             {showTopLayers && topLayerPadVisible ? (

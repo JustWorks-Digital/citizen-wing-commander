@@ -404,7 +404,7 @@ export function MissionBoxBreakdownPicker({
                               ? iconColor
                               : (color ?? "var(--rsi-text-muted)")
                           }
-                          className="flex-nowrap gap-x-2 [&_svg]:!size-7 [&_span]:text-xs"
+                          className="flex-nowrap gap-x-2 [&_svg]:!h-7 [&_svg]:!w-auto [&_span]:text-xs"
                         />
                       </button>
                     </li>
@@ -455,7 +455,7 @@ export function MissionBoxBreakdownPicker({
           <CargoBoxCountIcons
             boxCounts={triggerCounts}
             color={iconColor}
-            className="flex-nowrap gap-x-2 [&_svg]:!size-7 [&_span]:text-xs"
+            className="flex-nowrap gap-x-2 [&_svg]:!h-7 [&_svg]:!w-auto [&_span]:text-xs"
           />
         </span>
         <ChevronDownIcon open={open} />

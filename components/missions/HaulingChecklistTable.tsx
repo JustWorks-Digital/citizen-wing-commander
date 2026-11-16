@@ -94,7 +94,7 @@ export type HaulingChecklistTableProps = {
   onFocusStop?: (rowId: string | null) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
-  /** Shown inside the ⋯ menu (e.g. trip elapsed time). */
+  /** Shown inside the ⋯ menu on small phones (Distance / aUEC overflow). */
   toolbarEnd?: ReactNode;
   /** ⋯ menu: duplicate this trip into a new session. */
   onCopyTrip?: () => void | Promise<void>;
@@ -341,7 +341,8 @@ function routeActionBadges(routeAction: RouteAction): { label: string; variant: 
 /**
  * Trailing meta for condensed Done rows.
  * CSS grid locks tag / SCU / distance columns so badge right edges line up
- * (Quantum, Pickup, and Delivery+Pickup).
+ * (Quantum, Pickup, and Delivery+Pickup). On mobile, both-stops stack
+ * Delivery then Pick up on separate lines.
  */
 function CondensedRowTrailing({
   routeAction,
@@ -357,9 +358,17 @@ function CondensedRowTrailing({
 }) {
   const titleText =
     hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
+  const stackBadgesOnMobile = routeAction === "both";
   return (
-    <div className="grid w-[17.5rem] shrink-0 grid-cols-[minmax(0,1fr)_2.5rem_4.75rem] items-center gap-x-2.5">
-      <div className="flex min-w-0 items-center justify-end gap-1">
+    <div className="grid w-[10rem] shrink-0 grid-cols-[minmax(3.75rem,1fr)_1.75rem_3.5rem] items-center gap-x-1.5 md:w-[17.5rem] md:grid-cols-[minmax(0,1fr)_2.5rem_4.75rem] md:gap-x-2.5">
+      <div
+        className={[
+          "flex min-w-0 justify-end",
+          stackBadgesOnMobile
+            ? "flex-col items-end gap-0.5 md:flex-row md:items-center md:gap-1"
+            : "items-center gap-1",
+        ].join(" ")}
+      >
         {routeActionBadges(routeAction).map((badge) => (
           <Badge key={badge.label} variant={badge.variant} size="sm">
             {badge.label}
@@ -367,13 +376,13 @@ function CondensedRowTrailing({
         ))}
       </div>
       <div
-        className="text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
+        className="whitespace-nowrap text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
         title={scuTotal != null ? SCU_TITLE : undefined}
       >
         {scuTotal != null ? scuTotal : null}
       </div>
       <div
-        className="text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
+        className="whitespace-nowrap text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
         title={
           titleText
             ? routeAction === "quantum"
@@ -412,7 +421,7 @@ function groupCargoLines(lines: CargoLine[]): {
 }
 
 /** Clear the sticky trip toolbar while the Done control pins in a tall stop card. */
-const STICKY_DONE_TOP = "sticky top-16 z-[15] sm:top-24";
+const STICKY_DONE_TOP = "sticky top-20 z-[15] sm:top-24";
 
 function DoneCheckbox({
   location,
@@ -716,7 +725,11 @@ function CargoCommodityTile({
         void onToggleCargoHandled?.(row.id, line.sourceIndex);
       }}
       className={[
-        "relative inline-flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-rsi border px-2 py-1.5 font-mono font-medium tabular-nums md:gap-0.5 md:px-1.5 md:py-1",
+        // Mobile: corner icon. md+: centered stack; density follows cargo @container.
+        "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
+        "md:gap-0.5 md:px-1 md:py-1",
+        "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
+        "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
         "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
         isCargoPending
           ? "cursor-wait"
@@ -734,7 +747,7 @@ function CargoCommodityTile({
     >
       <span
         aria-hidden
-        className="inline-block size-5 shrink-0 bg-current md:size-3.5"
+        className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
         style={{
           WebkitMaskImage: `url(${iconSrc})`,
           maskImage: `url(${iconSrc})`,
@@ -746,10 +759,24 @@ function CargoCommodityTile({
           maskPosition: "center",
         }}
       />
-      <span className="text-base font-semibold leading-none md:text-[0.7rem]">
+      <span
+        aria-hidden
+        className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+        style={{
+          WebkitMaskImage: `url(${iconSrc})`,
+          maskImage: `url(${iconSrc})`,
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+      />
+      <span className="text-sm font-semibold leading-none md:text-[0.6rem] md:@[17rem]/cargo:text-[0.65rem]">
         {line.scu}
       </span>
-      <span className="line-clamp-3 w-full text-center text-xs leading-snug tracking-wide opacity-90 normal-case md:text-[0.55rem]">
+      <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
         {commodityName}
       </span>
       {isCargoPending ? (
@@ -787,7 +814,7 @@ function CargoCommodityTiles({
   const handledVerb = isPickup ? "picked up" : "delivered";
 
   return (
-    <div className="grid w-full grid-cols-3 gap-1.5">
+    <div className="@container/cargo grid w-full grid-cols-3 gap-2 md:gap-2.5">
       {items.map((line, index) => (
         <CargoCommodityTile
           key={`${row.id}-${role ?? "none"}-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`}
@@ -908,7 +935,7 @@ function CargoGroups({
               : null;
 
         const sectionBody = (
-          <div className="flex w-full min-w-0 flex-col gap-2 md:flex-1">
+          <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-1">
             {group.role ? (
               <span
                 className={[
@@ -923,7 +950,7 @@ function CargoGroups({
               </span>
             ) : null}
             {sectionTransfer}
-            <div className="grid grid-cols-1 gap-2 min-[28rem]:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3">
               {missionBuckets.map((bucket) => {
                 const mission =
                   bucket.missionId != null
@@ -969,7 +996,7 @@ function CargoGroups({
                   <div
                     key={`${row.id}-${group.role ?? "none"}-${mission.id}`}
                     className={[
-                      "flex min-w-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
+                      "flex h-full min-w-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
                       mission.isCompleted || row.isCompleted
                         ? "opacity-70"
                         : "",
@@ -1028,7 +1055,7 @@ function CargoGroups({
                         </p>
                       ) : null}
                     </div>
-                    <div className="mt-auto bg-rsi-bg-deep/35 p-2.5">
+                    <div className="mt-auto shrink-0 bg-rsi-bg-deep/35 p-2.5">
                       {tiles}
                     </div>
                   </div>
@@ -1047,16 +1074,16 @@ function CargoGroups({
           <div
             key={`${row.id}-cargo-${group.role ?? "none"}`}
             className={[
-              // Desktop: stretch pad graph to match left section height.
-              "flex flex-col gap-3 md:flex-row md:items-stretch md:gap-4",
+              // Keep mission cards full-width longer; bay sits beside from lg.
+              "flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4",
               showRoleDivider
-                ? "border-t border-rsi-divider pt-2 md:pt-1.5"
+                ? "border-t border-rsi-divider pt-2 lg:pt-1.5"
                 : "",
             ].join(" ")}
           >
             {sectionBody}
             {sectionAside ? (
-              <div className="flex w-full min-w-0 flex-col md:w-1/2 md:shrink-0">
+              <div className="flex w-full min-w-0 flex-col lg:w-1/2 lg:shrink-0">
                 {sectionAside}
               </div>
             ) : null}
@@ -1211,14 +1238,15 @@ function LocationHeader({
       </div>
       <div
         className={[
-          "flex min-w-0 flex-1 flex-col gap-1",
+          "flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-0",
           align === "end" ? "items-stretch" : "",
+          showTravelChevron ? "" : "sm:min-h-14",
         ].join(" ")}
       >
         <div
           className={[
-            "flex min-h-14 min-w-0 items-center gap-x-2 gap-y-1",
-            showTravelChevron ? "justify-between" : "sm:h-14",
+            "flex min-w-0 items-center gap-x-2 gap-y-1",
+            showTravelChevron ? "justify-between" : "",
           ].join(" ")}
         >
           <span
@@ -1455,7 +1483,7 @@ function QuantumTravelRow({
         aria-busy={sectionBusy}
         aria-current={isFocused ? "step" : undefined}
         className={[
-          "scroll-mt-16 border-b border-rsi-divider/80 sm:scroll-mt-24",
+          "scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24",
           isSavingSection ? "opacity-90" : "",
         ].join(" ")}
         onClick={onFocus}
@@ -1463,7 +1491,15 @@ function QuantumTravelRow({
         <CompletedQuantumHistoryRow
           fromLabel={fromShort}
           toLabel={toShort}
-          hopLabel={hopDistance ? hopLabel : null}
+          hopLabel={
+            hopDistance ? (
+              <>
+                <span className="md:hidden">{hopLabelCompact}</span>
+                <span className="hidden md:inline">{hopLabel}</span>
+              </>
+            ) : null
+          }
+          hopTitle={hopDistance ? hopLabel : null}
           isFocused={isFocused}
           isPending={isPending || isSavingSection}
           onToggle={onToggle}
@@ -1626,7 +1662,7 @@ function QuantumTravelRow({
       aria-busy={sectionBusy}
       aria-current={isFocused ? "step" : undefined}
       className={[
-        "scroll-mt-16 border-b border-rsi-divider/80 px-3 pt-3 pb-1 sm:scroll-mt-24",
+        "scroll-mt-20 border-b border-rsi-divider/80 px-3 pt-3 pb-1 sm:scroll-mt-24",
         checklistRowToneClass(isCompleted, isFocused),
         isSavingSection ? "opacity-90" : "",
       ].join(" ")}
@@ -1739,7 +1775,7 @@ function QuantumTravelComposer({
   };
 
   return (
-    <li className="scroll-mt-16 border-b border-rsi-divider/80 bg-rsi-accent-muted/20 px-3 py-3 sm:scroll-mt-24">
+    <li className="scroll-mt-20 border-b border-rsi-divider/80 bg-rsi-accent-muted/20 px-3 py-3 sm:scroll-mt-24">
       <div className="flex gap-3">
         <div className="hidden h-14 w-8 shrink-0 md:block" aria-hidden />
         <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-start md:gap-4">
@@ -1884,7 +1920,11 @@ function TransferColumnLabel({ children }: { children: ReactNode }) {
   );
 }
 
-/** Small station / ship thumb stacked above the endpoint name. */
+/**
+ * Station / ship thumb + endpoint name.
+ * Name beside the thumb from ~450px–lg (same band as 2+ mission cards);
+ * stacked under on narrower / wider layouts.
+ */
 function TransferEndpointName({
   kind,
   name,
@@ -1901,7 +1941,7 @@ function TransferEndpointName({
   strike: string;
 }) {
   return (
-    <div className="mb-2.5 flex min-w-0 items-center gap-2.5 self-start">
+    <div className="mb-2.5 flex min-w-0 flex-col items-start gap-1.5 self-stretch min-[450px]:max-lg:flex-row min-[450px]:max-lg:items-center min-[450px]:max-lg:gap-2">
       <span
         aria-hidden
         className={[
@@ -1930,7 +1970,7 @@ function TransferEndpointName({
       </span>
       <p
         className={[
-          "min-w-0 break-words text-sm font-medium leading-5",
+          "min-w-0 w-full break-words text-left text-sm font-medium leading-5 min-[450px]:max-lg:flex-1",
           isDone ? mute : "text-rsi-text-muted",
           strike,
         ].join(" ")}
@@ -2323,10 +2363,7 @@ function PayoutExpMeta({
               row.isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
             ].join(" ")}
           >
-            <span aria-hidden className="mr-0.5">
-              ➕
-            </span>
-            {approxXp.toLocaleString("en-US")}{" "}
+            +{approxXp.toLocaleString("en-US")}{" "}
             <span title="Hauling reputation / experience points">XP</span>
           </p>
         ) : (
@@ -2475,6 +2512,7 @@ function CompletedQuantumHistoryRow({
   fromLabel,
   toLabel,
   hopLabel,
+  hopTitle = null,
   isFocused,
   isPending,
   onToggle,
@@ -2482,14 +2520,16 @@ function CompletedQuantumHistoryRow({
 }: {
   fromLabel: string;
   toLabel: string;
-  hopLabel: string | null;
+  hopLabel?: ReactNode;
+  /** Full distance string for tooltip (when hopLabel is responsive). */
+  hopTitle?: string | null;
   isFocused: boolean;
   isPending: boolean;
   onToggle: () => void;
   /** Expand condensed history to the full quantum card. */
   onOpen?: () => void;
 }) {
-  const hopTitle = `${fromLabel} → ${toLabel}`;
+  const routeTitle = `${fromLabel} → ${toLabel}`;
   return (
     <div
       role={onOpen ? "button" : undefined}
@@ -2519,7 +2559,7 @@ function CompletedQuantumHistoryRow({
       ].join(" ")}
     >
       <DoneCheckbox
-        location={hopTitle}
+        location={routeTitle}
         step="QT"
         isCompleted
         isActive={isFocused}
@@ -2529,7 +2569,7 @@ function CompletedQuantumHistoryRow({
       />
       <span
         className="flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide text-rsi-text-secondary"
-        title={hopTitle}
+        title={routeTitle}
       >
         <span className="truncate">{fromLabel}</span>
         <TravelChevronsIcon className="mx-2.5 h-3.5 w-4 shrink-0 text-rsi-text-muted sm:mx-3" />
@@ -2538,6 +2578,7 @@ function CompletedQuantumHistoryRow({
       <CondensedRowTrailing
         routeAction="quantum"
         hopLabel={hopLabel}
+        hopTitle={hopTitle}
       />
     </div>
   );
@@ -2888,7 +2929,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
   const toolbar = (
     <div
       ref={stickyToolbarRef}
-      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 overflow-x-clip border-b border-rsi-divider bg-rsi-bg-deep/95 px-2 py-1 sm:gap-2 sm:px-3 sm:py-2"
+      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 overflow-x-clip border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-2"
     >
       <div className="min-w-0 flex-1">{toolbarStart}</div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -2907,7 +2948,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
           completedCount={completedCount}
           onToggleHistory={() => setHideCompleted((value) => !value)}
           onCopyTrip={onCopyTrip}
-          elapsed={toolbarEnd}
+          overflowStats={toolbarEnd}
         />
       </div>
     </div>
@@ -3366,7 +3407,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
                   aria-checked
                   aria-busy={isRowSectionBusy}
                   aria-current={isFocused ? "step" : undefined}
-                  className="scroll-mt-16 border-b border-rsi-divider/80 sm:scroll-mt-24"
+                  className="scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24"
                   onClick={() => onFocusStop?.(row.id)}
                 >
                   <CompletedStopHistoryRow
@@ -3440,7 +3481,7 @@ export const HaulingChecklistTable = memo(function HaulingChecklistTable({
               aria-checked={row.isCompleted}
               aria-busy={isRowSectionBusy}
               aria-current={isFocused ? "step" : undefined}
-              className="flex scroll-mt-16 flex-col border-b border-rsi-divider/80 pb-1 sm:scroll-mt-24"
+              className="flex scroll-mt-20 flex-col border-b border-rsi-divider/80 pb-1 sm:scroll-mt-24"
               onClick={() => onFocusStop?.(row.id)}
             >
               {historyHiddenBridge && prevRow ? (

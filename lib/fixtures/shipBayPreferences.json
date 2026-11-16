@@ -44,7 +44,7 @@
     {
       "shipSlug": "galaxy",
       "payload": {
-        "notes": "RSI Galaxy (cargo module): C2-style front/gap/rear with two equal 360 SCU holds. Prefer flat layers; keep the mid-gap clear.",
+        "notes": "RSI Galaxy (cargo module): C2-style front/gap/rear with two equal 360 SCU holds (10×9×4 inset in a 12-wide envelope). Prefer flat layers; keep the mid-gap clear.",
         "preferredZoneOrder": ["rear", "middle", "front"],
         "preferredRuleIds": [
           "prefer-flat-layers",

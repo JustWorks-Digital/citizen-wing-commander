@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar. Opens trip time, Copy trip, Hide / Show history, and the Controls keyboard list.",
+          "Right-edge ⋯ on the route checklist toolbar. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, and Controls.",
       },
     },
   },
@@ -19,10 +19,15 @@ const meta = {
     completedCount: 2,
     onToggleHistory: () => {},
     onCopyTrip: async () => {},
-    elapsed: (
-      <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary">
-        <span className="text-rsi-text-muted">Time </span>1h 24m
-      </p>
+    overflowStats: (
+      <div className="flex flex-col gap-1.5 font-mono text-[0.65rem] tabular-nums text-rsi-text">
+        <div>
+          <span className="text-rsi-text-muted">Dist </span>12.4 / 48.2 Mm
+        </div>
+        <div>
+          <span className="text-rsi-text-muted">aUEC </span>0 / 128k
+        </div>
+      </div>
     ),
   },
 } satisfies Meta<typeof RouteChecklistMenu>;

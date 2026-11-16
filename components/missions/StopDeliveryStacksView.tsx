@@ -263,8 +263,12 @@ export function StopDeliveryStacksView({
     const el = viewportRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const update = () => {
-      setViewportWidth(el.clientWidth);
-      setViewportHeight(el.clientHeight);
+      // Round + bail when unchanged — scrollbar / zoom fit can otherwise
+      // oscillate clientWidth by 1px and blow the update depth.
+      const nextW = Math.round(el.clientWidth);
+      const nextH = Math.round(el.clientHeight);
+      setViewportWidth((prev) => (prev === nextW ? prev : nextW));
+      setViewportHeight((prev) => (prev === nextH ? prev : nextH));
     };
     update();
     const observer = new ResizeObserver(update);
@@ -358,7 +362,8 @@ export function StopDeliveryStacksView({
   }, [pileRouteKey, frameLengthCells, widthCells, frameHeightCells, peelStack]);
 
   useEffect(() => {
-    if (!userZoomedRef.current) setZoom(fitZoom);
+    if (userZoomedRef.current) return;
+    setZoom((prev) => (Math.abs(prev - fitZoom) < 0.001 ? prev : fitZoom));
   }, [fitZoom]);
 
   const renderCellPx = cellPx * zoom;
@@ -494,19 +499,27 @@ export function StopDeliveryStacksView({
         </div>
       </div>
 
+      {/* Measure shell stays overflow-hidden so scrollbars don't feed ResizeObserver. */}
       <div
         ref={viewportRef}
         className={[
-          "relative min-w-0 px-2.5 pb-2.5 pt-1",
+          "relative min-w-0 overflow-hidden px-2.5 pb-2.5 pt-1",
           stretchToParent ? "min-h-0 flex-1" : "",
-          // Default fit zoom must not introduce a vertical scrollbar; allow it
-          // only after the user zooms in past the auto-fit scale.
-          zoom > fitZoom + 0.01 ? "overflow-auto" : "overflow-x-auto overflow-y-hidden",
         ].join(" ")}
         style={
           stretchToParent ? undefined : { maxHeight: MAX_VIEWPORT_HEIGHT_PX }
         }
       >
+        <div
+          className={[
+            "h-full min-h-0 min-w-0",
+            // Default fit zoom must not introduce a vertical scrollbar; allow it
+            // only after the user zooms in past the auto-fit scale.
+            zoom > fitZoom + 0.01
+              ? "overflow-auto"
+              : "overflow-x-auto overflow-y-hidden",
+          ].join(" ")}
+        >
         <div
           className={[
             "flex w-max min-w-full justify-center",
@@ -730,6 +743,7 @@ export function StopDeliveryStacksView({
               );
             })}
           </svg>
+        </div>
         </div>
       </div>
       {showPileNav && activePile ? (

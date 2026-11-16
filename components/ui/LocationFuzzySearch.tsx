@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { getLocationBySlug } from "@/lib/fixtures";
+import { getLocationBySlug, getLocationImageSrc } from "@/lib/fixtures";
 import { searchLocations } from "@/lib/sessions/resolveRefs";
 
 export type LocationFuzzySearchProps = {
@@ -31,6 +31,32 @@ function ClearIcon({ className }: { className?: string }) {
   );
 }
 
+function LocationThumb({
+  slug,
+  className = "h-6 w-10",
+}: {
+  slug: string | null | undefined;
+  className?: string;
+}) {
+  const src = getLocationImageSrc(slug);
+  return (
+    <span
+      aria-hidden
+      className={[
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm",
+        className,
+      ].join(" ")}
+    >
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
+        <img src={src} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="size-full bg-rsi-bg-deep/40" />
+      )}
+    </span>
+  );
+}
+
 export function LocationFuzzySearch({
   valueSlug,
   onChange,
@@ -39,7 +65,9 @@ export function LocationFuzzySearch({
   disabled = false,
 }: LocationFuzzySearchProps) {
   const listId = useId();
+  const inputId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const selected = valueSlug ? getLocationBySlug(valueSlug) : undefined;
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -61,10 +89,16 @@ export function LocationFuzzySearch({
     setHighlight(0);
   }, [query]);
 
+  const dismiss = () => {
+    setIsOpen(false);
+    inputRef.current?.blur();
+  };
+
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
+        inputRef.current?.blur();
       }
     };
     document.addEventListener("mousedown", onPointerDown);
@@ -84,23 +118,42 @@ export function LocationFuzzySearch({
   };
 
   const showClear = Boolean(valueSlug) || query.trim().length > 0;
-
+  const showSelectedThumb = Boolean(valueSlug) && !isOpen;
   const menuOpen = isOpen && (results.length > 0 || query.trim().length > 0);
 
   return (
     <div
       ref={rootRef}
       className={[
-        "relative w-full max-w-md",
+        "relative w-full md:max-w-md",
         // Above HaulingChecklistTable sticky toolbar (z-20) while the menu is open.
         menuOpen ? "z-30" : "z-0",
       ].join(" ")}
+      onMouseDown={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("input, button, [role='listbox']")) return;
+        if (target.closest("label")) return;
+        // Empty chrome on the label row (or elsewhere in the field) — deselect.
+        dismiss();
+      }}
     >
-      <label className="mb-1 block font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
-        {label}
-      </label>
+      <div className="mb-1 flex min-h-[1rem] items-center">
+        <label
+          htmlFor={inputId}
+          className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted"
+        >
+          {label}
+        </label>
+      </div>
       <div className="relative">
+        {showSelectedThumb ? (
+          <span className="pointer-events-none absolute top-1/2 left-2.5 z-[1] -translate-y-1/2">
+            <LocationThumb slug={valueSlug} />
+          </span>
+        ) : null}
         <input
+          ref={inputRef}
+          id={inputId}
           type="text"
           role="combobox"
           aria-expanded={isOpen}
@@ -111,10 +164,11 @@ export function LocationFuzzySearch({
           placeholder={placeholder}
           autoComplete="off"
           className={[
-            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep py-2 pl-3",
+            "w-full rounded-rsi border border-rsi-border bg-rsi-bg-deep py-2",
+            showSelectedThumb ? "pl-14" : "pl-3",
             showClear ? "pr-9" : "pr-3",
             "font-sans text-sm text-rsi-text placeholder:text-rsi-text-muted",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
             "disabled:cursor-not-allowed disabled:opacity-50",
           ].join(" ")}
           onFocus={() => setIsOpen(true)}
@@ -137,7 +191,7 @@ export function LocationFuzzySearch({
               const hit = results[highlight];
               if (hit) pick(hit.slug);
             } else if (event.key === "Escape") {
-              setIsOpen(false);
+              dismiss();
             }
           }}
         />
@@ -170,7 +224,7 @@ export function LocationFuzzySearch({
               <button
                 type="button"
                 className={[
-                  "flex w-full flex-col items-start px-3 py-2 text-left text-sm",
+                  "flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left text-sm",
                   index === highlight
                     ? "bg-rsi-accent-muted text-rsi-text"
                     : "text-rsi-text hover:bg-rsi-surface-raised",
@@ -178,9 +232,12 @@ export function LocationFuzzySearch({
                 onMouseEnter={() => setHighlight(index)}
                 onClick={() => pick(loc.slug)}
               >
-                <span className="font-medium tracking-wide">{loc.name}</span>
-                <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                  {[loc.parentName, loc.type].filter(Boolean).join(" · ")}
+                <LocationThumb slug={loc.slug} className="h-7 w-12" />
+                <span className="min-w-0 flex flex-col items-start">
+                  <span className="font-medium tracking-wide">{loc.name}</span>
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                    {[loc.parentName, loc.type].filter(Boolean).join(" · ")}
+                  </span>
                 </span>
               </button>
             </li>

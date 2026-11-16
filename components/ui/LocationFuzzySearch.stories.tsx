@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Fuzzy location search. When a value or typed query is present, a clear (X) control sits on the right edge of the input.",
+          "Fuzzy location search with location thumbs in the field and list. Clear (X) when a value or query is present. Click empty chrome on the label row to blur.",
       },
     },
   },

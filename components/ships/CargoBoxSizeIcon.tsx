@@ -76,7 +76,8 @@ export function CargoBoxSizeIcon({
   return (
     <svg
       viewBox={vb}
-      className={["inline-block size-4.5 shrink-0", className]
+      // Height-fixed, width follows the iso viewBox so crate proportions stay true.
+      className={["inline-block h-4.5 w-auto shrink-0", className]
         .filter(Boolean)
         .join(" ")}
       role="img"

@@ -518,7 +518,7 @@ function MissionBoxesButton({
               <CargoBoxCountIcons
                 boxCounts={boxCountsFromBreakdown(splits)}
                 color={isCompleted ? "var(--rsi-text-muted)" : cargoColor}
-                className="gap-x-1.5 [&_svg]:size-4 [&_span]:text-[0.6rem]"
+                className="gap-x-1.5 [&_svg]:h-4 [&_svg]:w-auto [&_span]:text-[0.6rem]"
               />
             </span>
           );

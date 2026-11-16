@@ -60,6 +60,27 @@ export function SessionCargoLayoutModal({
   useEffect(() => {
     if (!open) return;
     const openedAt = performance.now();
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+    };
+    // Freeze page scroll (overflow alone is not enough on many browsers / trackpads).
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -73,6 +94,14 @@ export function SessionCargoLayoutModal({
       );
     });
     return () => {
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.left = previous.bodyLeft;
+      body.style.right = previous.bodyRight;
+      body.style.width = previous.bodyWidth;
+      window.scrollTo(0, scrollY);
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKey);
     };
@@ -135,7 +164,7 @@ export function SessionCargoLayoutModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/85 p-3 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-rsi-bg-deep/85 p-3 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -157,7 +186,7 @@ export function SessionCargoLayoutModal({
         <h2 id={titleId} className="sr-only">
           Cargo bays
         </h2>
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 max-h-[min(85vh,52rem)] overflow-y-auto overscroll-contain">
           <button
             type="button"
             role="slider"
@@ -203,7 +232,6 @@ export function SessionCargoLayoutModal({
             onStopScopeChange={setStopScope}
             sessionId={sessionId}
             headerAside={headerAside}
-            className="max-h-[min(85vh,52rem)] overflow-hidden"
           />
         </div>
       </div>

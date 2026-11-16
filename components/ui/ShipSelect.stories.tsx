@@ -25,6 +25,12 @@ const meta = {
   component: ShipSelect,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Session ship picker matched to Start location field height/chrome, with ship badge thumbnails in the field and list. Click empty chrome on the label row to blur. Full width on mobile; max-w-md from md up.",
+      },
+    },
   },
   args: {
     options: demoOptions,
