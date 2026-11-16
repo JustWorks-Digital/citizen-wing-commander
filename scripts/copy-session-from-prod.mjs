@@ -9,7 +9,7 @@
  *
  * Env:
  *   DATABASE_URL          local Postgres (from .env.local)
- *   PROD_BASE_URL         default https://citizen-wing-commander-production.up.railway.app
+ *   PROD_BASE_URL         production origin (required — see .env.example)
  *
  * Flags:
  *   --no-select           do not mark the copied session as the active tab
@@ -19,12 +19,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
+import { resolveProdBaseUrl } from "../lib/api/appOrigin.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-
-const DEFAULT_PROD =
-  "https://citizen-wing-commander-production.up.railway.app";
 
 const UUID_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -109,9 +107,13 @@ async function main() {
     process.exit(1);
   }
 
-  const prodBase = (
-    process.env.PROD_BASE_URL?.trim() || DEFAULT_PROD
-  ).replace(/\/$/, "");
+  let prodBase;
+  try {
+    prodBase = resolveProdBaseUrl();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 
   console.log(`Fetching session ${sessionId} from ${prodBase}`);
   const checklist = await fetchJson(
@@ -217,7 +219,8 @@ async function main() {
   console.log(
     `Upserted local delivery_sessions row (${sessionName})${select ? " [selected]" : ""}`,
   );
-  console.log(`Open: http://localhost:3000/sessions/${sessionId}`);
+  const { resolveAppOrigin } = await import("../lib/api/appOrigin.mjs");
+  console.log(`Open: ${resolveAppOrigin()}/sessions/${sessionId}`);
 }
 
 main().catch((err) => {

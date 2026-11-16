@@ -2,18 +2,8 @@ import {
   listCatalogMissions,
   updateCatalogMissionRouteFlags,
 } from "@/db/queries/catalogMissions";
-import type { HaulingCatalogMissionPayload } from "@/lib/missions/catalogMission";
+import { isMissionPayloadHauling } from "@/lib/missions/catalogMission";
 import { catalogRouteFlagsFromLocationSplits } from "@/lib/missions/catalogRouteFlags";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 /** Derive `isDirect` / `isOnePickup` / `isOneDelivery` from location splits. */
 export async function backfillCatalogRouteFlags(): Promise<{
@@ -29,7 +19,7 @@ export async function backfillCatalogRouteFlags(): Promise<{
 
   for (const mission of missions) {
     try {
-      const payload = isHaulingPayload(mission.payload)
+      const payload = isMissionPayloadHauling(mission.payload)
         ? mission.payload
         : null;
       const flags = catalogRouteFlagsFromLocationSplits(

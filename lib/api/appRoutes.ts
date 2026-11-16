@@ -25,7 +25,6 @@ export const appApi = {
     "/api/catalog/missions/backfill-offer-star-system",
   catalogMissionsAddToSession: "/api/catalog/missions/add-to-session",
   catalogMissionsScuBoxSplits: "/api/catalog/missions/scu-box-splits",
-  sessions: "/api/sessions",
   ships: "/api/ships",
   healthDb: "/api/health/db",
   /** Local-only continuous perf capture (dev). */

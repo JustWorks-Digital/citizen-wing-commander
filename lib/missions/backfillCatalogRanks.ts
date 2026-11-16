@@ -6,22 +6,12 @@ import {
   buildHaulingCatalogMissionPayload,
   catalogMissionFingerprint,
   catalogMissionVariantFamilyKey,
-  type HaulingCatalogMissionPayload,
+  isMissionPayloadHauling,
 } from "@/lib/missions/catalogMission";
 import {
   normalizeMissionRank,
   stripRankFromTitle,
 } from "@/lib/missions/missionRank";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 /**
  * Extract `rank` from titles, strip rank tokens, and normalize Title Case.
@@ -40,7 +30,7 @@ export async function backfillCatalogRanks(): Promise<{
 
   for (const mission of missions) {
     try {
-      if (!isHaulingPayload(mission.payload)) {
+      if (!isMissionPayloadHauling(mission.payload)) {
         skipped += 1;
         continue;
       }

@@ -9,10 +9,18 @@ Do **not** scatter raw API URL strings in components, scripts, or feature code. 
 
 ## App (Next.js) routes
 
-- Canonical path map: `lib/api/appRoutes.ts` (`appApi.checklist`, `appApi.sessions`, …).
+- Canonical path map: `lib/api/appRoutes.ts` (`appApi.checklist`, `appApi.checklistSessions`, …).
 - Prefer **domain clients** under `lib/api/` (e.g. `checklistApi.ts`) that import `appApi` — UI/hooks call `fetchChecklist` / `saveChecklist`, not `fetch("/api/…")`.
 - When adding a new `app/api/**/route.ts`, also add a named entry to `appApi` and a thin client helper if anything outside the route needs it.
 - Route handlers stay thin; they do not redefine their own path constants for clients.
+
+## App / prod origins (env only)
+
+- Never hardcode the Railway production host in `lib/` or `scripts/`.
+- Helpers: `lib/api/appOrigin.mjs` (`resolveAppOrigin` / `resolveProdBaseUrl`), re-exported from `appOrigin.ts`.
+- Env (see `.env.example`):
+  - `APP_ORIGIN` — this deployment’s public origin (MCP trip links; local defaults to `http://localhost:3000`).
+  - `PROD_BASE_URL` — production host for sync/copy scripts (required when those scripts run).
 
 ## External / third-party APIs
 

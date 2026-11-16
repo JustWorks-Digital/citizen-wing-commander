@@ -7,10 +7,22 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { resolveProdBaseUrl } from "../lib/api/appOrigin.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, "..");
+try {
+  const { config } = await import("dotenv");
+  config({ path: path.join(root, ".env.local") });
+  config({ path: path.join(root, ".env") });
+} catch {
+  // ignore
+}
 
 const BASE =
-  process.env.APP_BASE_URL ||
-  "https://citizen-wing-commander-production.up.railway.app";
+  process.env.APP_BASE_URL?.trim()?.replace(/\/$/, "") ||
+  resolveProdBaseUrl();
 const SESSION_ID = "2c7b4d42-2321-4c50-b56b-5bb5c4ad8059";
 const SHOTS_DIR = "/tmp/covalex-shots/all/screenshots";
 const CSV_PATH = "/tmp/covalex-shots/p1/full_reconciliation_mapping.csv";

@@ -5,28 +5,20 @@ import {
 import { getLocationBySlug } from "@/lib/fixtures";
 import {
   buildHaulingCatalogMissionPayload,
-  type HaulingCatalogMissionPayload,
+  isMissionPayloadHauling,
 } from "@/lib/missions/catalogMission";
 import { normalizeStarSystemSlug } from "@/lib/missions/starSystem";
 
 const BACKFILL_DEFAULT_SLUG = "stanton";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 function resolveOfferStarSystemSlug(mission: {
   offerStarSystemSlug?: string | null;
   offerLocationSlug?: string | null;
   payload: unknown;
 }): string {
-  const payload = isHaulingPayload(mission.payload) ? mission.payload : null;
+  const payload = isMissionPayloadHauling(mission.payload)
+    ? mission.payload
+    : null;
   const fromColumn = normalizeStarSystemSlug(mission.offerStarSystemSlug);
   if (fromColumn) return fromColumn;
   const fromPayload = normalizeStarSystemSlug(payload?.offerStarSystemSlug);
@@ -61,7 +53,7 @@ export async function backfillCatalogOfferStarSystem(): Promise<{
 
   for (const mission of missions) {
     try {
-      if (!isHaulingPayload(mission.payload)) {
+      if (!isMissionPayloadHauling(mission.payload)) {
         skipped += 1;
         continue;
       }

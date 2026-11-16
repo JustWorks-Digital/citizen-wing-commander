@@ -5,8 +5,12 @@ import {
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import {
+  boxCountsFromBreakdown,
+  breakdownKey,
+  enumerateBoxBreakdowns,
   expandBreakdownToBoxSizes,
   takeBoxesForScu,
+  type BoxBreakdownOption,
 } from "@/lib/missions/boxBreakdownOptions";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { resolveCommoditySlug } from "@/lib/sessions/resolveRefs";
@@ -16,6 +20,18 @@ import {
   decomposeScuIntoBoxes,
   type CargoBoxScu,
 } from "@/lib/ships/cargoBoxSizes";
+
+/** Cargo line shape used by total-style option previews. */
+export type CargoBoxSplitLine = {
+  commoditySlug: string;
+  scu: number;
+};
+
+/** Picker option for multi-cargo “Total” style (preview aggregate + primary value). */
+export type TotalStyleBoxOption = BoxBreakdownOption & {
+  /** Primary-line mix passed to `onSelect` (not the aggregate preview). */
+  value: ScuBoxSplits;
+};
 
 /** Options when applying one commodity’s mix style to the rest. */
 export type PropagatePreferredMaxOptions = {
@@ -395,5 +411,75 @@ export const cargoBoxSplits = {
 
   commodityLines(mission: SessionMission) {
     return missionCargoLines(mission);
+  },
+
+  /**
+   * Total crate mix for a style option: primary keeps the exact mix;
+   * other cargo types use greedy fills under that preferred max.
+   */
+  aggregateStyleSplits(
+    primarySlug: string,
+    primaryBreakdown: ScuBoxSplits,
+    lines: CargoBoxSplitLine[],
+    styleMax: number,
+  ): ScuBoxSplits {
+    const map: ScuCargoBoxSplits = {};
+    for (const line of lines) {
+      map[line.commoditySlug] =
+        line.commoditySlug === primarySlug
+          ? primaryBreakdown
+          : scuBoxSplitsForScu(line.scu, styleMax);
+    }
+    return cargoBoxSplits.aggregate(map);
+  },
+
+  /**
+   * Multi-cargo “Total” picker options: each row previews the aggregate
+   * after applying the primary mix’s preferred max to the other lines.
+   */
+  totalStyleOptions(
+    mission: SessionMission,
+    lines: CargoBoxSplitLine[],
+    primary: CargoBoxSplitLine,
+    optionLimit = 16,
+  ): TotalStyleBoxOption[] {
+    const isMultiCargo = lines.length > 1;
+    const primaryAuto =
+      mission.scuCargoBoxSplitsAutoSelected?.[primary.commoditySlug] ??
+      scuBoxSplitsForScu(primary.scu, mission.scuMaxContainerSize ?? null);
+    const primaryOptions = enumerateBoxBreakdowns(
+      primary.scu,
+      mission.scuMaxContainerSize,
+      optionLimit,
+    );
+    return primaryOptions.map((option): TotalStyleBoxOption => {
+      const preferredMax = cargoBoxSplits.preferredMaxFromSplits(
+        option.breakdown,
+      );
+      const styleMax =
+        preferredMax != null
+          ? cargoBoxSplits.effectivePreferredMax(mission, preferredMax)
+          : null;
+      const total =
+        styleMax != null && isMultiCargo
+          ? cargoBoxSplits.aggregateStyleSplits(
+              primary.commoditySlug,
+              option.breakdown,
+              lines,
+              styleMax,
+            )
+          : option.breakdown;
+      const boxCounts = boxCountsFromBreakdown(total);
+      return {
+        ...option,
+        id: `total:${option.id}`,
+        breakdown: total,
+        boxCounts,
+        boxCount: boxCounts.reduce((sum, entry) => sum + entry.count, 0),
+        label: option.label,
+        value: option.breakdown,
+        isDefault: breakdownKey(option.breakdown) === breakdownKey(primaryAuto),
+      };
+    });
   },
 };

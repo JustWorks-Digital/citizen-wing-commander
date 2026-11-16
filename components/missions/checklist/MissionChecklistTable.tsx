@@ -71,6 +71,7 @@ import {
 } from "@/lib/missions/sessionMissionObjectives";
 import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { stopMissionBoxConfigModalProps } from "@/lib/missions/stopMissionBoxConfig";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { OutdoorFreightBadge } from "../OutdoorFreightBadge";
@@ -1120,37 +1121,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       )}
       {boxEditMission && onSelectBoxBreakdown ? (
         <StopMissionBoxConfigModal
-          mission={boxEditMission}
-          rows={rows}
-          sessionId={sessionId}
-          onClose={() => setBoxEditMissionId(null)}
-          onSelectBoxBreakdown={(
-            commoditySlug: string,
-            breakdown: ScuBoxSplits,
-            options?: {
-              applyPreferredMaxToRemaining?: boolean;
-              onlyUncorrected?: boolean;
-            },
-          ) => {
-            onSelectBoxBreakdown(
-              boxEditMission.id,
-              commoditySlug,
-              breakdown,
-              options,
-            );
-            const lines =
-              boxEditMission.cargo?.filter((line) => (line.scu ?? 0) > 0) ??
-              [];
-            if (lines.length <= 1) {
-              setBoxEditMissionId(null);
-            }
-          }}
-          onSaveScuDraft={
-            onSaveMissionScuDraft
-              ? (draft: MissionScuDraft) =>
-                  onSaveMissionScuDraft(boxEditMission.id, draft)
-              : undefined
-          }
+          {...stopMissionBoxConfigModalProps({
+            mission: boxEditMission,
+            rows,
+            sessionId,
+            onClose: () => setBoxEditMissionId(null),
+            onSelectBoxBreakdown,
+            onSaveMissionScuDraft,
+          })}
         />
       ) : null}
     </div>

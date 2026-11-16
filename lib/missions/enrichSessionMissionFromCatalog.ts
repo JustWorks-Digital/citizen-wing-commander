@@ -5,7 +5,7 @@ import {
   formatRewardsLabel,
   normalizeCatalogRewards,
   rewardsFromAuec,
-  type HaulingCatalogMissionPayload,
+  isMissionPayloadHauling,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import {
@@ -15,16 +15,6 @@ import {
 import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 function locationDisplay(slug: string): string {
   return getLocationBySlug(slug)?.name ?? slug;
@@ -39,7 +29,7 @@ export function enrichSessionMissionFromCatalog(
   mission: SessionMission,
   catalog: CatalogMission | null | undefined,
 ): SessionMission {
-  if (!catalog || !isHaulingPayload(catalog.payload)) return mission;
+  if (!catalog || !isMissionPayloadHauling(catalog.payload)) return mission;
   const payload = catalog.payload;
   const extras = payload.extras ?? {};
   const legacyDeliverySplits = Array.isArray(extras.deliverySplits)

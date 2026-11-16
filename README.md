@@ -29,4 +29,4 @@ npm run db:upgrade   # apply pending drizzle/*.sql (also: db:migrate)
 
 Deploy / CI should run the same upgrade script with `DATABASE_URL` set (`scripts/db-upgrade.mjs`).
 
-Minimal proof routes: `GET /api/health/db`, `GET|POST /api/sessions`.
+Minimal proof route: `GET /api/health/db`.

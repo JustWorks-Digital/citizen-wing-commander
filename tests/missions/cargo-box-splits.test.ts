@@ -273,6 +273,64 @@ describe("cargoBoxSplits.boxSizesForLine", () => {
   });
 });
 
+describe("cargoBoxSplits.aggregateStyleSplits / totalStyleOptions", () => {
+  it("keeps primary mix and greeds other lines under the style max", () => {
+    const primary = {
+      scuOne: 0,
+      scuTwo: 6,
+      scuFour: 0,
+      scuEight: 0,
+      scuSixteen: 0,
+      scuThirtyTwo: 0,
+    };
+    const total = cargoBoxSplits.aggregateStyleSplits(
+      "silicon",
+      primary,
+      [
+        { commoditySlug: "silicon", scu: 12 },
+        { commoditySlug: "titanium", scu: 8 },
+      ],
+      2,
+    );
+    expect(total).toEqual({
+      scuOne: 0,
+      scuTwo: 10,
+      scuFour: 0,
+      scuEight: 0,
+      scuSixteen: 0,
+      scuThirtyTwo: 0,
+    });
+  });
+
+  it("builds total picker options with aggregate preview and primary value", () => {
+    const base = cargoBoxSplits.withDefaults(
+      mission({
+        cargo: [
+          { commodity: "Silicon", scu: 12 },
+          { commodity: "Titanium", scu: 8 },
+        ],
+        scuMaxContainerSize: 4,
+      }),
+    );
+    const lines = cargoBoxSplits.commodityLines(base);
+    const primary = lines[0]!;
+    const options = cargoBoxSplits.totalStyleOptions(base, lines, primary, 8);
+    expect(options.length).toBeGreaterThan(0);
+    const first = options[0]!;
+    expect(first.id.startsWith("total:")).toBe(true);
+    const preferred = cargoBoxSplits.preferredMaxFromSplits(first.value);
+    expect(preferred).toBe(4);
+    expect(first.breakdown).toEqual(
+      cargoBoxSplits.aggregateStyleSplits(
+        primary.commoditySlug,
+        first.value,
+        lines,
+        cargoBoxSplits.effectivePreferredMax(base, preferred!),
+      ),
+    );
+  });
+});
+
 describe("cargoBoxSplits.propagatePreferredMax", () => {
   it("re-greedies other lines from the source mix preferred max", () => {
     const base = cargoBoxSplits.withDefaults(

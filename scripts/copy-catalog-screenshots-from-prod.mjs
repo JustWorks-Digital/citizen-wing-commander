@@ -13,18 +13,16 @@
  *   npm run catalog:copy-screenshots-from-prod -- --force
  *
  * Env:
- *   PROD_BASE_URL   default https://citizen-wing-commander-production.up.railway.app
- *   CATALOG_API_URL default ${PROD_BASE_URL}/api/catalog/missions
+ *   PROD_BASE_URL   production origin (required — see .env.example)
+ *   CATALOG_API_URL optional override (default ${PROD_BASE_URL}/api/catalog/missions)
  */
 import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveProdBaseUrl } from "../lib/api/appOrigin.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-
-const DEFAULT_PROD =
-  "https://citizen-wing-commander-production.up.railway.app";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -133,9 +131,21 @@ async function main() {
     process.exit(1);
   }
 
-  const prodBase = (
-    process.env.PROD_BASE_URL?.trim() || DEFAULT_PROD
-  ).replace(/\/$/, "");
+  try {
+    const { config } = await import("dotenv");
+    config({ path: path.join(root, ".env.local") });
+    config({ path: path.join(root, ".env") });
+  } catch {
+    // ignore
+  }
+
+  let prodBase;
+  try {
+    prodBase = resolveProdBaseUrl();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
   const catalogApi =
     process.env.CATALOG_API_URL?.trim() || `${prodBase}/api/catalog/missions`;
 

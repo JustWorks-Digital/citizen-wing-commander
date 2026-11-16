@@ -8,8 +8,9 @@
  *   DATABASE_URL=… npm run db:sync-catalog-missions
  *
  * Optional:
- *   CATALOG_API_URL=https://…/api/catalog/missions
- *   MCP_URL=https://…/mcp
+ *   PROD_BASE_URL   production origin (required unless both URLs below are set)
+ *   CATALOG_API_URL default ${PROD_BASE_URL}/api/catalog/missions
+ *   MCP_URL         default ${PROD_BASE_URL}/mcp
  *
  * Note: Railway Postgres has no public TCP proxy by default, so pg_dump is not
  * available from outside. Notes/runs are cleared locally (not exposed by API).
@@ -17,20 +18,44 @@
  * `npm run catalog:copy-screenshots-from-prod` afterward to pull sources.
  */
 import { createHash } from "node:crypto";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import postgres from "postgres";
+import { resolveProdBaseUrl } from "../lib/api/appOrigin.mjs";
 
-const CATALOG_API_URL =
-  process.env.CATALOG_API_URL ??
-  "https://citizen-wing-commander-production.up.railway.app/api/catalog/missions";
-const MCP_URL =
-  process.env.MCP_URL ??
-  "https://citizen-wing-commander-production.up.railway.app/mcp";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, "..");
+
+try {
+  const { config } = await import("dotenv");
+  config({ path: path.join(root, ".env.local") });
+  config({ path: path.join(root, ".env") });
+} catch {
+  // ignore
+}
+
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.error("DATABASE_URL is required");
   process.exit(1);
 }
+
+let prodBase = "";
+try {
+  prodBase = resolveProdBaseUrl();
+} catch (error) {
+  if (!process.env.CATALOG_API_URL?.trim() || !process.env.MCP_URL?.trim()) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}
+
+const CATALOG_API_URL =
+  process.env.CATALOG_API_URL?.trim() ||
+  `${prodBase}/api/catalog/missions`;
+const MCP_URL =
+  process.env.MCP_URL?.trim() || `${prodBase}/mcp`;
 
 async function mcpCall(method, params, id = 1) {
   const res = await fetch(MCP_URL, {

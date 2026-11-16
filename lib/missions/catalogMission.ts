@@ -175,6 +175,17 @@ export type HaulingCatalogMissionPayload = {
   extras?: Record<string, unknown>;
 };
 
+/** True when mission payload `kind` is hauling (catalog JSON body). */
+export function isMissionPayloadHauling(
+  payload: unknown,
+): payload is HaulingCatalogMissionPayload {
+  return (
+    typeof payload === "object" &&
+    payload != null &&
+    (payload as { kind?: string }).kind === "hauling"
+  );
+}
+
 export type CatalogMissionNoteSentiment = "good" | "bad" | "neutral";
 
 export function emptyScuBoxSplits(): ScuBoxSplits {

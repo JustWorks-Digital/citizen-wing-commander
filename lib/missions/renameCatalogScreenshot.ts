@@ -10,22 +10,15 @@ import {
 } from "@/db/queries/catalogMissions";
 import { rewriteScreenshotLogicalPathInSessions } from "@/db/queries/deliverySessions";
 import { catalogMissions } from "@/db/schema";
-import type { HaulingCatalogMissionPayload } from "@/lib/missions/catalogMission";
+import {
+  isMissionPayloadHauling,
+  type HaulingCatalogMissionPayload,
+} from "@/lib/missions/catalogMission";
 import { buildCatalogScreenshotFilenameFromPayload } from "@/lib/missions/catalogScreenshotFilename";
 import {
   absoluteScreenshotPath,
   screenshotLogicalPath,
 } from "@/lib/sessions/screenshotStore";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 function replaceLogicalPath(
   value: string | null | undefined,
@@ -98,7 +91,7 @@ export async function renameCatalogMissionScreenshot(
   if (!mission) {
     throw new Error(`Catalog mission not found: ${missionId}`);
   }
-  if (!isHaulingPayload(mission.payload)) {
+  if (!isMissionPayloadHauling(mission.payload)) {
     throw new Error(`Mission ${missionId} is not a hauling catalog payload`);
   }
 
@@ -283,7 +276,7 @@ export async function renameAllCatalogMissionScreenshots(options?: {
   for (const mission of withShots) {
     try {
       if (options?.dryRun) {
-        if (!isHaulingPayload(mission.payload) || !mission.latestScreenshotPath) {
+        if (!isMissionPayloadHauling(mission.payload) || !mission.latestScreenshotPath) {
           skipped += 1;
           continue;
         }

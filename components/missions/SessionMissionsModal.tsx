@@ -53,6 +53,7 @@ import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { stopMissionBoxConfigModalProps } from "@/lib/missions/stopMissionBoxConfig";
 import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 
@@ -1269,25 +1270,14 @@ export function SessionMissionsModal({
 
       {open && boxEditMission ? (
         <StopMissionBoxConfigModal
-          mission={boxEditMission}
-          rows={rows}
-          sessionId={sessionId}
-          onClose={() => setBoxEditMissionId(null)}
-          onSelectBoxBreakdown={(commoditySlug, breakdown, options) => {
-            onSelectBoxBreakdown(
-              boxEditMission.id,
-              commoditySlug,
-              breakdown,
-              options,
-            );
-            const lines = cargoBoxSplits.commodityLines(boxEditMission);
-            if (lines.length <= 1) setBoxEditMissionId(null);
-          }}
-          onSaveScuDraft={
-            onSaveMissionScuDraft
-              ? (draft) => onSaveMissionScuDraft(boxEditMission.id, draft)
-              : undefined
-          }
+          {...stopMissionBoxConfigModalProps({
+            mission: boxEditMission,
+            rows,
+            sessionId,
+            onClose: () => setBoxEditMissionId(null),
+            onSelectBoxBreakdown,
+            onSaveMissionScuDraft,
+          })}
         />
       ) : null}
     </div>

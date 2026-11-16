@@ -4,23 +4,13 @@ import {
   formatAuecAmount,
   formatRewardsLabel,
   normalizeCatalogRewards,
-  type HaulingCatalogMissionPayload,
+  isMissionPayloadHauling,
 } from "@/lib/missions/catalogMission";
 import { normalizeHaulingCategory } from "@/lib/missions/haulingCategory";
 import { normalizeMissionRank } from "@/lib/missions/missionRank";
 import { resolveScuSplits } from "@/lib/missions/missionScuSplits";
 import { getContractorBySlug, getLocationBySlug } from "@/lib/fixtures";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
-
-function isHaulingPayload(
-  payload: unknown,
-): payload is HaulingCatalogMissionPayload {
-  return (
-    typeof payload === "object" &&
-    payload != null &&
-    (payload as { kind?: string }).kind === "hauling"
-  );
-}
 
 function locationDisplay(slug: string): string {
   return getLocationBySlug(slug)?.name ?? slug;
@@ -33,7 +23,7 @@ function locationDisplay(slug: string): string {
 export function sessionMissionFromCatalog(
   catalog: CatalogMission,
 ): SessionMission {
-  if (!isHaulingPayload(catalog.payload)) {
+  if (!isMissionPayloadHauling(catalog.payload)) {
     throw new Error(`Catalog mission ${catalog.id} is not a hauling payload`);
   }
   const payload = catalog.payload;
