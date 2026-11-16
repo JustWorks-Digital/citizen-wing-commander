@@ -1,0 +1,12 @@
+{
+  "sessionName": "microTech — 5 Experienced Local Hauls — 77 SCU",
+  "startLocationSlug": "covalex-distribution-centre-s4dc05",
+  "missionCount": 5,
+  "rowCount": 6,
+  "peakStopId": "stop-1",
+  "peakScu": 47,
+  "tripCargo": {
+    "ok": true,
+    "issueCount": 0
+  }
+}

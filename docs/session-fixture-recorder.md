@@ -21,9 +21,16 @@ npm run session:capture-fixture -- <sessionId|tripUrl> [--slug=name] [--assets=r
 
 Load in tests: `loadSessionFixture(slug)` from `tests/sessions/loadSessionFixture.ts`.
 
-First pack: `crossed-haul-invalid-2026-11-13`.
+Packs: `crossed-haul-invalid-2026-11-13`, `microtech-5-experienced-local-hauls-2026-11-16`.
 
-## Playwright
+## Playwright (product-surface folders)
+
+```
+e2e/session/             # name / trip open / recent-related
+e2e/mission-checklist/   # stop progress, completion summary, reorder stops
+e2e/contracts/           # contracts list + Source (UI only; MCP is Vitest)
+e2e/cargo/               # cargo bays
+```
 
 ```bash
 npm run test:e2e

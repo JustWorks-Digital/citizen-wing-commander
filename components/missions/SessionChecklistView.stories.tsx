@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown).",
+          "Trip shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown). Finish report opens on the incomplete→complete edge (not for already-done trips on load); concurrent Done saves keep the newest body.",
       },
     },
   },

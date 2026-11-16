@@ -127,6 +127,8 @@ export function SessionChecklistView({
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [tripCompleteOpen, setTripCompleteOpen] = useState(false);
+  /** null until first observe — already-complete trips must not auto-open the report. */
+  const wasTripCompleteRef = useRef<boolean | null>(null);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [missionsFocusId, setMissionsFocusId] = useState<string | null>(null);
   const [stopsOpen, setStopsOpen] = useState(false);
@@ -148,6 +150,8 @@ export function SessionChecklistView({
   const [shipsError, setShipsError] = useState<string | null>(null);
   const etagRef = useRef<string | null>(null);
   const savingRef = useRef(false);
+  /** Monotonic id so an older PUT cannot overwrite a newer optimistic Done click. */
+  const persistGenerationRef = useRef(0);
   /** False until the first successful GET for this route id (loading placeholder must not win the poll race). */
   const hydratedFromServerRef = useRef(Boolean(initial));
   /** Drives trip-table spinner until the first hydrate (or first-load failure). */
@@ -449,14 +453,31 @@ export function SessionChecklistView({
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
   const isTripComplete = areAllLegsComplete(session.rows);
 
-  // Close the finish report if the trip is reopened (stops unchecked).
+  // Close the finish report on trip switch; edge-open when every stop becomes done.
   useEffect(() => {
     setTripCompleteOpen(false);
+    wasTripCompleteRef.current = null;
   }, [session.id]);
 
   useEffect(() => {
-    if (!session.completedAt) setTripCompleteOpen(false);
-  }, [session.completedAt]);
+    // Ignore the empty loading shell → hydrated body transition so an
+    // already-finished trip does not auto-open the finish report.
+    if (isTripLoading) {
+      wasTripCompleteRef.current = null;
+      return;
+    }
+    if (wasTripCompleteRef.current === null) {
+      wasTripCompleteRef.current = isTripComplete;
+      return;
+    }
+    if (isTripComplete && !wasTripCompleteRef.current) {
+      setTripCompleteOpen(true);
+    }
+    if (!isTripComplete) {
+      setTripCompleteOpen(false);
+    }
+    wasTripCompleteRef.current = isTripComplete;
+  }, [isTripComplete, isTripLoading]);
 
   const tripElapsedLabel = useMemo(
     () =>
@@ -479,22 +500,20 @@ export function SessionChecklistView({
     }
     savingRef.current = true;
     setSaveInFlight((count) => count + 1);
+    const persistGeneration = ++persistGenerationRef.current;
     // Stamp locally so in-flight polls can't overwrite with a pre-save body.
     const stamped: SessionChecklist = {
       ...next,
       updatedAt: new Date().toISOString(),
     };
-    // Finish report when this write is the one that completes every stop.
-    if (
-      !areAllLegsComplete(sessionRef.current.rows) &&
-      areAllLegsComplete(stamped.rows)
-    ) {
-      setTripCompleteOpen(true);
-    }
     // Optimistic UI first; defer server echo so packing / grid don't re-run twice urgently.
+    // Finish report opens via isTripComplete edge (wasTripCompleteRef), not here.
     setSession(stamped);
     return saveChecklist(stamped)
       .then((result) => {
+        // Server updatedAt is always "now", so a slower earlier PUT can look newer.
+        // Only the latest persist generation may apply its echo.
+        if (persistGeneration !== persistGenerationRef.current) return;
         etagRef.current = result.etag;
         startTransition(() => {
           setSession(result.session);
@@ -516,11 +535,15 @@ export function SessionChecklistView({
         setLoadError(null);
       })
       .catch(() => {
+        if (persistGeneration !== persistGenerationRef.current) return;
         setLoadError("Failed to save checklist");
       })
       .finally(() => {
-        savingRef.current = false;
-        setSaveInFlight((count) => Math.max(0, count - 1));
+        setSaveInFlight((count) => {
+          const next = Math.max(0, count - 1);
+          savingRef.current = next > 0;
+          return next;
+        });
       });
   }, [initial]);
 

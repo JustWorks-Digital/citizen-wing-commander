@@ -1,0 +1,328 @@
+{
+  "version": 1,
+  "startedAt": "2026-11-16T21:34:24.847Z",
+  "viewport": {
+    "w": 1080,
+    "h": 768
+  },
+  "sessionId": "f6b69016-01d4-44d3-a7ec-598a70ae71d8",
+  "actions": [
+    {
+      "ts": 1794864864850,
+      "type": "navigate",
+      "url": "http://localhost:3000/sessions/f6b69016-01d4-44d3-a7ec-598a70ae71d8"
+    },
+    {
+      "ts": 1794864864850,
+      "type": "navigate",
+      "url": "http://localhost:3000/sessions/f6b69016-01d4-44d3-a7ec-598a70ae71d8"
+    },
+    {
+      "ts": 1794864870383,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "5"
+    },
+    {
+      "ts": 1794864877258,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "td",
+      "name": "9"
+    },
+    {
+      "ts": 1794864878524,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "td",
+      "name": "9"
+    },
+    {
+      "ts": 1794864879241,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "td",
+      "name": "9"
+    },
+    {
+      "ts": 1794864881161,
+      "type": "click"
+    },
+    {
+      "ts": 1794864882505,
+      "type": "click"
+    },
+    {
+      "ts": 1794864884061,
+      "type": "click"
+    },
+    {
+      "ts": 1794864888186,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Close"
+    },
+    {
+      "ts": 1794864890240,
+      "type": "click"
+    },
+    {
+      "ts": 1794864892165,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "p",
+      "name": "0/6"
+    },
+    {
+      "ts": 1794864903569,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Cancel"
+    },
+    {
+      "ts": 1794864911603,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Save order"
+    },
+    {
+      "ts": 1794864924577,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Save order"
+    },
+    {
+      "ts": 1794864928004,
+      "type": "click"
+    },
+    {
+      "ts": 1794864932118,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "6"
+    },
+    {
+      "ts": 1794864935873,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Save order"
+    },
+    {
+      "ts": 1794864937315,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Reset trip — clear stop completion to unlock reorder (contracts stay)"
+    },
+    {
+      "ts": 1794864938559,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Reset trip — clear stop completion to unlock reorder (contracts stay)"
+    },
+    {
+      "ts": 1794864939316,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Reset trip — clear stop completion to unlock reorder (contracts stay)"
+    },
+    {
+      "ts": 1794864939979,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Reset trip — clear stop completion to unlock reorder (contracts stay)"
+    },
+    {
+      "ts": 1794864940609,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Reset trip — clear stop completion to unlock reorder (contracts stay)"
+    },
+    {
+      "ts": 1794864941918,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Dismiss"
+    },
+    {
+      "ts": 1794864944273,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Open bays"
+    },
+    {
+      "ts": 1794864947361,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "tab",
+      "name": "Split view"
+    },
+    {
+      "ts": 1794864956448,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Show packing"
+    },
+    {
+      "ts": 1794864957465,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "Cargo type"
+    },
+    {
+      "ts": 1794864961173,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Zoom out"
+    },
+    {
+      "ts": 1794864961698,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Zoom out"
+    },
+    {
+      "ts": 1794864966457,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "div",
+      "name": "Covalex Distribution Centre S4DC05Hydrogen Fuel7SCUPressurized Ice8SCUProcessed "
+    },
+    {
+      "ts": 1794864968294,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "img",
+      "name": "RSI Galaxy 2D cargo grid, 720 SCU. Rear left, front right."
+    },
+    {
+      "ts": 1794864968912,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Hide packing"
+    },
+    {
+      "ts": 1794864971298,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Zoom out"
+    },
+    {
+      "ts": 1794864971881,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Zoom out"
+    },
+    {
+      "ts": 1794864973498,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Zoom in"
+    },
+    {
+      "ts": 1794864991206,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Show legend"
+    },
+    {
+      "ts": 1794864992427,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Hide legend"
+    },
+    {
+      "ts": 1794864993461,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Dismiss"
+    },
+    {
+      "ts": 1794864999361,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "combobox",
+      "name": "Ship"
+    },
+    {
+      "ts": 1794865001590,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "div",
+      "name": "TripmicroTech — 5 Experienced Local Hauls — 77 SCUID f6b69016-01d4-44d3-a7ec-598"
+    },
+    {
+      "ts": 1794865009590,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "✓"
+    },
+    {
+      "ts": 1794865014982,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "✓"
+    },
+    {
+      "ts": 1794865016927,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "✓"
+    },
+    {
+      "ts": 1794865019088,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "span",
+      "name": "✓"
+    },
+    {
+      "ts": 1794865021669,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "checkbox",
+      "name": "Stop 5, mark done: Shubin Mining Facility SM0-18"
+    },
+    {
+      "ts": 1794865022844,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "checkbox",
+      "name": "Stop 6, mark done: Covalex Distribution Centre S4DC05"
+    },
+    {
+      "ts": 1794865025902,
+      "type": "click",
+      "testId": "session-checklist",
+      "role": "button",
+      "name": "Continue"
+    }
+  ]
+}
