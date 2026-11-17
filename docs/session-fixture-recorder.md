@@ -16,7 +16,7 @@ Curated live-session snapshots live under `tests/sessions/<slug>/`:
 Capture from production:
 
 ```bash
-npm run session:capture-fixture -- <sessionId|tripUrl> [--slug=name] [--assets=referenced|none]
+npm run session:capture-fixture -- <sessionId|sessionUrl> [--slug=name] [--assets=referenced|none]
 ```
 
 Load in tests: `loadSessionFixture(slug)` from `tests/sessions/loadSessionFixture.ts`.

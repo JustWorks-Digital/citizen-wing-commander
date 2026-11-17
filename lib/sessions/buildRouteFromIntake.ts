@@ -232,14 +232,65 @@ function locationAffinity(
   return 80;
 }
 
-function isPickupOnly(bucket: StopBucket): boolean {
-  return bucket.pickups.length > 0 && bucket.deliveries.length === 0;
+function hasPickups(bucket: StopBucket): boolean {
+  return bucket.pickups.length > 0;
+}
+
+function cargoKey(line: IncomingCargoLine): string {
+  return `${line.missionId ?? ""}::${line.commodity}`;
+}
+
+/**
+ * A location that both loads outbound cargo and turns in return cargo must be
+ * two visits: pick up first, deliver later — otherwise start-at-hub schedules
+ * return drops before those commodities are aboard.
+ */
+function splitReturnHubVisits(buckets: StopBucket[]): StopBucket[] {
+  const out: StopBucket[] = [];
+  for (const bucket of buckets) {
+    if (bucket.pickups.length === 0 || bucket.deliveries.length === 0) {
+      out.push(bucket);
+      continue;
+    }
+
+    const localPickupKeys = new Set(bucket.pickups.map(cargoKey));
+    const sameStopDeliveries: IncomingCargoLine[] = [];
+    const returnDeliveries: IncomingCargoLine[] = [];
+    for (const line of bucket.deliveries) {
+      // Same mission+commodity picked up here can unload on the same visit;
+      // anything else was loaded elsewhere and needs a later return stop.
+      if (localPickupKeys.has(cargoKey(line))) {
+        sameStopDeliveries.push(line);
+      } else {
+        returnDeliveries.push(line);
+      }
+    }
+
+    if (returnDeliveries.length === 0) {
+      out.push(bucket);
+      continue;
+    }
+
+    out.push({
+      location: bucket.location,
+      locationSlug: bucket.locationSlug,
+      pickups: bucket.pickups,
+      deliveries: sameStopDeliveries,
+    });
+    out.push({
+      location: bucket.location,
+      locationSlug: bucket.locationSlug,
+      pickups: [],
+      deliveries: returnDeliveries,
+    });
+  }
+  return out;
 }
 
 /**
  * Greedy nearest-neighbor from start.
- * Pickup-only stops are exhausted before any delivery/both stop so cargo
- * is collected before a later stop tries to turn it in.
+ * Any stop that still has pickups is preferred over delivery-only stops so
+ * return hub drops wait until outbound/mine cargo is collected.
  */
 function orderBucketsFromStart(
   buckets: StopBucket[],
@@ -256,9 +307,16 @@ function orderBucketsFromStart(
   const ordered: StopBucket[] = [];
   let cursor = startSlug;
 
-  const startIdx = remaining.findIndex((b) => b.locationSlug === startSlug);
-  if (startIdx >= 0) {
-    ordered.push(remaining.splice(startIdx, 1)[0]!);
+  // Prefer the pickup (or pickup_delivery) visit when start has a split return.
+  const startIdx = remaining.findIndex(
+    (b) => b.locationSlug === startSlug && hasPickups(b),
+  );
+  const startFallbackIdx =
+    startIdx >= 0
+      ? startIdx
+      : remaining.findIndex((b) => b.locationSlug === startSlug);
+  if (startFallbackIdx >= 0) {
+    ordered.push(remaining.splice(startFallbackIdx, 1)[0]!);
     cursor = ordered[0]!.locationSlug;
   }
 
@@ -274,12 +332,10 @@ function orderBucketsFromStart(
   };
 
   while (remaining.length > 0) {
-    const pickupOnly = remaining.filter(isPickupOnly);
-    const pool = pickupOnly.length > 0 ? pickupOnly : remaining;
+    const withPickups = remaining.filter(hasPickups);
+    const pool = withPickups.length > 0 ? withPickups : remaining;
     const next = takeNearest(pool);
-    const idx = remaining.findIndex(
-      (bucket) => bucket.locationSlug === next.locationSlug,
-    );
+    const idx = remaining.findIndex((bucket) => bucket === next);
     remaining.splice(idx, 1);
     ordered.push(next);
     cursor = next.locationSlug;
@@ -343,13 +399,23 @@ export function buildRouteFromIntake(
 
   const startSlug = options?.startLocation
     ? resolveLocationSlug(options.startLocation)
-    : null;
+    : intake.startLocation
+      ? resolveLocationSlug(intake.startLocation)
+      : null;
+
+  const expanded = splitReturnHubVisits([...buckets.values()]);
 
   const ordered = startSlug
-    ? orderBucketsFromStart([...buckets.values()], startSlug)
-    : [...buckets.values()].sort((a, b) => {
+    ? orderBucketsFromStart(expanded, startSlug)
+    : expanded.sort((a, b) => {
         const rank = stopRank(a) - stopRank(b);
         if (rank !== 0) return rank;
+        // Same-location return delivery visit after that location's pickups.
+        if (a.locationSlug === b.locationSlug) {
+          const aPick = hasPickups(a) ? 0 : 1;
+          const bPick = hasPickups(b) ? 0 : 1;
+          if (aPick !== bPick) return aPick - bPick;
+        }
         return a.location.localeCompare(b.location);
       });
 

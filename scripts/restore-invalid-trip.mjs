@@ -54,7 +54,7 @@ console.log(
       missionCount: saved.missionCount,
       rowCount: Array.isArray(saved.rows) ? saved.rows.length : 0,
       startLocationSlug: saved.startLocationSlug ?? null,
-      tripUrl: `${base}/sessions/${saved.id}`,
+      sessionUrl: `${base}/sessions/${saved.id}`,
     },
     null,
     2,

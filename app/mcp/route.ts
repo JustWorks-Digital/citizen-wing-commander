@@ -166,7 +166,7 @@ const handler = createMcpHandler(
       {
         title: "Create hauling session",
         description:
-          "Use this to open a new empty hauling session tab (same as the UI + control). Returns sessionId, tripUrl, and sourceHandoff text. When chat attachments cannot be pushed to MCP, create the trip first, send tripUrl, ask the user to paste shots in Source, then continue with list/get.",
+          "Use this to open a new empty hauling session tab (same as the UI + control). Returns sessionId, sessionUrl (absolute https link with domain to open the session), and sourceHandoff text. Always show sessionUrl to the user. When chat attachments cannot be pushed to MCP, create the trip first, send sessionUrl, ask the user to paste shots in Source, then continue with list/get.",
         inputSchema: z.object({
           sessionName: z.string().optional(),
           activate: z
@@ -1299,15 +1299,16 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.10",
+      version: "0.2.12",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow Lane A (push bytes) vs Lane B (Source handoff).",
+      "After create_hauling_session, always give the user sessionUrl (absolute https link with domain to open the session).",
       "After apply_hauling_contracts_intake / replace_hauling_checklist, read tripPlanValid and tripCargoIssues. Soft only (route still saves). When tripPlanValid is false, prefer fixing legs so each commodity is picked up before delivery unless the player intentionally wants that order.",
       "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32) and scuBoxSplitsCertainty: known. For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo). Certainty is per commodity via scuCargoBoxSplitsCertainty when commodity is set. On create_mission, pass scuCargoBoxSplitsCertainty (slug→known|estimated|unknown) and/or scuTotalCertainty / scuBoxSplitsCertainty rollup when you know how sure the SCU/crate data is.",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
-      "Screenshots — Lane A: ChatGPT should pass store_hauling_screenshot `file` (openai/fileParams native attachment with download_url). Other hosts may use fileUrl / readable filePath / imageBase64. create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). Bare ChatGPT /mnt/data paths are NOT reachable — never pass them as filePath. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
+      "Screenshots — Lane A: ChatGPT should pass store_hauling_screenshot `file` (openai/fileParams native attachment with download_url). Other hosts may use fileUrl / readable filePath / imageBase64. create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). Bare ChatGPT /mnt/data paths are NOT reachable — never pass them as filePath. Lane B: if push is impossible, create_hauling_session, send sessionUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",
       "Extract every Accepted contract into hauling_contracts_intake JSON (contracts with from/to/cargo and screenshots[] logical paths).",
       "Call list_hauling_sessions to see open tabs and activeSessionId. Pass sessionId on write tools to target a specific tab; omit to use the active session.",
       "Prefer building an optimized legs[] route, then call apply_hauling_contracts_intake with contracts + legs (and startLocation / sessionId when known). If legs are omitted, the server auto-merges contracts into stops.",

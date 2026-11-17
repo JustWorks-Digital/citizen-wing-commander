@@ -5,7 +5,7 @@
  * logical paths such as `<otherBatch>/<file>.png`).
  *
  * Usage:
- *   npm run session:copy-from-prod -- <sessionId|tripUrl>
+ *   npm run session:copy-from-prod -- <sessionId|sessionUrl>
  *   npm run session:copy-from-prod -- https://…/sessions/<uuid>
  *
  * Env:
@@ -134,7 +134,7 @@ async function main() {
   const sessionId = resolveSessionId(target);
   if (!sessionId) {
     console.error(
-      "Usage: npm run session:copy-from-prod -- <sessionId|tripUrl> [--no-select] [--skip-screenshots]",
+      "Usage: npm run session:copy-from-prod -- <sessionId|sessionUrl> [--no-select] [--skip-screenshots]",
     );
     process.exit(1);
   }

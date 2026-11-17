@@ -2,7 +2,7 @@
 /**
  * Capture a production hauling session into a curated test fixture pack.
  *
- *   npm run session:capture-fixture -- <sessionId|tripUrl> [--slug=name] [--assets=referenced|none]
+ *   npm run session:capture-fixture -- <sessionId|sessionUrl> [--slug=name] [--assets=referenced|none]
  *
  * Writes tests/sessions/<slug>/{meta,session,expectations}.json and optional assets/.
  * Does not upsert local DB (use session:copy-from-prod for that).
@@ -109,7 +109,7 @@ async function main() {
   const sessionId = resolveSessionId(target);
   if (!sessionId) {
     console.error(
-      "Usage: npm run session:capture-fixture -- <sessionId|tripUrl> [--slug=name] [--assets=referenced|none]",
+      "Usage: npm run session:capture-fixture -- <sessionId|sessionUrl> [--slug=name] [--assets=referenced|none]",
     );
     process.exit(1);
   }

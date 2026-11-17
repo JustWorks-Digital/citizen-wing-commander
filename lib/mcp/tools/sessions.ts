@@ -90,7 +90,7 @@ import {
   storeHaulingScreenshotBuffer,
   type HaulingScreenshotStatus,
 } from "@/lib/sessions/screenshotStore";
-import { sessionTripUrl } from "@/lib/sessions/sessionTripUrl";
+import { sessionPageUrl } from "@/lib/sessions/sessionTripUrl";
 import {
   listIntakeUploads,
   markIntakeUploadProcessed,
@@ -173,15 +173,16 @@ export async function toolCreateHaulingSession(input?: {
     sessionName: input?.sessionName,
     activate: input?.activate !== false,
   });
-  const trip = sessionTripUrl(session.id);
+  const page = sessionPageUrl(session.id);
   return textResult({
     ok: true,
-    message: `Created session ${session.id}${input?.activate === false ? "" : " (active)"}.`,
+    message: `Created session ${session.id}${input?.activate === false ? "" : " (active)"}. Open sessionUrl to view the session in the app.`,
     session: presentSession(session),
-    tripPath: trip.path,
-    tripUrl: trip.url,
+    sessionPath: page.path,
+    // Absolute URL (scheme + host + path) — always show this to the user.
+    sessionUrl: page.url,
     sourceHandoff:
-      "If chat attachments cannot be pushed to MCP, ask the user to open tripUrl → Source → paste Accepted contract shots → reply continue. Then list_hauling_screenshots (status=pending) + get_hauling_screenshot.",
+      "If chat attachments cannot be pushed to MCP, ask the user to open sessionUrl → Source → paste Accepted contract shots → reply continue. Then list_hauling_screenshots (status=pending) + get_hauling_screenshot.",
   });
 }
 

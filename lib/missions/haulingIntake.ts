@@ -10,6 +10,24 @@ export type HaulingIntakeCargoLine = {
   /** Fixture name, code, or slug (e.g. "Iron (Ore)", "STIM", "waste"). */
   commodity: string;
   scu: number;
+  /** Model self-reported confidence for this line (0–1), when extracted by vision. */
+  confidence?: number;
+};
+
+/**
+ * Per-field vision confidence (0 = guess / unreadable, 1 = clearly read).
+ * Model self-report — not a calibrated probability.
+ */
+export type HaulingIntakeFieldConfidence = {
+  title: number;
+  details: number;
+  rank?: number;
+  contractor?: number;
+  rewards?: number;
+  from: number;
+  to: number;
+  cargo: number;
+  scuMaxContainerSize?: number;
 };
 
 export type HaulingIntakeContract = {
@@ -17,8 +35,18 @@ export type HaulingIntakeContract = {
   id?: string;
   title: string;
   /**
-   * Hauling career rank (Trainee…Master), without the word “Rank”.
-   * Extracted from `title` when omitted.
+   * Full left-panel Details prose from the MobiGlas contract (usually starts
+   * with “Greetings”). Preserve line breaks when visible.
+   */
+  details?: string;
+  /**
+   * Vision confidence per major field (0–1). Required on OpenAI extract.
+   */
+  fieldConfidence?: HaulingIntakeFieldConfidence;
+  /**
+   * Hauling career rank only (Trainee…Master), without the word “Rank”
+   * and without the haul size (Small/Medium/…). Parsed from the title line
+   * when the screenshot shows e.g. “Member Rank - Small Cargo Haul”.
    */
   rank?: string | null;
   contractor?: string;

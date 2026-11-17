@@ -17,7 +17,7 @@ Client can pass:
 - a host-readable **`filePath`**
 - or **`imageBase64`**
 
-1. `create_hauling_session` (name from user / first contract). Note `tripUrl` / `sessionId`.
+1. `create_hauling_session` (name from user / first contract). Note `sessionUrl` (absolute session link with domain) / `sessionId`. Always show `sessionUrl` to the user.
 2. For each shot: `store_hauling_screenshot` with `sessionId` (= batch). Prefer ChatGPT **`file`**, then `fileUrl` / `filePath`; `imageBase64` fallback.
 3. Extract contracts (vision on those bytes or via `get_hauling_screenshot`).
 4. `apply_hauling_contracts_intake` with `contracts[].screenshots` = returned `logicalPath`s (+ optimized `legs` when ready).
@@ -31,7 +31,7 @@ Client can pass:
 When push is impossible or `store_hauling_screenshot` fails:
 
 1. Still **`create_hauling_session` immediately** (so the user has a trip to paste into).
-2. Reply with **`tripUrl`**: open the trip → **Source** → paste/drop all Accepted shots → reply **continue**.
+2. Reply with **`sessionUrl`**: open the session → **Source** → paste/drop all Accepted shots → reply **continue**.
 3. On continue: `list_hauling_screenshots` (`sessionId`, `status: "pending"`). If empty, ask again for Source uploads.
 4. For each pending shot: `get_hauling_screenshot` (**one image per call**) → vision extract.
 5. `apply_hauling_contracts_intake` with those `logicalPath`s on `contracts[].screenshots`.
@@ -117,7 +117,7 @@ Link evidence on each contract:
 
 | Tool | Purpose |
 | --- | --- |
-| `create_hauling_session` | New trip; returns `tripUrl` for Lane B Source handoff |
+| `create_hauling_session` | New trip; returns `sessionUrl` (absolute domain link) for Lane B Source handoff |
 | `store_hauling_screenshot` | Lane A: ChatGPT `file` (openai/fileParams) / fileUrl / filePath / imageBase64 → `.data/mcp-screenshots/<sessionId>/` |
 | `list_hauling_screenshots` | List Source shots (`status`: pending / processed / all; default pending) |
 | `get_hauling_screenshot` | Pull one image (base64) for vision — prefer one call per shot |
