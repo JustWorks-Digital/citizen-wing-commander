@@ -376,6 +376,59 @@ describe("missionScuAmounts", () => {
         .map((row) => row.cargoDeliveries[0]!.scu),
     ).toEqual([4, 4, 3]);
   });
+
+  it("sets pick-up SCU to 0 to skip that stop and rebalance remaining pickups", () => {
+    const session = multiPickupSession();
+    const result = missionScuAmounts.setPickupScuAtStop(session, {
+      missionId: "quartz",
+      commoditySlug: "quartz-raw",
+      locationSlug: "shubin-mining-facility-sm0-18",
+      scu: 0,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "pickup")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([0, 6, 5]);
+  });
+
+  it("sets delivery SCU at a stop and rebalances remaining drop-offs", () => {
+    const session = multiDeliverySession();
+    const result = missionScuAmounts.setDeliveryScuAtStop(session, {
+      missionId: "food",
+      commoditySlug: "processed-food",
+      locationSlug: "everus-harbor",
+      scu: 2,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Locked everus=2; remainder 9 split across baijini(3) + area18(4) → 4 + 5.
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "delivery")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([2, 4, 5]);
+  });
+
+  it("sets delivery SCU to 0 to clear that stop and rebalance remaining drop-offs", () => {
+    const session = multiDeliverySession();
+    const result = missionScuAmounts.setDeliveryScuAtStop(session, {
+      missionId: "food",
+      commoditySlug: "processed-food",
+      locationSlug: "everus-harbor",
+      scu: 0,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Locked everus=0; remainder 11 split across baijini(3) + area18(4) → 5 + 6.
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "delivery")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([0, 5, 6]);
+  });
 });
 
 function multiPickupSession(): SessionChecklist {

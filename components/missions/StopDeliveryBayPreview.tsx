@@ -9,6 +9,7 @@ import {
   resolveScuBoxSplitsCertainty,
   type ScuBoxSplitsIndicators,
 } from "@/lib/missions/scuCertainty";
+import { commoditySlugOf } from "@/lib/missions/missionScuShared";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
   planPickupHangarStacks,
@@ -26,8 +27,28 @@ export type StopDeliveryBayPreviewProps = {
   /** Session missions — used for crate-mix certainty on under-stack labels. */
   missions?: SessionMission[];
   className?: string;
-  /** Double-click under-stack cargo label to edit that mission’s box mix. */
+  /** Click under-stack cargo label to edit that mission’s box mix. */
   onEditMissionBoxes?: (missionId: string) => void;
+  /**
+   * Double-click under-stack SCU on pick-up Breakdown to edit quantity;
+   * remaining pick-ups rebalance. 0 clears.
+   */
+  onSetPickupScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  /**
+   * Double-click under-stack SCU on drop-off Breakdown to edit quantity;
+   * remaining drop-offs rebalance. 0 clears.
+   */
+  onSetDeliveryScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  /** Pending keys `missionId::commoditySlug::locationSlug` while SCU save runs. */
+  pendingSetStopScuKeys?: ReadonlySet<string>;
   /**
    * Show only one pad graph. Omit to render both (delivery then pickup).
    * Used to align each graph with its left-side Pickup / Drop off section.
@@ -233,6 +254,9 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   missions = [],
   className,
   onEditMissionBoxes,
+  onSetPickupScu,
+  onSetDeliveryScu,
+  pendingSetStopScuKeys,
   role,
   onSetCargoRoleHandled,
   pendingCargoRoleKeys,
@@ -277,6 +301,21 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
     }
     return map;
   }, [missions]);
+
+  const maxStopScuBySlug = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const mission of missions) {
+      for (const line of mission.cargo) {
+        const slug = commoditySlugOf(line.commodity);
+        if (!slug) continue;
+        const scu = Math.max(0, Math.floor(Number(line.scu) || 0));
+        map.set(slug, Math.max(map.get(slug) ?? 0, scu));
+      }
+    }
+    return map;
+  }, [missions]);
+
+  const canEditStopScu = !row.isCompleted;
 
   const deliveryPlan = useMemo(
     () => (showDelivery ? planStopCargoStacks(row, "delivery") : null),
@@ -376,6 +415,12 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
               boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
+              onSetStopScu={
+                canEditStopScu ? onSetDeliveryScu : undefined
+              }
+              maxStopScuBySlug={maxStopScuBySlug}
+              pendingSetStopScuKeys={pendingSetStopScuKeys}
+              locationSlug={row.locationSlug}
             />
             {deliveryHandled ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -476,6 +521,10 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               className="md:h-full"
               onEditMissionBoxes={onEditMissionBoxes}
               boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
+              onSetStopScu={canEditStopScu ? onSetPickupScu : undefined}
+              maxStopScuBySlug={maxStopScuBySlug}
+              pendingSetStopScuKeys={pendingSetStopScuKeys}
+              locationSlug={row.locationSlug}
             />
             {pickupHandled ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">

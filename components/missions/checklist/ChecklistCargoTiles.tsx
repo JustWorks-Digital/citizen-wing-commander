@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { describeCargoDeliveries, getCommodityIconSrc } from "@/lib/fixtures";
 import {
   commodityBadgeBackground,
@@ -134,6 +134,9 @@ export function CargoCommodityTile({
   onSkipPickup,
   canSkipPickup,
   pendingSkipPickupKeys,
+  onSetPickupScu,
+  pendingSetPickupScuKeys,
+  maxPickupScu = null,
 }: {
   row: HaulingChecklistRow;
   line: CargoLine;
@@ -149,6 +152,15 @@ export function CargoCommodityTile({
   onSkipPickup?: (missionId: string, commoditySlug: string) => void;
   canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
   pendingSkipPickupKeys?: ReadonlySet<string>;
+  /** Set pick-up SCU at this stop; remaining pick-ups rebalance. */
+  onSetPickupScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  pendingSetPickupScuKeys?: ReadonlySet<string>;
+  /** Mission commodity total — edit cannot exceed it. */
+  maxPickupScu?: number | null;
 }) {
   const cleared = line.isHandled;
   const isCargoPending =
@@ -159,12 +171,13 @@ export function CargoCommodityTile({
     line.sourceIndex != null &&
     !isCargoPending;
   const commoditySlug = line.commoditySlug?.trim() || "";
+  const currentScu = Math.max(0, Math.floor(Number(line.scu) || 0));
   const skipAllowed =
     isPickup &&
     Boolean(onSkipPickup) &&
     Boolean(missionId) &&
     commoditySlug.length > 0 &&
-    (line.scu ?? 0) > 0 &&
+    currentScu > 0 &&
     !row.isCompleted;
   const canSkip =
     skipAllowed && (canSkipPickup?.(missionId!, commoditySlug) ?? false);
@@ -175,6 +188,21 @@ export function CargoCommodityTile({
   const isSkipPending = Boolean(
     skipPendingKey && pendingSkipPickupKeys?.has(skipPendingKey),
   );
+  const isSetScuPending = Boolean(
+    skipPendingKey && pendingSetPickupScuKeys?.has(skipPendingKey),
+  );
+  const canEditPickupScu =
+    isPickup &&
+    Boolean(onSetPickupScu) &&
+    Boolean(missionId) &&
+    commoditySlug.length > 0 &&
+    currentScu > 0 &&
+    !row.isCompleted &&
+    !isSkipPending &&
+    !isSetScuPending;
+  const [isEditingScu, setIsEditingScu] = useState(false);
+  const [scuText, setScuText] = useState(String(currentScu));
+  const scuInputRef = useRef<HTMLInputElement>(null);
   const cargoHex = resolveCommodityColorHex(
     line.color,
     line.color2,
@@ -193,11 +221,79 @@ export function CargoCommodityTile({
   const tileFg = cargoHex
     ? commodityBadgeForeground(cargoHex)
     : "var(--rsi-text-secondary)";
-  const statusSuffix = isCargoPending
+  const statusSuffix = isCargoPending || isSetScuPending
     ? "updating…"
     : cleared
       ? `marked ${handledVerb}`
       : `click to mark ${handledVerb}`;
+  const scuEditHint = canEditPickupScu
+    ? "Double-click SCU to edit — remaining pickups rebalance"
+    : null;
+
+  useEffect(() => {
+    if (isEditingScu) return;
+    setScuText(String(currentScu));
+  }, [currentScu, isEditingScu]);
+
+  useEffect(() => {
+    if (!isEditingScu) return;
+    const node = scuInputRef.current;
+    if (!node) return;
+    node.focus();
+    node.select();
+  }, [isEditingScu]);
+
+  const commitPickupScu = () => {
+    setIsEditingScu(false);
+    if (!canEditPickupScu || !missionId || !commoditySlug) return;
+    const maxScu =
+      maxPickupScu != null && maxPickupScu > 0
+        ? Math.floor(maxPickupScu)
+        : currentScu;
+    const parsed = Math.min(
+      maxScu,
+      Math.max(0, Math.floor(Number(scuText) || 0)),
+    );
+    setScuText(String(parsed));
+    if (parsed === currentScu) return;
+    onSetPickupScu?.(missionId, commoditySlug, parsed);
+  };
+
+  const tileClassName = [
+    // Mobile: corner icon. md+: centered stack; density follows cargo @container.
+    "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
+    "md:gap-0.5 md:px-1 md:py-1",
+    "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
+    "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
+    "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+    isCargoPending || isSetScuPending
+      ? "cursor-wait"
+      : canToggle && !isEditingScu
+        ? "cursor-pointer"
+        : "cursor-default",
+    doneClass,
+    cleared && !isCargoPending && !isSetScuPending ? "opacity-40" : "",
+  ].join(" ");
+
+  const tileStyle = {
+    backgroundColor: tileBg,
+    borderColor: tileBorder,
+    color: tileFg,
+  };
+
+  const iconMaskStyle = {
+    WebkitMaskImage: `url(${iconSrc})`,
+    maskImage: `url(${iconSrc})`,
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
+  } as const;
+
+  const scuNumberClass =
+    "text-sm font-semibold leading-none md:text-[0.6rem] md:@[17rem]/cargo:text-[0.65rem]";
 
   return (
     <div className="relative min-w-0">
@@ -206,15 +302,15 @@ export function CargoCommodityTile({
           type="button"
           aria-label={`Skip pick up of ${commodityName} at this stop`}
           aria-busy={isSkipPending || undefined}
-          disabled={isSkipPending || !canSkip}
+          disabled={isSkipPending || !canSkip || isEditingScu}
           title={
             canSkip
               ? "Skip pick up — remaining stops absorb this SCU"
               : "Can't skip — this is the only pick-up stop for this cargo"
           }
           className={[
-            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center rounded-sm border-0 font-mono text-[0.85rem] leading-none shadow-none transition-colors",
-            "bg-rsi-bg-deep/55 text-rsi-text",
+            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center rounded-sm border-0 bg-transparent font-mono text-[0.85rem] leading-none shadow-none transition-colors",
+            "text-rsi-text",
             isSkipPending
               ? "cursor-wait opacity-70"
               : canSkip
@@ -224,7 +320,7 @@ export function CargoCommodityTile({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            if (isSkipPending || !canSkip) return;
+            if (isSkipPending || !canSkip || isEditingScu) return;
             onSkipPickup?.(missionId, commoditySlug);
           }}
         >
@@ -235,84 +331,123 @@ export function CargoCommodityTile({
           )}
         </button>
       ) : null}
-      <button
-        type="button"
-        title={[fullLabel, statusSuffix].join(" · ")}
-        aria-label={fullLabel}
-        aria-pressed={cleared}
-        aria-busy={isCargoPending}
-        disabled={!canToggle && !isCargoPending}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (line.sourceIndex == null || isCargoPending) return;
-          void onToggleCargoHandled?.(row.id, line.sourceIndex);
-        }}
-        className={[
-          // Mobile: corner icon. md+: centered stack; density follows cargo @container.
-          "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
-          "md:gap-0.5 md:px-1 md:py-1",
-          "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
-          "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
-          "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-          isCargoPending
-            ? "cursor-wait"
-            : canToggle
-              ? "cursor-pointer"
-              : "cursor-default",
-          doneClass,
-          cleared && !isCargoPending ? "opacity-40" : "",
-        ].join(" ")}
-        style={{
-          backgroundColor: tileBg,
-          borderColor: tileBorder,
-          color: tileFg,
-        }}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
-          style={{
-            WebkitMaskImage: `url(${iconSrc})`,
-            maskImage: `url(${iconSrc})`,
-            WebkitMaskSize: "contain",
-            maskSize: "contain",
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            maskPosition: "center",
-          }}
-        />
-        <span
-          aria-hidden
-          className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
-          style={{
-            WebkitMaskImage: `url(${iconSrc})`,
-            maskImage: `url(${iconSrc})`,
-            WebkitMaskSize: "contain",
-            maskSize: "contain",
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
-            maskPosition: "center",
-          }}
-        />
-        <span className="text-sm font-semibold leading-none md:text-[0.6rem] md:@[17rem]/cargo:text-[0.65rem]">
-          {line.scu}
-        </span>
-        <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
-          {commodityName}
-        </span>
-        {isCargoPending ? (
+      {isEditingScu ? (
+        <div
+          className={tileClassName}
+          style={tileStyle}
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
-          >
-            <Spinner className="size-3.5 text-rsi-accent" />
+            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
+            style={iconMaskStyle}
+          />
+          <span
+            aria-hidden
+            className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+            style={iconMaskStyle}
+          />
+          <label className="sr-only" htmlFor={`pickup-scu-${row.id}-${commoditySlug}`}>
+            {commodityName} pick-up SCU
+          </label>
+          <input
+            ref={scuInputRef}
+            id={`pickup-scu-${row.id}-${commoditySlug}`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={maxPickupScu != null && maxPickupScu > 0 ? maxPickupScu : undefined}
+            step={1}
+            value={scuText}
+            aria-label={`${commodityName} pick-up SCU`}
+            className={[
+              scuNumberClass,
+              "w-[2.75rem] rounded-sm border border-rsi-accent/55 bg-rsi-bg-deep/70 px-0.5 py-0.5 text-center tabular-nums text-rsi-text outline-none focus:border-rsi-accent",
+            ].join(" ")}
+            onChange={(event) => setScuText(event.target.value)}
+            onBlur={commitPickupScu}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                (event.target as HTMLInputElement).blur();
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setScuText(String(currentScu));
+                setIsEditingScu(false);
+              }
+            }}
+          />
+          <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
+            {commodityName}
           </span>
-        ) : cleared ? (
-          <CargoTileHandledMark isPickup={isPickup} />
-        ) : null}
-      </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          title={[fullLabel, scuEditHint, statusSuffix]
+            .filter(Boolean)
+            .join(" · ")}
+          aria-label={fullLabel}
+          aria-pressed={cleared}
+          aria-busy={isCargoPending || isSetScuPending || undefined}
+          disabled={!canToggle && !isCargoPending && !isSetScuPending}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (line.sourceIndex == null || isCargoPending || isSetScuPending)
+              return;
+            void onToggleCargoHandled?.(row.id, line.sourceIndex);
+          }}
+          className={tileClassName}
+          style={tileStyle}
+        >
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
+            style={iconMaskStyle}
+          />
+          <span
+            aria-hidden
+            className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+            style={iconMaskStyle}
+          />
+          <span
+            className={[
+              scuNumberClass,
+              canEditPickupScu ? "rounded-sm hover:ring-1 hover:ring-rsi-accent/40" : "",
+            ].join(" ")}
+            title={scuEditHint ?? undefined}
+            onClick={(event) => {
+              if (!canEditPickupScu) return;
+              // Keep double-click from toggling handled on the tile button.
+              event.stopPropagation();
+            }}
+            onDoubleClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!canEditPickupScu) return;
+              setScuText(String(currentScu));
+              setIsEditingScu(true);
+            }}
+          >
+            {line.scu}
+          </span>
+          <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
+            {commodityName}
+          </span>
+          {isCargoPending || isSetScuPending ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
+            >
+              <Spinner className="size-3.5 text-rsi-accent" />
+            </span>
+          ) : cleared ? (
+            <CargoTileHandledMark isPickup={isPickup} />
+          ) : null}
+        </button>
+      )}
     </div>
   );
 }
@@ -327,6 +462,9 @@ export function CargoCommodityTiles({
   onSkipPickup,
   canSkipPickup,
   pendingSkipPickupKeys,
+  onSetPickupScu,
+  pendingSetPickupScuKeys,
+  maxPickupScuBySlug = null,
 }: {
   row: HaulingChecklistRow;
   items: CargoLine[];
@@ -340,6 +478,13 @@ export function CargoCommodityTiles({
   onSkipPickup?: (missionId: string, commoditySlug: string) => void;
   canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
   pendingSkipPickupKeys?: ReadonlySet<string>;
+  onSetPickupScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  pendingSetPickupScuKeys?: ReadonlySet<string>;
+  maxPickupScuBySlug?: ReadonlyMap<string, number> | null;
 }) {
   const doneClass = row.isCompleted ? "opacity-70" : "";
   const isPickup = role === "pickup";
@@ -361,6 +506,15 @@ export function CargoCommodityTiles({
           onSkipPickup={onSkipPickup}
           canSkipPickup={canSkipPickup}
           pendingSkipPickupKeys={pendingSkipPickupKeys}
+          onSetPickupScu={isPickup ? onSetPickupScu : undefined}
+          pendingSetPickupScuKeys={
+            isPickup ? pendingSetPickupScuKeys : undefined
+          }
+          maxPickupScu={
+            isPickup && line.commoditySlug
+              ? (maxPickupScuBySlug?.get(line.commoditySlug) ?? null)
+              : null
+          }
         />
       ))}
     </div>
@@ -682,6 +836,8 @@ export function CargoGroups({
   pendingSkipPickupKeys,
   onAddPickup,
   pendingAddPickupKeys,
+  onSetPickupScu,
+  pendingSetPickupScuKeys,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -713,6 +869,16 @@ export function CargoGroups({
     scu: number,
   ) => void;
   pendingAddPickupKeys?: ReadonlySet<string>;
+  /**
+   * Edit pick-up SCU on a Breakdown tile (double-click number → blur).
+   * Remaining pick-up stops rebalance for that commodity.
+   */
+  onSetPickupScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  pendingSetPickupScuKeys?: ReadonlySet<string>;
 }) {
   const groups = groupCargoLines(cargoLines);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
@@ -819,6 +985,16 @@ export function CargoGroups({
                   return null;
                 }
 
+                const maxPickupScuBySlug =
+                  group.role === "pickup" && mission
+                    ? new Map(
+                        mission.cargo.map((cargoLine) => [
+                          commoditySlugOf(cargoLine.commodity),
+                          Math.max(0, Math.floor(Number(cargoLine.scu) || 0)),
+                        ]),
+                      )
+                    : null;
+
                 const tiles =
                   activeItems.length > 0 ? (
                     <CargoCommodityTiles
@@ -839,6 +1015,15 @@ export function CargoGroups({
                           ? pendingSkipPickupKeys
                           : undefined
                       }
+                      onSetPickupScu={
+                        group.role === "pickup" ? onSetPickupScu : undefined
+                      }
+                      pendingSetPickupScuKeys={
+                        group.role === "pickup"
+                          ? pendingSetPickupScuKeys
+                          : undefined
+                      }
+                      maxPickupScuBySlug={maxPickupScuBySlug}
                     />
                   ) : null;
 

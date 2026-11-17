@@ -442,8 +442,9 @@ export const missionScuMutate = {
   },
 
   /**
-   * Set pick-up SCU for a mission commodity at one stop (add or restore after
-   * skip). Rebalances other pick-up stops so the mission total stays fixed.
+   * Set pick-up SCU for a mission commodity at one stop (add, restore after
+   * skip, or edit). Rebalances other pick-up stops so the mission total stays
+   * fixed. SCU 0 skips this stop (same as {@link skipPickupAtStop}).
    */
   setPickupScuAtStop(
     session: SessionChecklist,
@@ -456,7 +457,11 @@ export const missionScuMutate = {
   ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
     const amount = Math.max(0, Math.floor(Number(input.scu) || 0));
     if (amount <= 0) {
-      return { ok: false, error: "Pick-up SCU must be greater than 0." };
+      return missionScuMutate.skipPickupAtStop(session, {
+        missionId: input.missionId,
+        commoditySlug: input.commoditySlug,
+        locationSlug: input.locationSlug,
+      });
     }
     const mission = (session.missions ?? []).find(
       (entry) => entry.id === input.missionId,
@@ -492,6 +497,53 @@ export const missionScuMutate = {
     );
     draft = missionScuDraft.setPickupScuInDraft(
       draft,
+      slug,
+      locationSlugOf(input.locationSlug),
+      amount,
+    );
+    return missionScuMutate.applyDraft(session, input.missionId, draft);
+  },
+
+  /**
+   * Set delivery SCU for a mission commodity at one stop. Rebalances other
+   * delivery stops so the mission total stays fixed. SCU 0 clears this stop.
+   */
+  setDeliveryScuAtStop(
+    session: SessionChecklist,
+    input: {
+      missionId: string;
+      commoditySlug: string;
+      locationSlug: string;
+      scu: number;
+    },
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
+    const amount = Math.max(0, Math.floor(Number(input.scu) || 0));
+    const mission = (session.missions ?? []).find(
+      (entry) => entry.id === input.missionId,
+    );
+    if (!mission) {
+      return { ok: false, error: `Unknown mission: ${input.missionId}` };
+    }
+    if (mission.isCompleted) {
+      return {
+        ok: false,
+        error: "Completed contracts cannot change deliveries.",
+      };
+    }
+    const slug =
+      resolveCommoditySlug(input.commoditySlug) ??
+      input.commoditySlug.trim().toLowerCase();
+    const cargoLine = mission.cargo.find(
+      (line) => commoditySlugOf(line.commodity) === slug,
+    );
+    if (!cargoLine) {
+      return {
+        ok: false,
+        error: `Commodity ${input.commoditySlug} is not on this mission.`,
+      };
+    }
+    const draft = missionScuDraft.setDeliveryScuInDraft(
+      missionScuDraft.draftFromMission(mission, session.rows),
       slug,
       locationSlugOf(input.locationSlug),
       amount,

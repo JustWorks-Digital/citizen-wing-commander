@@ -33,6 +33,7 @@ export const missionScuAmounts = {
   applyDraft: missionScuMutate.applyDraft,
   skipPickupAtStop: missionScuMutate.skipPickupAtStop,
   setPickupScuAtStop: missionScuMutate.setPickupScuAtStop,
+  setDeliveryScuAtStop: missionScuMutate.setDeliveryScuAtStop,
   setCommodityTotal: missionScuMutate.setCommodityTotal,
   setLocationAmount: missionScuMutate.setLocationAmount,
 };

@@ -176,7 +176,7 @@ export type MissionChecklistTableProps = {
   onOpenStops?: () => void;
   /** Open contracts table; pass a mission id to highlight that row. */
   onOpenContracts?: (missionId?: string) => void;
-  /** Persist crate mix for a session mission (Pickup / Drop off double-click). */
+  /** Persist crate mix for a session mission (Pickup / Drop off click). */
   onSelectBoxBreakdown?: (
     missionId: string,
     commoditySlug: string,
@@ -202,6 +202,16 @@ export type MissionChecklistTableProps = {
    * (mission-card Add cargo).
    */
   onSetPickupScuAtStop?: (input: {
+    missionId: string;
+    commoditySlug: string;
+    locationSlug: string;
+    scu: number;
+  }) => void | Promise<void>;
+  /**
+   * Set drop-off SCU at this stop and rebalance remaining deliveries.
+   * SCU 0 clears that cargo at the stop.
+   */
+  onSetDeliveryScuAtStop?: (input: {
     missionId: string;
     commoditySlug: string;
     locationSlug: string;
@@ -279,6 +289,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onSaveMissionScuDraft,
   onSkipPickupAtStop,
   onSetPickupScuAtStop,
+  onSetDeliveryScuAtStop,
   isSaving = false,
   isLoading = false,
 }: MissionChecklistTableProps) {
@@ -317,7 +328,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const [draftingAfterRowId, setDraftingAfterRowId] = useState<string | null>(
     null,
   );
-  /** Double-click Pickup / Drop off crate → box mix modal. */
+  /** Click Pickup / Drop off crate → box mix modal. */
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
   /** Completed Done-strip row expanded to full card (history shown). */
   const [expandedCompletedRowId, setExpandedCompletedRowId] = useState<
@@ -473,6 +484,32 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     markPendingId(setPendingQuantumRowIds, rowId, true);
     return Promise.resolve(action()).finally(() => {
       markPendingId(setPendingQuantumRowIds, rowId, false);
+    });
+  };
+
+  /** Add or edit pick-up / drop-off SCU at a stop (shared pending key). */
+  const queueSetStopScuAtStop = (
+    role: "pickup" | "delivery",
+    locationSlug: string,
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => {
+    const handler =
+      role === "pickup" ? onSetPickupScuAtStop : onSetDeliveryScuAtStop;
+    if (!handler) return;
+    const key = `${missionId}::${commoditySlug}::${locationSlug}`;
+    if (pendingAddPickupKeys.has(key)) return;
+    markPendingId(setPendingAddPickupKeys, key, true);
+    void Promise.resolve(
+      handler({
+        missionId,
+        commoditySlug,
+        locationSlug,
+        scu,
+      }),
+    ).finally(() => {
+      markPendingId(setPendingAddPickupKeys, key, false);
     });
   };
 
@@ -1221,31 +1258,35 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         onAddPickup={
                           onSetPickupScuAtStop && !row.isCompleted
                             ? (missionId, commoditySlug, scu) => {
-                                const key = `${missionId}::${commoditySlug}::${row.locationSlug}`;
-                                if (pendingAddPickupKeys.has(key)) return;
-                                setPendingAddPickupKeys((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(key);
-                                  return next;
-                                });
-                                void Promise.resolve(
-                                  onSetPickupScuAtStop({
-                                    missionId,
-                                    commoditySlug,
-                                    locationSlug: row.locationSlug,
-                                    scu,
-                                  }),
-                                ).finally(() => {
-                                  setPendingAddPickupKeys((prev) => {
-                                    const next = new Set(prev);
-                                    next.delete(key);
-                                    return next;
-                                  });
-                                });
+                                queueSetStopScuAtStop(
+                                  "pickup",
+                                  row.locationSlug,
+                                  missionId,
+                                  commoditySlug,
+                                  scu,
+                                );
                               }
                             : undefined
                         }
                         pendingAddPickupKeys={
+                          pendingAddPickupKeys.size > 0
+                            ? pendingAddPickupKeys
+                            : undefined
+                        }
+                        onSetPickupScu={
+                          onSetPickupScuAtStop && !row.isCompleted
+                            ? (missionId, commoditySlug, scu) => {
+                                queueSetStopScuAtStop(
+                                  "pickup",
+                                  row.locationSlug,
+                                  missionId,
+                                  commoditySlug,
+                                  scu,
+                                );
+                              }
+                            : undefined
+                        }
+                        pendingSetPickupScuKeys={
                           pendingAddPickupKeys.size > 0
                             ? pendingAddPickupKeys
                             : undefined
@@ -1266,6 +1307,37 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                                       return;
                                     setBoxEditMissionId(missionId);
                                   }
+                                : undefined
+                            }
+                            onSetPickupScu={
+                              onSetPickupScuAtStop && !row.isCompleted
+                                ? (missionId, commoditySlug, scu) => {
+                                    queueSetStopScuAtStop(
+                                      "pickup",
+                                      row.locationSlug,
+                                      missionId,
+                                      commoditySlug,
+                                      scu,
+                                    );
+                                  }
+                                : undefined
+                            }
+                            onSetDeliveryScu={
+                              onSetDeliveryScuAtStop && !row.isCompleted
+                                ? (missionId, commoditySlug, scu) => {
+                                    queueSetStopScuAtStop(
+                                      "delivery",
+                                      row.locationSlug,
+                                      missionId,
+                                      commoditySlug,
+                                      scu,
+                                    );
+                                  }
+                                : undefined
+                            }
+                            pendingSetStopScuKeys={
+                              pendingAddPickupKeys.size > 0
+                                ? pendingAddPickupKeys
                                 : undefined
                             }
                             onSetCargoRoleHandled={

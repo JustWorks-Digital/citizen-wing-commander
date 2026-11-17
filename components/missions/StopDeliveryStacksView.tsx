@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import {
+  commodityBadgeBackground,
+  commodityBadgeBorder,
+  commodityBadgeForeground,
+  resolveCommodityColorHex,
+} from "@/lib/fixtures/commodityColors";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import type { ScuBoxSplitsIndicators } from "@/lib/missions/scuCertainty";
@@ -27,13 +32,30 @@ export type StopDeliveryStacksViewProps = {
    * space. Mobile keeps the fixed max frame height.
    */
   fillAvailableHeight?: boolean;
-  /** Double-click the under-stack cargo label (abbrev + SCU) to edit crate mix. */
+  /** Click under-stack abbrev / box to edit crate mix. */
   onEditMissionBoxes?: (missionId: string) => void;
   /**
    * Per-mission crate-mix dots on under-stack SCU boxes (independent):
    * warn = AI uncertain, accent = manual overwrite. Both may show.
    */
   boxSplitIndicatorsByMissionId?: ReadonlyMap<string, ScuBoxSplitsIndicators>;
+  /**
+   * Double-click under-stack SCU to edit quantity (pick-up or drop-off);
+   * remaining same-role stops rebalance on blur. 0 clears this stop.
+   */
+  onSetStopScu?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  /** Mission commodity totals keyed by commodity slug. */
+  maxStopScuBySlug?: ReadonlyMap<string, number> | null;
+  /**
+   * Pending keys `missionId::commoditySlug::locationSlug` while SCU save runs.
+   */
+  pendingSetStopScuKeys?: ReadonlySet<string>;
+  /** Stop location slug — pairs with pending SCU keys. */
+  locationSlug?: string | null;
 };
 
 type Point = { x: number; y: number };
@@ -231,10 +253,18 @@ export function StopDeliveryStacksView({
   fillAvailableHeight = false,
   onEditMissionBoxes,
   boxSplitIndicatorsByMissionId,
+  onSetStopScu,
+  maxStopScuBySlug = null,
+  pendingSetStopScuKeys,
+  locationSlug = null,
 }: StopDeliveryStacksViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(true);
   const peelStack = peelStackProp ?? peelStackInternal;
   const [zoom, setZoom] = useState(1);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [scuEditText, setScuEditText] = useState("");
+  /** Escape cancels — skip the following blur commit. */
+  const skipScuCommitRef = useRef(false);
 
   function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
     const next = typeof value === "function" ? value(peelStack) : value;
@@ -666,6 +696,33 @@ export function StopDeliveryStacksView({
               );
               const canEditBoxes =
                 Boolean(onEditMissionBoxes) && Boolean(label.missionId);
+              const pendingScuKey =
+                label.missionId && label.commoditySlug && locationSlug
+                  ? `${label.missionId}::${label.commoditySlug}::${locationSlug}`
+                  : null;
+              const isScuPending = Boolean(
+                pendingScuKey && pendingSetStopScuKeys?.has(pendingScuKey),
+              );
+              const canEditStopScu =
+                (displayPlan.action === "pickup" ||
+                  displayPlan.action === "delivery") &&
+                Boolean(onSetStopScu) &&
+                Boolean(label.missionId) &&
+                label.scu > 0 &&
+                !isScuPending;
+              const isEditingScu = editingLabelId === label.id;
+              const roleVerb =
+                displayPlan.action === "pickup" ? "pickups" : "drop-offs";
+              // Same commodity chip colors as left-side cargo tiles / stack crates.
+              const cargoHex =
+                resolveCommodityColorHex(
+                  null,
+                  null,
+                  label.commoditySlug,
+                ) ?? FALLBACK_HEX;
+              const labelBoxFill = commodityBadgeBackground(cargoHex);
+              const labelBoxStroke = commodityBadgeBorder(cargoHex);
+              const labelAbbrevFill = commodityBadgeForeground(cargoHex);
               const boxSplitIndicators =
                 label.missionId != null
                   ? (boxSplitIndicatorsByMissionId?.get(
@@ -676,9 +733,14 @@ export function StopDeliveryStacksView({
                 displayPlan.action === "pickup"
                   ? `${label.scu} ${SCU_TITLE} pick up · ${label.commodityName}`
                   : `${label.scu} ${SCU_TITLE} drop off · ${label.commodityName}`;
-              const editHint = canEditBoxes
-                ? " · Double-click to edit box types"
-                : "";
+              const editHints = [
+                canEditBoxes ? "Click to edit box types" : null,
+                canEditStopScu
+                  ? `Double-click SCU to edit — remaining ${roleVerb} rebalance; 0 removes`
+                  : null,
+              ].filter(Boolean);
+              const editHint =
+                editHints.length > 0 ? ` · ${editHints.join(" · ")}` : "";
               const indicatorHints = [
                 boxSplitIndicators?.uncertain ? "Crate mix estimated" : null,
                 boxSplitIndicators?.overridden ? "Crate mix overridden" : null,
@@ -730,16 +792,39 @@ export function StopDeliveryStacksView({
                   title: "Crate mix overridden",
                 });
               }
+
+              const commitStopScu = () => {
+                setEditingLabelId(null);
+                if (skipScuCommitRef.current) {
+                  skipScuCommitRef.current = false;
+                  return;
+                }
+                if (!canEditStopScu || !label.missionId) return;
+                const maxScu = Math.max(
+                  0,
+                  maxStopScuBySlug?.get(label.commoditySlug) ?? label.scu,
+                );
+                const parsed = Math.min(
+                  maxScu,
+                  Math.max(0, Math.floor(Number(scuEditText) || 0)),
+                );
+                setScuEditText(String(parsed));
+                if (parsed === label.scu) return;
+                onSetStopScu?.(
+                  label.missionId,
+                  label.commoditySlug,
+                  parsed,
+                );
+              };
+
               return (
                 <g
                   key={`label-${label.id}`}
-                  style={canEditBoxes ? { cursor: "pointer" } : undefined}
-                  onDoubleClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (!canEditBoxes || !label.missionId) return;
-                    onEditMissionBoxes?.(label.missionId);
-                  }}
+                  style={
+                    canEditBoxes || canEditStopScu
+                      ? { cursor: "pointer" }
+                      : undefined
+                  }
                 >
                   <title>{`${scuTitle}${indicatorHint}${editHint}`}</title>
                   <rect
@@ -748,9 +833,16 @@ export function StopDeliveryStacksView({
                     width={boxW}
                     height={boxH}
                     rx={3}
-                    fill="var(--rsi-bg-deep)"
-                    stroke="var(--rsi-border-strong)"
+                    fill={labelBoxFill}
+                    stroke={labelBoxStroke}
                     strokeWidth={1}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (isEditingScu) return;
+                      if (!canEditBoxes || !label.missionId) return;
+                      onEditMissionBoxes?.(label.missionId);
+                    }}
                   />
                   {indicatorDots.map((dot, index) => (
                     <circle
@@ -773,33 +865,132 @@ export function StopDeliveryStacksView({
                     y={abbrevY}
                     textAnchor="middle"
                     dominantBaseline="hanging"
-                    fill="var(--rsi-text-secondary)"
+                    fill={labelAbbrevFill}
                     style={{
                       fontFamily: "var(--font-mono, ui-monospace, monospace)",
                       fontSize: abbrevSize,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
                     }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (isEditingScu) return;
+                      if (!canEditBoxes || !label.missionId) return;
+                      onEditMissionBoxes?.(label.missionId);
+                    }}
                   >
                     <title>{label.commodityName}</title>
                     {label.abbrev}
                   </text>
-                  <text
-                    x={foot.x}
-                    y={scuY}
-                    textAnchor="middle"
-                    dominantBaseline="hanging"
-                    fill="var(--rsi-text)"
+                  {isEditingScu ? (
+                    <foreignObject
+                      x={boxX + 2}
+                      y={scuY - 1}
+                      width={Math.max(24, boxW - 4)}
+                      height={scuSize + 6}
+                    >
+                      <div
+                        // eslint-disable-next-line react/no-unknown-property -- SVG foreignObject HTML root
+                        xmlns="http://www.w3.org/1999/xhtml"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "100%",
+                          height: "100%",
+                        }}
+                      >
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={
+                            maxStopScuBySlug?.get(label.commoditySlug) ??
+                            undefined
+                          }
+                          step={1}
+                          value={scuEditText}
+                          aria-label={`${label.commodityName} ${displayPlan.action === "pickup" ? "pick-up" : "drop-off"} SCU`}
+                          autoFocus
+                          onFocus={(event) => event.currentTarget.select()}
+                          onChange={(event) =>
+                            setScuEditText(event.target.value)
+                          }
+                          onBlur={commitStopScu}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              (event.target as HTMLInputElement).blur();
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              skipScuCommitRef.current = true;
+                              setScuEditText(String(label.scu));
+                              setEditingLabelId(null);
+                              (event.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          onDoubleClick={(event) => event.stopPropagation()}
+                          style={{
+                            width: "100%",
+                            maxWidth: "3.25rem",
+                            boxSizing: "border-box",
+                            margin: 0,
+                            padding: "0 2px",
+                            border: "1px solid color-mix(in srgb, var(--rsi-accent) 55%, transparent)",
+                            borderRadius: 2,
+                            background:
+                              "color-mix(in srgb, var(--rsi-bg-deep) 70%, transparent)",
+                            color: "var(--rsi-text)",
+                            fontFamily:
+                              "var(--font-mono, ui-monospace, monospace)",
+                            fontSize: scuSize,
+                            fontVariantNumeric: "tabular-nums",
+                            letterSpacing: "0.04em",
+                            textAlign: "center",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
+                    </foreignObject>
+                  ) : (
+                    <text
+                      x={foot.x}
+                      y={scuY}
+                      textAnchor="middle"
+                      dominantBaseline="hanging"
+                    fill={labelAbbrevFill}
                     style={{
-                      fontFamily: "var(--font-mono, ui-monospace, monospace)",
+                      fontFamily:
+                          "var(--font-mono, ui-monospace, monospace)",
                       fontSize: scuSize,
                       fontVariantNumeric: "tabular-nums",
                       letterSpacing: "0.04em",
+                      cursor: canEditStopScu ? "text" : undefined,
+                    }}
+                    onClick={(event) => {
+                      // Don't open box-types modal from the SCU number.
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onDoubleClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (!canEditStopScu || !label.missionId) return;
+                      setScuEditText(String(label.scu));
+                      setEditingLabelId(label.id);
                     }}
                   >
-                    <title>{SCU_TITLE}</title>
+                    <title>
+                      {canEditStopScu
+                        ? `Double-click to edit ${SCU_TITLE}`
+                        : SCU_TITLE}
+                    </title>
                     {label.scu}
                   </text>
+                  )}
                 </g>
               );
             })}

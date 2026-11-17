@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Copy one hauling delivery session from production → local Postgres +
- * `.data/mcp-screenshots/<sessionId>/` (including Source pending/processed status).
+ * `.data/mcp-screenshots/` (session Source folder + any mission-referenced
+ * logical paths such as `<otherBatch>/<file>.png`).
  *
  * Usage:
  *   npm run session:copy-from-prod -- <sessionId|tripUrl>
@@ -57,6 +58,43 @@ function resolveSessionId(raw) {
   const fromUrl = trimmed.match(UUID_RE);
   if (fromUrl) return fromUrl[0].toLowerCase();
   return null;
+}
+
+/**
+ * @param {string | null | undefined} logicalPath
+ * @returns {{ batchId: string, filename: string, logicalPath: string } | null}
+ */
+function parseLogicalPath(logicalPath) {
+  const trimmed = logicalPath?.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split("/").filter(Boolean);
+  if (parts.length < 2) return null;
+  const batchId = parts[0];
+  const filename = parts.slice(1).join("/");
+  if (!batchId || !filename) return null;
+  return { batchId, filename, logicalPath: `${batchId}/${filename}` };
+}
+
+/** Collect `batchId/filename` refs from session mission screenshot fields. */
+function missionScreenshotRefs(checklist) {
+  /** @type {Map<string, { batchId: string, filename: string, logicalPath: string }>} */
+  const byPath = new Map();
+  for (const mission of checklist?.missions ?? []) {
+    const candidates = [];
+    if (Array.isArray(mission?.screenshots)) {
+      candidates.push(...mission.screenshots);
+    }
+    if (typeof mission?.latestScreenshotPath === "string") {
+      candidates.push(mission.latestScreenshotPath);
+    }
+    for (const candidate of candidates) {
+      if (typeof candidate !== "string") continue;
+      const parsed = parseLogicalPath(candidate);
+      if (!parsed) continue;
+      byPath.set(parsed.logicalPath, parsed);
+    }
+  }
+  return [...byPath.values()];
 }
 
 async function fetchJson(url) {
@@ -163,8 +201,38 @@ async function main() {
       "utf8",
     );
     console.log(
-      `Wrote ${downloaded} screenshot(s) + status (${processedFilenames.length} processed) → ${path.relative(root, batchDir)}`,
+      `Wrote ${downloaded} Source screenshot(s) + status (${processedFilenames.length} processed) → ${path.relative(root, batchDir)}`,
     );
+
+    // Mission.screenshots often point at the intake/source batch, not this
+    // session's Source folder — pull those logical paths too.
+    const missionRefs = missionScreenshotRefs(checklist);
+    let missionDownloaded = 0;
+    for (const ref of missionRefs) {
+      const destPath = path.join(
+        root,
+        ".data",
+        "mcp-screenshots",
+        ref.batchId,
+        ref.filename,
+      );
+      await mkdir(path.dirname(destPath), { recursive: true });
+      const url = `${prodBase}/api/checklist/sessions/${encodeURIComponent(ref.batchId)}/screenshots/${encodeURIComponent(ref.filename)}`;
+      try {
+        const bytes = await downloadFile(url, destPath);
+        missionDownloaded += 1;
+        console.log(`  mission shot ${ref.logicalPath} (${bytes} bytes)`);
+      } catch (error) {
+        console.error(
+          `  FAIL ${ref.logicalPath}: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+    if (missionRefs.length > 0) {
+      console.log(
+        `Wrote ${missionDownloaded}/${missionRefs.length} mission-referenced screenshot(s)`,
+      );
+    }
   }
 
   const createdAt =
