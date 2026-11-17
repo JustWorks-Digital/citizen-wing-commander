@@ -208,16 +208,12 @@ export function CargoCommodityTile({
           disabled={isSkipPending}
           title="Skip pick up — remaining stops absorb this SCU"
           className={[
-            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center rounded-sm border font-mono text-[0.7rem] leading-none shadow-sm transition-opacity",
+            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center border-0 bg-transparent font-mono text-[0.7rem] leading-none text-[color:var(--skip-fg)] shadow-none transition-colors",
             isSkipPending
               ? "cursor-wait opacity-70"
-              : "hover:opacity-90",
+              : "hover:text-rsi-danger",
           ].join(" ")}
-          style={{
-            backgroundColor: tileBg,
-            borderColor: tileBorder,
-            color: tileFg,
-          }}
+          style={{ ["--skip-fg" as string]: tileFg }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
