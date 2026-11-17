@@ -13,6 +13,7 @@ import {
 import {
   cargoSummaryFor,
   commoditySlugOf,
+  locationLabelOf,
   locationMatches,
   locationSlugOf,
   scalePositiveParts,
@@ -436,6 +437,64 @@ export const missionScuMutate = {
       missionScuDraft.draftFromMission(mission, session.rows),
       input.commoditySlug,
       input.locationSlug,
+    );
+    return missionScuMutate.applyDraft(session, input.missionId, draft);
+  },
+
+  /**
+   * Set pick-up SCU for a mission commodity at one stop (add or restore after
+   * skip). Rebalances other pick-up stops so the mission total stays fixed.
+   */
+  setPickupScuAtStop(
+    session: SessionChecklist,
+    input: {
+      missionId: string;
+      commoditySlug: string;
+      locationSlug: string;
+      scu: number;
+    },
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
+    const amount = Math.max(0, Math.floor(Number(input.scu) || 0));
+    if (amount <= 0) {
+      return { ok: false, error: "Pick-up SCU must be greater than 0." };
+    }
+    const mission = (session.missions ?? []).find(
+      (entry) => entry.id === input.missionId,
+    );
+    if (!mission) {
+      return { ok: false, error: `Unknown mission: ${input.missionId}` };
+    }
+    if (mission.isCompleted) {
+      return { ok: false, error: "Completed contracts cannot change pick-ups." };
+    }
+    const slug =
+      resolveCommoditySlug(input.commoditySlug) ??
+      input.commoditySlug.trim().toLowerCase();
+    const cargoLine = mission.cargo.find(
+      (line) => commoditySlugOf(line.commodity) === slug,
+    );
+    if (!cargoLine) {
+      return {
+        ok: false,
+        error: `Commodity ${input.commoditySlug} is not on this mission.`,
+      };
+    }
+    const locationLabel = locationLabelOf(input.locationSlug);
+    let draft = missionScuDraft.ensurePickupStopInDraft(
+      missionScuDraft.draftFromMission(mission, session.rows),
+      {
+        commoditySlug: slug,
+        commodity: cargoLine.commodity,
+        locationKey: input.locationSlug,
+        locationSlug: locationSlugOf(input.locationSlug),
+        locationLabel,
+      },
+    );
+    draft = missionScuDraft.setPickupScuInDraft(
+      draft,
+      slug,
+      locationSlugOf(input.locationSlug),
+      amount,
     );
     return missionScuMutate.applyDraft(session, input.missionId, draft);
   },

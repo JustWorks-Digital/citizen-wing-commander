@@ -233,6 +233,27 @@ export function useSessionRouteEdits(input: {
     [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
   );
 
+  const setPickupScuAtStop = useCallback(
+    (input: {
+      missionId: string;
+      commoditySlug: string;
+      locationSlug: string;
+      scu: number;
+    }) => {
+      const result = missionScuAmounts.setPickupScuAtStop(
+        sessionRef.current,
+        input,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      void persistSession(result.session);
+      syncCatalogBoxSplits(input.missionId, result.session);
+    },
+    [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
+  );
+
   const onReorderStops = useCallback(
     (orderedIds: string[]) => {
       const current = sessionRef.current;
@@ -264,6 +285,7 @@ export function useSessionRouteEdits(input: {
     applyBoxBreakdown,
     applyMissionScuDraft,
     skipPickupAtStop,
+    setPickupScuAtStop,
     onReorderStops,
     onResetTrip,
   };

@@ -26,11 +26,13 @@ export const missionScuAmounts = {
   setPickupScuInDraft: missionScuDraft.setPickupScuInDraft,
   skipPickupInDraft: missionScuDraft.skipPickupInDraft,
   canSkipPickupInDraft: missionScuDraft.canSkipPickupInDraft,
+  ensurePickupStopInDraft: missionScuDraft.ensurePickupStopInDraft,
   setCommodityScuInDraft: missionScuDraft.setCommodityScuInDraft,
   validateDraft: missionScuDraft.validateDraft,
   locationLines: missionLocationScu.locationLines,
   applyDraft: missionScuMutate.applyDraft,
   skipPickupAtStop: missionScuMutate.skipPickupAtStop,
+  setPickupScuAtStop: missionScuMutate.setPickupScuAtStop,
   setCommodityTotal: missionScuMutate.setCommodityTotal,
   setLocationAmount: missionScuMutate.setLocationAmount,
 };

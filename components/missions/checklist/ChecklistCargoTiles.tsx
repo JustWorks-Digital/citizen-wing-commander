@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { describeCargoDeliveries, getCommodityIconSrc } from "@/lib/fixtures";
 import {
   commodityBadgeBackground,
@@ -15,11 +15,14 @@ import {
   formatHaulingRepXp,
 } from "@/lib/missions/haulingRepXp";
 import { resolveMissionRank, resolveMissionTitle } from "@/lib/missions/missionRank";
+import { commoditySlugOf } from "@/lib/missions/missionScuShared";
 import { inferCargoMissionId, screenshotRefsForMission } from "@/lib/missions/rowMissionScreenshots";
 import { missionRewardLabel } from "@/lib/missions/sessionMissionObjectives";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { StopMissionScreenshots } from "../StopMissionScreenshots";
+import { PlusIcon } from "./ChecklistIcons";
 import { DeliveryTransferBlock, PickupTransferBlock } from "./TransferBlocks";
 
 export type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
@@ -361,6 +364,282 @@ export function CargoCommodityTiles({
   );
 }
 
+type MissionCargoOption = {
+  commoditySlug: string;
+  commodity: string;
+  /** Mission commodity total — pick-up at this stop cannot exceed it. */
+  maxScu: number;
+};
+
+/** Mission commodities not already shown as active pick-up tiles at this stop. */
+function addableMissionCargo(
+  mission: SessionMission,
+  activeCommoditySlugs: ReadonlySet<string>,
+): MissionCargoOption[] {
+  const options: MissionCargoOption[] = [];
+  const seen = new Set<string>();
+  for (const line of mission.cargo) {
+    const slug = commoditySlugOf(line.commodity);
+    const maxScu = Math.max(0, Math.floor(Number(line.scu) || 0));
+    if (!slug || seen.has(slug) || activeCommoditySlugs.has(slug)) continue;
+    if (maxScu <= 0) continue;
+    seen.add(slug);
+    options.push({
+      commoditySlug: slug,
+      commodity: line.commodity,
+      maxScu,
+    });
+  }
+  return options;
+}
+
+function AddPickupCargoForm({
+  missionId,
+  options,
+  locationSlug,
+  pendingAddPickupKeys,
+  onAddPickup,
+}: {
+  missionId: string;
+  options: MissionCargoOption[];
+  locationSlug: string;
+  pendingAddPickupKeys?: ReadonlySet<string>;
+  onAddPickup: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+}) {
+  const [commoditySlug, setCommoditySlug] = useState(
+    options[0]?.commoditySlug ?? "",
+  );
+  const selected =
+    options.find((option) => option.commoditySlug === commoditySlug) ??
+    options[0] ??
+    null;
+  const maxScu = selected?.maxScu ?? 1;
+  const [scuText, setScuText] = useState(String(Math.min(1, maxScu)));
+
+  useEffect(() => {
+    if (
+      commoditySlug &&
+      options.some((option) => option.commoditySlug === commoditySlug)
+    ) {
+      return;
+    }
+    setCommoditySlug(options[0]?.commoditySlug ?? "");
+  }, [commoditySlug, options]);
+
+  useEffect(() => {
+    const parsed = Math.max(0, Math.floor(Number(scuText) || 0));
+    if (parsed > maxScu) setScuText(String(maxScu));
+  }, [maxScu, scuText]);
+
+  if (options.length === 0 || !selected) return null;
+
+  const pendingKey = `${missionId}::${commoditySlug}::${locationSlug}`;
+  const isPending = Boolean(
+    commoditySlug && pendingAddPickupKeys?.has(pendingKey),
+  );
+  const scu = Math.min(
+    maxScu,
+    Math.max(0, Math.floor(Number(scuText) || 0)),
+  );
+  const canSubmit = Boolean(commoditySlug) && scu > 0 && !isPending;
+
+  return (
+    <form
+      className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-rsi-border/50 pt-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!canSubmit) return;
+        onAddPickup(missionId, commoditySlug, scu);
+      }}
+      aria-label="Add pick-up cargo"
+    >
+      <label className="sr-only" htmlFor={`add-pickup-${missionId}`}>
+        Cargo type
+      </label>
+      <select
+        id={`add-pickup-${missionId}`}
+        value={commoditySlug}
+        disabled={isPending}
+        onChange={(event) => setCommoditySlug(event.target.value)}
+        className="min-w-0 flex-1 rounded-rsi border border-rsi-border bg-rsi-bg-deep/70 px-2 py-1 font-mono text-[0.55rem] tracking-wide text-rsi-text outline-none focus:border-rsi-accent"
+      >
+        {options.map((option) => (
+          <option key={option.commoditySlug} value={option.commoditySlug}>
+            {option.commodity}
+          </option>
+        ))}
+      </select>
+      <label className="inline-flex items-center gap-1">
+        <span className="sr-only">SCU</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={maxScu}
+          step={1}
+          value={scuText}
+          disabled={isPending}
+          aria-label={`Pick up SCU (max ${maxScu})`}
+          title={`Max ${maxScu} SCU (mission total)`}
+          onChange={(event) => setScuText(event.target.value)}
+          className="w-14 rounded-rsi border border-rsi-border bg-rsi-bg-deep/70 px-2 py-1 font-mono text-[0.65rem] tabular-nums text-rsi-text outline-none focus:border-rsi-accent"
+        />
+        <span className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+          SCU
+        </span>
+      </label>
+      <Button
+        type="submit"
+        variant="ghost"
+        disabled={!canSubmit}
+        aria-busy={isPending || undefined}
+        className="!min-h-0 !px-2 !py-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent"
+      >
+        {isPending ? <Spinner className="size-2.5" label="Adding" /> : "Add"}
+      </Button>
+    </form>
+  );
+}
+
+function MissionStopCargoCard({
+  row,
+  mission,
+  role,
+  sessionId,
+  tiles,
+  addOptions,
+  onAddPickup,
+  pendingAddPickupKeys,
+}: {
+  row: HaulingChecklistRow;
+  mission: SessionMission;
+  role: "pickup" | "delivery" | null;
+  sessionId?: string | null;
+  tiles: ReactNode;
+  addOptions: MissionCargoOption[];
+  onAddPickup?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  pendingAddPickupKeys?: ReadonlySet<string>;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const canAdd =
+    role === "pickup" && addOptions.length > 0 && Boolean(onAddPickup);
+
+  useEffect(() => {
+    if (!canAdd) setAddOpen(false);
+  }, [canAdd]);
+
+  const rank = resolveMissionRank(mission);
+  const title = resolveMissionTitle(mission) || mission.title;
+  const reward = missionRewardLabel(mission);
+  const exp = estimateMissionHaulingRepXp(mission);
+  const headerAccent =
+    role === "pickup"
+      ? "border-rsi-accent/40"
+      : role === "delivery"
+        ? "border-rsi-gold/40"
+        : "border-rsi-border";
+  const sourceRefs = sessionId
+    ? screenshotRefsForMission(mission, sessionId)
+    : [];
+
+  return (
+    <div
+      className={[
+        "flex h-full min-w-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
+        mission.isCompleted || row.isCompleted ? "opacity-70" : "",
+      ].join(" ")}
+    >
+      <div className={["min-w-0 border-b px-2.5 py-2", headerAccent].join(" ")}>
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p
+              className={[
+                "font-mono text-[0.5rem] tracking-[0.12em]",
+                mission.isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
+              ].join(" ")}
+            >
+              {rank ?? "—"}
+            </p>
+            <p
+              className={[
+                "mt-0.5 min-w-0 truncate text-[0.65rem] font-semibold tracking-wide",
+                mission.isCompleted ? "text-rsi-text-muted" : "text-rsi-text",
+              ].join(" ")}
+            >
+              {title || mission.title}
+            </p>
+          </div>
+          <div className="inline-flex shrink-0 items-center gap-1">
+            {canAdd ? (
+              <button
+                type="button"
+                title={addOpen ? "Hide add cargo" : "Add cargo"}
+                aria-label={addOpen ? "Hide add cargo" : "Add cargo"}
+                aria-expanded={addOpen}
+                onClick={() => setAddOpen((open) => !open)}
+                className={[
+                  "inline-flex size-6 items-center justify-center rounded-rsi border transition-colors md:size-4",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                  addOpen
+                    ? "border-rsi-accent/60 bg-rsi-accent/10 text-rsi-accent"
+                    : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent",
+                ].join(" ")}
+              >
+                <PlusIcon className="size-3 md:size-2" />
+              </button>
+            ) : null}
+            {sourceRefs.length > 0 ? (
+              <StopMissionScreenshots
+                refs={sourceRefs}
+                variant="inline"
+                className="shrink-0"
+              />
+            ) : null}
+          </div>
+        </div>
+        {reward !== "—" || exp != null ? (
+          <p className="mt-1 flex min-w-0 items-baseline justify-between gap-2 font-mono text-[0.55rem] tabular-nums tracking-wide text-rsi-text-secondary">
+            <span className="min-w-0 truncate">
+              {reward !== "—" ? reward : null}
+            </span>
+            {exp != null ? (
+              <span
+                className="shrink-0"
+                title={`Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`}
+              >
+                {formatHaulingRepXp(exp)} XP
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+      <div className="mt-auto shrink-0 bg-rsi-bg-deep/35 p-2.5">
+        {tiles}
+        {canAdd && addOpen && onAddPickup ? (
+          <AddPickupCargoForm
+            missionId={mission.id}
+            options={addOptions}
+            locationSlug={row.locationSlug}
+            pendingAddPickupKeys={pendingAddPickupKeys}
+            onAddPickup={(missionId, commoditySlug, scu) => {
+              onAddPickup(missionId, commoditySlug, scu);
+              setAddOpen(false);
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function CargoGroups({
   row,
   cargoLines,
@@ -376,6 +655,8 @@ export function CargoGroups({
   onSkipPickup,
   canSkipPickup,
   pendingSkipPickupKeys,
+  onAddPickup,
+  pendingAddPickupKeys,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -400,6 +681,13 @@ export function CargoGroups({
   canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
   /** Pending keys `missionId::commoditySlug::locationSlug`. */
   pendingSkipPickupKeys?: ReadonlySet<string>;
+  /** Add / restore a mission commodity pick-up at this stop with an SCU amount. */
+  onAddPickup?: (
+    missionId: string,
+    commoditySlug: string,
+    scu: number,
+  ) => void;
+  pendingAddPickupKeys?: ReadonlySet<string>;
 }) {
   const groups = groupCargoLines(cargoLines);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
@@ -480,37 +768,54 @@ export function CargoGroups({
             {sectionTransfer}
             <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
               {missionBuckets.map((bucket) => {
-                // Skipped pick-ups stay at 0 SCU on the row — drop empty tiles.
+                // Skipped pick-ups stay at 0 SCU on the row — hide those tiles.
                 const activeItems = bucket.items.filter(
                   (item) => (item.scu ?? 0) > 0,
                 );
-                if (activeItems.length === 0) return null;
+                const activeSlugs = new Set(
+                  activeItems
+                    .map((item) => item.commoditySlug)
+                    .filter((slug): slug is string => Boolean(slug)),
+                );
 
                 const mission =
                   bucket.missionId != null
                     ? (missionById.get(bucket.missionId) ?? null)
                     : null;
-                const tiles = (
-                  <CargoCommodityTiles
-                    row={row}
-                    items={activeItems}
-                    role={group.role}
-                    pendingCargoKeys={pendingCargoKeys}
-                    onToggleCargoHandled={onToggleCargoHandled}
-                    missionId={bucket.missionId}
-                    onSkipPickup={
-                      group.role === "pickup" ? onSkipPickup : undefined
-                    }
-                    canSkipPickup={
-                      group.role === "pickup" ? canSkipPickup : undefined
-                    }
-                    pendingSkipPickupKeys={
-                      group.role === "pickup"
-                        ? pendingSkipPickupKeys
-                        : undefined
-                    }
-                  />
-                );
+                const addOptions =
+                  group.role === "pickup" &&
+                  mission &&
+                  onAddPickup &&
+                  !mission.isCompleted &&
+                  !row.isCompleted
+                    ? addableMissionCargo(mission, activeSlugs)
+                    : [];
+                if (activeItems.length === 0 && addOptions.length === 0) {
+                  return null;
+                }
+
+                const tiles =
+                  activeItems.length > 0 ? (
+                    <CargoCommodityTiles
+                      row={row}
+                      items={activeItems}
+                      role={group.role}
+                      pendingCargoKeys={pendingCargoKeys}
+                      onToggleCargoHandled={onToggleCargoHandled}
+                      missionId={bucket.missionId}
+                      onSkipPickup={
+                        group.role === "pickup" ? onSkipPickup : undefined
+                      }
+                      canSkipPickup={
+                        group.role === "pickup" ? canSkipPickup : undefined
+                      }
+                      pendingSkipPickupKeys={
+                        group.role === "pickup"
+                          ? pendingSkipPickupKeys
+                          : undefined
+                      }
+                    />
+                  ) : null;
 
                 if (!mission) {
                   return (
@@ -523,88 +828,18 @@ export function CargoGroups({
                   );
                 }
 
-                const rank = resolveMissionRank(mission);
-                const title = resolveMissionTitle(mission) || mission.title;
-                const reward = missionRewardLabel(mission);
-                const exp = estimateMissionHaulingRepXp(mission);
-                const headerAccent =
-                  group.role === "pickup"
-                    ? "border-rsi-accent/40"
-                    : group.role === "delivery"
-                      ? "border-rsi-gold/40"
-                      : "border-rsi-border";
-
-                const sourceRefs = sessionId
-                  ? screenshotRefsForMission(mission, sessionId)
-                  : [];
-
                 return (
-                  <div
+                  <MissionStopCargoCard
                     key={`${row.id}-${group.role ?? "none"}-${mission.id}`}
-                    className={[
-                      "flex h-full min-w-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
-                      mission.isCompleted || row.isCompleted
-                        ? "opacity-70"
-                        : "",
-                    ].join(" ")}
-                  >
-                    <div
-                      className={[
-                        "min-w-0 border-b px-2.5 py-2",
-                        headerAccent,
-                      ].join(" ")}
-                    >
-                      <div className="flex min-w-0 items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p
-                            className={[
-                              "font-mono text-[0.5rem] tracking-[0.12em]",
-                              mission.isCompleted
-                                ? "text-rsi-text-muted"
-                                : "text-rsi-accent",
-                            ].join(" ")}
-                          >
-                            {rank ?? "—"}
-                          </p>
-                          <p
-                            className={[
-                              "mt-0.5 min-w-0 truncate text-[0.65rem] font-semibold tracking-wide",
-                              mission.isCompleted
-                                ? "text-rsi-text-muted"
-                                : "text-rsi-text",
-                            ].join(" ")}
-                          >
-                            {title || mission.title}
-                          </p>
-                        </div>
-                        {sourceRefs.length > 0 ? (
-                          <StopMissionScreenshots
-                            refs={sourceRefs}
-                            variant="inline"
-                            className="shrink-0"
-                          />
-                        ) : null}
-                      </div>
-                      {reward !== "—" || exp != null ? (
-                        <p className="mt-1 flex min-w-0 items-baseline justify-between gap-2 font-mono text-[0.55rem] tabular-nums tracking-wide text-rsi-text-secondary">
-                          <span className="min-w-0 truncate">
-                            {reward !== "—" ? reward : null}
-                          </span>
-                          {exp != null ? (
-                            <span
-                              className="shrink-0"
-                              title={`Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`}
-                            >
-                              {formatHaulingRepXp(exp)} XP
-                            </span>
-                          ) : null}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="mt-auto shrink-0 bg-rsi-bg-deep/35 p-2.5">
-                      {tiles}
-                    </div>
-                  </div>
+                    row={row}
+                    mission={mission}
+                    role={group.role}
+                    sessionId={sessionId}
+                    tiles={tiles}
+                    addOptions={addOptions}
+                    onAddPickup={onAddPickup}
+                    pendingAddPickupKeys={pendingAddPickupKeys}
+                  />
                 );
               })}
             </div>

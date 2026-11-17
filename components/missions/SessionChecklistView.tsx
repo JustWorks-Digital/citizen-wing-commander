@@ -577,6 +577,7 @@ export function SessionChecklistView({
     applyBoxBreakdown,
     applyMissionScuDraft,
     skipPickupAtStop,
+    setPickupScuAtStop,
     onReorderStops,
     onResetTrip,
   } = useSessionRouteEdits({
@@ -1051,6 +1052,7 @@ export function SessionChecklistView({
         onSelectBoxBreakdown={applyBoxBreakdown}
         onSaveMissionScuDraft={applyMissionScuDraft}
         onSkipPickupAtStop={skipPickupAtStop}
+        onSetPickupScuAtStop={setPickupScuAtStop}
         isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}

@@ -351,6 +351,31 @@ describe("missionScuAmounts", () => {
         .map((row) => row.cargoDeliveries[0]!.scu),
     ).toEqual([0, 6, 5]);
   });
+
+  it("restores a skipped pick-up at a stop with a specific SCU and rebalances", () => {
+    const session = multiPickupSession();
+    const skipped = missionScuAmounts.skipPickupAtStop(session, {
+      missionId: "quartz",
+      commoditySlug: "quartz-raw",
+      locationSlug: "shubin-mining-facility-sm0-18",
+    });
+    expect(skipped.ok).toBe(true);
+    if (!skipped.ok) return;
+
+    const restored = missionScuAmounts.setPickupScuAtStop(skipped.session, {
+      missionId: "quartz",
+      commoditySlug: "quartz-raw",
+      locationSlug: "shubin-mining-facility-sm0-18",
+      scu: 4,
+    });
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) return;
+    expect(
+      restored.session.rows
+        .filter((row) => row.routeAction === "pickup")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([4, 4, 3]);
+  });
 });
 
 function multiPickupSession(): SessionChecklist {

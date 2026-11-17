@@ -184,6 +184,16 @@ export type MissionChecklistTableProps = {
     commoditySlug: string;
     locationSlug: string;
   }) => void | Promise<void>;
+  /**
+   * Add / restore pick-up SCU for a mission commodity at this stop
+   * (mission-card Add cargo).
+   */
+  onSetPickupScuAtStop?: (input: {
+    missionId: string;
+    commoditySlug: string;
+    locationSlug: string;
+    scu: number;
+  }) => void | Promise<void>;
   /** True while any session save is awaiting the backend echo. */
   isSaving?: boolean;
   /** True until the first checklist hydrate on page / session change. */
@@ -252,6 +262,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onSelectBoxBreakdown,
   onSaveMissionScuDraft,
   onSkipPickupAtStop,
+  onSetPickupScuAtStop,
   isSaving = false,
   isLoading = false,
 }: MissionChecklistTableProps) {
@@ -264,6 +275,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     () => new Set(),
   );
   const [pendingSkipPickupKeys, setPendingSkipPickupKeys] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const [pendingAddPickupKeys, setPendingAddPickupKeys] = useState<
     ReadonlySet<string>
   >(() => new Set());
   const [pendingQuantumRowIds, setPendingQuantumRowIds] = useState<
@@ -1135,6 +1149,38 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         pendingSkipPickupKeys={
                           pendingSkipPickupKeys.size > 0
                             ? pendingSkipPickupKeys
+                            : undefined
+                        }
+                        onAddPickup={
+                          onSetPickupScuAtStop && !row.isCompleted
+                            ? (missionId, commoditySlug, scu) => {
+                                const key = `${missionId}::${commoditySlug}::${row.locationSlug}`;
+                                if (pendingAddPickupKeys.has(key)) return;
+                                setPendingAddPickupKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(key);
+                                  return next;
+                                });
+                                void Promise.resolve(
+                                  onSetPickupScuAtStop({
+                                    missionId,
+                                    commoditySlug,
+                                    locationSlug: row.locationSlug,
+                                    scu,
+                                  }),
+                                ).finally(() => {
+                                  setPendingAddPickupKeys((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(key);
+                                    return next;
+                                  });
+                                });
+                              }
+                            : undefined
+                        }
+                        pendingAddPickupKeys={
+                          pendingAddPickupKeys.size > 0
+                            ? pendingAddPickupKeys
                             : undefined
                         }
                         bayAside={(role) => (

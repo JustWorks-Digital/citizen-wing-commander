@@ -194,6 +194,43 @@ export const missionScuDraft = {
   },
 
   /**
+   * Ensure a pick-up draft row exists for this commodity + location
+   * (e.g. before adding cargo back at a skipped stop).
+   */
+  ensurePickupStopInDraft(
+    draft: MissionScuDraft,
+    input: {
+      commoditySlug: string;
+      commodity: string;
+      locationKey: string;
+      locationSlug: string;
+      locationLabel: string;
+    },
+  ): MissionScuDraft {
+    const exists = draft.pickups.some(
+      (line) =>
+        line.commoditySlug === input.commoditySlug &&
+        line.locationSlug === input.locationSlug,
+    );
+    if (exists) return draft;
+    return {
+      ...draft,
+      pickups: [
+        ...draft.pickups,
+        {
+          locationKey: input.locationKey,
+          locationSlug: input.locationSlug,
+          locationLabel: input.locationLabel,
+          commoditySlug: input.commoditySlug,
+          commodity: input.commodity,
+          scu: 0,
+          isUserCorrected: false,
+        },
+      ],
+    };
+  },
+
+  /**
    * Mark a pick-up stop as player-overwritten and rebalance the other
    * pick-up stops for that commodity.
    */
