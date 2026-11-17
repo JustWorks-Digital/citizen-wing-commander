@@ -69,7 +69,10 @@ import {
   missionAuecAmount,
   missionRewardLabel,
 } from "@/lib/missions/sessionMissionObjectives";
-import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
+import {
+  missionScuAmounts,
+  type MissionScuDraft,
+} from "@/lib/missions/missionScuAmounts";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { stopMissionBoxConfigModalProps } from "@/lib/missions/stopMissionBoxConfig";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
@@ -172,6 +175,15 @@ export type MissionChecklistTableProps = {
   ) => void | Promise<void>;
   /** Persist draft mission + delivery SCU from the box-types modal. */
   onSaveMissionScuDraft?: (missionId: string, draft: MissionScuDraft) => void;
+  /**
+   * Skip pick-up of one cargo at the current stop (Breakdown ×) and
+   * rebalance remaining pick-up stops for that commodity.
+   */
+  onSkipPickupAtStop?: (input: {
+    missionId: string;
+    commoditySlug: string;
+    locationSlug: string;
+  }) => void | Promise<void>;
   /** True while any session save is awaiting the backend echo. */
   isSaving?: boolean;
   /** True until the first checklist hydrate on page / session change. */
@@ -239,6 +251,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onOpenContracts,
   onSelectBoxBreakdown,
   onSaveMissionScuDraft,
+  onSkipPickupAtStop,
   isSaving = false,
   isLoading = false,
 }: MissionChecklistTableProps) {
@@ -250,6 +263,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const [pendingCargoKeys, setPendingCargoKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  const [pendingSkipPickupKeys, setPendingSkipPickupKeys] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
   const [pendingQuantumRowIds, setPendingQuantumRowIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -300,6 +316,31 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const showQuantumInList =
     showQuantumOrigin && !(hideCompleted && quantumCompleted);
   const canAddStops = Boolean(onInsertQuantumTravel);
+
+  /** Keys: `missionId::commoditySlug::locationSlug` that can absorb a skip. */
+  const skippablePickupKeys = useMemo(() => {
+    if (!onSkipPickupAtStop) return null;
+    const keys = new Set<string>();
+    for (const mission of missions) {
+      if (mission.isCompleted) continue;
+      const draft = missionScuAmounts.draftFromMission(mission, rows);
+      for (const pickup of draft.pickups) {
+        if (
+          !missionScuAmounts.canSkipPickupInDraft(
+            draft,
+            pickup.commoditySlug,
+            pickup.locationSlug,
+          )
+        ) {
+          continue;
+        }
+        keys.add(
+          `${mission.id}::${pickup.commoditySlug}::${pickup.locationSlug}`,
+        );
+      }
+    }
+    return keys;
+  }, [missions, onSkipPickupAtStop, rows]);
 
   useEffect(() => {
     if (isQuantumOriginControlled) return;
@@ -1047,6 +1088,53 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         onToggleCargoHandled={
                           onToggleCargoHandled
                             ? handleCargoToggle
+                            : undefined
+                        }
+                        onSkipPickup={
+                          onSkipPickupAtStop && !row.isCompleted
+                            ? (missionId, commoditySlug) => {
+                                const key = `${missionId}::${commoditySlug}::${row.locationSlug}`;
+                                if (pendingSkipPickupKeys.has(key)) return;
+                                if (
+                                  skippablePickupKeys &&
+                                  !skippablePickupKeys.has(key)
+                                ) {
+                                  return;
+                                }
+                                setPendingSkipPickupKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(key);
+                                  return next;
+                                });
+                                void Promise.resolve(
+                                  onSkipPickupAtStop({
+                                    missionId,
+                                    commoditySlug,
+                                    locationSlug: row.locationSlug,
+                                  }),
+                                ).finally(() => {
+                                  setPendingSkipPickupKeys((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(key);
+                                    return next;
+                                  });
+                                });
+                              }
+                            : undefined
+                        }
+                        canSkipPickup={
+                          onSkipPickupAtStop &&
+                          !row.isCompleted &&
+                          skippablePickupKeys
+                            ? (missionId, commoditySlug) =>
+                                skippablePickupKeys.has(
+                                  `${missionId}::${commoditySlug}::${row.locationSlug}`,
+                                )
+                            : undefined
+                        }
+                        pendingSkipPickupKeys={
+                          pendingSkipPickupKeys.size > 0
+                            ? pendingSkipPickupKeys
                             : undefined
                         }
                         bayAside={(role) => (

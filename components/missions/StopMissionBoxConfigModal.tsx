@@ -39,16 +39,16 @@ export type StopMissionBoxConfigModalProps = {
     options?: SelectBoxBreakdownOptions,
   ) => void;
   /**
-   * Persist draft mission + nested delivery SCU. Caller should run
-   * `missionScuAmounts.applyDraft` (validates delivery sums === totals).
+   * Persist draft mission + nested Pick up/Deliver SCU. Caller should run
+   * `missionScuAmounts.applyDraft` (validates role sums === totals).
    */
   onSaveScuDraft?: (draft: MissionScuDraft) => void;
 };
 
 /**
  * Correct crate sizes and SCU amounts for a session contract — condensed
- * cargo totals with expandable nested delivery SCU, plus crate-mix dropdowns.
- * SCU edits stay in a draft until Save (delivery sums must match totals).
+ * cargo totals with expandable Pick up / Deliver SCU, plus crate-mix dropdowns.
+ * SCU edits stay in a draft until Save (role sums must match totals).
  */
 export function StopMissionBoxConfigModal({
   mission,
@@ -147,6 +147,29 @@ export function StopMissionBoxConfigModal({
     );
   };
 
+  const setPickupScu = (
+    commoditySlug: string,
+    locationSlug: string,
+    scu: number,
+  ) => {
+    setSaveError(null);
+    setDraft((prev) =>
+      missionScuAmounts.setPickupScuInDraft(
+        prev,
+        commoditySlug,
+        locationSlug,
+        scu,
+      ),
+    );
+  };
+
+  const skipPickup = (commoditySlug: string, locationSlug: string) => {
+    setSaveError(null);
+    setDraft((prev) =>
+      missionScuAmounts.skipPickupInDraft(prev, commoditySlug, locationSlug),
+    );
+  };
+
   const toggleExpanded = (commoditySlug: string) => {
     setExpandedSlugs((prev) => {
       const next = new Set(prev);
@@ -229,7 +252,7 @@ export function StopMissionBoxConfigModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-sm text-rsi-text-secondary">
             {canEditScu
-              ? "Edit cargo totals, expand a type, click a stop SCU to override it — other stops rebalance. Save when delivery stops sum to each cargo total."
+              ? "Edit cargo totals, expand a type for Pick up / Deliver stops. Override a stop SCU or Skip a pick up — other stops rebalance. Save when Pick up and Deliver each sum to the cargo total."
               : isMultiCargo
                 ? "Set the total crate style, or adjust each cargo type."
                 : "Pick the crate mix that matches the contract."}
@@ -252,6 +275,8 @@ export function StopMissionBoxConfigModal({
                   onToggle={toggleExpanded}
                   onChangeCommodity={setCommodityScu}
                   onChangeDelivery={setDeliveryScu}
+                  onChangePickup={setPickupScu}
+                  onSkipPickup={skipPickup}
                   onReset={handleCancelDraft}
                   onSave={handleSave}
                 />

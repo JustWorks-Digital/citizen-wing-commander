@@ -7,6 +7,7 @@ import { cargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
 import { missionLocationScu } from "@/lib/missions/missionLocationScu";
 import {
   type MissionScuDraft,
+  type MissionScuDraftStop,
   missionScuDraft,
 } from "@/lib/missions/missionScuDraft";
 import {
@@ -229,12 +230,219 @@ function finishMissionUpdate(
   });
 }
 
+function pinSplitsByLocationField(
+  scuSplits: NonNullable<SessionMission["scuSplits"]>,
+  stops: MissionScuDraftStop[],
+  field: "fromLocationSlug" | "toLocationSlug",
+  existing: SessionMission,
+): NonNullable<SessionMission["scuSplits"]> {
+  let next = [...scuSplits];
+  for (const stop of stops) {
+    const amount = Math.max(0, Math.floor(stop.scu));
+    const matchingIndexes: number[] = [];
+    for (const [index, split] of next.entries()) {
+      if (
+        split.commoditySlug !== stop.commoditySlug &&
+        commoditySlugOf(split.commodityName) !== stop.commoditySlug
+      ) {
+        continue;
+      }
+      if (!locationMatches(split[field], stop.locationKey)) continue;
+      matchingIndexes.push(index);
+    }
+    const corrected = Boolean(stop.isUserCorrected) || undefined;
+    if (matchingIndexes.length === 0) {
+      next.push(
+        makeDeliverSplit({
+          from:
+            field === "fromLocationSlug"
+              ? stop.locationKey
+              : (existing.from[0] ?? stop.locationKey),
+          to:
+            field === "toLocationSlug"
+              ? stop.locationKey
+              : (existing.to[0] ?? stop.locationKey),
+          commodity: stop.commodity,
+          scu: amount,
+          isUserCorrected: corrected,
+        }),
+      );
+      continue;
+    }
+    if (matchingIndexes.length === 1) {
+      const index = matchingIndexes[0]!;
+      const prev = next[index]!;
+      next[index] = {
+        ...prev,
+        scu: amount,
+        isUserCorrected: corrected,
+        scuAutoSelected:
+          corrected && prev.scuAutoSelected == null
+            ? prev.scu
+            : prev.scuAutoSelected,
+      };
+      continue;
+    }
+    const parts = matchingIndexes.map((index) => next[index]!.scu);
+    const scaled = scalePositiveParts(parts, amount);
+    matchingIndexes.forEach((index, i) => {
+      const prev = next[index]!;
+      next[index] = {
+        ...prev,
+        scu: scaled[i]!,
+        isUserCorrected: corrected,
+        scuAutoSelected:
+          corrected && prev.scuAutoSelected == null
+            ? prev.scu
+            : prev.scuAutoSelected,
+      };
+    });
+  }
+  return next;
+}
+
+/**
+ * Prefer edge rebuild when Collect×Deliver is 1:N or N:1; otherwise pin
+ * delivery then collect amounts on existing splits.
+ */
+function rebuildScuSplitsFromDraft(
+  existing: SessionMission,
+  draft: MissionScuDraft,
+): NonNullable<SessionMission["scuSplits"]> {
+  let scuSplits = [...(existing.scuSplits ?? [])];
+  const commoditySlugs = new Set(
+    draft.commodities.map((line) => line.commoditySlug),
+  );
+
+  for (const commoditySlug of commoditySlugs) {
+    const pickups = draft.pickups.filter(
+      (line) => line.commoditySlug === commoditySlug,
+    );
+    const deliveries = draft.deliveries.filter(
+      (line) => line.commoditySlug === commoditySlug,
+    );
+    if (pickups.length === 0 && deliveries.length === 0) continue;
+
+    const others = scuSplits.filter(
+      (split) =>
+        split.commoditySlug !== commoditySlug &&
+        commoditySlugOf(split.commodityName) !== commoditySlug,
+    );
+
+    if (deliveries.length === 1 && pickups.length > 0) {
+      const delivery = deliveries[0]!;
+      scuSplits = [
+        ...others,
+        ...pickups.map((pickup) =>
+          makeDeliverSplit({
+            from: pickup.locationKey,
+            to: delivery.locationKey,
+            commodity: pickup.commodity,
+            scu: pickup.scu,
+            isUserCorrected:
+              Boolean(pickup.isUserCorrected) ||
+              Boolean(delivery.isUserCorrected) ||
+              undefined,
+          }),
+        ),
+      ];
+      continue;
+    }
+
+    if (pickups.length === 1 && deliveries.length > 0) {
+      const pickup = pickups[0]!;
+      scuSplits = [
+        ...others,
+        ...deliveries.map((delivery) =>
+          makeDeliverSplit({
+            from: pickup.locationKey,
+            to: delivery.locationKey,
+            commodity: delivery.commodity,
+            scu: delivery.scu,
+            isUserCorrected:
+              Boolean(delivery.isUserCorrected) ||
+              Boolean(pickup.isUserCorrected) ||
+              undefined,
+          }),
+        ),
+      ];
+      continue;
+    }
+
+    if (scuSplits.length === 0 && deliveries.length > 0) {
+      const fromDefault =
+        pickups[0]?.locationKey ??
+        existing.from[0] ??
+        deliveries[0]!.locationKey;
+      for (const delivery of deliveries) {
+        scuSplits.push(
+          makeDeliverSplit({
+            from: fromDefault,
+            to: delivery.locationKey,
+            commodity: delivery.commodity,
+            scu: delivery.scu,
+            isUserCorrected: Boolean(delivery.isUserCorrected) || undefined,
+          }),
+        );
+      }
+      continue;
+    }
+
+    if (deliveries.length > 0) {
+      scuSplits = pinSplitsByLocationField(
+        scuSplits,
+        deliveries,
+        "toLocationSlug",
+        existing,
+      );
+    }
+    if (pickups.length > 0) {
+      scuSplits = pinSplitsByLocationField(
+        scuSplits,
+        pickups,
+        "fromLocationSlug",
+        existing,
+      );
+    }
+  }
+
+  return scuSplits;
+}
+
 /** Commit SCU edits onto the live session mission + route. */
 export const missionScuMutate = {
   /**
-   * Persist a validated draft: commodity totals + delivery location amounts,
-   * then scale pickups / restamp crates. Fails closed when delivery sums
-   * do not match each commodity total.
+   * Skip pick-up of one commodity at one stop: zero that stop and rebalance
+   * remaining pick-ups, then persist via {@link applyDraft}.
+   */
+  skipPickupAtStop(
+    session: SessionChecklist,
+    input: {
+      missionId: string;
+      commoditySlug: string;
+      locationSlug: string;
+    },
+  ): { ok: true; session: SessionChecklist } | { ok: false; error: string } {
+    const mission = (session.missions ?? []).find(
+      (entry) => entry.id === input.missionId,
+    );
+    if (!mission) {
+      return { ok: false, error: `Unknown mission: ${input.missionId}` };
+    }
+    if (mission.isCompleted) {
+      return { ok: false, error: "Completed contracts cannot change pick-ups." };
+    }
+    const draft = missionScuDraft.skipPickupInDraft(
+      missionScuDraft.draftFromMission(mission, session.rows),
+      input.commoditySlug,
+      input.locationSlug,
+    );
+    return missionScuMutate.applyDraft(session, input.missionId, draft);
+  },
+
+  /**
+   * Persist a validated draft: commodity totals + Collect/Deliver stop amounts.
+   * Fails closed when Collect or Deliver sums do not match each commodity total.
    */
   applyDraft(
     session: SessionChecklist,
@@ -261,82 +469,7 @@ export const missionScuMutate = {
       return next ? { ...line, scu: Math.max(0, Math.floor(next.scu)) } : line;
     });
 
-    let scuSplits = [...(existing.scuSplits ?? [])];
-    if (scuSplits.length === 0 && draft.deliveries.length > 0) {
-      const fromDefault = existing.from[0] ?? draft.deliveries[0]!.locationKey;
-      for (const delivery of draft.deliveries) {
-        scuSplits.push(
-          makeDeliverSplit({
-            from: fromDefault,
-            to: delivery.locationKey,
-            commodity: delivery.commodity,
-            scu: delivery.scu,
-            isUserCorrected: Boolean(delivery.isUserCorrected) || undefined,
-          }),
-        );
-      }
-    } else if (scuSplits.length > 0) {
-      // Pin delivery (`to`) amounts from the draft; leave unmatched splits.
-      for (const delivery of draft.deliveries) {
-        const amount = Math.max(0, Math.floor(delivery.scu));
-        const matchingIndexes: number[] = [];
-        for (const [index, split] of scuSplits.entries()) {
-          if (
-            split.commoditySlug !== delivery.commoditySlug &&
-            commoditySlugOf(split.commodityName) !== delivery.commoditySlug
-          ) {
-            continue;
-          }
-          if (!locationMatches(split.toLocationSlug, delivery.locationKey)) {
-            continue;
-          }
-          matchingIndexes.push(index);
-        }
-        const corrected = Boolean(delivery.isUserCorrected) || undefined;
-        if (matchingIndexes.length === 0) {
-          scuSplits.push(
-            makeDeliverSplit({
-              from: existing.from[0] ?? delivery.locationKey,
-              to: delivery.locationKey,
-              commodity: delivery.commodity,
-              scu: amount,
-              isUserCorrected: corrected,
-            }),
-          );
-          continue;
-        }
-        if (matchingIndexes.length === 1) {
-          const index = matchingIndexes[0]!;
-          const prev = scuSplits[index]!;
-          scuSplits[index] = {
-            ...prev,
-            scu: amount,
-            isUserCorrected: corrected,
-            scuAutoSelected:
-              corrected && prev.scuAutoSelected == null
-                ? prev.scu
-                : prev.scuAutoSelected,
-          };
-        } else {
-          const parts = matchingIndexes.map(
-            (index) => scuSplits[index]!.scu,
-          );
-          const scaled = scalePositiveParts(parts, amount);
-          matchingIndexes.forEach((index, i) => {
-            const prev = scuSplits[index]!;
-            scuSplits[index] = {
-              ...prev,
-              scu: scaled[i]!,
-              isUserCorrected: corrected,
-              scuAutoSelected:
-                corrected && prev.scuAutoSelected == null
-                  ? prev.scu
-                  : prev.scuAutoSelected,
-            };
-          });
-        }
-      }
-    }
+    let scuSplits = rebuildScuSplitsFromDraft(existing, draft);
 
     let mission: SessionMission = {
       ...existing,
@@ -374,14 +507,27 @@ export const missionScuMutate = {
         Math.max(0, Math.floor(delivery.scu)),
       );
     }
-    // Pickups follow each commodity total after deliveries are pinned.
-    for (const commodity of draft.commodities) {
-      const amount = Math.max(0, Math.floor(commodity.scu));
-      rows = applyScaledHits(
-        rows,
-        roleHits(rows, missionId, commodity.commoditySlug, "pickup"),
-        amount,
-      );
+    if (draft.pickups.length > 0) {
+      for (const pickup of draft.pickups) {
+        rows = setRouteLocationCommodityScu(
+          rows,
+          missionId,
+          "pickup",
+          pickup.locationKey,
+          pickup.commoditySlug,
+          Math.max(0, Math.floor(pickup.scu)),
+        );
+      }
+    } else {
+      // No collect rows in the draft — keep legacy proportional pickup scale.
+      for (const commodity of draft.commodities) {
+        const amount = Math.max(0, Math.floor(commodity.scu));
+        rows = applyScaledHits(
+          rows,
+          roleHits(rows, missionId, commodity.commoditySlug, "pickup"),
+          amount,
+        );
+      }
     }
 
     return {

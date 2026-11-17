@@ -106,6 +106,27 @@ function Interactive({
             ),
           );
         }}
+        onChangePickup={(commoditySlug, locationSlug, scu) => {
+          setSaveError(null);
+          setDraft((prev) =>
+            missionScuAmounts.setPickupScuInDraft(
+              prev,
+              commoditySlug,
+              locationSlug,
+              scu,
+            ),
+          );
+        }}
+        onSkipPickup={(commoditySlug, locationSlug) => {
+          setSaveError(null);
+          setDraft((prev) =>
+            missionScuAmounts.skipPickupInDraft(
+              prev,
+              commoditySlug,
+              locationSlug,
+            ),
+          );
+        }}
         onReset={() => {
           setDraft(baseline);
           setSaveError(null);
@@ -134,6 +155,8 @@ export const SimpleTotals: Story = {
     onToggle: () => {},
     onChangeCommodity: () => {},
     onChangeDelivery: () => {},
+    onChangePickup: () => {},
+    onSkipPickup: () => {},
     onReset: () => {},
     onSave: () => {},
   },
@@ -151,8 +174,77 @@ export const NestedDeliveries: Story = {
     onToggle: () => {},
     onChangeCommodity: () => {},
     onChangeDelivery: () => {},
+    onChangePickup: () => {},
+    onSkipPickup: () => {},
     onReset: () => {},
     onSave: () => {},
   },
   render: () => <Interactive source={nestedMission} />,
+};
+
+const nestedPickupsMission = {
+  ...mission,
+  id: "nested-pickups",
+  cargo: [{ commodity: "Quartz (Raw)", scu: 11 }],
+  cargoSummary: "11 SCU Quartz (Raw)",
+  from: [
+    "Shubin Mining Facility SM0-18",
+    "Shubin Mining Facility SM0-22",
+    "Shubin Mining Facility SM0-10",
+    "Shubin Mining Facility SM0-13",
+  ],
+  to: ["Covalex Distribution Centre S4DC05"],
+  scuSplits: [
+    {
+      kind: "deliver" as const,
+      fromLocationSlug: "shubin-mining-facility-sm0-18",
+      toLocationSlug: "covalex-distribution-centre-s4dc05",
+      commoditySlug: "quartz-raw",
+      commodityName: "Quartz (Raw)",
+      scu: 2,
+    },
+    {
+      kind: "deliver" as const,
+      fromLocationSlug: "shubin-mining-facility-sm0-22",
+      toLocationSlug: "covalex-distribution-centre-s4dc05",
+      commoditySlug: "quartz-raw",
+      commodityName: "Quartz (Raw)",
+      scu: 5,
+    },
+    {
+      kind: "deliver" as const,
+      fromLocationSlug: "shubin-mining-facility-sm0-10",
+      toLocationSlug: "covalex-distribution-centre-s4dc05",
+      commoditySlug: "quartz-raw",
+      commodityName: "Quartz (Raw)",
+      scu: 2,
+    },
+    {
+      kind: "deliver" as const,
+      fromLocationSlug: "shubin-mining-facility-sm0-13",
+      toLocationSlug: "covalex-distribution-centre-s4dc05",
+      commoditySlug: "quartz-raw",
+      commodityName: "Quartz (Raw)",
+      scu: 2,
+    },
+  ],
+};
+
+export const NestedPickupAndDeliver: Story = {
+  args: {
+    lines: [],
+    draft: missionScuAmounts.draftFromMission(nestedPickupsMission, null),
+    expandedSlugs: new Set(),
+    disabled: false,
+    isDirty: false,
+    saveError: null,
+    onToggle: () => {},
+    onChangeCommodity: () => {},
+    onChangeDelivery: () => {},
+    onChangePickup: () => {},
+    onSkipPickup: () => {},
+    onReset: () => {},
+    onSave: () => {},
+  },
+  render: () => <Interactive source={nestedPickupsMission} />,
 };

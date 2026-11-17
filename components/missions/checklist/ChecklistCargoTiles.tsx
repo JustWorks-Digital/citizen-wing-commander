@@ -35,7 +35,10 @@ function groupCargoLines(lines: CargoLine[]): {
   for (const role of order) {
     const items = lines.filter(
       (line) =>
-        line.role === role && line.scu != null && line.commodityName,
+        line.role === role &&
+        line.scu != null &&
+        line.scu > 0 &&
+        line.commodityName,
     );
     if (items.length > 0) groups.push({ role, items });
   }
@@ -124,6 +127,10 @@ export function CargoCommodityTile({
   doneClass,
   pendingCargoKeys,
   onToggleCargoHandled,
+  missionId = null,
+  onSkipPickup,
+  canSkipPickup,
+  pendingSkipPickupKeys,
 }: {
   row: HaulingChecklistRow;
   line: CargoLine;
@@ -135,6 +142,10 @@ export function CargoCommodityTile({
     rowId: string,
     cargoIndex: number,
   ) => void | Promise<void>;
+  missionId?: string | null;
+  onSkipPickup?: (missionId: string, commoditySlug: string) => void;
+  canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
+  pendingSkipPickupKeys?: ReadonlySet<string>;
 }) {
   const cleared = line.isHandled;
   const isCargoPending =
@@ -144,6 +155,22 @@ export function CargoCommodityTile({
     Boolean(onToggleCargoHandled) &&
     line.sourceIndex != null &&
     !isCargoPending;
+  const commoditySlug = line.commoditySlug?.trim() || "";
+  const canSkip =
+    isPickup &&
+    Boolean(onSkipPickup) &&
+    Boolean(missionId) &&
+    commoditySlug.length > 0 &&
+    (line.scu ?? 0) > 0 &&
+    !row.isCompleted &&
+    (canSkipPickup?.(missionId!, commoditySlug) ?? false);
+  const skipPendingKey =
+    missionId && commoditySlug
+      ? `${missionId}::${commoditySlug}::${row.locationSlug}`
+      : null;
+  const isSkipPending = Boolean(
+    skipPendingKey && pendingSkipPickupKeys?.has(skipPendingKey),
+  );
   const cargoHex = resolveCommodityColorHex(
     line.color,
     line.color2,
@@ -169,84 +196,118 @@ export function CargoCommodityTile({
       : `click to mark ${handledVerb}`;
 
   return (
-    <button
-      type="button"
-      title={[fullLabel, statusSuffix].join(" · ")}
-      aria-label={fullLabel}
-      aria-pressed={cleared}
-      aria-busy={isCargoPending}
-      disabled={!canToggle && !isCargoPending}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (line.sourceIndex == null || isCargoPending) return;
-        void onToggleCargoHandled?.(row.id, line.sourceIndex);
-      }}
-      className={[
-        // Mobile: corner icon. md+: centered stack; density follows cargo @container.
-        "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
-        "md:gap-0.5 md:px-1 md:py-1",
-        "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
-        "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
-        "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-        isCargoPending
-          ? "cursor-wait"
-          : canToggle
-            ? "cursor-pointer"
-            : "cursor-default",
-        doneClass,
-        cleared && !isCargoPending ? "opacity-40" : "",
-      ].join(" ")}
-      style={{
-        backgroundColor: tileBg,
-        borderColor: tileBorder,
-        color: tileFg,
-      }}
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
-        style={{
-          WebkitMaskImage: `url(${iconSrc})`,
-          maskImage: `url(${iconSrc})`,
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
+    <div className="relative min-w-0">
+      {canSkip && missionId ? (
+        <button
+          type="button"
+          aria-label={`Skip pick up of ${commodityName} at this stop`}
+          aria-busy={isSkipPending || undefined}
+          disabled={isSkipPending}
+          title="Skip pick up — remaining stops absorb this SCU"
+          className={[
+            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center rounded-sm border font-mono text-[0.7rem] leading-none shadow-sm transition-opacity",
+            isSkipPending
+              ? "cursor-wait opacity-70"
+              : "hover:opacity-90",
+          ].join(" ")}
+          style={{
+            backgroundColor: tileBg,
+            borderColor: tileBorder,
+            color: tileFg,
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (isSkipPending) return;
+            onSkipPickup?.(missionId, commoditySlug);
+          }}
+        >
+          {isSkipPending ? (
+            <Spinner className="size-2.5" label="Skipping" />
+          ) : (
+            "×"
+          )}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        title={[fullLabel, statusSuffix].join(" · ")}
+        aria-label={fullLabel}
+        aria-pressed={cleared}
+        aria-busy={isCargoPending}
+        disabled={!canToggle && !isCargoPending}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (line.sourceIndex == null || isCargoPending) return;
+          void onToggleCargoHandled?.(row.id, line.sourceIndex);
         }}
-      />
-      <span
-        aria-hidden
-        className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+        className={[
+          // Mobile: corner icon. md+: centered stack; density follows cargo @container.
+          "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
+          "md:gap-0.5 md:px-1 md:py-1",
+          "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
+          "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
+          "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+          isCargoPending
+            ? "cursor-wait"
+            : canToggle
+              ? "cursor-pointer"
+              : "cursor-default",
+          doneClass,
+          cleared && !isCargoPending ? "opacity-40" : "",
+        ].join(" ")}
         style={{
-          WebkitMaskImage: `url(${iconSrc})`,
-          maskImage: `url(${iconSrc})`,
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
+          backgroundColor: tileBg,
+          borderColor: tileBorder,
+          color: tileFg,
         }}
-      />
-      <span className="text-sm font-semibold leading-none md:text-[0.6rem] md:@[17rem]/cargo:text-[0.65rem]">
-        {line.scu}
-      </span>
-      <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
-        {commodityName}
-      </span>
-      {isCargoPending ? (
+      >
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
-        >
-          <Spinner className="size-3.5 text-rsi-accent" />
+          className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
+          style={{
+            WebkitMaskImage: `url(${iconSrc})`,
+            maskImage: `url(${iconSrc})`,
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        />
+        <span
+          aria-hidden
+          className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+          style={{
+            WebkitMaskImage: `url(${iconSrc})`,
+            maskImage: `url(${iconSrc})`,
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        />
+        <span className="text-sm font-semibold leading-none md:text-[0.6rem] md:@[17rem]/cargo:text-[0.65rem]">
+          {line.scu}
         </span>
-      ) : cleared ? (
-        <CargoTileHandledMark isPickup={isPickup} />
-      ) : null}
-    </button>
+        <span className="line-clamp-2 w-full min-w-0 text-center text-[0.55rem] leading-snug tracking-wide break-words opacity-90 normal-case md:text-[0.5rem] md:@[13rem]/cargo:text-[0.5rem] md:@[17rem]/cargo:text-[0.55rem]">
+          {commodityName}
+        </span>
+        {isCargoPending ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-rsi bg-rsi-bg-deep/55"
+          >
+            <Spinner className="size-3.5 text-rsi-accent" />
+          </span>
+        ) : cleared ? (
+          <CargoTileHandledMark isPickup={isPickup} />
+        ) : null}
+      </button>
+    </div>
   );
 }
 
@@ -256,6 +317,10 @@ export function CargoCommodityTiles({
   role,
   pendingCargoKeys,
   onToggleCargoHandled,
+  missionId = null,
+  onSkipPickup,
+  canSkipPickup,
+  pendingSkipPickupKeys,
 }: {
   row: HaulingChecklistRow;
   items: CargoLine[];
@@ -265,6 +330,10 @@ export function CargoCommodityTiles({
     rowId: string,
     cargoIndex: number,
   ) => void | Promise<void>;
+  missionId?: string | null;
+  onSkipPickup?: (missionId: string, commoditySlug: string) => void;
+  canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
+  pendingSkipPickupKeys?: ReadonlySet<string>;
 }) {
   const doneClass = row.isCompleted ? "opacity-70" : "";
   const isPickup = role === "pickup";
@@ -282,6 +351,10 @@ export function CargoCommodityTiles({
           doneClass={doneClass}
           pendingCargoKeys={pendingCargoKeys}
           onToggleCargoHandled={onToggleCargoHandled}
+          missionId={missionId}
+          onSkipPickup={onSkipPickup}
+          canSkipPickup={canSkipPickup}
+          pendingSkipPickupKeys={pendingSkipPickupKeys}
         />
       ))}
     </div>
@@ -300,6 +373,9 @@ export function CargoGroups({
   pendingCargoKeys,
   onToggleCargoHandled,
   bayAside,
+  onSkipPickup,
+  canSkipPickup,
+  pendingSkipPickupKeys,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -316,6 +392,14 @@ export function CargoGroups({
   ) => void | Promise<void>;
   /** Pad graph beside Pickup / Drop off — tops align with each section. */
   bayAside?: (role: "pickup" | "delivery") => ReactNode;
+  /**
+   * Skip pick-up of one cargo at this stop (mission-card ×). Remaining
+   * pick-up stops absorb the SCU.
+   */
+  onSkipPickup?: (missionId: string, commoditySlug: string) => void;
+  canSkipPickup?: (missionId: string, commoditySlug: string) => boolean;
+  /** Pending keys `missionId::commoditySlug::locationSlug`. */
+  pendingSkipPickupKeys?: ReadonlySet<string>;
 }) {
   const groups = groupCargoLines(cargoLines);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
@@ -396,6 +480,12 @@ export function CargoGroups({
             {sectionTransfer}
             <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
               {missionBuckets.map((bucket) => {
+                // Skipped pick-ups stay at 0 SCU on the row — drop empty tiles.
+                const activeItems = bucket.items.filter(
+                  (item) => (item.scu ?? 0) > 0,
+                );
+                if (activeItems.length === 0) return null;
+
                 const mission =
                   bucket.missionId != null
                     ? (missionById.get(bucket.missionId) ?? null)
@@ -403,10 +493,22 @@ export function CargoGroups({
                 const tiles = (
                   <CargoCommodityTiles
                     row={row}
-                    items={bucket.items}
+                    items={activeItems}
                     role={group.role}
                     pendingCargoKeys={pendingCargoKeys}
                     onToggleCargoHandled={onToggleCargoHandled}
+                    missionId={bucket.missionId}
+                    onSkipPickup={
+                      group.role === "pickup" ? onSkipPickup : undefined
+                    }
+                    canSkipPickup={
+                      group.role === "pickup" ? canSkipPickup : undefined
+                    }
+                    pendingSkipPickupKeys={
+                      group.role === "pickup"
+                        ? pendingSkipPickupKeys
+                        : undefined
+                    }
                   />
                 );
 

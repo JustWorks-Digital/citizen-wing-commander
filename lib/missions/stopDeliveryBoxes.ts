@@ -238,6 +238,8 @@ export function stopCargoBoxGroups(
 
   for (const cargo of row.cargoDeliveries) {
     if (!matchesCargoRole(row, action, cargo.role)) continue;
+    // Skipped pick-ups stay on the row at 0 SCU — hide empty stacks.
+    if (Math.max(0, Math.floor(Number(cargo.scu) || 0)) <= 0) continue;
 
     const commodity = getCommodityBySlug(cargo.commoditySlug);
     const missionId = cargo.missionId ?? null;

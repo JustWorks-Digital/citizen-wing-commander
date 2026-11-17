@@ -7,8 +7,12 @@ export type {
   MissionScuDraft,
   MissionScuDraftCommodity,
   MissionScuDraftDelivery,
+  MissionScuDraftStop,
 } from "@/lib/missions/missionScuDraft";
-export { rebalanceDraftDeliveries } from "@/lib/missions/missionScuDraft";
+export {
+  rebalanceDraftDeliveries,
+  rebalanceDraftStops,
+} from "@/lib/missions/missionScuDraft";
 
 /**
  * Editable SCU for the box-types modal: mission cargo totals and
@@ -19,10 +23,14 @@ export { rebalanceDraftDeliveries } from "@/lib/missions/missionScuDraft";
 export const missionScuAmounts = {
   draftFromMission: missionScuDraft.draftFromMission,
   setDeliveryScuInDraft: missionScuDraft.setDeliveryScuInDraft,
+  setPickupScuInDraft: missionScuDraft.setPickupScuInDraft,
+  skipPickupInDraft: missionScuDraft.skipPickupInDraft,
+  canSkipPickupInDraft: missionScuDraft.canSkipPickupInDraft,
   setCommodityScuInDraft: missionScuDraft.setCommodityScuInDraft,
   validateDraft: missionScuDraft.validateDraft,
   locationLines: missionLocationScu.locationLines,
   applyDraft: missionScuMutate.applyDraft,
+  skipPickupAtStop: missionScuMutate.skipPickupAtStop,
   setCommodityTotal: missionScuMutate.setCommodityTotal,
   setLocationAmount: missionScuMutate.setLocationAmount,
 };

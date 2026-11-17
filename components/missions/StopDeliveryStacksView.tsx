@@ -674,7 +674,7 @@ export function StopDeliveryStacksView({
                   : null;
               const scuTitle =
                 displayPlan.action === "pickup"
-                  ? `${label.scu} ${SCU_TITLE} collect · ${label.commodityName}`
+                  ? `${label.scu} ${SCU_TITLE} pick up · ${label.commodityName}`
                   : `${label.scu} ${SCU_TITLE} drop off · ${label.commodityName}`;
               const editHint = canEditBoxes
                 ? " · Double-click to edit box types"

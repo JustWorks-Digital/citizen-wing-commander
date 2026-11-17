@@ -136,6 +136,17 @@ describe("missionScuAmounts", () => {
         scu: 8,
       },
     ]);
+    expect(draft.pickups).toEqual([
+      {
+        locationKey: "covalex-distribution-centre-s4dc05",
+        locationSlug: "covalex-distribution-centre-s4dc05",
+        locationLabel: expect.any(String),
+        commoditySlug: "quantum-fuel",
+        commodity: "Quantum Fuel",
+        scu: 8,
+        isUserCorrected: false,
+      },
+    ]);
     expect(draft.deliveries).toEqual([
       {
         locationKey: "shubin-mining-facility-sm0-22",
@@ -161,6 +172,11 @@ describe("missionScuAmounts", () => {
     draft = {
       ...draft,
       commodities: [{ ...draft.commodities[0]!, scu: 12 }],
+      pickups: draft.pickups.map((line) => ({
+        ...line,
+        scu: 12,
+        isUserCorrected: false,
+      })),
       deliveries: draft.deliveries.map((line, index) => ({
         ...line,
         scu: 4,
@@ -207,6 +223,11 @@ describe("missionScuAmounts", () => {
     draft = {
       ...draft,
       commodities: [{ ...draft.commodities[0]!, scu: 12 }],
+      pickups: draft.pickups.map((line) => ({
+        ...line,
+        scu: 12,
+        isUserCorrected: false,
+      })),
       deliveries: draft.deliveries.map((line) => ({
         ...line,
         scu: 4,
@@ -256,6 +277,7 @@ describe("missionScuAmounts", () => {
       session.rows,
     );
     draft.commodities[0]!.scu = 15;
+    draft.pickups[0]!.scu = 15;
     draft.deliveries[0]!.scu = 6;
     draft.deliveries[1]!.scu = 5;
     draft.deliveries[2]!.scu = 4;
@@ -274,7 +296,165 @@ describe("missionScuAmounts", () => {
     ).toEqual([6, 5, 4]);
     expect(result.session.rows[0]!.cargoDeliveries[0]!.scu).toBe(15);
   });
+
+  it("skips a collect stop and rebalances remaining pickups", () => {
+    const session = multiPickupSession();
+    let draft = missionScuAmounts.draftFromMission(
+      session.missions![0]!,
+      session.rows,
+    );
+    expect(draft.pickups.map((line) => line.scu)).toEqual([3, 4, 4]);
+    expect(
+      missionScuAmounts.canSkipPickupInDraft(
+        draft,
+        "quartz-raw",
+        "shubin-mining-facility-sm0-18",
+      ),
+    ).toBe(true);
+    draft = missionScuAmounts.skipPickupInDraft(
+      draft,
+      "quartz-raw",
+      "shubin-mining-facility-sm0-18",
+    );
+    expect(draft.pickups[0]!.scu).toBe(0);
+    expect(draft.pickups[0]!.isUserCorrected).toBe(true);
+    expect(draft.pickups.slice(1).map((line) => line.scu)).toEqual([6, 5]);
+    expect(missionScuAmounts.validateDraft(draft)).toEqual({ ok: true });
+
+    const result = missionScuAmounts.applyDraft(session, "quartz", draft);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      result.session.rows.find(
+        (row) => row.locationSlug === "shubin-mining-facility-sm0-18",
+      )?.cargoDeliveries[0]?.scu,
+    ).toBe(0);
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "pickup")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([0, 6, 5]);
+  });
+
+  it("skips a pick-up at a stop in one call and rebalances remaining stops", () => {
+    const session = multiPickupSession();
+    const result = missionScuAmounts.skipPickupAtStop(session, {
+      missionId: "quartz",
+      commoditySlug: "quartz-raw",
+      locationSlug: "shubin-mining-facility-sm0-18",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      result.session.rows
+        .filter((row) => row.routeAction === "pickup")
+        .map((row) => row.cargoDeliveries[0]!.scu),
+    ).toEqual([0, 6, 5]);
+  });
 });
+
+function multiPickupSession(): SessionChecklist {
+  const missions: SessionMission[] = [
+    {
+      id: "quartz",
+      title: "Quartz haul",
+      contractor: "Covalex",
+      rewardAuec: 1000,
+      from: [
+        "Shubin Mining Facility SM0-18",
+        "Shubin Mining Facility SM0-22",
+        "Shubin Mining Facility SM0-10",
+      ],
+      to: ["Covalex Distribution Centre S4DC05"],
+      cargo: [{ commodity: "Quartz (Raw)", scu: 11 }],
+      scuSplits: [
+        {
+          kind: "deliver",
+          fromLocationSlug: "shubin-mining-facility-sm0-18",
+          toLocationSlug: "covalex-distribution-centre-s4dc05",
+          commoditySlug: "quartz-raw",
+          commodityName: "Quartz (Raw)",
+          scu: 3,
+        },
+        {
+          kind: "deliver",
+          fromLocationSlug: "shubin-mining-facility-sm0-22",
+          toLocationSlug: "covalex-distribution-centre-s4dc05",
+          commoditySlug: "quartz-raw",
+          commodityName: "Quartz (Raw)",
+          scu: 4,
+        },
+        {
+          kind: "deliver",
+          fromLocationSlug: "shubin-mining-facility-sm0-10",
+          toLocationSlug: "covalex-distribution-centre-s4dc05",
+          commoditySlug: "quartz-raw",
+          commodityName: "Quartz (Raw)",
+          scu: 4,
+        },
+      ],
+      isCompleted: false,
+      screenshots: [],
+      mobiglas: {
+        tab: "Accepted",
+        category: "Hauling - Planetary",
+        title: "Quartz haul",
+        contractor: "Covalex",
+        rewardAuec: 1000,
+        timeRemaining: null,
+        deadline: null,
+        details: "",
+        objectives: [],
+      },
+    },
+  ];
+  return applySessionCompletionTiming({
+    id: "multi-pickup",
+    sessionName: "Multi pickup",
+    shipSlugs: ["galaxy"],
+    startLocationSlug: "shubin-mining-facility-sm0-18",
+    missionCount: 1,
+    missionsCompleted: 0,
+    missions,
+    startedAt: "2026-11-15T00:00:00.000Z",
+    completedAt: null,
+    updatedAt: "2026-11-15T00:00:00.000Z",
+    rows: [
+      makeStop({
+        id: "leg-1",
+        routeAction: "pickup",
+        locationSlug: "shubin-mining-facility-sm0-18",
+        cargo: [
+          cargo("quartz-raw", 3, { role: "pickup", missionId: "quartz" }),
+        ],
+      }),
+      makeStop({
+        id: "leg-2",
+        routeAction: "pickup",
+        locationSlug: "shubin-mining-facility-sm0-22",
+        cargo: [
+          cargo("quartz-raw", 4, { role: "pickup", missionId: "quartz" }),
+        ],
+      }),
+      makeStop({
+        id: "leg-3",
+        routeAction: "pickup",
+        locationSlug: "shubin-mining-facility-sm0-10",
+        cargo: [
+          cargo("quartz-raw", 4, { role: "pickup", missionId: "quartz" }),
+        ],
+      }),
+      makeStop({
+        id: "leg-4",
+        routeAction: "delivery",
+        locationSlug: "covalex-distribution-centre-s4dc05",
+        cargo: [
+          cargo("quartz-raw", 11, { role: "delivery", missionId: "quartz" }),
+        ],
+      }),
+    ],
+  });
+}
 
 /** Multi-destination mission whose route only drops one commodity at one stop. */
 function partialMultiDropSession(): SessionChecklist {

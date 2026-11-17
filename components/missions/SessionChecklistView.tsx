@@ -576,6 +576,7 @@ export function SessionChecklistView({
     onUpdateQuantumTravel,
     applyBoxBreakdown,
     applyMissionScuDraft,
+    skipPickupAtStop,
     onReorderStops,
     onResetTrip,
   } = useSessionRouteEdits({
@@ -1049,6 +1050,7 @@ export function SessionChecklistView({
         onOpenContracts={onOpenContracts}
         onSelectBoxBreakdown={applyBoxBreakdown}
         onSaveMissionScuDraft={applyMissionScuDraft}
+        onSkipPickupAtStop={skipPickupAtStop}
         isLoading={isTripLoading}
         isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
@@ -1128,6 +1130,7 @@ export function SessionChecklistView({
         onRemoveMission={handleMissionRemove}
         onSelectBoxBreakdown={applyBoxBreakdown}
         onSaveMissionScuDraft={applyMissionScuDraft}
+        onSkipPickupAtStop={skipPickupAtStop}
       />
     </div>
   );

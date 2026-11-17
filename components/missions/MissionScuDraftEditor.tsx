@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { CommodityIcon } from "@/components/missions/CommodityIcon";
 import { Button } from "@/components/ui/Button";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
-import type { MissionScuDraft } from "@/lib/missions/missionScuAmounts";
+import type {
+  MissionScuDraft,
+  MissionScuDraftStop,
+} from "@/lib/missions/missionScuAmounts";
 
 export type MissionScuDraftCargoLine = {
   commoditySlug: string;
@@ -26,6 +29,13 @@ export type MissionScuDraftEditorProps = {
     locationSlug: string,
     scu: number,
   ) => void;
+  onChangePickup: (
+    commoditySlug: string,
+    locationSlug: string,
+    scu: number,
+  ) => void;
+  /** Zero this pick-up stop and rebalance remaining pick-up stops. */
+  onSkipPickup: (commoditySlug: string, locationSlug: string) => void;
   onReset: () => void;
   onSave: () => void;
 };
@@ -149,22 +159,19 @@ function ExpandChevron({ expanded }: { expanded: boolean }) {
   );
 }
 
-/** Compare SCU drafts for dirty-state (commodity + delivery lines). */
-export function missionScuDraftsEqual(
-  a: MissionScuDraft,
-  b: MissionScuDraft,
+function roleSum(stops: MissionScuDraftStop[], commoditySlug: string): number {
+  return stops
+    .filter((line) => line.commoditySlug === commoditySlug)
+    .reduce((sum, line) => sum + Math.max(0, Math.floor(line.scu)), 0);
+}
+
+function stopsEqual(
+  a: MissionScuDraftStop[],
+  b: MissionScuDraftStop[],
 ): boolean {
-  if (a.commodities.length !== b.commodities.length) return false;
-  if (a.deliveries.length !== b.deliveries.length) return false;
-  for (const [index, line] of a.commodities.entries()) {
-    const other = b.commodities[index];
-    if (!other) return false;
-    if (line.commoditySlug !== other.commoditySlug || line.scu !== other.scu) {
-      return false;
-    }
-  }
-  for (const [index, line] of a.deliveries.entries()) {
-    const other = b.deliveries[index];
+  if (a.length !== b.length) return false;
+  for (const [index, line] of a.entries()) {
+    const other = b[index];
     if (!other) return false;
     if (
       line.commoditySlug !== other.commoditySlug ||
@@ -178,9 +185,115 @@ export function missionScuDraftsEqual(
   return true;
 }
 
+/** Compare SCU drafts for dirty-state (commodity + Pick up/Deliver lines). */
+export function missionScuDraftsEqual(
+  a: MissionScuDraft,
+  b: MissionScuDraft,
+): boolean {
+  if (a.commodities.length !== b.commodities.length) return false;
+  if (!stopsEqual(a.pickups ?? [], b.pickups ?? [])) return false;
+  if (!stopsEqual(a.deliveries, b.deliveries)) return false;
+  for (const [index, line] of a.commodities.entries()) {
+    const other = b.commodities[index];
+    if (!other) return false;
+    if (line.commoditySlug !== other.commoditySlug || line.scu !== other.scu) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function StopSection({
+  title,
+  sum,
+  total,
+  stops,
+  disabled,
+  role,
+  onChange,
+  onSkip,
+}: {
+  title: string;
+  sum: number;
+  total: number;
+  stops: MissionScuDraftStop[];
+  disabled: boolean;
+  role: "pickup" | "delivery";
+  onChange: (commoditySlug: string, locationSlug: string, scu: number) => void;
+  onSkip?: (commoditySlug: string, locationSlug: string) => void;
+}) {
+  const matches = sum === total;
+  const roleColor =
+    role === "pickup" ? "text-rsi-accent" : "text-rsi-gold";
+  const roleBorder =
+    role === "pickup" ? "border-rsi-accent/45" : "border-rsi-gold/45";
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p
+          className={[
+            "w-fit border-b pb-0.5 font-mono text-[0.55rem] uppercase tracking-[0.14em]",
+            roleColor,
+            roleBorder,
+          ].join(" ")}
+        >
+          {title}
+        </p>
+        <p
+          className={[
+            "font-mono text-[0.55rem] uppercase tracking-[0.12em] tabular-nums",
+            matches ? roleColor : "text-rsi-danger",
+          ].join(" ")}
+          title={matches ? undefined : `Stops sum to ${sum} SCU, need ${total}`}
+        >
+          {total}
+        </p>
+      </div>
+      <ul className="space-y-2">
+        {stops.map((stop) => (
+          <li
+            key={`${role}:${stop.locationSlug}:${stop.commoditySlug}`}
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <p className="min-w-0 flex-1 truncate text-sm text-rsi-text-secondary">
+              {stop.locationLabel}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {role === "pickup" && onSkip && stop.scu > 0 && !disabled ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="!min-h-0 !px-2 !py-1 font-mono text-[0.55rem] uppercase tracking-[0.12em]"
+                  aria-label={`Skip pick up at ${stop.locationLabel}`}
+                  title="Ignore this pick up — remaining stops absorb the SCU"
+                  onClick={() =>
+                    onSkip(stop.commoditySlug, stop.locationSlug)
+                  }
+                >
+                  Skip
+                </Button>
+              ) : null}
+              <ScuAmountInput
+                value={stop.scu}
+                disabled={disabled}
+                unlockOnClick
+                isUserCorrected={Boolean(stop.isUserCorrected)}
+                ariaLabel={`${stop.locationLabel} ${stop.commodity} ${role === "pickup" ? "pick up" : "delivery"} SCU`}
+                onCommit={(scu) =>
+                  onChange(stop.commoditySlug, stop.locationSlug, scu)
+                }
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
- * Condensed cargo totals with expandable nested delivery SCU.
- * Edits stay in a draft until Save (delivery sums must match totals).
+ * Condensed cargo totals with expandable Pick up / Deliver SCU.
+ * Edits stay in a draft until Save (role sums must match totals).
  */
 export function MissionScuDraftEditor({
   lines,
@@ -192,9 +305,12 @@ export function MissionScuDraftEditor({
   onToggle,
   onChangeCommodity,
   onChangeDelivery,
+  onChangePickup,
+  onSkipPickup,
   onReset,
   onSave,
 }: MissionScuDraftEditorProps) {
+  const pickups = draft.pickups ?? [];
   return (
     <section className="rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/40 px-3 py-3 sm:px-4">
       <p className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
@@ -205,17 +321,21 @@ export function MissionScuDraftEditor({
           const cargoColor =
             resolveCommodityColorHex(null, null, line.commoditySlug) ??
             "var(--rsi-text-secondary)";
-          const deliveries = draft.deliveries.filter(
+          const commodityPickups = pickups.filter(
             (entry) => entry.commoditySlug === line.commoditySlug,
           );
-          const hasDeliveries = deliveries.length > 0;
-          const expanded = expandedSlugs.has(line.commoditySlug);
-          const deliverySum = deliveries.reduce(
-            (sum, entry) => sum + Math.max(0, Math.floor(entry.scu)),
-            0,
+          const commodityDeliveries = draft.deliveries.filter(
+            (entry) => entry.commoditySlug === line.commoditySlug,
           );
+          const hasStops =
+            commodityPickups.length > 0 || commodityDeliveries.length > 0;
+          const expanded = expandedSlugs.has(line.commoditySlug);
+          const pickupSum = roleSum(pickups, line.commoditySlug);
+          const deliverySum = roleSum(draft.deliveries, line.commoditySlug);
+          const total = Math.max(0, Math.floor(line.scu));
           const matches =
-            !hasDeliveries || deliverySum === Math.max(0, Math.floor(line.scu));
+            (commodityPickups.length === 0 || pickupSum === total) &&
+            (commodityDeliveries.length === 0 || deliverySum === total);
 
           return (
             <li
@@ -223,15 +343,15 @@ export function MissionScuDraftEditor({
               className="rounded-rsi border border-rsi-border/40 bg-rsi-surface/30"
             >
               <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 sm:gap-3">
-                {hasDeliveries ? (
+                {hasStops ? (
                   <button
                     type="button"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-rsi text-rsi-text-secondary hover:bg-rsi-surface-raised hover:text-rsi-text"
                     aria-expanded={expanded}
                     aria-label={
                       expanded
-                        ? `Hide ${line.commodity} delivery SCU`
-                        : `Show ${line.commodity} delivery SCU`
+                        ? `Hide ${line.commodity} stop SCU`
+                        : `Show ${line.commodity} stop SCU`
                     }
                     onClick={() => onToggle(line.commoditySlug)}
                   >
@@ -253,16 +373,30 @@ export function MissionScuDraftEditor({
                     >
                       {line.commodity}
                     </p>
-                    {hasDeliveries ? (
+                    {hasStops ? (
                       <p
                         className={[
-                          "font-mono text-[0.55rem] uppercase tracking-[0.12em]",
+                          "font-mono text-[0.55rem] uppercase tracking-[0.12em] tabular-nums",
                           matches
                             ? "text-rsi-text-muted"
                             : "text-rsi-danger",
                         ].join(" ")}
+                        title={
+                          matches
+                            ? undefined
+                            : [
+                                commodityPickups.length > 0
+                                  ? `Pick up ${pickupSum}/${total}`
+                                  : null,
+                                commodityDeliveries.length > 0
+                                  ? `Deliver ${deliverySum}/${total}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")
+                        }
                       >
-                        Total SCU: {deliverySum}/{line.scu}
+                        {total}
                       </p>
                     ) : null}
                   </div>
@@ -275,33 +409,32 @@ export function MissionScuDraftEditor({
                 />
               </div>
 
-              {hasDeliveries && expanded ? (
-                <ul className="space-y-2 border-t border-rsi-border/40 px-2.5 py-2.5 pl-11 sm:pl-12">
-                  {deliveries.map((delivery) => (
-                    <li
-                      key={`${delivery.locationSlug}:${delivery.commoditySlug}`}
-                      className="flex flex-wrap items-center justify-between gap-3"
-                    >
-                      <p className="min-w-0 truncate text-sm text-rsi-text-secondary">
-                        {delivery.locationLabel}
-                      </p>
-                      <ScuAmountInput
-                        value={delivery.scu}
-                        disabled={disabled}
-                        unlockOnClick
-                        isUserCorrected={Boolean(delivery.isUserCorrected)}
-                        ariaLabel={`${delivery.locationLabel} ${delivery.commodity} delivery SCU`}
-                        onCommit={(scu) =>
-                          onChangeDelivery(
-                            delivery.commoditySlug,
-                            delivery.locationSlug,
-                            scu,
-                          )
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
+              {hasStops && expanded ? (
+                <div className="space-y-4 border-t border-rsi-border/40 px-2.5 py-2.5 pl-11 sm:pl-12">
+                  {commodityPickups.length > 0 ? (
+                    <StopSection
+                      title="Pick up"
+                      sum={pickupSum}
+                      total={total}
+                      stops={commodityPickups}
+                      disabled={disabled}
+                      role="pickup"
+                      onChange={onChangePickup}
+                      onSkip={onSkipPickup}
+                    />
+                  ) : null}
+                  {commodityDeliveries.length > 0 ? (
+                    <StopSection
+                      title="Deliver"
+                      sum={deliverySum}
+                      total={total}
+                      stops={commodityDeliveries}
+                      disabled={disabled}
+                      role="delivery"
+                      onChange={onChangeDelivery}
+                    />
+                  ) : null}
+                </div>
               ) : null}
             </li>
           );

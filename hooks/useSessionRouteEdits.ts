@@ -213,6 +213,26 @@ export function useSessionRouteEdits(input: {
     [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
   );
 
+  const skipPickupAtStop = useCallback(
+    (input: {
+      missionId: string;
+      commoditySlug: string;
+      locationSlug: string;
+    }) => {
+      const result = missionScuAmounts.skipPickupAtStop(
+        sessionRef.current,
+        input,
+      );
+      if (!result.ok) {
+        setLoadError(result.error);
+        return;
+      }
+      void persistSession(result.session);
+      syncCatalogBoxSplits(input.missionId, result.session);
+    },
+    [persistSession, sessionRef, setLoadError, syncCatalogBoxSplits],
+  );
+
   const onReorderStops = useCallback(
     (orderedIds: string[]) => {
       const current = sessionRef.current;
@@ -243,6 +263,7 @@ export function useSessionRouteEdits(input: {
     onUpdateQuantumTravel,
     applyBoxBreakdown,
     applyMissionScuDraft,
+    skipPickupAtStop,
     onReorderStops,
     onResetTrip,
   };
