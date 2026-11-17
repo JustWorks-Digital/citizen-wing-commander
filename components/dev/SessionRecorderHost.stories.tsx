@@ -4,7 +4,15 @@ import { SessionRecorderHost } from "./SessionRecorderHost";
 const meta = {
   title: "Dev/SessionRecorderHost",
   component: SessionRecorderHost,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Dev UI action recorder HUD (bottom-right). Capability-gated. Press `R` to show/hide the box; Record/Stop attaches capture listeners only while recording.",
+      },
+    },
+  },
 } satisfies Meta<typeof SessionRecorderHost>;
 
 export default meta;

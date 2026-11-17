@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+import { TransferScuLine } from "@/components/missions/checklist/TransferBlocks";
 import type { DistanceToNext } from "@/lib/missions/sessionChecklist";
 
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
@@ -116,7 +117,13 @@ export function TripCompleteSummaryModal({
 
   const distanceLabel = formatRoundedDistance(distanceTotal);
   const auecHalf = Math.floor(Math.max(0, auecEarned) / 2);
-  const auecDisplay = isAuecSplit ? auecHalf : auecEarned;
+  const auecDigitCols = Math.max(
+    formatAuec(auecEarned).length,
+    formatAuec(auecHalf).length,
+    1,
+  );
+  const auecStrike = "";
+  const auecMute = "text-rsi-text-muted";
 
   return (
     <div
@@ -206,14 +213,34 @@ export function TripCompleteSummaryModal({
                 preserveCase
                 title={AUEC_TITLE}
                 value={
-                  <span className="inline-flex flex-col items-end gap-0.5">
-                    <span>+{formatAuec(auecDisplay)}</span>
-                    {isAuecSplit ? (
-                      <span className="font-mono text-[0.55rem] text-rsi-text-muted">
-                        of {formatAuec(auecEarned)}
-                      </span>
-                    ) : null}
-                  </span>
+                  isAuecSplit ? (
+                    <div className="ml-auto w-fit text-left">
+                      <TransferScuLine
+                        amount={`+${formatAuec(auecEarned)}`}
+                        suffix="÷2"
+                        tone="text-rsi-text-muted"
+                        strike={auecStrike}
+                        mute={auecMute}
+                        isDone={false}
+                        digitCols={auecDigitCols}
+                      />
+                      <div
+                        aria-hidden
+                        className="mb-1 border-t border-rsi-border-strong"
+                      />
+                      <TransferScuLine
+                        amount={`+${formatAuec(auecHalf)}`}
+                        suffix=""
+                        tone="text-rsi-text"
+                        strike={auecStrike}
+                        mute={auecMute}
+                        isDone={false}
+                        digitCols={auecDigitCols}
+                      />
+                    </div>
+                  ) : (
+                    `+${formatAuec(auecEarned)}`
+                  )
                 }
                 action={
                   <button

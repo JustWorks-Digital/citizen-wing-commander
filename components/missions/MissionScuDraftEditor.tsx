@@ -366,40 +366,26 @@ export function MissionScuDraftEditor({
                     label={line.commodity}
                     showTooltip={false}
                   />
-                  <div className="min-w-0">
-                    <p
-                      className="truncate text-sm font-medium tracking-wide"
-                      style={{ color: cargoColor }}
-                    >
-                      {line.commodity}
-                    </p>
-                    {hasStops ? (
-                      <p
-                        className={[
-                          "font-mono text-[0.55rem] uppercase tracking-[0.12em] tabular-nums",
-                          matches
-                            ? "text-rsi-text-muted"
-                            : "text-rsi-danger",
-                        ].join(" ")}
-                        title={
-                          matches
-                            ? undefined
-                            : [
-                                commodityPickups.length > 0
-                                  ? `Pick up ${pickupSum}/${total}`
-                                  : null,
-                                commodityDeliveries.length > 0
-                                  ? `Deliver ${deliverySum}/${total}`
-                                  : null,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")
-                        }
-                      >
-                        {total}
-                      </p>
-                    ) : null}
-                  </div>
+                  <p
+                    className="min-w-0 truncate text-sm font-medium tracking-wide"
+                    style={{ color: cargoColor }}
+                    title={
+                      hasStops && !matches
+                        ? [
+                            commodityPickups.length > 0
+                              ? `Pick up ${pickupSum}/${total}`
+                              : null,
+                            commodityDeliveries.length > 0
+                              ? `Deliver ${deliverySum}/${total}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : undefined
+                    }
+                  >
+                    {line.commodity}
+                  </p>
                 </div>
                 <ScuAmountInput
                   value={line.scu}

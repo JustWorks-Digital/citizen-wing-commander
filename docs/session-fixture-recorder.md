@@ -62,7 +62,7 @@ Seed helpers refuse non-local hosts.
 
 **Capability gate:** `SESSION_RECORDER_ENABLED=1` unlocks the host in production. In development the host is on unless set to `0`.
 
-**User control:** floating panel — Record / Stop / Clear / Export. Listeners run only while recording. State persists in `sessionStorage` across client navigations. `?record=1` auto-starts when the gate allows it.
+**User control:** floating panel — Record / Stop / Clear / Export. Press `R` to show/hide the panel (ignored while typing). Listeners run only while recording. State persists in `sessionStorage` across client navigations. `?record=1` auto-starts when the gate allows it.
 
 Export downloads `trace.json` (and copies to clipboard when permitted). Drop it into the pack, then convert to a Playwright spec (hand or AI) using locators from `testId` / role+name.
 

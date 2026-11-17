@@ -30,7 +30,7 @@ export type StopDeliveryBayPreviewProps = {
   /** Click under-stack cargo label to edit that mission’s box mix. */
   onEditMissionBoxes?: (missionId: string) => void;
   /**
-   * Double-click under-stack SCU on pick-up Breakdown to edit quantity;
+   * Double-click under-stack SCU on pick-up pad to edit quantity;
    * remaining pick-ups rebalance. 0 clears.
    */
   onSetPickupScu?: (
@@ -39,7 +39,7 @@ export type StopDeliveryBayPreviewProps = {
     scu: number,
   ) => void;
   /**
-   * Double-click under-stack SCU on drop-off Breakdown to edit quantity;
+   * Double-click under-stack SCU on drop-off pad to edit quantity;
    * remaining drop-offs rebalance. 0 clears.
    */
   onSetDeliveryScu?: (
@@ -54,13 +54,15 @@ export type StopDeliveryBayPreviewProps = {
    * Used to align each graph with its left-side Pickup / Drop off section.
    */
   role?: "pickup" | "delivery";
-  /** Mark all cargo of a role handled (Breakdown checkbox + corner button). */
+  /** Mark all cargo of a role handled (Dropped off / Picked up header checkbox). */
   onSetCargoRoleHandled?: (
     role: "pickup" | "delivery",
     handled: boolean,
   ) => void | Promise<void>;
   /** Pending keys `pickup` / `delivery` while role handled save runs. */
   pendingCargoRoleKeys?: ReadonlySet<"pickup" | "delivery">;
+  /** When true, omit the header checkbox. */
+  hideRoleHandledCheckbox?: boolean;
 };
 
 function GraphCompletedStamp() {
@@ -141,7 +143,8 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
   return plan.heightCells > 1;
 }
 
-function RoleHandledCheckbox({
+/** Role handled mark — shared by pad graph header and left Drop off / Pick up. */
+export function CargoRoleHandledCheckbox({
   role,
   checked,
   isPending,
@@ -199,54 +202,11 @@ function RoleHandledCheckbox({
   );
 }
 
-function RoleHandledHeaderButton({
-  role,
-  checked,
-  isPending,
-  onToggle,
-}: {
-  role: "pickup" | "delivery";
-  checked: boolean;
-  isPending: boolean;
-  onToggle: () => void;
-}) {
-  const label = role === "pickup" ? "Picked up" : "Dropped off";
-  return (
-    <button
-      type="button"
-      aria-pressed={checked}
-      aria-busy={isPending || undefined}
-      disabled={isPending}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (isPending) return;
-        onToggle();
-      }}
-      className={[
-        "inline-flex items-center gap-1.5 rounded-rsi border px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-        isPending
-          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/70 text-rsi-accent"
-          : checked
-            ? role === "pickup"
-              ? "border-rsi-accent/60 bg-rsi-accent/15 text-rsi-accent"
-              : "border-rsi-gold/60 bg-rsi-gold/15 text-rsi-gold"
-            : role === "pickup"
-              ? "border-rsi-accent/40 bg-rsi-bg-deep/70 text-rsi-accent hover:border-rsi-accent/70"
-              : "border-rsi-gold/40 bg-rsi-bg-deep/70 text-rsi-gold hover:border-rsi-gold/70",
-      ].join(" ")}
-    >
-      {isPending ? <Spinner className="size-2.5" label={label} /> : null}
-      {label}
-    </button>
-  );
-}
-
 /**
  * Per-stop pickup/delivery crates on generic flat 3D pads (not the ship bay).
  * Pass `role` to render a single graph (aligned with that left-side section).
  * Without `role`, both render (drop off then pickup).
- * Pickup can toggle Cargo (by commodity) vs Piles (by delivery location).
+ * Pickup can toggle All (by commodity) vs Per location (by delivery location).
  */
 export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   row,
@@ -260,6 +220,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   role,
   onSetCargoRoleHandled,
   pendingCargoRoleKeys,
+  hideRoleHandledCheckbox = false,
 }: StopDeliveryBayPreviewProps) {
   const [pickupMode, setPickupMode] = useState<PickupPadMode>("cargo");
   const [deliveryPeel, setDeliveryPeel] = useState(true);
@@ -366,10 +327,11 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <div className="flex min-w-0 items-center gap-2">
               <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-                Breakdown
+                Dropped off
               </p>
-              {onSetCargoRoleHandled || deliveryHandled ? (
-                <RoleHandledCheckbox
+              {!hideRoleHandledCheckbox &&
+              (onSetCargoRoleHandled || deliveryHandled) ? (
+                <CargoRoleHandledCheckbox
                   role="delivery"
                   checked={deliveryHandled}
                   isPending={deliveryPending}
@@ -383,27 +345,14 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {canToggleRole ? (
-                <RoleHandledHeaderButton
-                  role="delivery"
-                  checked={deliveryHandled}
-                  isPending={deliveryPending}
-                  onToggle={() => {
-                    void onSetCargoRoleHandled!(
-                      "delivery",
-                      !deliveryRoleHandled,
-                    );
-                  }}
-                />
-              ) : null}
-              {showDeliveryPeel ? (
+            {showDeliveryPeel ? (
+              <div className="flex flex-wrap items-center gap-1.5">
                 <PadPeelButton
                   pressed={deliveryPeel}
                   onPressedChange={setDeliveryPeel}
                 />
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col p-1.5">
             <StopDeliveryStacksView
@@ -440,10 +389,11 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
             <div className="flex min-w-0 items-center gap-2">
               <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-                Breakdown
+                Picked up
               </p>
-              {onSetCargoRoleHandled || pickupHandled ? (
-                <RoleHandledCheckbox
+              {!hideRoleHandledCheckbox &&
+              (onSetCargoRoleHandled || pickupHandled) ? (
+                <CargoRoleHandledCheckbox
                   role="pickup"
                   checked={pickupHandled}
                   isPending={pickupPending}
@@ -454,21 +404,8 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : null}
             </div>
-            {canToggleRole || showPickupPeel || showPickupModes ? (
+            {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
-                {canToggleRole ? (
-                  <RoleHandledHeaderButton
-                    role="pickup"
-                    checked={pickupHandled}
-                    isPending={pickupPending}
-                    onToggle={() => {
-                      void onSetCargoRoleHandled!(
-                        "pickup",
-                        !pickupRoleHandled,
-                      );
-                    }}
-                  />
-                ) : null}
                 {showPickupPeel ? (
                   <PadPeelButton
                     pressed={pickupPeel}
@@ -483,8 +420,8 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                   >
                     {(
                       [
-                        { id: "cargo", label: "Cargo" },
-                        { id: "piles", label: "Piles" },
+                        { id: "cargo", label: "All" },
+                        { id: "piles", label: "Per location" },
                       ] as const
                     ).map((tab) => {
                       const selected = pickupMode === tab.id;

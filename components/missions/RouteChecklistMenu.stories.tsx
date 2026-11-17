@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Log crash, and Controls.",
+          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Summary (when the trip is complete), Controls, and Crash out.",
       },
     },
   },
@@ -73,6 +73,14 @@ export const LogCrash: Story = {
 export const CrashAlreadyFinished: Story = {
   args: {
     onLogCrash: () => undefined,
+    canLogCrash: false,
+  },
+};
+
+export const TripCompleteSummary: Story = {
+  args: {
+    onOpenSummary: () => undefined,
+    onLogCrash: undefined,
     canLogCrash: false,
   },
 };

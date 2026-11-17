@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), route toolbar as two strips — Contract/Stop/Bay left, Distance/aUEC/Time right-aligned (below sm, Distance/aUEC move to ⋯ and Time stays in the strip), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
+          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), route toolbar as two strips — Contract/Stop/Bay left, Distance/aUEC/Time right-aligned (Saving… sits left of Distance so the trip strip does not shift; below sm, Distance/aUEC move to ⋯ and Time stays in the strip), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
       },
     },
   },

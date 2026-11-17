@@ -119,8 +119,10 @@ export type MissionChecklistTableProps = {
   onRepairTrip?: () => void;
   /** ⋯ menu: open crash-finish dialog. */
   onLogCrash?: () => void;
-  /** Hide Log crash when the session is already finished. */
+  /** Hide Crash out when the session is already finished. */
   canLogCrash?: boolean;
+  /** ⋯ menu: reopen the finish report when every stop is done. */
+  onOpenSummary?: () => void;
   isRepairingTrip?: boolean;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
@@ -136,14 +138,14 @@ export type MissionChecklistTableProps = {
     cargoIndex: number,
   ) => void | Promise<void>;
   /**
-   * Mark all pickup or delivery cargo at a stop handled (Breakdown controls).
-   * Resolves `true` when the stop was auto-completed (advance focus).
+   * Mark all pickup or delivery cargo at a stop handled (Drop off / Pick up).
+   * Does not complete the stop — Done stays separate.
    */
   onSetCargoRoleHandled?: (
     rowId: string,
     role: "pickup" | "delivery",
     handled: boolean,
-  ) => void | Promise<void | boolean>;
+  ) => void | Promise<void>;
   /**
    * Session origin. When set and different from the first stop, a compact
    * “Quantum to …” row is shown above the checklist.
@@ -217,8 +219,6 @@ export type MissionChecklistTableProps = {
     locationSlug: string;
     scu: number;
   }) => void | Promise<void>;
-  /** True while any session save is awaiting the backend echo. */
-  isSaving?: boolean;
   /** True until the first checklist hydrate on page / session change. */
   isLoading?: boolean;
 };
@@ -271,6 +271,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   isRepairingTrip = false,
   onLogCrash,
   canLogCrash = true,
+  onOpenSummary,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -290,7 +291,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onSkipPickupAtStop,
   onSetPickupScuAtStop,
   onSetDeliveryScuAtStop,
-  isSaving = false,
   isLoading = false,
 }: MissionChecklistTableProps) {
   const transferShipName = shipName?.trim() || "Ship";
@@ -343,6 +343,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const bridgeElsRef = useRef(new Map<string, HTMLElement>());
   const stickyToolbarRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollToIdRef = useRef<string | null>(null);
+  /** Block history-strip Open after Done — click can retarget onto the strip. */
+  const suppressHistoryOpenUntilRef = useRef(new Map<string, number>());
   const displayRows = rows;
   const tripStarted = rows.some((row) => row.isCompleted);
   const showQuantumOrigin = needsQuantumOriginRow(
@@ -520,16 +522,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     >
       <div className="min-w-0 flex-1">{toolbarStart}</div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        {isSaving ? (
-          <span
-            className="inline-flex items-center gap-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
-            role="status"
-            aria-live="polite"
-          >
-            <Spinner className="size-3 sm:size-3.5" label="Saving trip" />
-            <span className="hidden sm:inline">Saving…</span>
-          </span>
-        ) : null}
         <RouteChecklistMenu
           hideCompleted={hideCompleted}
           completedCount={completedCount}
@@ -539,6 +531,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           isRepairingTrip={isRepairingTrip}
           onLogCrash={onLogCrash}
           canLogCrash={canLogCrash}
+          onOpenSummary={onOpenSummary}
           overflowStats={toolbarEnd}
         />
       </div>
@@ -645,6 +638,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         const completing = !row.isCompleted;
         void runRowPending(row.id, () => onToggle(row.id));
         if (completing) {
+          suppressHistoryOpenUntilRef.current.set(row.id, Date.now() + 500);
+          setExpandedCompletedRowId((current) =>
+            current === row.id ? null : current,
+          );
           const routeIndex = rows.findIndex((entry) => entry.id === row.id);
           const nextIncomplete = rows
             .slice(routeIndex + 1)
@@ -739,19 +736,15 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       next.add(key);
       return next;
     });
-    void Promise.resolve(onSetCargoRoleHandled(rowId, role, handled))
-      .then((didCompleteStop) => {
-        if (didCompleteStop === true) {
-          advanceFocusAfterStop(rowId);
-        }
-      })
-      .finally(() => {
+    void Promise.resolve(onSetCargoRoleHandled(rowId, role, handled)).finally(
+      () => {
         setPendingCargoRoleKeys((prev) => {
           const next = new Set(prev);
           next.delete(key);
           return next;
         });
-      });
+      },
+    );
   };
 
   const handleQuantumEndpointChange = (
@@ -915,6 +908,12 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             // Always advance when completing — especially with history hidden,
             // the finished stop leaves the list and the next one should be active.
             if (completing) {
+              // Force history-strip condensation even if this stop was expanded.
+              // Also ignore Open for a beat — Done click can land on the strip.
+              suppressHistoryOpenUntilRef.current.set(stopId, Date.now() + 500);
+              setExpandedCompletedRowId((current) =>
+                current === stopId ? null : current,
+              );
               const nextIncomplete = displayRows
                 .slice(stopRouteIndex + 1)
                 .find((entry) => !entry.isCompleted);
@@ -927,6 +926,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                 }
               });
             }
+          };
+          const openCompletedHistory = (stopId: string) => {
+            const until =
+              suppressHistoryOpenUntilRef.current.get(stopId) ?? 0;
+            if (Date.now() < until) return;
+            if (pendingCompleteRowIds.has(stopId)) return;
+            setExpandedCompletedRowId(stopId);
+            onFocusStop?.(stopId);
           };
           const toggleStopDone = () => {
             toggleStopDoneById(row.id, routeIndex, row.isCompleted);
@@ -978,10 +985,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                   }
                   footer={addStopFooter(row.id)}
                   isHistoryExpanded={expandedCompletedRowId === row.id}
-                  onHistoryExpand={() => {
-                    setExpandedCompletedRowId(row.id);
-                    onFocusStop?.(row.id);
-                  }}
+                  onHistoryExpand={() => openCompletedHistory(row.id)}
                   onHistoryCollapse={() => setExpandedCompletedRowId(null)}
                 />
                 {draftingAfterRowId === row.id ? draftComposer : null}
@@ -1085,10 +1089,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                     isFocused={isFocused}
                     isPending={isPendingComplete}
                     onToggle={toggleStopDone}
-                    onOpen={() => {
-                      setExpandedCompletedRowId(row.id);
-                      onFocusStop?.(row.id);
-                    }}
+                    onOpen={() => openCompletedHistory(row.id)}
                   />
                   {bridgeNextDistance && nextRow ? (
                     <NextStopBridgeBand
@@ -1297,6 +1298,32 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                             rows={rows}
                             missions={missions}
                             role={role}
+                            onSetCargoRoleHandled={
+                              onSetCargoRoleHandled
+                                ? (cargoRole, handled) => {
+                                    handleSetCargoRoleHandled(
+                                      row.id,
+                                      cargoRole,
+                                      handled,
+                                    );
+                                  }
+                                : undefined
+                            }
+                            pendingCargoRoleKeys={
+                              pendingCargoRoleKeys.size > 0
+                                ? new Set(
+                                    (["pickup", "delivery"] as const).filter(
+                                      (cargoRole) =>
+                                        pendingCargoRoleKeys.has(
+                                          cargoRolePendingKey(
+                                            row.id,
+                                            cargoRole,
+                                          ),
+                                        ),
+                                    ),
+                                  )
+                                : undefined
+                            }
                             onEditMissionBoxes={
                               onSelectBoxBreakdown
                                 ? (missionId: string) => {
@@ -1340,38 +1367,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                                 ? pendingAddPickupKeys
                                 : undefined
                             }
-                            onSetCargoRoleHandled={
-                              onSetCargoRoleHandled
-                                ? (cargoRole, handled) => {
-                                    handleSetCargoRoleHandled(
-                                      row.id,
-                                      cargoRole,
-                                      handled,
-                                    );
-                                  }
-                                : undefined
-                            }
-                            pendingCargoRoleKeys={
-                              pendingCargoRoleKeys.size > 0
-                                ? new Set(
-                                    (
-                                      ["pickup", "delivery"] as const
-                                    ).filter((cargoRole) =>
-                                      pendingCargoRoleKeys.has(
-                                        cargoRolePendingKey(
-                                          row.id,
-                                          cargoRole,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : undefined
-                            }
                           />
                         )}
                       />
                     </div>
-                    {/* Same lg split as transfer + Breakdown so width matches Pick up / Drop off. */}
+                    {/* Same lg split as transfer + pad so width matches Pick up / Drop off. */}
                     <div className="mt-2 flex w-full min-w-0 flex-col lg:flex-row lg:gap-4">
                       <div className="min-w-0 w-full lg:flex-1">
                         <PayoutExpMeta

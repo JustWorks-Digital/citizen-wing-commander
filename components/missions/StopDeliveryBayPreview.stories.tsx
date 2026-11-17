@@ -129,7 +129,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Graph headers say Breakdown. Pass `role` to show only Pick up or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pick up. Pick up stops with a route can switch Cargo ↔ Piles. Click under-stack abbrev/box to edit crate mix (`onEditMissionBoxes`). Double-click under-stack SCU on pick-up or drop-off to edit quantity (`onSetPickupScu` / `onSetDeliveryScu`; remaining same-role stops rebalance on blur; 0 clears). Under-stack SCU chips use each cargo type’s commodity color. Skip pick-up lives on the mission card (left of Breakdown), not on this graph. Header Picked up / Dropped off marks the checkbox (all cargo of that role handled) and stamps the graph.",
+          "Flat pad stacks for stop cargo. Graph headers say Dropped off / Picked up. Pass `role` to show only one graph (checklist aligns each with that left Drop off / Pick up section). Both-stops render drop-off then pick-up. Pick up stops with a route can switch Cargo ↔ Piles. Click under-stack abbrev/box to edit crate mix (`onEditMissionBoxes`). Double-click under-stack SCU on pick-up or drop-off to edit quantity (`onSetPickupScu` / `onSetDeliveryScu`; remaining same-role stops rebalance on blur; 0 clears). Under-stack SCU chips use each cargo type’s commodity color. Skip pick-up lives on the mission card (left of the pad), not on this graph. Header checkbox marks all cargo of that role handled and stamps the graph.",
       },
     },
   },

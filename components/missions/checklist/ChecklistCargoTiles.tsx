@@ -870,7 +870,7 @@ export function CargoGroups({
   ) => void;
   pendingAddPickupKeys?: ReadonlySet<string>;
   /**
-   * Edit pick-up SCU on a Breakdown tile (double-click number → blur).
+   * Edit pick-up SCU on a cargo tile (double-click number → blur).
    * Remaining pick-up stops rebalance for that commodity.
    */
   onSetPickupScu?: (
@@ -1084,7 +1084,7 @@ export function CargoGroups({
                 {group.role === "pickup" ? "Pick up" : "Drop off"}
               </span>
             ) : null}
-            {/* Role label sits above so transfer + Breakdown tops line up;
+            {/* Role label sits above so transfer + pad tops line up;
                 stretch keeps the pad graph filling the left column height. */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
               {sectionBody}

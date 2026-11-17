@@ -60,10 +60,12 @@ function sessionIdFromPath(pathname: string): string | null {
 /**
  * App-wide UI action recorder overlay. Mount only when capability gate is on.
  * Listeners attach only while the user has started recording.
+ * Press `R` to show / hide the box (ignored while typing in a field).
  */
 export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
   const pathname = usePathname();
   const [recording, setRecording] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [count, setCount] = useState(0);
   const traceRef = useRef<UiActionTrace>(emptyUiActionTrace());
 
@@ -74,6 +76,29 @@ export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
     const next = fromQuery || readActive();
     setRecording(next);
     if (fromQuery) writeActive(true);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      return Boolean(
+        target.closest(
+          "input, textarea, select, [contenteditable='true'], [role='textbox']",
+        ),
+      );
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.repeat) return;
+      if (isTypingTarget(event.target)) return;
+      if (event.key.toLowerCase() !== "r") return;
+      event.preventDefault();
+      setPanelOpen((open) => !open);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [enabled]);
 
   useEffect(() => {
@@ -138,7 +163,7 @@ export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
     setCount(traceRef.current.actions.length);
   }, [enabled, recording, pathname]);
 
-  if (!enabled) return null;
+  if (!enabled || !panelOpen) return null;
 
   const start = () => {
     traceRef.current = emptyUiActionTrace({

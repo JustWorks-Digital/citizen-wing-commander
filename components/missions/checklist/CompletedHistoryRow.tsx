@@ -204,6 +204,9 @@ export function CompletedStopHistoryRow({
         onOpen
           ? (event) => {
               event.stopPropagation();
+              // Ignore while Done save is in flight — same click that completed
+              // the stop can retarget onto this strip after it condenses.
+              if (isPending) return;
               onOpen();
             }
           : undefined
@@ -214,13 +217,14 @@ export function CompletedStopHistoryRow({
               if (event.key !== "Enter" && event.key !== " ") return;
               event.preventDefault();
               event.stopPropagation();
+              if (isPending) return;
               onOpen();
             }
           : undefined
       }
       className={[
         "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
-        onOpen ? "cursor-pointer" : "",
+        onOpen && !isPending ? "cursor-pointer" : "",
         checklistRowToneClass(true, isFocused),
       ].join(" ")}
     >
@@ -280,6 +284,7 @@ export function CompletedQuantumHistoryRow({
         onOpen
           ? (event) => {
               event.stopPropagation();
+              if (isPending) return;
               onOpen();
             }
           : undefined
@@ -290,13 +295,14 @@ export function CompletedQuantumHistoryRow({
               if (event.key !== "Enter" && event.key !== " ") return;
               event.preventDefault();
               event.stopPropagation();
+              if (isPending) return;
               onOpen();
             }
           : undefined
       }
       className={[
         "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
-        onOpen ? "cursor-pointer" : "",
+        onOpen && !isPending ? "cursor-pointer" : "",
         checklistRowToneClass(true, isFocused),
       ].join(" ")}
     >

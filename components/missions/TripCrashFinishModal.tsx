@@ -15,7 +15,7 @@ export type TripCrashFinishModalProps = {
 };
 
 /**
- * ⋯ menu → Log crash: end the trip as `finishStatus: crash` with incident notes.
+ * ⋯ menu → Crash out: end the trip as `finishStatus: crash` with incident notes.
  */
 export function TripCrashFinishModal({
   open,

@@ -691,6 +691,7 @@ export function SessionChecklistView({
         onCapacityClick={openCargoLayout}
         cargoBayCount={cargoBayCount}
         elapsed={<SessionElapsedLabel session={elapsedSession} variant="value" />}
+        isSaving={saveInFlight > 0}
       />
     ),
     [
@@ -710,6 +711,7 @@ export function SessionChecklistView({
       openCargoLayout,
       cargoBayCount,
       elapsedSession,
+      saveInFlight,
     ],
   );
 
@@ -1085,7 +1087,6 @@ export function SessionChecklistView({
         onSetPickupScuAtStop={setPickupScuAtStop}
         onSetDeliveryScuAtStop={setDeliveryScuAtStop}
         isLoading={isTripLoading}
-        isSaving={saveInFlight > 0}
         toolbarStart={routeProgressStats}
         toolbarEnd={tripOverflowStats}
         onCopyTrip={initial ? undefined : copyTrip}
@@ -1101,6 +1102,9 @@ export function SessionChecklistView({
             : () => setCrashFinishOpen(true)
         }
         canLogCrash={!isSessionFinished(session)}
+        onOpenSummary={
+          isTripComplete ? () => setTripCompleteOpen(true) : undefined
+        }
         onToggle={onToggleStop}
       />
 

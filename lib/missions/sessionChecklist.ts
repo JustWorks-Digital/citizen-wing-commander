@@ -174,7 +174,7 @@ export type SessionChecklist = {
   completedAt: string | null;
   /**
    * How the trip ended. `null` / omitted while in progress.
-   * `complete` = every stop done; `crash` = ended via Log crash (⋯ menu).
+   * `complete` = every stop done; `crash` = ended via Crash out (⋯ menu).
    */
   finishStatus?: SessionFinishStatus | null;
   /** Incident notes when `finishStatus` is `crash`; otherwise null. */

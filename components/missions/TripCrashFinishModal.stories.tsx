@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Opened from the route checklist ⋯ menu (Log crash). Ends the session with finishStatus crash and optional incident notes in finishFeedback.",
+          "Opened from the route checklist ⋯ menu (Crash out). Ends the session with finishStatus crash and optional incident notes in finishFeedback.",
       },
     },
   },

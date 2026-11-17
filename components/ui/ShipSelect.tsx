@@ -148,25 +148,28 @@ export function ShipSelect({
         dismiss();
       }}
     >
-      <div className="mb-1 flex min-h-[1rem] items-center">
+      <div className="mb-1.5 flex min-h-[1.125rem] items-center">
         <label
           htmlFor={inputId}
-          className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted"
+          className="font-mono text-xs uppercase tracking-[0.18em] text-rsi-text-muted"
         >
           {label}
         </label>
       </div>
       <div
         className={[
-          "relative flex w-full items-center gap-2 rounded-rsi border border-rsi-border bg-rsi-bg-deep",
-          !open && selected ? "pl-2.5" : "pl-3",
-          canClear ? "pr-9" : "pr-3",
+          "relative flex w-full items-center gap-2.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep",
+          !open && selected ? "pl-3" : "pl-3.5",
+          canClear ? "pr-11" : "pr-3.5",
           "focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--rsi-ring)]",
           isDisabled ? "cursor-not-allowed opacity-60" : "",
         ].join(" ")}
       >
         {!open && selected ? (
-          <ShipThumb slug={selected.slug} className="pointer-events-none h-6 w-10" />
+          <ShipThumb
+            slug={selected.slug}
+            className="pointer-events-none h-8 w-14"
+          />
         ) : null}
         <input
           ref={inputRef}
@@ -218,7 +221,7 @@ export function ShipSelect({
             }
           }}
           className={[
-            "min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-rsi-text placeholder:text-rsi-text-muted",
+            "min-w-0 flex-1 border-0 bg-transparent py-3 text-base text-rsi-text placeholder:text-rsi-text-muted",
             "focus-visible:outline-none",
             isDisabled ? "cursor-not-allowed" : "",
           ].join(" ")}
@@ -233,7 +236,7 @@ export function ShipSelect({
               clearSelection();
             }}
             className={[
-              "absolute top-1/2 right-1.5 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-rsi text-rsi-text-muted transition-colors",
+              "absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-rsi text-rsi-text-muted transition-colors",
               "hover:bg-rsi-surface-raised hover:text-rsi-text",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             ].join(" ")}
@@ -241,7 +244,7 @@ export function ShipSelect({
             <svg
               aria-hidden
               viewBox="0 0 16 16"
-              className="size-3.5"
+              className="size-4"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"

@@ -16,6 +16,7 @@ import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUr
 import { resolveMissionTitle } from "@/lib/missions/missionRank";
 import { formatDistanceToNext, type DistanceToNext } from "@/lib/missions/sessionChecklist";
 
+import { Spinner } from "@/components/ui/Spinner";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 function StatLabel({
@@ -186,6 +187,11 @@ export type SessionRouteProgressStatsProps = {
   cargoBayCount?: number;
   /** Trip elapsed — Time cell in the Distance / aUEC / Time strip. */
   elapsed?: ReactNode;
+  /**
+   * Trip save in flight — shown left of Distance in the trip strip so it
+   * does not push Distance / aUEC / Time.
+   */
+  isSaving?: boolean;
   /** Optional control to the right of the trip strip (kept outside overflow). */
   trailing?: ReactNode;
   className?: string;
@@ -293,6 +299,7 @@ export function SessionRouteProgressStats({
   onCapacityClick,
   cargoBayCount: _cargoBayCount = 1,
   elapsed = null,
+  isSaving = false,
   trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
@@ -416,38 +423,52 @@ export function SessionRouteProgressStats({
           <div className={cellClass}>{capacityBody}</div>
         )}
       </div>
-      {showTripGroup ? (
-        <div
-          className={[stripClass, "ml-auto !w-fit max-w-full"].join(" ")}
-          role="group"
-          aria-label="Distance payout and time"
-        >
-          {showDistance ? (
-            <div
-              className={[cellClass, "hidden sm:flex"].join(" ")}
-              title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
-              aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
+      {showTripGroup || isSaving ? (
+        <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
+          {isSaving ? (
+            <span
+              className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
+              role="status"
+              aria-live="polite"
             >
-              {distanceBody}
-            </div>
+              <Spinner className="size-3 sm:size-3.5" label="Saving trip" />
+              <span className="hidden sm:inline">Saving…</span>
+            </span>
           ) : null}
-          {showAuec ? (
+          {showTripGroup ? (
             <div
-              className={[cellClass, "hidden shrink-0 sm:flex"].join(" ")}
-              title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
-              aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
+              className={[stripClass, "!w-fit max-w-full"].join(" ")}
+              role="group"
+              aria-label="Distance payout and time"
             >
-              {auecBody}
-            </div>
-          ) : null}
-          {elapsed ? (
-            <div
-              className={[cellClass, "shrink-0"].join(" ")}
-              title="Total time"
-              aria-label="Trip time"
-            >
-              <StatLabel>Time</StatLabel>
-              <StatValue>{elapsed}</StatValue>
+              {showDistance ? (
+                <div
+                  className={[cellClass, "hidden sm:flex"].join(" ")}
+                  title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
+                  aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
+                >
+                  {distanceBody}
+                </div>
+              ) : null}
+              {showAuec ? (
+                <div
+                  className={[cellClass, "hidden shrink-0 sm:flex"].join(" ")}
+                  title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+                  aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
+                >
+                  {auecBody}
+                </div>
+              ) : null}
+              {elapsed ? (
+                <div
+                  className={[cellClass, "shrink-0"].join(" ")}
+                  title="Total time"
+                  aria-label="Trip time"
+                >
+                  <StatLabel>Time</StatLabel>
+                  <StatValue>{elapsed}</StatValue>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

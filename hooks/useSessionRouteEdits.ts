@@ -73,49 +73,22 @@ export function useSessionRouteEdits(input: {
   );
 
   const onSetCargoRoleHandled = useCallback(
-    async (
-      rowId: string,
-      role: "pickup" | "delivery",
-      handled: boolean,
-    ): Promise<boolean> => {
+    (rowId: string, role: "pickup" | "delivery", handled: boolean) => {
       const current = sessionRef.current;
       const target = current.rows.find((row) => row.id === rowId);
-      if (!target) return false;
+      if (!target) return Promise.resolve();
 
       const withRole = stopCargoRole.withHandled(target, role, handled);
-      const rows = current.rows.map((row) =>
-        row.id === rowId ? withRole : row,
-      );
-      const shouldCompleteStop =
-        handled &&
-        !withRole.isCompleted &&
-        stopCargoRole.arePresentRolesHandled(withRole);
-
-      if (shouldCompleteStop) {
-        const completed = toggleStopCompletion(
-          {
-            ...current,
-            shipSlugs: current.shipSlugs ?? [],
-            startLocationSlug: current.startLocationSlug ?? null,
-            rows,
-          },
-          rowId,
-        );
-        if (completed) {
-          await persistSession(completed);
-          return true;
-        }
-      }
-
-      await persistSession(
+      return persistSession(
         applySessionCompletionTiming({
           ...current,
           shipSlugs: current.shipSlugs ?? [],
           startLocationSlug: current.startLocationSlug ?? null,
-          rows,
+          rows: current.rows.map((row) =>
+            row.id === rowId ? withRole : row,
+          ),
         }),
       );
-      return false;
     },
     [persistSession, sessionRef],
   );
