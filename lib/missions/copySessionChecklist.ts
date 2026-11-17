@@ -66,6 +66,8 @@ export function copySessionChecklist(
       missions: (source.missions ?? []).map(resetMission),
       startedAt: nowIso,
       completedAt: null,
+      finishStatus: null,
+      finishFeedback: null,
       updatedAt: nowIso,
       rows: (source.rows ?? []).map(resetRow),
     },

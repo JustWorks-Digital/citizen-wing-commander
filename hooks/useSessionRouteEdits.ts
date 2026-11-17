@@ -21,6 +21,7 @@ import {
   applySessionCompletionTiming,
   type SessionChecklist,
 } from "@/lib/missions/sessionChecklist";
+import { stopCargoRole } from "@/lib/missions/stopDeliveryBoxes";
 import { toggleStopCompletion } from "@/lib/missions/toggleStopCompletion";
 import { QUANTUM_ORIGIN_ROW_ID } from "@/components/missions/checklist/MissionChecklistTable";
 
@@ -68,6 +69,54 @@ export function useSessionRouteEdits(input: {
           }),
         }),
       ),
+    [persistSession, sessionRef],
+  );
+
+  const onSetCargoRoleHandled = useCallback(
+    async (
+      rowId: string,
+      role: "pickup" | "delivery",
+      handled: boolean,
+    ): Promise<boolean> => {
+      const current = sessionRef.current;
+      const target = current.rows.find((row) => row.id === rowId);
+      if (!target) return false;
+
+      const withRole = stopCargoRole.withHandled(target, role, handled);
+      const rows = current.rows.map((row) =>
+        row.id === rowId ? withRole : row,
+      );
+      const shouldCompleteStop =
+        handled &&
+        !withRole.isCompleted &&
+        stopCargoRole.arePresentRolesHandled(withRole);
+
+      if (shouldCompleteStop) {
+        const completed = toggleStopCompletion(
+          {
+            ...current,
+            shipSlugs: current.shipSlugs ?? [],
+            startLocationSlug: current.startLocationSlug ?? null,
+            rows,
+          },
+          rowId,
+        );
+        if (completed) {
+          await persistSession(completed);
+          return true;
+        }
+      }
+
+      await persistSession(
+        applySessionCompletionTiming({
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows,
+        }),
+      );
+      return false;
+    },
     [persistSession, sessionRef],
   );
 
@@ -279,6 +328,7 @@ export function useSessionRouteEdits(input: {
 
   return {
     onToggleCargoHandled,
+    onSetCargoRoleHandled,
     onToggleStop,
     onInsertQuantumTravel,
     onUpdateQuantumTravel,

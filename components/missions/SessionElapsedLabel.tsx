@@ -5,7 +5,10 @@ import { formatSessionDuration, getSessionElapsedMs, type SessionChecklist } fro
 
 
 export type SessionElapsedLabelProps = {
-  session: Pick<SessionChecklist, "startedAt" | "completedAt">;
+  session: Pick<
+    SessionChecklist,
+    "startedAt" | "completedAt" | "finishStatus"
+  >;
   /**
    * `default` — “Time …” line for the ⋯ menu.
    * `value` — duration only for the route toolbar Time cell.
@@ -21,7 +24,8 @@ export function SessionElapsedLabel({
   session,
   variant = "default",
 }: SessionElapsedLabelProps) {
-  const isComplete = Boolean(session.completedAt);
+  const isCrashed = session.finishStatus === "crash";
+  const isComplete = Boolean(session.completedAt) || isCrashed;
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -31,17 +35,20 @@ export function SessionElapsedLabel({
       setNowMs(Date.now());
     }, 1000);
     return () => window.clearInterval(tick);
-  }, [isComplete, session.startedAt, session.completedAt]);
+  }, [isComplete, session.startedAt, session.completedAt, session.finishStatus]);
 
   const label = formatSessionDuration(getSessionElapsedMs(session, nowMs));
-  const display = `${label}${isComplete ? " · done" : ""}`;
+  const suffix = isCrashed ? " · crash" : isComplete ? " · done" : "";
+  const display = `${label}${suffix}`;
+  const toneClass = isCrashed
+    ? "text-rsi-danger"
+    : isComplete
+      ? "text-rsi-success"
+      : undefined;
 
   if (variant === "value") {
     return (
-      <span
-        className={isComplete ? "text-rsi-success" : undefined}
-        title="Total time"
-      >
+      <span className={toneClass} title="Total time">
         {display}
       </span>
     );
@@ -51,7 +58,7 @@ export function SessionElapsedLabel({
     <p
       className={[
         "font-mono text-[0.65rem] uppercase tracking-[0.14em] tabular-nums",
-        isComplete ? "text-rsi-success" : "text-rsi-text-secondary",
+        toneClass ?? "text-rsi-text-secondary",
       ].join(" ")}
       title="Total time"
     >

@@ -137,6 +137,9 @@ export function rowPresenceLocationSlug(row: HaulingChecklistRow): string {
   return row.locationSlug;
 }
 
+/** How a hauling session finished. */
+export type SessionFinishStatus = "complete" | "crash";
+
 /** Live hauling trip checklist (tabs, MCP session, Postgres payload). */
 export type SessionChecklist = {
   /**
@@ -166,12 +169,40 @@ export type SessionChecklist = {
   /**
    * ISO timestamp when the last checklist item was checked.
    * Null while the run is still in progress.
+   * Also set when the trip ends as a crash finish.
    */
   completedAt: string | null;
+  /**
+   * How the trip ended. `null` / omitted while in progress.
+   * `complete` = every stop done; `crash` = ended via Log crash (⋯ menu).
+   */
+  finishStatus?: SessionFinishStatus | null;
+  /** Incident notes when `finishStatus` is `crash`; otherwise null. */
+  finishFeedback?: string | null;
   /** ISO timestamp of the last shared write (sync / ETag revision). */
   updatedAt: string;
   rows: HaulingChecklistRow[];
 };
+
+const SESSION_FINISH_STATUS = new Set<SessionFinishStatus>([
+  "complete",
+  "crash",
+]);
+
+function normalizeFinishStatus(
+  value: unknown,
+): SessionFinishStatus | null {
+  return typeof value === "string" &&
+    SESSION_FINISH_STATUS.has(value as SessionFinishStatus)
+    ? (value as SessionFinishStatus)
+    : null;
+}
+
+function normalizeFinishFeedback(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 /** Round to nearest hundredth; drop trailing zeros (1.50 → 1.5). */
 function formatDistanceValue(value: number): string {
@@ -200,12 +231,21 @@ export function areAllLegsComplete(rows: HaulingChecklistRow[]): boolean {
   return rows.length > 0 && rows.every((row) => row.isCompleted);
 }
 
-/** Set/clear `completedAt` from create → last item checked. */
+/** Set/clear `completedAt` / finish fields from route progress or crash. */
 export function applySessionCompletionTiming(
   session: SessionChecklist,
   now = new Date(),
 ): SessionChecklist {
   const startedAt = session.startedAt || now.toISOString();
+  if (session.finishStatus === "crash") {
+    return {
+      ...session,
+      startedAt,
+      completedAt: session.completedAt ?? now.toISOString(),
+      finishStatus: "crash" as const,
+      finishFeedback: normalizeFinishFeedback(session.finishFeedback),
+    };
+  }
   const allDone = areAllLegsComplete(session.rows);
   return {
     ...session,
@@ -213,7 +253,30 @@ export function applySessionCompletionTiming(
     completedAt: allDone
       ? session.completedAt ?? now.toISOString()
       : null,
+    finishStatus: allDone ? ("complete" as const) : null,
+    finishFeedback: null,
   };
+}
+
+/** End the trip as a crash with optional incident notes (⋯ menu). */
+export function finishSessionAsCrash(
+  session: SessionChecklist,
+  feedback: string,
+  now = new Date(),
+): SessionChecklist {
+  return applySessionCompletionTiming({
+    ...session,
+    completedAt: now.toISOString(),
+    finishStatus: "crash",
+    finishFeedback: normalizeFinishFeedback(feedback),
+  }, now);
+}
+
+/** True when the timer is stopped (all stops done or crash finish). */
+export function isSessionFinished(
+  session: Pick<SessionChecklist, "completedAt" | "finishStatus">,
+): boolean {
+  return Boolean(session.completedAt) || session.finishStatus === "crash";
 }
 
 /**
@@ -360,6 +423,8 @@ export function emptySessionChecklist(
     missions: [],
     startedAt: now,
     completedAt: null,
+    finishStatus: null,
+    finishFeedback: null,
     updatedAt: now,
     rows: [],
     ...overrides,
@@ -438,6 +503,8 @@ export function normalizeSessionChecklist(
       startedAt,
       completedAt:
         typeof raw.completedAt === "string" ? raw.completedAt : null,
+      finishStatus: normalizeFinishStatus(raw.finishStatus),
+      finishFeedback: normalizeFinishFeedback(raw.finishFeedback),
       updatedAt,
       rows: Array.isArray(raw.rows)
         ? raw.rows.map((row) => normalizeChecklistRow(row))

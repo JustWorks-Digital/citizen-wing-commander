@@ -69,6 +69,48 @@ function matchesCargoRole(
   return row.routeAction === "delivery" || row.routeAction === "pickup_delivery";
 }
 
+/** Pickup / delivery lines on a stop (same rules as pad stacking). */
+export const stopCargoRole = {
+  lines(
+    row: HaulingChecklistRow,
+    role: "pickup" | "delivery",
+  ): HaulingChecklistRow["cargoDeliveries"] {
+    return row.cargoDeliveries.filter((cargo) =>
+      matchesCargoRole(row, role, cargo.role),
+    );
+  },
+  isHandled(row: HaulingChecklistRow, role: "pickup" | "delivery"): boolean {
+    const lines = stopCargoRole.lines(row, role);
+    return lines.length > 0 && lines.every((cargo) => cargo.isHandled === true);
+  },
+  withHandled(
+    row: HaulingChecklistRow,
+    role: "pickup" | "delivery",
+    handled: boolean,
+  ): HaulingChecklistRow {
+    return {
+      ...row,
+      cargoDeliveries: row.cargoDeliveries.map((cargo) =>
+        matchesCargoRole(row, role, cargo.role)
+          ? { ...cargo, isHandled: handled }
+          : cargo,
+      ),
+    };
+  },
+  /**
+   * True when every role that has cargo on this stop is fully handled.
+   * Pickup-only / delivery-only → that one role; both → pickup and delivery.
+   */
+  arePresentRolesHandled(row: HaulingChecklistRow): boolean {
+    const hasPickup = stopCargoRole.lines(row, "pickup").length > 0;
+    const hasDelivery = stopCargoRole.lines(row, "delivery").length > 0;
+    if (!hasPickup && !hasDelivery) return false;
+    if (hasPickup && !stopCargoRole.isHandled(row, "pickup")) return false;
+    if (hasDelivery && !stopCargoRole.isHandled(row, "delivery")) return false;
+    return true;
+  },
+};
+
 function groupKey(
   action: CargoGridBoxAction,
   missionId: string | null | undefined,

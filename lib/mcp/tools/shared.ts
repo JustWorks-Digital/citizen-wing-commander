@@ -221,6 +221,8 @@ export function presentSession(session: SessionChecklist) {
     missions: session.missions ?? [],
     startedAt: session.startedAt,
     completedAt: session.completedAt,
+    finishStatus: session.finishStatus ?? null,
+    finishFeedback: session.finishFeedback ?? null,
     updatedAt: session.updatedAt,
     totalTime: formatSessionDuration(getSessionElapsedMs(session)),
     rows: session.rows.map((row) => ({

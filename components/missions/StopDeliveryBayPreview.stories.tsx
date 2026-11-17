@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
+import { stopCargoRole } from "@/lib/missions/stopDeliveryBoxes";
 
 import { StopDeliveryBayPreview } from "./StopDeliveryBayPreview";
 
@@ -127,7 +129,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Graph headers say Breakdown. Pass `role` to show only Pick up or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pick up. Pick up stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided. Skip pick-up lives on the mission card (left of Breakdown), not on this graph.",
+          "Flat pad stacks for stop cargo. Graph headers say Breakdown. Pass `role` to show only Pick up or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pick up. Pick up stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided. Skip pick-up lives on the mission card (left of Breakdown), not on this graph. Bottom-right Picked up / Dropped off marks the header checkbox (all cargo of that role handled) and stamps the graph.",
       },
     },
   },
@@ -142,16 +144,42 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+function InteractiveRoleHandled({
+  row,
+  role,
+}: {
+  row: HaulingChecklistRow;
+  role?: "pickup" | "delivery";
+}) {
+  const [liveRow, setLiveRow] = useState(row);
+  return (
+    <StopDeliveryBayPreview
+      row={liveRow}
+      role={role}
+      onSetCargoRoleHandled={(cargoRole, handled) => {
+        setLiveRow((current) =>
+          stopCargoRole.withHandled(current, cargoRole, handled),
+        );
+      }}
+    />
+  );
+}
+
 export const DeliveryOnly: Story = {
   args: { row: deliveryRow, role: "delivery" },
+  render: (args) => (
+    <InteractiveRoleHandled row={args.row} role="delivery" />
+  ),
 };
 
 export const PickupOnly: Story = {
   args: { row: pickupRow, role: "pickup" },
+  render: (args) => <InteractiveRoleHandled row={args.row} role="pickup" />,
 };
 
 export const PickupAndDelivery: Story = {
   args: { row: bothRow },
+  render: (args) => <InteractiveRoleHandled row={args.row} />,
 };
 
 export const PickupHangarPiles: Story = {

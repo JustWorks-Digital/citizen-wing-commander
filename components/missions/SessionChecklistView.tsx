@@ -38,13 +38,16 @@ import {
   applySessionCompletionTiming,
   areAllLegsComplete,
   emptySessionChecklist,
+  finishSessionAsCrash,
   formatSessionDuration,
   getSessionElapsedMs,
+  isSessionFinished,
   summarizeSessionChecklist,
   type SessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
 import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
+import { TripCrashFinishModal } from "@/components/missions/TripCrashFinishModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
   applyCompletedMissionStopState,
@@ -127,6 +130,8 @@ export function SessionChecklistView({
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
   const [tripCompleteOpen, setTripCompleteOpen] = useState(false);
+  const [crashFinishOpen, setCrashFinishOpen] = useState(false);
+  const [crashFinishBusy, setCrashFinishBusy] = useState(false);
   /** null until first observe — already-complete trips must not auto-open the report. */
   const wasTripCompleteRef = useRef<boolean | null>(null);
   const [missionsOpen, setMissionsOpen] = useState(false);
@@ -571,6 +576,7 @@ export function SessionChecklistView({
   });
   const {
     onToggleCargoHandled,
+    onSetCargoRoleHandled,
     onToggleStop,
     onInsertQuantumTravel,
     onUpdateQuantumTravel,
@@ -942,6 +948,28 @@ export function SessionChecklistView({
         }}
       />
 
+      <TripCrashFinishModal
+        open={crashFinishOpen}
+        sessionName={session.sessionName}
+        isBusy={crashFinishBusy}
+        onClose={() => {
+          if (crashFinishBusy) return;
+          setCrashFinishOpen(false);
+        }}
+        onConfirm={async (feedback) => {
+          if (crashFinishBusy) return;
+          setCrashFinishBusy(true);
+          try {
+            await persistSession(
+              finishSessionAsCrash(sessionRef.current, feedback),
+            );
+            setCrashFinishOpen(false);
+          } finally {
+            setCrashFinishBusy(false);
+          }
+        }}
+      />
+
       <div className="min-w-0 max-w-full">
         <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
           Trip
@@ -1044,6 +1072,7 @@ export function SessionChecklistView({
         quantumOriginDeparted={quantumOriginDeparted}
         onQuantumOriginDepartedChange={setQuantumOriginDeparted}
         onToggleCargoHandled={onToggleCargoHandled}
+        onSetCargoRoleHandled={onSetCargoRoleHandled}
         onInsertQuantumTravel={onInsertQuantumTravel}
         onUpdateQuantumTravel={onUpdateQuantumTravel}
         onOpenCargoBays={toggleCargoLayout}
@@ -1064,6 +1093,12 @@ export function SessionChecklistView({
             : undefined
         }
         isRepairingTrip={tripRepairBusy}
+        onLogCrash={
+          initial || isSessionFinished(session)
+            ? undefined
+            : () => setCrashFinishOpen(true)
+        }
+        canLogCrash={!isSessionFinished(session)}
         onToggle={onToggleStop}
       />
 

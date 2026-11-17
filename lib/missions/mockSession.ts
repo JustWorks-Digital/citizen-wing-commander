@@ -55,6 +55,8 @@ export const mockSessionChecklist: SessionChecklist = {
   ],
   startedAt: new Date().toISOString(),
   completedAt: null,
+  finishStatus: null,
+  finishFeedback: null,
   updatedAt: new Date().toISOString(),
   rows: [
     {

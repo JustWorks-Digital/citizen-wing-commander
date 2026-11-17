@@ -13,8 +13,10 @@ import type { SessionMission } from "@/lib/missions/sessionMissions";
 import {
   planPickupHangarStacks,
   planStopCargoStacks,
+  stopCargoRole,
   type StopCargoStacksPlan,
 } from "@/lib/missions/stopDeliveryBoxes";
+import { Spinner } from "@/components/ui/Spinner";
 import { StopDeliveryStacksView } from "./StopDeliveryStacksView";
 
 export type StopDeliveryBayPreviewProps = {
@@ -31,6 +33,13 @@ export type StopDeliveryBayPreviewProps = {
    * Used to align each graph with its left-side Pickup / Drop off section.
    */
   role?: "pickup" | "delivery";
+  /** Mark all cargo of a role handled (Breakdown checkbox + corner button). */
+  onSetCargoRoleHandled?: (
+    role: "pickup" | "delivery",
+    handled: boolean,
+  ) => void | Promise<void>;
+  /** Pending keys `pickup` / `delivery` while role handled save runs. */
+  pendingCargoRoleKeys?: ReadonlySet<"pickup" | "delivery">;
 };
 
 function GraphCompletedStamp() {
@@ -111,6 +120,105 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
   return plan.heightCells > 1;
 }
 
+function RoleHandledCheckbox({
+  role,
+  checked,
+  isPending,
+  onToggle,
+}: {
+  role: "pickup" | "delivery";
+  checked: boolean;
+  isPending: boolean;
+  onToggle: () => void;
+}) {
+  const label = role === "pickup" ? "Picked up" : "Dropped off";
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-busy={isPending || undefined}
+      disabled={isPending}
+      aria-label={label}
+      title={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (isPending) return;
+        onToggle();
+      }}
+      className={[
+        "inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+        isPending
+          ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
+          : checked
+            ? role === "pickup"
+              ? "border-rsi-accent bg-rsi-accent text-rsi-bg-deep"
+              : "border-rsi-gold bg-rsi-gold text-rsi-bg-deep"
+            : "border-rsi-border bg-transparent text-transparent hover:border-rsi-border-strong",
+      ].join(" ")}
+    >
+      {isPending ? (
+        <Spinner className="size-2.5" label={label} />
+      ) : checked ? (
+        <svg
+          viewBox="0 0 12 12"
+          className="size-2.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M2.5 6.2 L4.8 8.5 L9.5 3.5" />
+        </svg>
+      ) : null}
+    </button>
+  );
+}
+
+function RoleHandledCornerButton({
+  role,
+  checked,
+  isPending,
+  onToggle,
+}: {
+  role: "pickup" | "delivery";
+  checked: boolean;
+  isPending: boolean;
+  onToggle: () => void;
+}) {
+  const label = role === "pickup" ? "Picked up" : "Dropped off";
+  return (
+    <button
+      type="button"
+      aria-pressed={checked}
+      aria-busy={isPending || undefined}
+      disabled={isPending}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (isPending) return;
+        onToggle();
+      }}
+      className={[
+        "absolute right-2 bottom-2 z-20 inline-flex items-center gap-1.5 rounded-rsi border px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-sm transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+        isPending
+          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/90 text-rsi-accent"
+          : checked
+            ? role === "pickup"
+              ? "border-rsi-accent/60 bg-rsi-accent/15 text-rsi-accent"
+              : "border-rsi-gold/60 bg-rsi-gold/15 text-rsi-gold"
+            : "border-rsi-border bg-rsi-bg-deep/90 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+      ].join(" ")}
+    >
+      {isPending ? <Spinner className="size-2.5" label={label} /> : null}
+      {label}
+    </button>
+  );
+}
+
 /**
  * Per-stop pickup/delivery crates on generic flat 3D pads (not the ship bay).
  * Pass `role` to render a single graph (aligned with that left-side section).
@@ -124,6 +232,8 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   className,
   onEditMissionBoxes,
   role,
+  onSetCargoRoleHandled,
+  pendingCargoRoleKeys,
 }: StopDeliveryBayPreviewProps) {
   const [pickupMode, setPickupMode] = useState<PickupPadMode>("cargo");
   const [deliveryPeel, setDeliveryPeel] = useState(true);
@@ -131,6 +241,13 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
 
   const showDelivery = role == null || role === "delivery";
   const showPickup = role == null || role === "pickup";
+  const deliveryRoleHandled = stopCargoRole.isHandled(row, "delivery");
+  const pickupRoleHandled = stopCargoRole.isHandled(row, "pickup");
+  const deliveryHandled = deliveryRoleHandled || row.isCompleted;
+  const pickupHandled = pickupRoleHandled || row.isCompleted;
+  const deliveryPending = Boolean(pendingCargoRoleKeys?.has("delivery"));
+  const pickupPending = Boolean(pendingCargoRoleKeys?.has("pickup"));
+  const canToggleRole = Boolean(onSetCargoRoleHandled) && !row.isCompleted;
 
   /**
    * Keyed by `missionId::commoditySlug`. Certainty + override are both
@@ -206,9 +323,25 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
           ].join(" ")}
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-              Breakdown
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
+                Breakdown
+              </p>
+              {onSetCargoRoleHandled || deliveryHandled ? (
+                <RoleHandledCheckbox
+                  role="delivery"
+                  checked={deliveryHandled}
+                  isPending={deliveryPending}
+                  onToggle={() => {
+                    if (!canToggleRole || !onSetCargoRoleHandled) return;
+                    void onSetCargoRoleHandled(
+                      "delivery",
+                      !deliveryRoleHandled,
+                    );
+                  }}
+                />
+              ) : null}
+            </div>
             {showDeliveryPeel ? (
               <PadPeelButton
                 pressed={deliveryPeel}
@@ -227,10 +360,23 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               onEditMissionBoxes={onEditMissionBoxes}
               boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
             />
-            {row.isCompleted ? (
+            {deliveryHandled ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <GraphCompletedStamp />
               </div>
+            ) : null}
+            {canToggleRole ? (
+              <RoleHandledCornerButton
+                role="delivery"
+                checked={deliveryHandled}
+                isPending={deliveryPending}
+                onToggle={() => {
+                  void onSetCargoRoleHandled!(
+                    "delivery",
+                    !deliveryRoleHandled,
+                  );
+                }}
+              />
             ) : null}
           </div>
         </section>
@@ -243,9 +389,22 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
           ].join(" ")}
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-              Breakdown
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
+                Breakdown
+              </p>
+              {onSetCargoRoleHandled || pickupHandled ? (
+                <RoleHandledCheckbox
+                  role="pickup"
+                  checked={pickupHandled}
+                  isPending={pickupPending}
+                  onToggle={() => {
+                    if (!canToggleRole || !onSetCargoRoleHandled) return;
+                    void onSetCargoRoleHandled("pickup", !pickupRoleHandled);
+                  }}
+                />
+              ) : null}
+            </div>
             {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
                 {showPickupPeel ? (
@@ -301,10 +460,20 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               onEditMissionBoxes={onEditMissionBoxes}
               boxSplitIndicatorsByMissionId={boxSplitIndicatorsByMissionId}
             />
-            {row.isCompleted ? (
+            {pickupHandled ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <GraphCompletedStamp />
               </div>
+            ) : null}
+            {canToggleRole ? (
+              <RoleHandledCornerButton
+                role="pickup"
+                checked={pickupHandled}
+                isPending={pickupPending}
+                onToggle={() => {
+                  void onSetCargoRoleHandled!("pickup", !pickupRoleHandled);
+                }}
+              />
             ) : null}
           </div>
         </section>

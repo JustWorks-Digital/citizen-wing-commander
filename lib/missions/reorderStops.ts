@@ -46,6 +46,8 @@ export function resetTripProgress(
     missions,
     missionCount: counted.length,
     missionsCompleted: 0,
+    finishStatus: null,
+    finishFeedback: null,
   });
   const rebuilt = rebuildRowsFromMissions(cleared, missions);
   if (!rebuilt.ok) return cleared;

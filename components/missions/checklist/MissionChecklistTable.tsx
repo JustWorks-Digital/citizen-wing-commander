@@ -117,6 +117,10 @@ export type MissionChecklistTableProps = {
   onCopyTrip?: () => void | Promise<void>;
   /** ⋯ menu: repair an invalid trip after the banner was dismissed. */
   onRepairTrip?: () => void;
+  /** ⋯ menu: open crash-finish dialog. */
+  onLogCrash?: () => void;
+  /** Hide Log crash when the session is already finished. */
+  canLogCrash?: boolean;
   isRepairingTrip?: boolean;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
@@ -131,6 +135,15 @@ export type MissionChecklistTableProps = {
     rowId: string,
     cargoIndex: number,
   ) => void | Promise<void>;
+  /**
+   * Mark all pickup or delivery cargo at a stop handled (Breakdown controls).
+   * Resolves `true` when the stop was auto-completed (advance focus).
+   */
+  onSetCargoRoleHandled?: (
+    rowId: string,
+    role: "pickup" | "delivery",
+    handled: boolean,
+  ) => void | Promise<void | boolean>;
   /**
    * Session origin. When set and different from the first stop, a compact
    * “Quantum to …” row is shown above the checklist.
@@ -246,11 +259,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onCopyTrip,
   onRepairTrip,
   isRepairingTrip = false,
+  onLogCrash,
+  canLogCrash = true,
   shipName = null,
   shipSlug = null,
   missions = [],
   sessionId = null,
   onToggleCargoHandled,
+  onSetCargoRoleHandled,
   startLocationSlug = null,
   quantumOriginDeparted: quantumOriginDepartedProp,
   onQuantumOriginDepartedChange,
@@ -278,6 +294,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     ReadonlySet<string>
   >(() => new Set());
   const [pendingAddPickupKeys, setPendingAddPickupKeys] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const [pendingCargoRoleKeys, setPendingCargoRoleKeys] = useState<
     ReadonlySet<string>
   >(() => new Set());
   const [pendingQuantumRowIds, setPendingQuantumRowIds] = useState<
@@ -481,6 +500,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           onCopyTrip={onCopyTrip}
           onRepairTrip={onRepairTrip}
           isRepairingTrip={isRepairingTrip}
+          onLogCrash={onLogCrash}
+          canLogCrash={canLogCrash}
           overflowStats={toolbarEnd}
         />
       </div>
@@ -648,6 +669,52 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     void runCargoPending(rowId, cargoIndex, () =>
       onToggleCargoHandled(rowId, cargoIndex),
     );
+  };
+
+  const cargoRolePendingKey = (rowId: string, role: "pickup" | "delivery") =>
+    `${rowId}::${role}`;
+
+  const advanceFocusAfterStop = (rowId: string) => {
+    const stopRouteIndex = displayRows.findIndex((entry) => entry.id === rowId);
+    const nextIncomplete = displayRows
+      .slice(stopRouteIndex + 1)
+      .find((entry) => !entry.isCompleted);
+    startTransition(() => {
+      if (nextIncomplete) {
+        pendingScrollToIdRef.current = nextIncomplete.id;
+        onFocusStop?.(nextIncomplete.id);
+      } else {
+        onFocusStop?.(null);
+      }
+    });
+  };
+
+  const handleSetCargoRoleHandled = (
+    rowId: string,
+    role: "pickup" | "delivery",
+    handled: boolean,
+  ) => {
+    if (!onSetCargoRoleHandled) return;
+    const key = cargoRolePendingKey(rowId, role);
+    if (pendingCargoRoleKeys.has(key)) return;
+    setPendingCargoRoleKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    void Promise.resolve(onSetCargoRoleHandled(rowId, role, handled))
+      .then((didCompleteStop) => {
+        if (didCompleteStop === true) {
+          advanceFocusAfterStop(rowId);
+        }
+      })
+      .finally(() => {
+        setPendingCargoRoleKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      });
   };
 
   const handleQuantumEndpointChange = (
@@ -1199,6 +1266,33 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                                       return;
                                     setBoxEditMissionId(missionId);
                                   }
+                                : undefined
+                            }
+                            onSetCargoRoleHandled={
+                              onSetCargoRoleHandled
+                                ? (cargoRole, handled) => {
+                                    handleSetCargoRoleHandled(
+                                      row.id,
+                                      cargoRole,
+                                      handled,
+                                    );
+                                  }
+                                : undefined
+                            }
+                            pendingCargoRoleKeys={
+                              pendingCargoRoleKeys.size > 0
+                                ? new Set(
+                                    (
+                                      ["pickup", "delivery"] as const
+                                    ).filter((cargoRole) =>
+                                      pendingCargoRoleKeys.has(
+                                        cargoRolePendingKey(
+                                          row.id,
+                                          cargoRole,
+                                        ),
+                                      ),
+                                    ),
+                                  )
                                 : undefined
                             }
                           />

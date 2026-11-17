@@ -22,6 +22,10 @@ export type RouteChecklistMenuProps = {
    */
   onRepairTrip?: () => void;
   isRepairingTrip?: boolean;
+  /** Open crash-finish dialog (end trip as finishStatus crash). */
+  onLogCrash?: () => void;
+  /** Hide Log crash when the session is already finished. */
+  canLogCrash?: boolean;
   /**
    * Trip stats that leave the sticky strip on small phones (Distance, aUEC).
    * Hidden from `sm` up when those cells are back in the toolbar.
@@ -33,7 +37,7 @@ export type RouteChecklistMenuProps = {
 /**
  * Right-edge ⋯ on the route checklist toolbar.
  * Holds Distance/aUEC on small phones, Copy trip, Hide / Show history,
- * Repair route (when the invalid banner is dismissed), and Controls.
+ * Repair route (when the invalid banner is dismissed), Log crash, and Controls.
  */
 export function RouteChecklistMenu({
   hideCompleted,
@@ -42,6 +46,8 @@ export function RouteChecklistMenu({
   onCopyTrip,
   onRepairTrip,
   isRepairingTrip = false,
+  onLogCrash,
+  canLogCrash = true,
   overflowStats = null,
   className,
 }: RouteChecklistMenuProps) {
@@ -170,6 +176,23 @@ export function RouteChecklistMenu({
                 <Spinner className="size-3" label="Repairing route" />
               ) : null}
               Repair route
+            </button>
+          ) : null}
+          {onLogCrash && canLogCrash ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                onLogCrash();
+                setOpen(false);
+              }}
+              className={[
+                "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-danger transition-colors",
+                "hover:bg-rsi-danger-muted/40 hover:text-rsi-danger",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+            >
+              Log crash
             </button>
           ) : null}
           <p

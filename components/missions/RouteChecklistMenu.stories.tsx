@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), and Controls.",
+          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Log crash, and Controls.",
       },
     },
   },
@@ -19,6 +19,7 @@ const meta = {
     completedCount: 2,
     onToggleHistory: () => {},
     onCopyTrip: async () => {},
+    onLogCrash: () => {},
     overflowStats: (
       <div className="flex flex-col gap-1.5 font-mono text-[0.65rem] tabular-nums text-rsi-text">
         <div>
@@ -62,6 +63,20 @@ export const RepairingRoute: Story = {
   },
 };
 
+export const LogCrash: Story = {
+  args: {
+    onLogCrash: () => undefined,
+    canLogCrash: true,
+  },
+};
+
+export const CrashAlreadyFinished: Story = {
+  args: {
+    onLogCrash: () => undefined,
+    canLogCrash: false,
+  },
+};
+
 export const Interactive: Story = {
   render: function InteractiveMenu() {
     const [hideCompleted, setHideCompleted] = useState(false);
@@ -74,6 +89,7 @@ export const Interactive: Story = {
           onCopyTrip={async () => {
             await new Promise((resolve) => setTimeout(resolve, 400));
           }}
+          onLogCrash={() => undefined}
         />
       </div>
     );
