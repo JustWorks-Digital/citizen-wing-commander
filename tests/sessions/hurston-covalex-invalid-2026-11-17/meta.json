@@ -1,0 +1,7 @@
+{
+  "slug": "hurston-covalex-invalid-2026-11-17",
+  "sourceSessionId": "053d7767-d209-41e5-bd37-5373e1284044",
+  "capturedAt": "2026-11-17T17:04:27.896Z",
+  "notes": "Invalid trip plan reference: Farnesway delivers iron/food/ice before those pickups exist (AI-authored legs). Soft MCP tripPlanValid / UI Invalid trip plan + Repair.",
+  "assets": []
+}

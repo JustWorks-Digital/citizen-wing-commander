@@ -69,6 +69,7 @@ import {
   shipStorageLocationLabels,
   type SessionChecklist,
 } from "@/lib/missions/sessionChecklist";
+import { validateChecklistTripCargo } from "@/lib/missions/tripPlan";
 import {
   createChecklistSession,
   getChecklistSession,
@@ -198,6 +199,40 @@ export const cargoGridCoordinateSystem = {
   boxSizesScu: [1, 2, 4, 8, 16, 32] as const,
   note: "Do not invent grid sizes. Prefer these sketches when packing; ships without a sketch have no bay geometry yet.",
 };
+
+/**
+ * Soft cargo-causality check (same as UI “Invalid trip plan”).
+ * Never blocks a write — callers attach this to MCP responses for AI feedback.
+ */
+export function presentTripCargoValidation(session: SessionChecklist) {
+  const check = validateChecklistTripCargo(
+    session.rows,
+    session.startLocationSlug ?? null,
+  );
+  const tripCargoIssues = check.issues.map((issue) => ({
+    stopId: issue.stopId,
+    locationSlug: issue.locationSlug,
+    locationName:
+      getLocationBySlug(issue.locationSlug)?.name ?? issue.locationSlug,
+    commoditySlug: issue.missing.commoditySlug,
+    commodityName:
+      getCommodityBySlug(issue.missing.commoditySlug)?.name ??
+      issue.missing.commoditySlug,
+    neededScu: issue.missing.scu,
+    shortfallScu: issue.shortfallScu,
+    missionId: issue.missing.missionId,
+  }));
+  return {
+    tripPlanValid: check.ok,
+    tripCargoIssues,
+    ...(check.ok
+      ? {}
+      : {
+          tripPlanWarning:
+            "Soft warning (route was still saved): one or more deliveries need cargo that is not yet aboard at that stop. Prefer fixing legs so each commodity is picked up before it is delivered, unless the player intentionally ordered it this way. The UI shows Invalid trip plan.",
+        }),
+  };
+}
 
 export function presentSession(session: SessionChecklist) {
   const startSlug = session.startLocationSlug;

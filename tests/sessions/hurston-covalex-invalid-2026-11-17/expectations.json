@@ -1,0 +1,12 @@
+{
+  "sessionName": "Hurston Covalex — local+stellar",
+  "startLocationSlug": "port-tressler",
+  "missionCount": 5,
+  "rowCount": 6,
+  "peakStopId": "leg-6",
+  "peakScu": 412,
+  "tripCargo": {
+    "ok": false,
+    "issueCount": 11
+  }
+}

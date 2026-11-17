@@ -6,6 +6,7 @@ alwaysApply: false
 # Session fixtures + recorder
 
 - Curated packs live in **`tests/sessions/<slug>/`** (`session.json`, `expectations.json`, `meta.json`, optional `trace.json` / `assets/`).
+- Invalid trip plan reference (manual + MCP soft `tripPlanValid`): **`hurston-covalex-invalid-2026-11-17`** — `npm run fixtures:restore-invalid-trip` / `@/lib/fixtures/sessions/invalidTripPlan`.
 - Capture with `npm run session:capture-fixture` (not a full `.data` dump). Prefer allowlisted assets only.
 - Domain tests use `loadSessionFixture(slug)` and **concrete** `expectations.json` values.
 - Playwright: `npm run test:e2e`; seed only against localhost. Prod `PLAYWRIGHT_BASE_URL` is read-only.

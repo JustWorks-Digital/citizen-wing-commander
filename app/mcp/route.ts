@@ -577,7 +577,7 @@ const handler = createMcpHandler(
       {
         title: "Replace hauling checklist",
         description:
-          "Use this after reading mission screenshots or contract text to fully replace a session checklist with structured legs. Prefer search_locations / search_commodities first when names are ambiguous. Pass sessionId to target a tab; omit for the active session.",
+          "Use this after reading mission screenshots or contract text to fully replace a session checklist with structured legs. Prefer search_locations / search_commodities first when names are ambiguous. Pass sessionId to target a tab; omit for the active session. Response includes soft tripPlanValid / tripCargoIssues (same as UI Invalid trip plan) — still saves when invalid; fix legs when tripPlanValid is false unless the player wants that order.",
         inputSchema: z.object({
           sessionId: sessionIdSchema,
           sessionName: z.string().optional(),
@@ -662,7 +662,7 @@ const handler = createMcpHandler(
       {
         title: "Apply hauling contracts intake",
         description:
-          "Use this to apply accepted hauling_contracts_intake JSON. When the user attached images, each contract MUST include screenshots[] logical paths from store_hauling_screenshot (omit screenshots only for text-only intake). Optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Still succeeds if screenshots are missing, but returns screenshotsMissing: true — then call set_mission_screenshots. Resets the session timer by default.",
+          "Use this to apply accepted hauling_contracts_intake JSON. When the user attached images, each contract MUST include screenshots[] logical paths from store_hauling_screenshot (omit screenshots only for text-only intake). Optionally pass optimized legs (same shape as replace_hauling_checklist). Without legs, the server auto-merges contracts into stops. Still succeeds if screenshots are missing, but returns screenshotsMissing: true — then call set_mission_screenshots. Also returns soft tripPlanValid / tripCargoIssues (not a hard reject) — if false, prefer repairing legs so pickups precede deliveries unless the player wants that order. Resets the session timer by default.",
         inputSchema: z.object({
           kind: z.literal("hauling_contracts_intake").optional(),
           version: z.literal(1).optional(),
@@ -1299,11 +1299,12 @@ const handler = createMcpHandler(
     serverInfo: {
       name: "citizen-wing-commander",
       // Bump when tool schemas change so MCP clients invalidate cached tools/list.
-      version: "0.2.9",
+      version: "0.2.10",
     },
     instructions: [
       "Citizen Wing Commander is a Star Citizen companion (hauling sessions, catalog, cargo bay) — call get_ai_profile early for tone, product purpose, and how to help the player (general game help + tools; not hauling-only).",
       "Before ingesting screenshots or contract text, call get_hauling_intake_playbook and follow Lane A (push bytes) vs Lane B (Source handoff).",
+      "After apply_hauling_contracts_intake / replace_hauling_checklist, read tripPlanValid and tripCargoIssues. Soft only (route still saves). When tripPlanValid is false, prefer fixing legs so each commodity is picked up before delivery unless the player intentionally wants that order.",
       "When the player reports real crate sizes from the freight elevator / hangar UI, call set_mission_scu_box_splits with missionId + boxes: [{ size, count }, …] (1/2/4/8/16/32) and scuBoxSplitsCertainty: known. For multi-cargo missions also pass commodity; totals must match that commodity’s SCU (or the mission total when single-cargo). Certainty is per commodity via scuCargoBoxSplitsCertainty when commodity is set. On create_mission, pass scuCargoBoxSplitsCertainty (slug→known|estimated|unknown) and/or scuTotalCertainty / scuBoxSplitsCertainty rollup when you know how sure the SCU/crate data is.",
       "Quantum travel: list_location_shops for destination shop Reasons (Platinum Bay, Cargo Center, …); insert_quantum_travel or set_quantum_travel_reason to write reasonShop on quantum legs.",
       "Screenshots — Lane A: ChatGPT should pass store_hauling_screenshot `file` (openai/fileParams native attachment with download_url). Other hosts may use fileUrl / readable filePath / imageBase64. create_hauling_session then store_hauling_screenshot per shot (sessionId=batch). Bare ChatGPT /mnt/data paths are NOT reachable — never pass them as filePath. Lane B: if push is impossible, create_hauling_session, send tripUrl, ask the user to open Source and paste Accepted shots, then on continue list_hauling_screenshots(status=pending) + get_hauling_screenshot (one at a time) + extract + apply. After apply, mark_hauling_screenshots_processed. Never invent paths. Do not put screenshot binaries in git. Do not require browser control.",

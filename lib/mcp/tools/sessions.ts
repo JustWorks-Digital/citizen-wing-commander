@@ -150,6 +150,7 @@ import {
   presentCargoGridSketch,
   presentSession,
   presentShips,
+  presentTripCargoValidation,
   resolveTargetSession,
   sessionScreenshotSoftGate,
   textResult,
@@ -316,6 +317,7 @@ export async function toolReplaceHaulingChecklist(input: {
       ok: true,
       message: `Replaced checklist on session ${session.id} with ${rows.length} leg(s).`,
       session: presentSession(session),
+      ...presentTripCargoValidation(session),
     });
   } catch (error) {
     return textResult({

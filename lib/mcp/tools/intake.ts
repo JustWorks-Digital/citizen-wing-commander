@@ -144,6 +144,7 @@ import { placementPlanLegend } from "@/lib/ships/cargoGridPlacement";
 import {
   PLAYBOOK_PATH,
   mergeTextResult,
+  presentTripCargoValidation,
   resolveTargetSession,
   sessionScreenshotSoftGate,
   textResult,
@@ -196,15 +197,23 @@ export async function toolApplyHaulingContractsIntake(
 
   const screenshotGate = sessionScreenshotSoftGate(intake.contracts);
 
-  if (intake.startLocation != null && intake.startLocation.trim()) {
-    const start = await toolSetSessionStartLocation(
-      intake.startLocation,
-      intake.sessionId,
-    );
-    return mergeTextResult(start, screenshotGate);
-  }
+  let result =
+    intake.startLocation != null && intake.startLocation.trim()
+      ? await toolSetSessionStartLocation(
+          intake.startLocation,
+          intake.sessionId,
+        )
+      : replaced;
 
-  return mergeTextResult(replaced, screenshotGate);
+  result = mergeTextResult(result, screenshotGate);
+
+  // Re-stamp soft cargo validation on the final session (start path would
+  // otherwise drop the fields from replace).
+  const session = await resolveTargetSession(intake.sessionId);
+  if (session) {
+    result = mergeTextResult(result, presentTripCargoValidation(session));
+  }
+  return result;
 }
 
 

@@ -38,7 +38,7 @@ export function SessionElapsedLabel({
   }, [isComplete, session.startedAt, session.completedAt, session.finishStatus]);
 
   const label = formatSessionDuration(getSessionElapsedMs(session, nowMs));
-  const suffix = isCrashed ? " · crash" : isComplete ? " · done" : "";
+  const suffix = isCrashed ? " · crash" : "";
   const display = `${label}${suffix}`;
   const toneClass = isCrashed
     ? "text-rsi-danger"

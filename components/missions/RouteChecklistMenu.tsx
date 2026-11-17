@@ -106,6 +106,23 @@ export function RouteChecklistMenu({
                 {overflowStats}
               </div>
             ) : null}
+            {onOpenSummary ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onOpenSummary();
+                  setOpen(false);
+                }}
+                className={[
+                  "mb-1 flex w-full items-center rounded-rsi border border-rsi-success/40 bg-rsi-success-muted/50 px-1.5 py-1.5 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-success transition-colors",
+                  "hover:border-rsi-success/70 hover:bg-rsi-success-muted/70 hover:text-rsi-success",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                ].join(" ")}
+              >
+                Summary
+              </button>
+            ) : null}
             {onCopyTrip ? (
               <button
                 type="button"
@@ -174,23 +191,6 @@ export function RouteChecklistMenu({
                   <Spinner className="size-3" label="Repairing route" />
                 ) : null}
                 Repair route
-              </button>
-            ) : null}
-            {onOpenSummary ? (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onOpenSummary();
-                  setOpen(false);
-                }}
-                className={[
-                  "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
-                  "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                ].join(" ")}
-              >
-                Summary
               </button>
             ) : null}
             <button

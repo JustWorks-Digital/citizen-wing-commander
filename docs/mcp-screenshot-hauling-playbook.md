@@ -186,6 +186,10 @@ Common Hurston mappings:
 | Iron (Ore) / Quartz (Raw) | those exact fixture names |
 | Stims, Tin, Silicon, Tungsten, Quartz | exact fixture names |
 
+## Route validation (soft)
+
+`apply_hauling_contracts_intake` and `replace_hauling_checklist` return **`tripPlanValid`** + **`tripCargoIssues`** (same cargo-causality check as the UI **Invalid trip plan** banner). Invalid routes are **still saved** — this is feedback, not a hard reject. When `tripPlanValid` is false, prefer repairing `legs` so each commodity is picked up before it is delivered, unless the player intentionally wants that order.
+
 ## Route optimization rules
 
 Optimize **geography**, not contract order.

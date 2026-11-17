@@ -260,7 +260,8 @@ export function StopDeliveryStacksView({
 }: StopDeliveryStacksViewProps) {
   const [peelStackInternal, setPeelStackInternal] = useState(true);
   const peelStack = peelStackProp ?? peelStackInternal;
-  const [zoom, setZoom] = useState(1);
+  /** Null = auto fitZoom; set only when the user overrides zoom. */
+  const [userZoom, setUserZoom] = useState<number | null>(null);
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [scuEditText, setScuEditText] = useState("");
   /** Escape cancels — skip the following blur commit. */
@@ -276,7 +277,8 @@ export function StopDeliveryStacksView({
   const [isDesktop, setIsDesktop] = useState(false);
   const [pileIndex, setPileIndex] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const userZoomedRef = useRef(false);
+  /** Last committed measure — ignore tiny scrollbar / subpixel noise. */
+  const viewportSizeRef = useRef({ w: 0, h: 0 });
   const stretchToParent = fillAvailableHeight && isDesktop;
 
   const allPileLabels = plan.pileLabels ?? [];
@@ -299,18 +301,58 @@ export function StopDeliveryStacksView({
   useEffect(() => {
     const el = viewportRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
+
+    // Lock after a usable layout so zoom / sibling bay graphs cannot re-enter
+    // measure → fitZoom → layout. Keep sampling until flex has real height.
+    let locked = false;
+    let raf = 0;
+    let bestW = 0;
+    let bestH = 0;
+
+    const publish = (w: number, h: number) => {
+      viewportSizeRef.current = { w, h };
+      setViewportWidth(w);
+      setViewportHeight(h);
+    };
+
+    const commit = (nextW: number, nextH: number) => {
+      if (locked) return;
+      if (nextW < 32) return;
+      const h = stretchToParent ? nextH : 0;
+      bestW = Math.max(bestW, nextW);
+      bestH = Math.max(bestH, h);
+      const prev = viewportSizeRef.current;
+      if (bestW !== prev.w || bestH !== prev.h) {
+        publish(bestW, bestH);
+      }
+      const heightReady =
+        !stretchToParent || bestH >= Math.min(120, MAX_VIEWPORT_HEIGHT_PX);
+      if (heightReady) locked = true;
+    };
+
     const update = () => {
-      // Round + bail when unchanged — scrollbar / zoom fit can otherwise
-      // oscillate clientWidth by 1px and blow the update depth.
       const nextW = Math.round(el.clientWidth);
       const nextH = Math.round(el.clientHeight);
-      setViewportWidth((prev) => (prev === nextW ? prev : nextW));
-      setViewportHeight((prev) => (prev === nextH ? prev : nextH));
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => commit(nextW, nextH));
     };
+
+    const unlock = () => {
+      locked = false;
+      bestW = 0;
+      bestH = 0;
+      update();
+    };
+
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener("resize", unlock);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+      window.removeEventListener("resize", unlock);
+    };
   }, [stretchToParent]);
 
   const safePileIndex = showPileNav
@@ -325,6 +367,26 @@ export function StopDeliveryStacksView({
   }, [plan, activePileSlug]);
 
   const { lengthCells, widthCells, stackLabels, pileLabels } = displayPlan;
+
+  const legendDots = useMemo(() => {
+    let showEstimated = false;
+    let showOverridden = false;
+    if (!boxSplitIndicatorsByMissionId) {
+      return { showEstimated, showOverridden };
+    }
+    for (const label of stackLabels) {
+      if (label.missionId == null) continue;
+      const indicators = boxSplitIndicatorsByMissionId.get(
+        `${label.missionId}::${label.commoditySlug}`,
+      );
+      if (!indicators) continue;
+      if (indicators.uncertain) showEstimated = true;
+      if (indicators.overridden) showOverridden = true;
+      if (showEstimated && showOverridden) break;
+    }
+    return { showEstimated, showOverridden };
+  }, [boxSplitIndicatorsByMissionId, stackLabels]);
+
   // Frame height from the full hangar plan so pile switches keep a stable graph height.
   const frameHeightCells = showPileNav
     ? Math.max(1, plan.heightCells)
@@ -395,14 +457,12 @@ export function StopDeliveryStacksView({
   ]);
 
   useEffect(() => {
-    userZoomedRef.current = false;
+    setUserZoom(null);
   }, [pileRouteKey, frameLengthCells, widthCells, frameHeightCells, peelStack]);
 
-  useEffect(() => {
-    if (userZoomedRef.current) return;
-    setZoom((prev) => (Math.abs(prev - fitZoom) < 0.001 ? prev : fitZoom));
-  }, [fitZoom]);
-
+  // Derive display zoom — never write fitZoom into state (that re-entered the
+  // measure → setState → layout loop with dual bay graphs).
+  const zoom = userZoom ?? fitZoom;
   const renderCellPx = cellPx * zoom;
 
   const bounds = useMemo(
@@ -448,8 +508,8 @@ export function StopDeliveryStacksView({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2 px-2.5 pt-1.5">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex shrink-0 flex-nowrap items-start justify-between gap-2 px-2.5 pt-1.5">
+        <div className="flex min-w-0 flex-wrap items-start gap-x-2.5 gap-y-1">
           <span className="sr-only">
             {pileLabels && pileLabels.length > 0
               ? "Hangar piles by delivery location"
@@ -470,6 +530,38 @@ export function StopDeliveryStacksView({
               Peel
             </button>
           ) : null}
+          {legendDots.showEstimated || legendDots.showOverridden ? (
+            <div
+              className="flex flex-wrap items-center gap-x-3 gap-y-1"
+              role="list"
+              aria-label="Crate-mix indicator legend"
+            >
+              {legendDots.showEstimated ? (
+                <span
+                  role="listitem"
+                  className="inline-flex items-center gap-1.5 font-mono text-[0.5rem] leading-none uppercase tracking-[0.1em] text-rsi-text-muted"
+                >
+                  <span
+                    aria-hidden
+                    className="inline-block size-1.5 shrink-0 self-center rounded-full bg-rsi-warn"
+                  />
+                  <span className="leading-none">Estimated</span>
+                </span>
+              ) : null}
+              {legendDots.showOverridden ? (
+                <span
+                  role="listitem"
+                  className="inline-flex items-center gap-1.5 font-mono text-[0.5rem] leading-none uppercase tracking-[0.1em] text-rsi-text-muted"
+                >
+                  <span
+                    aria-hidden
+                    className="inline-block size-1.5 shrink-0 self-center rounded-full bg-rsi-accent"
+                  />
+                  <span className="leading-none">Overridden</span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div
           className="inline-flex shrink-0 overflow-hidden rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95"
@@ -482,8 +574,9 @@ export function StopDeliveryStacksView({
             title="Zoom out"
             disabled={zoom <= ZOOM_MIN}
             onClick={() => {
-              userZoomedRef.current = true;
-              setZoom((value) => clampZoom(value - ZOOM_STEP));
+              setUserZoom((prev) =>
+                clampZoom((prev ?? fitZoom) - ZOOM_STEP),
+              );
             }}
             className={[
               "inline-flex size-6 items-center justify-center border-r border-rsi-border/80 font-mono text-[0.7rem]",
@@ -499,12 +592,10 @@ export function StopDeliveryStacksView({
             min={ZOOM_MIN}
             max={ZOOM_MAX}
             onChange={(next) => {
-              userZoomedRef.current = true;
-              setZoom(next);
+              setUserZoom(next);
             }}
             onClick={() => {
-              userZoomedRef.current = false;
-              setZoom(fitZoom);
+              setUserZoom(null);
             }}
             title="Fit to view · click to reset"
             aria-label="Fit zoom"
@@ -521,8 +612,9 @@ export function StopDeliveryStacksView({
             title="Zoom in"
             disabled={zoom >= ZOOM_MAX}
             onClick={() => {
-              userZoomedRef.current = true;
-              setZoom((value) => clampZoom(value + ZOOM_STEP));
+              setUserZoom((prev) =>
+                clampZoom((prev ?? fitZoom) + ZOOM_STEP),
+              );
             }}
             className={[
               "inline-flex size-6 items-center justify-center font-mono text-[0.7rem]",
@@ -536,7 +628,8 @@ export function StopDeliveryStacksView({
         </div>
       </div>
 
-      {/* Measure shell stays overflow-hidden so scrollbars don't feed ResizeObserver. */}
+      {/* In-flow SVG so bay sections keep real height; overflow-hidden on the
+          shell keeps scrollbars off the ResizeObserver target. */}
       <div
         ref={viewportRef}
         className={[
@@ -768,6 +861,11 @@ export function StopDeliveryStacksView({
               const boxY = foot.y + renderCellPx * 0.85;
               const abbrevY = boxY + padTop;
               const scuY = abbrevY + abbrevSize + renderCellPx * 0.2;
+              // Wide (not tall) SCU hit strip — easier double-click than the glyph alone.
+              const scuHitW = Math.max(boxW + renderCellPx * 1.2, renderCellPx * 3.4);
+              const scuHitH = scuSize + 4;
+              const scuHitX = foot.x - scuHitW / 2;
+              const scuHitY = scuY - 1;
               const indicatorDotR = Math.max(1.5, renderCellPx * 0.11);
               const indicatorDotInset = Math.max(2, renderCellPx * 0.14);
               const indicatorDotGap = indicatorDotR * 2 + renderCellPx * 0.12;
@@ -885,10 +983,10 @@ export function StopDeliveryStacksView({
                   </text>
                   {isEditingScu ? (
                     <foreignObject
-                      x={boxX + 2}
-                      y={scuY - 1}
-                      width={Math.max(24, boxW - 4)}
-                      height={scuSize + 6}
+                      x={scuHitX}
+                      y={scuHitY}
+                      width={scuHitW}
+                      height={scuHitH + 2}
                     >
                       <div
                         style={{
@@ -933,10 +1031,10 @@ export function StopDeliveryStacksView({
                           onDoubleClick={(event) => event.stopPropagation()}
                           style={{
                             width: "100%",
-                            maxWidth: "3.25rem",
+                            maxWidth: "4.5rem",
                             boxSizing: "border-box",
                             margin: 0,
-                            padding: "0 2px",
+                            padding: "0 4px",
                             border: "1px solid color-mix(in srgb, var(--rsi-accent) 55%, transparent)",
                             borderRadius: 2,
                             background:
@@ -954,40 +1052,54 @@ export function StopDeliveryStacksView({
                       </div>
                     </foreignObject>
                   ) : (
-                    <text
-                      x={foot.x}
-                      y={scuY}
-                      textAnchor="middle"
-                      dominantBaseline="hanging"
-                    fill={labelAbbrevFill}
-                    style={{
-                      fontFamily:
-                          "var(--font-mono, ui-monospace, monospace)",
-                      fontSize: scuSize,
-                      fontVariantNumeric: "tabular-nums",
-                      letterSpacing: "0.04em",
-                      cursor: canEditStopScu ? "text" : undefined,
-                    }}
-                    onClick={(event) => {
-                      // Don't open box-types modal from the SCU number.
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }}
-                    onDoubleClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      if (!canEditStopScu || !label.missionId) return;
-                      setScuEditText(String(label.scu));
-                      setEditingLabelId(label.id);
-                    }}
-                  >
-                    <title>
-                      {canEditStopScu
-                        ? `Double-click to edit ${SCU_TITLE}`
-                        : SCU_TITLE}
-                    </title>
-                    {label.scu}
-                  </text>
+                    <g>
+                      {/* Wider SCU hit strip (same height as the number) for double-click. */}
+                      <rect
+                        x={scuHitX}
+                        y={scuHitY}
+                        width={scuHitW}
+                        height={scuHitH}
+                        fill="transparent"
+                        style={{
+                          cursor: canEditStopScu ? "text" : undefined,
+                        }}
+                        onClick={(event) => {
+                          // Don't open box-types modal from the SCU strip.
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onDoubleClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!canEditStopScu || !label.missionId) return;
+                          setScuEditText(String(label.scu));
+                          setEditingLabelId(label.id);
+                        }}
+                      >
+                        <title>
+                          {canEditStopScu
+                            ? `Double-click to edit ${SCU_TITLE}`
+                            : SCU_TITLE}
+                        </title>
+                      </rect>
+                      <text
+                        x={foot.x}
+                        y={scuY}
+                        textAnchor="middle"
+                        dominantBaseline="hanging"
+                        fill={labelAbbrevFill}
+                        pointerEvents="none"
+                        style={{
+                          fontFamily:
+                            "var(--font-mono, ui-monospace, monospace)",
+                          fontSize: scuSize,
+                          fontVariantNumeric: "tabular-nums",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {label.scu}
+                      </text>
+                    </g>
                   )}
                 </g>
               );

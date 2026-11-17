@@ -1,5 +1,7 @@
 # Crossed haul — invalid route backup
 
+> Prefer **`hurston-covalex-invalid-2026-11-17`** as the current invalid trip plan reference for manual / MCP testing (`npm run fixtures:restore-invalid-trip`).
+
 Canonical **session fixture pack** for live session `4b6fff2c-aa42-428c-ab43-3e8ec291ca41` (2026-11-13).
 
 Opposite-direction Covalex S4DC05 ↔ Shubin SM0-* contracts were merged so stop 1 delivers cargo that is only picked up later.

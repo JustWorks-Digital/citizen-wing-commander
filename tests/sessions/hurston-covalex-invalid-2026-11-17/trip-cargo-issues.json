@@ -1,0 +1,116 @@
+{
+  "ok": false,
+  "issueCount": 11,
+  "issues": [
+    {
+      "stopId": "leg-2",
+      "locationSlug": "hdpc-farnesway",
+      "missing": {
+        "commoditySlug": "iron-ore",
+        "scu": 20,
+        "missionId": "contract-03-iron"
+      },
+      "shortfallScu": 20
+    },
+    {
+      "stopId": "leg-2",
+      "locationSlug": "hdpc-farnesway",
+      "missing": {
+        "commoditySlug": "processed-food",
+        "scu": 395,
+        "missionId": "contract-06-ice-food-farnesway"
+      },
+      "shortfallScu": 395
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 3,
+        "missionId": null
+      },
+      "shortfallScu": 3
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 14,
+        "missionId": null
+      },
+      "shortfallScu": 14
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 8,
+        "missionId": null
+      },
+      "shortfallScu": 8
+    },
+    {
+      "stopId": "leg-4",
+      "locationSlug": "hdms-thedus",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 12,
+        "missionId": null
+      },
+      "shortfallScu": 12
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "hdms-pinewood",
+      "missing": {
+        "commoditySlug": "quantum-fuel",
+        "scu": 3,
+        "missionId": null
+      },
+      "shortfallScu": 3
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "hdms-pinewood",
+      "missing": {
+        "commoditySlug": "hydrogen-fuel",
+        "scu": 14,
+        "missionId": null
+      },
+      "shortfallScu": 14
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "hdms-pinewood",
+      "missing": {
+        "commoditySlug": "ship-ammunition",
+        "scu": 8,
+        "missionId": null
+      },
+      "shortfallScu": 8
+    },
+    {
+      "stopId": "leg-5",
+      "locationSlug": "hdms-pinewood",
+      "missing": {
+        "commoditySlug": "stims",
+        "scu": 12,
+        "missionId": null
+      },
+      "shortfallScu": 12
+    },
+    {
+      "stopId": "leg-6",
+      "locationSlug": "everus-harbor",
+      "missing": {
+        "commoditySlug": "pressurized-ice",
+        "scu": 323,
+        "missionId": "contract-04-ice-tressler"
+      },
+      "shortfallScu": 17
+    }
+  ]
+}
