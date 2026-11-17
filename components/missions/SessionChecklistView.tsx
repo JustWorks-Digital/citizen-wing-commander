@@ -1130,7 +1130,6 @@ export function SessionChecklistView({
         onRemoveMission={handleMissionRemove}
         onSelectBoxBreakdown={applyBoxBreakdown}
         onSaveMissionScuDraft={applyMissionScuDraft}
-        onSkipPickupAtStop={skipPickupAtStop}
       />
     </div>
   );
