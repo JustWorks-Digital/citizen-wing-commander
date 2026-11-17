@@ -1,16 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildRouteFromIntake } from "@/lib/sessions/buildRouteFromIntake";
 import { validateChecklistTripCargo } from "@/lib/missions/tripPlan";
-import { resolveIncomingLeg } from "@/lib/sessions/resolveRefs";
+import { resolveIncomingLeg, type IncomingLeg } from "@/lib/sessions/resolveRefs";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import type { HaulingContractsIntake } from "@/lib/missions/haulingIntake";
 
-function resolveLegs(legs: ReturnType<typeof buildRouteFromIntake> extends {
-  ok: true;
-  legs: infer L;
-}
-  ? L
-  : never): HaulingChecklistRow[] {
+function resolveLegs(legs: IncomingLeg[]): HaulingChecklistRow[] {
   const rows: HaulingChecklistRow[] = [];
   for (const [index, leg] of legs.entries()) {
     const resolved = resolveIncomingLeg(leg, index);
