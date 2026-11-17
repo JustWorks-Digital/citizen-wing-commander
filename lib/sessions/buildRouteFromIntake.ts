@@ -241,14 +241,26 @@ function cargoKey(line: IncomingCargoLine): string {
 }
 
 /**
- * A location that both loads outbound cargo and turns in return cargo must be
- * two visits: pick up first, deliver later — otherwise start-at-hub schedules
- * return drops before those commodities are aboard.
+ * Only the route **origin** that both loads outbound cargo and turns in return
+ * cargo needs two visits (pick up first, deliver later). Remote stops keep
+ * unload-then-load on one stop — splitting them + pickup-first ordering leaves
+ * mine deliveries after the hub return.
  */
-function splitReturnHubVisits(buckets: StopBucket[]): StopBucket[] {
+function splitReturnHubVisits(
+  buckets: StopBucket[],
+  startLocationSlug: string | null | undefined,
+): StopBucket[] {
+  const startSlug =
+    (startLocationSlug && resolveLocationSlug(startLocationSlug)) || null;
+  if (!startSlug) return buckets;
+
   const out: StopBucket[] = [];
   for (const bucket of buckets) {
-    if (bucket.pickups.length === 0 || bucket.deliveries.length === 0) {
+    if (
+      bucket.locationSlug !== startSlug ||
+      bucket.pickups.length === 0 ||
+      bucket.deliveries.length === 0
+    ) {
       out.push(bucket);
       continue;
     }
@@ -403,7 +415,7 @@ export function buildRouteFromIntake(
       ? resolveLocationSlug(intake.startLocation)
       : null;
 
-  const expanded = splitReturnHubVisits([...buckets.values()]);
+  const expanded = splitReturnHubVisits([...buckets.values()], startSlug);
 
   const ordered = startSlug
     ? orderBucketsFromStart(expanded, startSlug)
