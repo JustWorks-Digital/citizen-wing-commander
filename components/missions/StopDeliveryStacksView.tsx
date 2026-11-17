@@ -891,8 +891,6 @@ export function StopDeliveryStacksView({
                       height={scuSize + 6}
                     >
                       <div
-                        // eslint-disable-next-line react/no-unknown-property -- SVG foreignObject HTML root
-                        xmlns="http://www.w3.org/1999/xhtml"
                         style={{
                           display: "flex",
                           alignItems: "center",
