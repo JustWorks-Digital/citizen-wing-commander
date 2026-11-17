@@ -159,14 +159,15 @@ export function CargoCommodityTile({
     line.sourceIndex != null &&
     !isCargoPending;
   const commoditySlug = line.commoditySlug?.trim() || "";
-  const canSkip =
+  const skipAllowed =
     isPickup &&
     Boolean(onSkipPickup) &&
     Boolean(missionId) &&
     commoditySlug.length > 0 &&
     (line.scu ?? 0) > 0 &&
-    !row.isCompleted &&
-    (canSkipPickup?.(missionId!, commoditySlug) ?? false);
+    !row.isCompleted;
+  const canSkip =
+    skipAllowed && (canSkipPickup?.(missionId!, commoditySlug) ?? false);
   const skipPendingKey =
     missionId && commoditySlug
       ? `${missionId}::${commoditySlug}::${row.locationSlug}`
@@ -200,24 +201,30 @@ export function CargoCommodityTile({
 
   return (
     <div className="relative min-w-0">
-      {canSkip && missionId ? (
+      {skipAllowed && missionId ? (
         <button
           type="button"
           aria-label={`Skip pick up of ${commodityName} at this stop`}
           aria-busy={isSkipPending || undefined}
-          disabled={isSkipPending}
-          title="Skip pick up — remaining stops absorb this SCU"
+          disabled={isSkipPending || !canSkip}
+          title={
+            canSkip
+              ? "Skip pick up — remaining stops absorb this SCU"
+              : "Can't skip — this is the only pick-up stop for this cargo"
+          }
           className={[
-            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center border-0 bg-transparent font-mono text-[0.7rem] leading-none text-[color:var(--skip-fg)] shadow-none transition-colors",
+            "absolute top-0.5 right-0.5 z-10 inline-flex size-5 items-center justify-center rounded-sm border-0 font-mono text-[0.85rem] leading-none shadow-none transition-colors",
+            "bg-rsi-bg-deep/55 text-rsi-text",
             isSkipPending
               ? "cursor-wait opacity-70"
-              : "hover:text-rsi-danger",
+              : canSkip
+                ? "hover:bg-rsi-danger-muted hover:text-rsi-danger"
+                : "cursor-not-allowed opacity-35",
           ].join(" ")}
-          style={{ ["--skip-fg" as string]: tileFg }}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            if (isSkipPending) return;
+            if (isSkipPending || !canSkip) return;
             onSkipPickup?.(missionId, commoditySlug);
           }}
         >
@@ -525,8 +532,12 @@ function MissionStopCargoCard({
   pendingAddPickupKeys?: ReadonlySet<string>;
 }) {
   const [addOpen, setAddOpen] = useState(false);
-  const canAdd =
-    role === "pickup" && addOptions.length > 0 && Boolean(onAddPickup);
+  const showAddControl =
+    role === "pickup" &&
+    Boolean(onAddPickup) &&
+    !mission.isCompleted &&
+    !row.isCompleted;
+  const canAdd = showAddControl && addOptions.length > 0;
 
   useEffect(() => {
     if (!canAdd) setAddOpen(false);
@@ -574,19 +585,37 @@ function MissionStopCargoCard({
             </p>
           </div>
           <div className="inline-flex shrink-0 items-center gap-1">
-            {canAdd ? (
+            {showAddControl ? (
               <button
                 type="button"
-                title={addOpen ? "Hide add cargo" : "Add cargo"}
-                aria-label={addOpen ? "Hide add cargo" : "Add cargo"}
-                aria-expanded={addOpen}
-                onClick={() => setAddOpen((open) => !open)}
+                title={
+                  canAdd
+                    ? addOpen
+                      ? "Hide add cargo"
+                      : "Add cargo"
+                    : "All mission cargo is already on this stop"
+                }
+                aria-label={
+                  canAdd
+                    ? addOpen
+                      ? "Hide add cargo"
+                      : "Add cargo"
+                    : "Add cargo unavailable"
+                }
+                aria-expanded={canAdd ? addOpen : undefined}
+                disabled={!canAdd}
+                onClick={() => {
+                  if (!canAdd) return;
+                  setAddOpen((open) => !open);
+                }}
                 className={[
                   "inline-flex size-6 items-center justify-center rounded-rsi border transition-colors md:size-4",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                  addOpen
-                    ? "border-rsi-accent/60 bg-rsi-accent/10 text-rsi-accent"
-                    : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent",
+                  !canAdd
+                    ? "cursor-not-allowed border-rsi-border/50 bg-rsi-surface/40 text-rsi-text-muted opacity-50"
+                    : addOpen
+                      ? "border-rsi-accent/60 bg-rsi-accent/10 text-rsi-accent"
+                      : "border-rsi-border bg-rsi-surface text-rsi-text-secondary hover:border-rsi-accent/50 hover:text-rsi-accent",
                 ].join(" ")}
               >
                 <PlusIcon className="size-3 md:size-2" />

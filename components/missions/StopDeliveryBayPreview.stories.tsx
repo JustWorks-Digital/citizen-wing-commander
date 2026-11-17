@@ -129,7 +129,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pad stacks for stop cargo. Graph headers say Breakdown. Pass `role` to show only Pick up or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pick up. Pick up stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided. Skip pick-up lives on the mission card (left of Breakdown), not on this graph. Bottom-right Picked up / Dropped off marks the header checkbox (all cargo of that role handled) and stamps the graph.",
+          "Flat pad stacks for stop cargo. Graph headers say Breakdown. Pass `role` to show only Pick up or Drop off (checklist aligns each graph with that section). Both-stops render Drop off then Pick up. Pick up stops with a route can switch Cargo ↔ Piles. Double-click the under-stack cargo label to edit box types when `onEditMissionBoxes` is provided. Skip pick-up lives on the mission card (left of Breakdown), not on this graph. Header Picked up / Dropped off marks the checkbox (all cargo of that role handled) and stamps the graph.",
       },
     },
   },

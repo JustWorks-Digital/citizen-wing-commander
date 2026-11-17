@@ -178,7 +178,7 @@ function RoleHandledCheckbox({
   );
 }
 
-function RoleHandledCornerButton({
+function RoleHandledHeaderButton({
   role,
   checked,
   isPending,
@@ -202,15 +202,17 @@ function RoleHandledCornerButton({
         onToggle();
       }}
       className={[
-        "absolute right-2 bottom-2 z-20 inline-flex items-center gap-1.5 rounded-rsi border px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-sm transition-colors",
+        "inline-flex items-center gap-1.5 rounded-rsi border px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
         isPending
-          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/90 text-rsi-accent"
+          ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/70 text-rsi-accent"
           : checked
             ? role === "pickup"
               ? "border-rsi-accent/60 bg-rsi-accent/15 text-rsi-accent"
               : "border-rsi-gold/60 bg-rsi-gold/15 text-rsi-gold"
-            : "border-rsi-border bg-rsi-bg-deep/90 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+            : role === "pickup"
+              ? "border-rsi-accent/40 bg-rsi-bg-deep/70 text-rsi-accent hover:border-rsi-accent/70"
+              : "border-rsi-gold/40 bg-rsi-bg-deep/70 text-rsi-gold hover:border-rsi-gold/70",
       ].join(" ")}
     >
       {isPending ? <Spinner className="size-2.5" label={label} /> : null}
@@ -342,12 +344,27 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : null}
             </div>
-            {showDeliveryPeel ? (
-              <PadPeelButton
-                pressed={deliveryPeel}
-                onPressedChange={setDeliveryPeel}
-              />
-            ) : null}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {canToggleRole ? (
+                <RoleHandledHeaderButton
+                  role="delivery"
+                  checked={deliveryHandled}
+                  isPending={deliveryPending}
+                  onToggle={() => {
+                    void onSetCargoRoleHandled!(
+                      "delivery",
+                      !deliveryRoleHandled,
+                    );
+                  }}
+                />
+              ) : null}
+              {showDeliveryPeel ? (
+                <PadPeelButton
+                  pressed={deliveryPeel}
+                  onPressedChange={setDeliveryPeel}
+                />
+              ) : null}
+            </div>
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col p-1.5">
             <StopDeliveryStacksView
@@ -364,19 +381,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <GraphCompletedStamp />
               </div>
-            ) : null}
-            {canToggleRole ? (
-              <RoleHandledCornerButton
-                role="delivery"
-                checked={deliveryHandled}
-                isPending={deliveryPending}
-                onToggle={() => {
-                  void onSetCargoRoleHandled!(
-                    "delivery",
-                    !deliveryRoleHandled,
-                  );
-                }}
-              />
             ) : null}
           </div>
         </section>
@@ -405,8 +409,21 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : null}
             </div>
-            {showPickupPeel || showPickupModes ? (
+            {canToggleRole || showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">
+                {canToggleRole ? (
+                  <RoleHandledHeaderButton
+                    role="pickup"
+                    checked={pickupHandled}
+                    isPending={pickupPending}
+                    onToggle={() => {
+                      void onSetCargoRoleHandled!(
+                        "pickup",
+                        !pickupRoleHandled,
+                      );
+                    }}
+                  />
+                ) : null}
                 {showPickupPeel ? (
                   <PadPeelButton
                     pressed={pickupPeel}
@@ -464,16 +481,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
               <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
                 <GraphCompletedStamp />
               </div>
-            ) : null}
-            {canToggleRole ? (
-              <RoleHandledCornerButton
-                role="pickup"
-                checked={pickupHandled}
-                isPending={pickupPending}
-                onToggle={() => {
-                  void onSetCargoRoleHandled!("pickup", !pickupRoleHandled);
-                }}
-              />
             ) : null}
           </div>
         </section>
