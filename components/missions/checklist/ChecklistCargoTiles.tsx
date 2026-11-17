@@ -260,11 +260,11 @@ export function CargoCommodityTile({
   };
 
   const tileClassName = [
-    // Mobile: corner icon. md+: centered stack; density follows cargo @container.
-    "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 py-1 font-mono font-medium tabular-nums",
-    "md:gap-0.5 md:px-1 md:py-1",
-    "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:py-1.5",
-    "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:py-2",
+    // Commodity icon sits top-left; SCU + name stay centered. Density follows cargo @container.
+    "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 pb-1 pt-2 font-mono font-medium tabular-nums",
+    "md:gap-0.5 md:px-1 md:pb-1 md:pt-2.5",
+    "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:pb-1.5 md:@[13rem]/cargo:pt-3",
+    "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:pb-2 md:@[17rem]/cargo:pt-3",
     "transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
     isCargoPending || isSetScuPending
       ? "cursor-wait"
@@ -340,12 +340,7 @@ export function CargoCommodityTile({
         >
           <span
             aria-hidden
-            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
-            style={iconMaskStyle}
-          />
-          <span
-            aria-hidden
-            className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:size-2.5 md:@[17rem]/cargo:size-3"
             style={iconMaskStyle}
           />
           <label className="sr-only" htmlFor={`pickup-scu-${row.id}-${commoditySlug}`}>
@@ -404,12 +399,7 @@ export function CargoCommodityTile({
         >
           <span
             aria-hidden
-            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:hidden"
-            style={iconMaskStyle}
-          />
-          <span
-            aria-hidden
-            className="hidden size-2.5 shrink-0 bg-current md:inline-block md:@[17rem]/cargo:size-3"
+            className="pointer-events-none absolute top-1 left-1 size-3 shrink-0 bg-current opacity-90 md:size-2.5 md:@[17rem]/cargo:size-3"
             style={iconMaskStyle}
           />
           <span
