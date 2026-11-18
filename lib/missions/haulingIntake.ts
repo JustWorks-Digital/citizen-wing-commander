@@ -78,7 +78,7 @@ export type HaulingIntakeContract = {
    * Per-commodity crate-mix certainty (commodity name/slug → certainty).
    * Keys resolve to fixture slugs on apply.
    */
-  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null>;
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null> | null;
   /**
    * Optional per-site cargo split when totals are shared across pickups
    * (e.g. Lathan + Bezdek). Keys are location names/slugs.
