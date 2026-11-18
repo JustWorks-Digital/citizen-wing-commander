@@ -143,6 +143,7 @@ import { placementPlanLegend } from "@/lib/ships/cargoGridPlacement";
 
 import {
   PLAYBOOK_PATH,
+  imageResult,
   mergeTextResult,
   presentTripCargoValidation,
   resolveTargetSession,
@@ -699,7 +700,7 @@ export async function toolSetMissionScuBoxSplits(input: {
   }
 }
 
-/** Return screenshot bytes (base64) so agents can read UI-uploaded images. */
+/** Return screenshot bytes so agents can read UI-uploaded images (MCP image block). */
 export async function toolGetHaulingScreenshot(input: {
   logicalPath?: string;
   batchId?: string;
@@ -717,14 +718,17 @@ export async function toolGetHaulingScreenshot(input: {
       });
     }
     const shot = await readHaulingScreenshot(logicalPath);
-    return textResult({
-      ok: true,
-      logicalPath: shot.logicalPath,
-      filename: shot.filename,
-      bytes: shot.bytes,
-      contentType: shot.contentType,
+    return imageResult({
+      meta: {
+        ok: true,
+        logicalPath: shot.logicalPath,
+        filename: shot.filename,
+        bytes: shot.bytes,
+        contentType: shot.contentType,
+        note: "Image is in the MCP image content block (not embedded in this JSON).",
+      },
       imageBase64: shot.imageBase64,
-      dataUrl: `data:${shot.contentType};base64,${shot.imageBase64}`,
+      mimeType: shot.contentType,
     });
   } catch (error) {
     return textResult({
@@ -758,7 +762,7 @@ export async function toolListIntakeUploads(input?: {
   });
 }
 
-/** Read a Capture-page upload (base64) for AI contract extraction. */
+/** Read a Capture-page upload for AI contract extraction (MCP image block). */
 export async function toolGetIntakeUpload(input: {
   logicalPath?: string;
   filename?: string;
@@ -766,15 +770,18 @@ export async function toolGetIntakeUpload(input: {
 }) {
   try {
     const shot = await readIntakeUpload(input);
-    return textResult({
-      ok: true,
-      status: shot.status,
-      logicalPath: shot.logicalPath,
-      filename: shot.filename,
-      bytes: shot.bytes,
-      contentType: shot.contentType,
+    return imageResult({
+      meta: {
+        ok: true,
+        status: shot.status,
+        logicalPath: shot.logicalPath,
+        filename: shot.filename,
+        bytes: shot.bytes,
+        contentType: shot.contentType,
+        note: "Image is in the MCP image content block (not embedded in this JSON).",
+      },
       imageBase64: shot.imageBase64,
-      dataUrl: `data:${shot.contentType};base64,${shot.imageBase64}`,
+      mimeType: shot.contentType,
     });
   } catch (error) {
     return textResult({

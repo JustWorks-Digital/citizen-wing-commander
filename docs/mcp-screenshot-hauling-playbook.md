@@ -33,7 +33,7 @@ When push is impossible or `store_hauling_screenshot` fails:
 1. Still **`create_hauling_session` immediately** (so the user has a trip to paste into).
 2. Reply with **`sessionUrl`**: open the session → **Source** → paste/drop all Accepted shots → reply **continue**.
 3. On continue: `list_hauling_screenshots` (`sessionId`, `status: "pending"`). If empty, ask again for Source uploads.
-4. For each pending shot: `get_hauling_screenshot` (**one image per call**) → vision extract.
+4. For each pending shot: `get_hauling_screenshot` (**one image per call**; response includes an MCP `image` content block) → vision extract.
 5. `apply_hauling_contracts_intake` with those `logicalPath`s on `contracts[].screenshots`.
 6. `mark_hauling_screenshots_processed` → `get_hauling_checklist`.
 
@@ -122,7 +122,7 @@ Link evidence on each contract:
 | `create_hauling_session` | New trip; returns `sessionUrl` (absolute domain link) for Lane B Source handoff |
 | `store_hauling_screenshot` | Lane A: ChatGPT `file` (openai/fileParams) / fileUrl / filePath / imageBase64 → `.data/mcp-screenshots/<sessionId>/` |
 | `list_hauling_screenshots` | List Source shots (`status`: pending / processed / all; default pending) |
-| `get_hauling_screenshot` | Pull one image (base64) for vision — prefer one call per shot |
+| `get_hauling_screenshot` | Pull one image as an MCP **image** content block (plus slim JSON meta) — prefer one call per shot |
 | `mark_hauling_screenshots_processed` | After apply — clear pending Source badge |
 | `set_mission_screenshots` | Attach logical paths to an existing mission without rewriting the route |
 | `set_mission_scu_box_splits` | Correct crate sizes from freight elevator / hangar UI (`boxes: [{ size, count }]`; pass `commodity` on multi-cargo). Stamp `scuBoxSplitsCertainty: "known"` (per commodity → `scuCargoBoxSplitsCertainty`) |

@@ -328,7 +328,7 @@ const handler = createMcpHandler(
       {
         title: "Get hauling screenshot",
         description:
-          "Use this to retrieve one screenshot (base64 + data URL) for vision/OCR — from UI Source uploads or store_hauling_screenshot. Prefer one call per image. Pass logicalPath from list_hauling_screenshots, or batchId + filename.",
+          "Use this to retrieve one screenshot for vision/OCR — from UI Source uploads or store_hauling_screenshot. Returns an MCP image content block (type image) plus small JSON metadata (no base64 in the JSON). Prefer one call per image. Pass logicalPath from list_hauling_screenshots, or batchId + filename.",
         inputSchema: z.object({
           logicalPath: z
             .string()
@@ -399,7 +399,7 @@ const handler = createMcpHandler(
       {
         title: "Get intake upload",
         description:
-          "Use this to retrieve a Capture-page screenshot (base64 + data URL) so you can read the contract and call create_mission / apply_hauling_contracts_intake. Pass logicalPath from list_intake_uploads, or filename (+ optional status).",
+          "Use this to retrieve a Capture-page screenshot so you can read the contract and call create_mission / apply_hauling_contracts_intake. Returns an MCP image content block (type image) plus small JSON metadata (no base64 in the JSON). Pass logicalPath from list_intake_uploads, or filename (+ optional status).",
         inputSchema: z.object({
           logicalPath: z
             .string()

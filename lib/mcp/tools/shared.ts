@@ -301,34 +301,13 @@ export function presentSession(session: SessionChecklist) {
   };
 }
 
-export function textResult(payload: unknown) {
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(payload, null, 2),
-      },
-    ],
-  };
-}
-
-export type McpTextResult = ReturnType<typeof textResult>;
-
-/** Merge fields into a successful tool JSON payload (leave error responses alone). */
-export function mergeTextResult(
-  result: McpTextResult,
-  extra: Record<string, unknown>,
-): McpTextResult {
-  const block = result.content[0];
-  if (!block || block.type !== "text") return textResult(extra);
-  try {
-    const parsed = JSON.parse(block.text) as Record<string, unknown>;
-    if (typeof parsed.error === "string") return result;
-    return textResult({ ...parsed, ...extra });
-  } catch {
-    return result;
-  }
-}
+export {
+  imageResult,
+  mergeTextResult,
+  textResult,
+  type McpImageResult,
+  type McpTextResult,
+} from "@/lib/mcp/toolResults";
 
 /**
  * Soft gate: screenshots stay optional in the schema, but missing paths get a
