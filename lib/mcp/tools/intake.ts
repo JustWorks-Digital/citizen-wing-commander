@@ -8,6 +8,7 @@ import {
   listCatalogMissionVariants,
   listCatalogMissions,
   recordCatalogMissionRun,
+  rewriteCatalogLatestScreenshotPath,
   updateCatalogMissionScuBoxSplits,
   upsertCatalogMission,
 } from "@/db/queries/catalogMissions";
@@ -815,9 +816,14 @@ export async function toolMarkIntakeUploadProcessed(input: {
 }) {
   try {
     const result = await markIntakeUploadProcessed(input);
+    const catalogPathsRewritten = await rewriteCatalogLatestScreenshotPath(
+      result.fromLogicalPath,
+      result.toLogicalPath,
+    );
     return textResult({
       ...result,
-      note: "File moved to intake-processed/. Prefer create_mission / apply_hauling_contracts_intake before marking processed.",
+      catalogPathsRewritten,
+      note: "File moved to intake-processed/. Catalog latestScreenshotPath refs updated when they still pointed at the pending path.",
     });
   } catch (error) {
     return textResult({

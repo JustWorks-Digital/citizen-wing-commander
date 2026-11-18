@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   emptyUiActionTrace,
+  RECORDER_PANEL_STORAGE_KEY,
   RECORDER_STORAGE_KEY,
   type UiActionTrace,
   type UiTraceAction,
@@ -50,6 +51,22 @@ function writeActive(active: boolean) {
   }
 }
 
+function readPanelOpen(): boolean {
+  try {
+    return localStorage.getItem(RECORDER_PANEL_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writePanelOpen(open: boolean) {
+  try {
+    localStorage.setItem(RECORDER_PANEL_STORAGE_KEY, open ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+
 function sessionIdFromPath(pathname: string): string | null {
   const match = pathname.match(
     /\/sessions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
@@ -61,11 +78,13 @@ function sessionIdFromPath(pathname: string): string | null {
  * App-wide UI action recorder overlay. Mount only when capability gate is on.
  * Listeners attach only while the user has started recording.
  * Press `R` to show / hide the box (ignored while typing in a field).
+ * Panel open/closed is stored in localStorage so it survives reloads.
  */
 export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
   const pathname = usePathname();
   const [recording, setRecording] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  /** Default closed so a stored-hidden preference does not flash open before hydrate. */
+  const [panelOpen, setPanelOpen] = useState(false);
   const [count, setCount] = useState(0);
   const traceRef = useRef<UiActionTrace>(emptyUiActionTrace());
 
@@ -76,6 +95,7 @@ export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
     const next = fromQuery || readActive();
     setRecording(next);
     if (fromQuery) writeActive(true);
+    setPanelOpen(readPanelOpen());
   }, [enabled]);
 
   useEffect(() => {
@@ -95,7 +115,11 @@ export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
       if (isTypingTarget(event.target)) return;
       if (event.key.toLowerCase() !== "r") return;
       event.preventDefault();
-      setPanelOpen((open) => !open);
+      setPanelOpen((open) => {
+        const next = !open;
+        writePanelOpen(next);
+        return next;
+      });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

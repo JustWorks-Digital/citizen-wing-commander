@@ -19,6 +19,7 @@ import {
 import { SpaceshipIcon, TravelChevronsIcon } from "./ChecklistIcons";
 import { LocationHeader } from "./ChecklistLocationHeader";
 import {
+  CondensedQuantumRow,
   CompletedQuantumHistoryRow,
   checklistRowToneClass,
 } from "./CompletedHistoryRow";
@@ -137,6 +138,13 @@ export function QuantumTravelRow({
     event.stopPropagation();
   };
 
+  const condensedHopLabel = hopDistance ? (
+    <>
+      <span className="md:hidden">{hopLabelCompact}</span>
+      <span className="hidden md:inline">{hopLabel}</span>
+    </>
+  ) : null;
+
   if (isCompleted && !isHistoryExpanded) {
     return (
       <li
@@ -152,19 +160,39 @@ export function QuantumTravelRow({
         <CompletedQuantumHistoryRow
           fromLabel={fromShort}
           toLabel={toShort}
-          hopLabel={
-            hopDistance ? (
-              <>
-                <span className="md:hidden">{hopLabelCompact}</span>
-                <span className="hidden md:inline">{hopLabel}</span>
-              </>
-            ) : null
-          }
+          hopLabel={condensedHopLabel}
           hopTitle={hopDistance ? hopLabel : null}
           isFocused={isFocused}
           isPending={isPending || isSavingSection}
           onToggle={onToggle}
           onOpen={onHistoryExpand}
+        />
+      </li>
+    );
+  }
+
+  // Upcoming QT: keep the strip condensed until this hop is the active stop.
+  if (!isCompleted && !isFocused) {
+    return (
+      <li
+        aria-checked={false}
+        aria-busy={sectionBusy}
+        className={[
+          "scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24",
+          isSavingSection ? "opacity-90" : "",
+        ].join(" ")}
+        onClick={onFocus}
+      >
+        <CondensedQuantumRow
+          fromLabel={fromShort}
+          toLabel={toShort}
+          hopLabel={condensedHopLabel}
+          hopTitle={hopDistance ? hopLabel : null}
+          isCompleted={false}
+          isFocused={false}
+          isPending={isPending || isSavingSection}
+          onToggle={onToggle}
+          onOpen={onFocus}
         />
       </li>
     );

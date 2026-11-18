@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Contracts catalog with filters, checkbox selection, and selection totals (Stops / Distance / SCU / Peak / aUEC / EXP) under the selected chip block.",
+          "Contracts catalog with filters, checkbox selection, and selection totals (Stops / Distance / SCU / Peak / aUEC / EXP) under the selected chip block. Selected rows can Add to trip (existing picker) or Create new trip.",
       },
     },
   },

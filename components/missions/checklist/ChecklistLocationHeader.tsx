@@ -40,17 +40,9 @@ export function CondensedRowTrailing({
 }) {
   const titleText =
     hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
-  const stackBadgesOnMobile = routeAction === "pickup_delivery";
   return (
-    <div className="grid w-[11.25rem] shrink-0 grid-cols-[minmax(3.75rem,1fr)_2.75rem_3.5rem] items-center gap-x-1.5 md:w-[18.75rem] md:grid-cols-[minmax(0,1fr)_3.5rem_4.75rem] md:gap-x-2.5">
-      <div
-        className={[
-          "flex min-w-0 justify-end",
-          stackBadgesOnMobile
-            ? "flex-col items-end gap-0.5 md:flex-row md:items-center md:gap-1"
-            : "items-center gap-1",
-        ].join(" ")}
-      >
+    <div className="grid w-[13.5rem] shrink-0 grid-cols-[minmax(5.75rem,1fr)_2.5rem_3.25rem] items-center gap-x-1 md:w-[18.75rem] md:grid-cols-[minmax(0,1fr)_3.5rem_4.75rem] md:gap-x-2.5">
+      <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 md:gap-2">
         {routeActionBadges(routeAction).map((badge) => (
           <Badge key={badge.label} variant={badge.variant} size="sm">
             {badge.label}
@@ -271,7 +263,7 @@ export function LocationHeader({
         {showRouteAction || showLocationTags ? (
           <div
             className={[
-              "flex flex-wrap items-center gap-2",
+              "flex flex-nowrap items-center gap-2 sm:gap-2.5",
               align === "end" ? "justify-end" : "",
             ].join(" ")}
           >

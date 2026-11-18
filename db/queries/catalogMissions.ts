@@ -493,6 +493,46 @@ export async function deleteCatalogMissionsByIds(
   return deleted.length;
 }
 
+/**
+ * Rewrite every catalog row pointing at `fromLogicalPath` to `toLogicalPath`
+ * (column + hauling payload). Used when Capture moves intake-pending → processed.
+ */
+export async function rewriteCatalogLatestScreenshotPath(
+  fromLogicalPath: string,
+  toLogicalPath: string,
+): Promise<number> {
+  const from = fromLogicalPath.trim();
+  const to = toLogicalPath.trim();
+  if (!from || !to || from === to) return 0;
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: catalogMissions.id,
+      payload: catalogMissions.payload,
+    })
+    .from(catalogMissions)
+    .where(eq(catalogMissions.latestScreenshotPath, from));
+  if (rows.length === 0) return 0;
+  for (const row of rows) {
+    const payload =
+      row.payload && typeof row.payload === "object"
+        ? {
+            ...(row.payload as Record<string, unknown>),
+            latestScreenshotPath: to,
+          }
+        : row.payload;
+    await db
+      .update(catalogMissions)
+      .set({
+        latestScreenshotPath: to,
+        payload: payload as CatalogMission["payload"],
+        updatedAt: new Date(),
+      })
+      .where(eq(catalogMissions.id, row.id));
+  }
+  return rows.length;
+}
+
 /** Catalog row whose source screenshot filename matches an intake file. */
 export async function getCatalogMissionByScreenshotFilename(
   filename: string,

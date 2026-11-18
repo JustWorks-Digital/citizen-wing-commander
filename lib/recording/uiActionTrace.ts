@@ -21,6 +21,8 @@ export type UiActionTrace = {
 };
 
 export const RECORDER_STORAGE_KEY = "cwc.uiRecorder.active";
+/** Panel show/hide preference (`1` open, `0` hidden). Survives page reload. */
+export const RECORDER_PANEL_STORAGE_KEY = "cwc.uiRecorder.panelOpen";
 
 export function emptyUiActionTrace(
   partial?: Partial<Pick<UiActionTrace, "sessionId">>,

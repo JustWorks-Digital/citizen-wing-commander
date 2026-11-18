@@ -12,13 +12,15 @@ import {
   type ChecklistSessionsList,
 } from "@/lib/api/checklistApi";
 
+type Mode = "existing" | "new";
+
 export type AddCatalogMissionsToSessionModalProps = {
   catalogMissionIds: string[];
   onClose: () => void;
   onAdded?: (result: AddCatalogMissionsToSessionResult) => void;
+  /** Which trip target to show first. Default `existing`. */
+  initialMode?: Mode;
 };
-
-type Mode = "existing" | "new";
 
 /**
  * Pick an open hauling trip (or create one) and append catalog contracts.
@@ -27,9 +29,10 @@ export function AddCatalogMissionsToSessionModal({
   catalogMissionIds,
   onClose,
   onAdded,
+  initialMode = "existing",
 }: AddCatalogMissionsToSessionModalProps) {
   const [sessions, setSessions] = useState<ChecklistSessionsList | null>(null);
-  const [mode, setMode] = useState<Mode>("existing");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [sessionId, setSessionId] = useState<string>("");
   const [sessionName, setSessionName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +47,9 @@ export function AddCatalogMissionsToSessionModal({
         if (cancelled) return;
         setSessions(list);
         setSessionId(list.activeSessionId || list.sessions[0]?.id || "");
+        if (initialMode === "existing" && list.sessions.length === 0) {
+          setMode("new");
+        }
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -58,7 +64,7 @@ export function AddCatalogMissionsToSessionModal({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMode]);
 
   const count = catalogMissionIds.length;
   const canSubmit =
@@ -194,7 +200,13 @@ export function AddCatalogMissionsToSessionModal({
               onClick={() => void submit()}
               disabled={!canSubmit}
             >
-              {isSaving ? "Adding…" : "Add to trip"}
+              {isSaving
+                ? mode === "new"
+                  ? "Creating…"
+                  : "Adding…"
+                : mode === "new"
+                  ? "Create new trip"
+                  : "Add to trip"}
             </Button>
           </div>
         </div>

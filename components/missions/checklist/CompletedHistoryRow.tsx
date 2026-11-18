@@ -170,14 +170,15 @@ export function NextStopBridgeBand({
   );
 }
 
-/** Compact history row for a completed stop (show-history mode). */
-export function CompletedStopHistoryRow({
+/** Compact strip for a cargo stop (completed history or upcoming). */
+export function CondensedStopRow({
   location,
   step,
   routeAction,
   scuTotal,
   hopLabel = null,
   hopTitle = null,
+  isCompleted = true,
   isFocused,
   isPending,
   onToggle,
@@ -190,10 +191,11 @@ export function CompletedStopHistoryRow({
   /** Formatted distance for the hop leaving this stop. */
   hopLabel?: ReactNode;
   hopTitle?: string | null;
+  isCompleted?: boolean;
   isFocused: boolean;
   isPending: boolean;
   onToggle: () => void;
-  /** Expand condensed history to the full stop card. */
+  /** Expand condensed strip to the full stop card / focus this stop. */
   onOpen?: () => void;
 }) {
   return (
@@ -225,20 +227,23 @@ export function CompletedStopHistoryRow({
       className={[
         "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
         onOpen && !isPending ? "cursor-pointer" : "",
-        checklistRowToneClass(true, isFocused),
+        checklistRowToneClass(isCompleted, isFocused),
       ].join(" ")}
     >
       <DoneCheckbox
         location={location}
         step={step}
-        isCompleted
+        isCompleted={isCompleted}
         isActive={isFocused}
         isPending={isPending}
         compact
         onToggle={onToggle}
       />
       <span
-        className="min-w-0 flex-1 truncate text-sm font-medium tracking-wide text-rsi-text-secondary"
+        className={[
+          "min-w-0 flex-1 truncate text-sm font-medium tracking-wide",
+          isCompleted ? "text-rsi-text-secondary" : "text-rsi-text",
+        ].join(" ")}
         title={location}
       >
         {location}
@@ -253,12 +258,20 @@ export function CompletedStopHistoryRow({
   );
 }
 
-/** Compact history strip for a completed quantum hop. */
-export function CompletedQuantumHistoryRow({
+/** Completed history strip — same as CondensedStopRow with isCompleted. */
+export function CompletedStopHistoryRow(
+  props: Omit<Parameters<typeof CondensedStopRow>[0], "isCompleted">,
+) {
+  return <CondensedStopRow {...props} isCompleted />;
+}
+
+/** Compact strip for a quantum hop (completed history or upcoming). */
+export function CondensedQuantumRow({
   fromLabel,
   toLabel,
   hopLabel,
   hopTitle = null,
+  isCompleted = true,
   isFocused,
   isPending,
   onToggle,
@@ -269,10 +282,11 @@ export function CompletedQuantumHistoryRow({
   hopLabel?: ReactNode;
   /** Full distance string for tooltip (when hopLabel is responsive). */
   hopTitle?: string | null;
+  isCompleted?: boolean;
   isFocused: boolean;
   isPending: boolean;
   onToggle: () => void;
-  /** Expand condensed history to the full quantum card. */
+  /** Expand condensed strip to the full quantum card / focus this stop. */
   onOpen?: () => void;
 }) {
   const routeTitle = `${fromLabel} → ${toLabel}`;
@@ -303,20 +317,23 @@ export function CompletedQuantumHistoryRow({
       className={[
         "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
         onOpen && !isPending ? "cursor-pointer" : "",
-        checklistRowToneClass(true, isFocused),
+        checklistRowToneClass(isCompleted, isFocused),
       ].join(" ")}
     >
       <DoneCheckbox
         location={routeTitle}
         step="QT"
-        isCompleted
+        isCompleted={isCompleted}
         isActive={isFocused}
         isPending={isPending}
         compact
         onToggle={onToggle}
       />
       <span
-        className="flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide text-rsi-text-secondary"
+        className={[
+          "flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide",
+          isCompleted ? "text-rsi-text-secondary" : "text-rsi-text",
+        ].join(" ")}
         title={routeTitle}
       >
         <span className="truncate">{fromLabel}</span>
@@ -330,6 +347,13 @@ export function CompletedQuantumHistoryRow({
       />
     </div>
   );
+}
+
+/** @deprecated Prefer CondensedQuantumRow — alias for completed QT history strips. */
+export function CompletedQuantumHistoryRow(
+  props: Omit<Parameters<typeof CondensedQuantumRow>[0], "isCompleted">,
+) {
+  return <CondensedQuantumRow {...props} isCompleted />;
 }
 
 export function NextDistanceMeta({

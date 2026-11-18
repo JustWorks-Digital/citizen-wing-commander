@@ -89,6 +89,7 @@ import {
 } from "./ChecklistDoneControls";
 import { AddStopAfterButton, LocationHeader } from "./ChecklistLocationHeader";
 import {
+  CondensedStopRow,
   CompletedStopHistoryRow,
   NextDistanceMeta,
   NextStopBridgeBand,
@@ -835,7 +836,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                   getLocationShortName(startSlugTrimmed),
                 );
               }}
-              onFocus={() => onFocusStop?.(QUANTUM_ORIGIN_ROW_ID)}
+              onFocus={() => {
+                setExpandedCompletedRowId(null);
+                onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+              }}
               onToggle={() => {
                 if (quantumCompleted) {
                   setQuantumDeparted(false);
@@ -939,6 +943,75 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             toggleStopDoneById(row.id, routeIndex, row.isCompleted);
           };
 
+          const condensedHopLabel = (() => {
+            const hop =
+              (nextLocationSlug
+                ? distanceBetweenLocationSlugs(
+                    row.locationSlug,
+                    nextLocationSlug,
+                  )
+                : null) ?? row.distanceToNext;
+            if (!hop) return null;
+            return (
+              <>
+                <span className="md:hidden">
+                  {formatDistanceToNext(hop, { compact: true })}
+                </span>
+                <span className="hidden md:inline">
+                  {formatDistanceToNext(hop)}
+                </span>
+              </>
+            );
+          })();
+          const condensedHopTitle = (() => {
+            const hop =
+              (nextLocationSlug
+                ? distanceBetweenLocationSlugs(
+                    row.locationSlug,
+                    nextLocationSlug,
+                  )
+                : null) ?? row.distanceToNext;
+            return hop ? formatDistanceToNext(hop) : null;
+          })();
+
+          const focusUpcomingStop = () => {
+            setExpandedCompletedRowId(null);
+            onFocusStop?.(row.id);
+          };
+
+          // Upcoming stops stay condensed; only the active stop is fully open.
+          if (!row.isCompleted && !isFocused && !isQuantumTravelRow(row)) {
+            return (
+              <Fragment key={row.id}>
+                <li
+                  ref={(node) => {
+                    if (node) rowElsRef.current.set(row.id, node);
+                    else rowElsRef.current.delete(row.id);
+                  }}
+                  aria-checked={false}
+                  aria-busy={isRowSectionBusy}
+                  className="scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24"
+                  onClick={focusUpcomingStop}
+                >
+                  <CondensedStopRow
+                    location={location}
+                    step={step}
+                    routeAction={row.routeAction}
+                    scuTotal={sumCargoScu(row.cargoDeliveries)}
+                    hopLabel={condensedHopLabel}
+                    hopTitle={condensedHopTitle}
+                    isCompleted={false}
+                    isFocused={false}
+                    isPending={isPendingComplete}
+                    onToggle={toggleStopDone}
+                    onOpen={focusUpcomingStop}
+                  />
+                </li>
+                {draftingAfterRowId === row.id ? draftComposer : null}
+              </Fragment>
+            );
+          }
+
           if (isQuantumTravelRow(row)) {
             const destinationSlug = row.quantumToLocationSlug?.trim() || "";
             const destinationName = destinationSlug
@@ -963,7 +1036,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                       getLocationShortName(row.locationSlug),
                     );
                   }}
-                  onFocus={() => onFocusStop?.(row.id)}
+                  onFocus={() => {
+                    if (!row.isCompleted) setExpandedCompletedRowId(null);
+                    onFocusStop?.(row.id);
+                  }}
                   isPending={isPendingComplete}
                   isSavingSection={isQuantumSaving}
                   onToggle={toggleStopDone}

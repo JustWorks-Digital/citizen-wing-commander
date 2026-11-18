@@ -50,7 +50,7 @@ export function SessionCatalogMissionsPanel({
             ) : null}
           </h2>
           <p className="mt-1 text-xs text-rsi-text-muted">
-            Select catalog rows, then Add to trip — they apply to this
+            Select catalog rows, then Add to trip (this trip) or Create new
             trip.
           </p>
         </header>

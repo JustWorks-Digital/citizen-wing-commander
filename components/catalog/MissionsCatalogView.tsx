@@ -42,6 +42,7 @@ import {
 import { formatDistanceToNext } from "@/lib/missions/sessionChecklist";
 
 import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
+import { appPaths } from "@/lib/appPaths";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
   ImageLightbox,
@@ -101,12 +102,17 @@ export function MissionsCatalogView({
   const [visibleColumns, setVisibleColumns] = useState<CatalogTableColumnKey[]>(
     () => [...CATALOG_TABLE_COLUMN_KEYS],
   );
-  const [isAddToSessionOpen, setIsAddToSessionOpen] = useState(false);
+  const [addModalMode, setAddModalMode] = useState<"existing" | "new" | null>(
+    null,
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [addStatus, setAddStatus] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
-  const applyAddResult = (result: AddCatalogMissionsToSessionResult) => {
+  const applyAddResult = (
+    result: AddCatalogMissionsToSessionResult,
+    options?: { navigateToTrip?: boolean },
+  ) => {
     setCheckedIds([]);
     setAddError(null);
     setAddStatus(
@@ -115,6 +121,13 @@ export function MissionsCatalogView({
     );
     window.setTimeout(() => setAddStatus(null), 4000);
     onAdded?.(result);
+    if (
+      options?.navigateToTrip &&
+      result.sessionId &&
+      result.sessionId !== targetSessionId
+    ) {
+      router.push(appPaths.session(result.sessionId));
+    }
   };
 
   const addToTargetSession = async () => {
@@ -130,6 +143,25 @@ export function MissionsCatalogView({
     } catch (err) {
       setAddError(
         err instanceof Error ? err.message : "Failed to add contracts",
+      );
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const createNewTrip = async () => {
+    if (checkedIds.length === 0 || isAdding) return;
+    setIsAdding(true);
+    setAddError(null);
+    try {
+      const result = await addCatalogMissionsToSession({
+        catalogMissionIds: checkedIds,
+        createSession: true,
+      });
+      applyAddResult(result, { navigateToTrip: true });
+    } catch (err) {
+      setAddError(
+        err instanceof Error ? err.message : "Failed to create trip",
       );
     } finally {
       setIsAdding(false);
@@ -293,6 +325,16 @@ export function MissionsCatalogView({
                     Clear
                   </Button>
                   <Button
+                    variant="ghost"
+                    className="px-3 py-1.5 text-[0.7rem]"
+                    disabled={isAdding}
+                    onClick={() => {
+                      void createNewTrip();
+                    }}
+                  >
+                    {isAdding ? "Working…" : "Create new trip"}
+                  </Button>
+                  <Button
                     variant="primary"
                     className="px-3 py-1.5 text-[0.7rem]"
                     disabled={isAdding}
@@ -301,7 +343,7 @@ export function MissionsCatalogView({
                         void addToTargetSession();
                         return;
                       }
-                      setIsAddToSessionOpen(true);
+                      setAddModalMode("existing");
                     }}
                   >
                     {isAdding ? "Adding…" : "Add to trip"}
@@ -475,11 +517,16 @@ export function MissionsCatalogView({
         />
       ) : null}
 
-      {isAddToSessionOpen && !targetSessionId ? (
+      {addModalMode && !targetSessionId ? (
         <AddCatalogMissionsToSessionModal
           catalogMissionIds={checkedIds}
-          onClose={() => setIsAddToSessionOpen(false)}
-          onAdded={applyAddResult}
+          initialMode={addModalMode}
+          onClose={() => setAddModalMode(null)}
+          onAdded={(result) =>
+            applyAddResult(result, {
+              navigateToTrip: addModalMode === "new",
+            })
+          }
         />
       ) : null}
     </div>

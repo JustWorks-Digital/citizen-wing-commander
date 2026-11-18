@@ -3,8 +3,12 @@
  * Download catalog mission source screenshots from production into local
  * `.data/mcp-screenshots/<batchId>/<filename>` (paths from `latestScreenshotPath`).
  *
- * Does not write the database — pair with `npm run db:sync-catalog-missions`
- * when you also need production catalog rows.
+ * Capture shots are often moved to `intake-processed/` while catalog rows still
+ * point at `intake-pending/` — this script falls back to the processed batch,
+ * writes the file under the resolved path, and rewrites local catalog paths.
+ *
+ * Does not replace the database catalog — pair with `npm run db:sync-catalog-missions`
+ * (which invokes this script afterward).
  *
  * Usage:
  *   npm run catalog:copy-screenshots-from-prod
@@ -15,6 +19,7 @@
  * Env:
  *   PROD_BASE_URL   production origin (required — see .env.example)
  *   CATALOG_API_URL optional override (default ${PROD_BASE_URL}/api/catalog/missions)
+ *   DATABASE_URL    optional; when set, remaps local intake-pending → intake-processed paths
  */
 import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,6 +31,8 @@ const root = path.resolve(__dirname, "..");
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const INTAKE_PENDING_BATCH = "intake-pending";
+const INTAKE_PROCESSED_BATCH = "intake-processed";
 
 function parseArgs(argv) {
   const flags = new Set();
@@ -73,6 +80,10 @@ function parseLogicalPath(logicalPath) {
   return { batchId, filename, logicalPath: `${batchId}/${filename}` };
 }
 
+function screenshotUrl(prodBase, batchId, filename) {
+  return `${prodBase}/api/checklist/sessions/${encodeURIComponent(batchId)}/screenshots/${encodeURIComponent(filename)}`;
+}
+
 async function fetchJson(url) {
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   const text = await res.text();
@@ -104,14 +115,110 @@ async function downloadFile(url, destPath) {
   const res = await fetch(url);
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(
+    const err = new Error(
       `Download ${url} → ${res.status}${detail ? `: ${detail.slice(0, 160)}` : ""}`,
     );
+    err.status = res.status;
+    throw err;
   }
   const buf = Buffer.from(await res.arrayBuffer());
   await mkdir(path.dirname(destPath), { recursive: true });
   await writeFile(destPath, buf);
   return buf.length;
+}
+
+/**
+ * Prefer the catalog path; if intake-pending 404s, try intake-processed.
+ * @returns {{ batchId: string, filename: string, logicalPath: string, remappedFrom: string | null, bytes: number }}
+ */
+async function downloadWithIntakeFallback(
+  prodBase,
+  entry,
+  destRoot,
+  { dryRun },
+) {
+  const attempts = [{ batchId: entry.batchId, remappedFrom: null }];
+  if (entry.batchId === INTAKE_PENDING_BATCH) {
+    attempts.push({
+      batchId: INTAKE_PROCESSED_BATCH,
+      remappedFrom: entry.logicalPath,
+    });
+  }
+
+  let lastError = null;
+  for (const attempt of attempts) {
+    const logicalPath = `${attempt.batchId}/${entry.filename}`;
+    const destPath = path.join(
+      destRoot,
+      ".data",
+      "mcp-screenshots",
+      attempt.batchId,
+      entry.filename,
+    );
+    const url = screenshotUrl(prodBase, attempt.batchId, entry.filename);
+    if (dryRun) {
+      return {
+        batchId: attempt.batchId,
+        filename: entry.filename,
+        logicalPath,
+        remappedFrom: attempt.remappedFrom,
+        bytes: 0,
+        destPath,
+        url,
+      };
+    }
+    try {
+      const bytes = await downloadFile(url, destPath);
+      return {
+        batchId: attempt.batchId,
+        filename: entry.filename,
+        logicalPath,
+        remappedFrom: attempt.remappedFrom,
+        bytes,
+        destPath,
+        url,
+      };
+    } catch (error) {
+      lastError = error;
+      const canFallback =
+        error?.status === 404 &&
+        attempt.batchId === INTAKE_PENDING_BATCH &&
+        attempts.length > 1;
+      if (canFallback) continue;
+      throw error;
+    }
+  }
+  throw lastError ?? new Error(`Failed to download ${entry.logicalPath}`);
+}
+
+async function rewriteLocalCatalogPaths(fromLogicalPath, toLogicalPath) {
+  const DATABASE_URL = process.env.DATABASE_URL?.trim();
+  if (!DATABASE_URL) return 0;
+  const postgres = (await import("postgres")).default;
+  const sql = postgres(DATABASE_URL, { max: 1 });
+  try {
+    const updated = await sql`
+      UPDATE catalog_missions
+      SET
+        latest_screenshot_path = ${toLogicalPath},
+        payload = CASE
+          WHEN jsonb_typeof(payload::jsonb) = 'object'
+            THEN jsonb_set(
+              payload::jsonb,
+              '{latestScreenshotPath}',
+              to_jsonb(${toLogicalPath}::text),
+              true
+            )
+          ELSE payload
+        END,
+        updated_at = now()
+      WHERE latest_screenshot_path = ${fromLogicalPath}
+      RETURNING id
+    `;
+    return updated.length;
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 async function main() {
@@ -191,34 +298,83 @@ async function main() {
   let downloaded = 0;
   let skipped = 0;
   let failed = 0;
+  let remapped = 0;
 
   for (const entry of byPath.values()) {
-    const destPath = path.join(
+    const pendingDest = path.join(
       root,
       ".data",
       "mcp-screenshots",
       entry.batchId,
       entry.filename,
     );
-    const relative = path.relative(root, destPath);
-    const url = `${prodBase}/api/checklist/sessions/${encodeURIComponent(entry.batchId)}/screenshots/${encodeURIComponent(entry.filename)}`;
+    const processedDest =
+      entry.batchId === INTAKE_PENDING_BATCH
+        ? path.join(
+            root,
+            ".data",
+            "mcp-screenshots",
+            INTAKE_PROCESSED_BATCH,
+            entry.filename,
+          )
+        : null;
 
-    if (!args.force && (await pathExists(destPath))) {
+    if (
+      !args.force &&
+      ((await pathExists(pendingDest)) ||
+        (processedDest && (await pathExists(processedDest))))
+    ) {
       skipped += 1;
       console.log(`  skip ${entry.logicalPath} (exists)`);
-      continue;
-    }
-
-    if (args.dryRun) {
-      console.log(`  would download ${entry.logicalPath} → ${relative}`);
-      downloaded += 1;
+      if (
+        processedDest &&
+        (await pathExists(processedDest)) &&
+        entry.batchId === INTAKE_PENDING_BATCH &&
+        !args.dryRun
+      ) {
+        const n = await rewriteLocalCatalogPaths(
+          entry.logicalPath,
+          `${INTAKE_PROCESSED_BATCH}/${entry.filename}`,
+        );
+        if (n > 0) {
+          remapped += n;
+          console.log(
+            `    remapped ${n} local catalog path(s) → ${INTAKE_PROCESSED_BATCH}/${entry.filename}`,
+          );
+        }
+      }
       continue;
     }
 
     try {
-      const bytes = await downloadFile(url, destPath);
+      const result = await downloadWithIntakeFallback(prodBase, entry, root, {
+        dryRun: args.dryRun,
+      });
       downloaded += 1;
-      console.log(`  ${entry.logicalPath} (${bytes} bytes) → ${relative}`);
+      const relative = path.relative(root, result.destPath);
+      if (args.dryRun) {
+        console.log(
+          `  would download ${entry.logicalPath}${
+            result.remappedFrom ? ` (via ${result.logicalPath})` : ""
+          } → ${relative}`,
+        );
+      } else {
+        console.log(
+          `  ${result.logicalPath} (${result.bytes} bytes) → ${relative}`,
+        );
+      }
+      if (result.remappedFrom && !args.dryRun) {
+        const n = await rewriteLocalCatalogPaths(
+          result.remappedFrom,
+          result.logicalPath,
+        );
+        remapped += n;
+        if (n > 0) {
+          console.log(
+            `    remapped ${n} local catalog path(s) → ${result.logicalPath}`,
+          );
+        }
+      }
     } catch (error) {
       failed += 1;
       console.error(
@@ -230,7 +386,7 @@ async function main() {
   console.log(
     args.dryRun
       ? `Dry run: ${downloaded} to fetch, ${skipped} already local, ${failed} failed`
-      : `Done: ${downloaded} downloaded, ${skipped} skipped, ${failed} failed`,
+      : `Done: ${downloaded} downloaded, ${skipped} skipped, ${failed} failed, ${remapped} catalog path(s) remapped`,
   );
   if (failed > 0) process.exit(1);
 }

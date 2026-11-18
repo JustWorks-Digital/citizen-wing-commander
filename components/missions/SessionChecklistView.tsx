@@ -1119,7 +1119,12 @@ export function SessionChecklistView({
         sessionId={session.id}
         sessionName={session.sessionName}
         onClose={() => setCatalogOpen(false)}
-        onAdded={() => {
+        onAdded={(addResult) => {
+          if (addResult.sessionId && addResult.sessionId !== session.id) {
+            setCatalogOpen(false);
+            router.push(appPaths.session(addResult.sessionId));
+            return;
+          }
           void (async () => {
             try {
               const result = await fetchChecklist(null, session.id);

@@ -14,10 +14,11 @@
  *
  * Note: Railway Postgres has no public TCP proxy by default, so pg_dump is not
  * available from outside. Notes/runs are cleared locally (not exposed by API).
- * Screenshot files under `.data/` are not synced by this script — run
- * `npm run catalog:copy-screenshots-from-prod` afterward to pull sources.
+ * After the DB replace, this script pulls contract source screenshots via
+ * `copy-catalog-screenshots-from-prod.mjs` (pass `--skip-screenshots` to skip).
  */
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
@@ -280,3 +281,29 @@ try {
 }
 
 console.log(`Replaced local catalog with ${upserted} production mission(s)`);
+
+const skipScreenshots = process.argv.includes("--skip-screenshots");
+if (!skipScreenshots) {
+  console.log("Pulling contract source screenshots from production…");
+  const copyScript = path.join(__dirname, "copy-catalog-screenshots-from-prod.mjs");
+  const exitCode = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [copyScript], {
+      cwd: root,
+      env: process.env,
+      stdio: "inherit",
+    });
+    child.on("exit", (code) => resolve(code ?? 1));
+    child.on("error", (error) => {
+      console.error(error);
+      resolve(1);
+    });
+  });
+  if (exitCode !== 0) {
+    console.error(
+      `Screenshot pull exited ${exitCode} (catalog rows are already synced).`,
+    );
+    process.exit(exitCode);
+  }
+} else {
+  console.log("Skipped screenshot pull (--skip-screenshots).");
+}
