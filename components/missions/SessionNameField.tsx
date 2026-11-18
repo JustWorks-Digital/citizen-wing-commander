@@ -52,11 +52,25 @@ export function SessionNameField({
   };
 
   if (isEditing) {
+    const textClass = compact
+      ? "text-sm font-semibold tracking-wide text-rsi-text"
+      : "text-lg font-semibold tracking-wide text-rsi-text sm:text-xl";
+    // Ignore display max-width caps (e.g. 14rem) so the field can match the title.
     return (
-      <div className={["min-w-0", className].filter(Boolean).join(" ")}>
+      <div className="relative inline-block max-w-full shrink-0">
         <label htmlFor={inputId} className="sr-only">
           Trip name
         </label>
+        {/* Mirror text so the input width matches the title (plus padding/border). */}
+        <span
+          aria-hidden
+          className={[
+            "invisible block whitespace-pre rounded-rsi border border-transparent px-2.5 py-1.5",
+            textClass,
+          ].join(" ")}
+        >
+          {draft || " "}
+        </span>
         <input
           ref={inputRef}
           id={inputId}
@@ -75,10 +89,8 @@ export function SessionNameField({
             }
           }}
           className={[
-            "w-full min-w-0 rounded-rsi border border-rsi-accent/50 bg-rsi-bg-deep px-2.5 py-1.5",
-            compact
-              ? "text-sm font-semibold tracking-wide text-rsi-text"
-              : "text-lg font-semibold tracking-wide text-rsi-text sm:text-xl",
+            "absolute inset-0 w-full rounded-rsi border border-rsi-accent/50 bg-rsi-bg-deep px-2.5 py-1.5",
+            textClass,
             "outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             "disabled:opacity-60",
           ].join(" ")}

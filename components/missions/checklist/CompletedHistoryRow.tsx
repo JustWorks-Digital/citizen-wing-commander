@@ -112,10 +112,10 @@ export function ChecklistProgressTimeline({
               <span
                 className={[
                   "relative flex size-9 items-center justify-center overflow-hidden rounded-full bg-rsi-bg-deep sm:size-10",
-                  stop.isCompleted
-                    ? "border-2 border-rsi-success"
-                    : stop.isCurrent || stop.isViewing
-                      ? "border-4 border-rsi-accent"
+                  stop.isViewing
+                    ? "border-4 border-rsi-accent"
+                    : stop.isCompleted
+                      ? "border-2 border-rsi-success"
                       : "border-2 border-rsi-border",
                 ].join(" ")}
               >
@@ -141,10 +141,10 @@ export function ChecklistProgressTimeline({
               <span
                 className={[
                   "w-full truncate text-[0.7rem] font-medium leading-tight",
-                  stop.isCompleted
-                    ? "text-rsi-text-muted"
-                    : stop.isCurrent || stop.isViewing
-                      ? "text-rsi-text"
+                  stop.isViewing
+                    ? "text-rsi-text"
+                    : stop.isCompleted
+                      ? "text-rsi-text-muted"
                       : "text-rsi-text-secondary",
                 ].join(" ")}
               >
@@ -413,7 +413,7 @@ export function ChecklistProgressRail({
   return (
     <aside
       aria-label="Stops"
-      className="sticky top-0 hidden w-[8.75rem] shrink-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel lg:flex"
+      className="sticky top-1.5 hidden w-[8.75rem] shrink-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-[0_12px_40px_rgba(0,0,0,0.35)] lg:flex"
       style={maxRailHeight != null ? { maxHeight: maxRailHeight } : undefined}
     >
       {onOpenStops ? (
@@ -483,7 +483,7 @@ export function checklistRowToneClass(
   isFocused: boolean,
 ): string {
   if (isFocused && isCompleted) {
-    return "cursor-pointer bg-rsi-success-muted/50 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";
+    return "cursor-pointer bg-rsi-success-muted/50 shadow-[inset_3px_0_0_0_var(--rsi-success)]";
   }
   if (isFocused) {
     return "cursor-pointer bg-rsi-accent-muted/45 shadow-[inset_3px_0_0_0_var(--rsi-accent)]";

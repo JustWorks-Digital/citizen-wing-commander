@@ -82,6 +82,14 @@ import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
 import { RouteChecklistMenu } from "./RouteChecklistMenu";
+import {
+  readPrioritizePickup,
+  writePrioritizePickup,
+} from "@/lib/sessions/prioritizePickupPrefs";
+import {
+  readPromoteUnfinished,
+  writePromoteUnfinished,
+} from "@/lib/sessions/promoteUnfinishedPrefs";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
@@ -137,6 +145,10 @@ export function SessionChecklistView({
   const [crashFinishOpen, setCrashFinishOpen] = useState(false);
   const [crashFinishBusy, setCrashFinishBusy] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [prioritizePickup, setPrioritizePickup] = useState(false);
+  const [prioritizePickupReady, setPrioritizePickupReady] = useState(false);
+  const [promoteUnfinished, setPromoteUnfinished] = useState(true);
+  const [promoteUnfinishedReady, setPromoteUnfinishedReady] = useState(false);
   /** After Continue on the finish report, show the last completed stop again. */
   const [summaryDismissed, setSummaryDismissed] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
@@ -471,12 +483,26 @@ export function SessionChecklistView({
   useEffect(() => {
     setTripNavOpen(readSessionTripNavOpen());
     setTripNavPrefsReady(true);
+    setPrioritizePickup(readPrioritizePickup());
+    setPrioritizePickupReady(true);
+    setPromoteUnfinished(readPromoteUnfinished());
+    setPromoteUnfinishedReady(true);
   }, []);
 
   useEffect(() => {
     if (!tripNavPrefsReady) return;
     writeSessionTripNavOpen(tripNavOpen);
   }, [tripNavOpen, tripNavPrefsReady]);
+
+  useEffect(() => {
+    if (!prioritizePickupReady) return;
+    writePrioritizePickup(prioritizePickup);
+  }, [prioritizePickup, prioritizePickupReady]);
+
+  useEffect(() => {
+    if (!promoteUnfinishedReady) return;
+    writePromoteUnfinished(promoteUnfinished);
+  }, [promoteUnfinished, promoteUnfinishedReady]);
 
   // After the user finishes name / start / ship, collapse to the Setup button
   // (do not leave the setup panel open as a modal).
@@ -1033,7 +1059,7 @@ export function SessionChecklistView({
         }}
       />
 
-      {isTripSetupComplete ? (
+      {!isTripLoading && isTripSetupComplete ? (
         <SessionTripSideNav
           presentation="modal"
           open={tripNavOpen}
@@ -1095,6 +1121,8 @@ export function SessionChecklistView({
         distanceTotal={routeDistance.total}
         hideCompleted={hideCompleted}
         onHideCompletedChange={setHideCompleted}
+        prioritizePickup={prioritizePickup}
+        promoteUnfinished={promoteUnfinished}
         onOpenSummary={isTripComplete ? openTripSummary : undefined}
         tripSummary={
           isTripComplete && !summaryDismissed
@@ -1148,7 +1176,7 @@ export function SessionChecklistView({
                   className="max-w-[min(100%,14rem)] sm:max-w-[18rem]"
                 />
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  {isTripSetupComplete ? (
+                  {!isTripLoading && isTripSetupComplete ? (
                     <button
                       type="button"
                       aria-expanded={tripNavOpen}
@@ -1178,13 +1206,17 @@ export function SessionChecklistView({
                   >
                     Find a Contract
                   </button>
-                  <RouteChecklistMenu
-                    hideCompleted={hideCompleted}
-                    completedCount={completedLegs}
-                    onToggleHistory={() =>
-                      setHideCompleted((value) => !value)
-                    }
-                    onCopyTrip={initial ? undefined : copyTrip}
+                <RouteChecklistMenu
+                  hideCompleted={hideCompleted}
+                  completedCount={completedLegs}
+                  onToggleHistory={() =>
+                    setHideCompleted((value) => !value)
+                  }
+                  prioritizePickup={prioritizePickup}
+                  onPrioritizePickupChange={setPrioritizePickup}
+                  promoteUnfinished={promoteUnfinished}
+                  onPromoteUnfinishedChange={setPromoteUnfinished}
+                  onCopyTrip={initial ? undefined : copyTrip}
                     onRepairTrip={
                       !tripCargoValidation.ok && tripInvalidDismissed
                         ? repairInvalidTrip
@@ -1206,7 +1238,7 @@ export function SessionChecklistView({
               </div>
             </div>
 
-            {!isTripSetupComplete ? (
+            {!isTripLoading && !isTripSetupComplete ? (
               <SessionTripSideNav
                 presentation="panel"
                 forceExpanded

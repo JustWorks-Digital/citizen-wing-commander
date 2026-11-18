@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip-header ⋯ beside Find a Contract (h-9, Contracts-style fill). On small phones shows aUEC; also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Summary (when the trip is complete), Controls, and Crash out.",
+          "Trip-header ⋯ beside Find a Contract (h-9, Contracts-style fill). On small phones shows aUEC; also Prioritize pickup, Promote unfinished, Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Summary (when the trip is complete), Controls, and Crash out.",
       },
     },
   },
@@ -18,6 +18,10 @@ const meta = {
     hideCompleted: false,
     completedCount: 2,
     onToggleHistory: () => {},
+    prioritizePickup: false,
+    onPrioritizePickupChange: () => {},
+    promoteUnfinished: true,
+    onPromoteUnfinishedChange: () => {},
     onCopyTrip: async () => {},
     onLogCrash: () => {},
     overflowStats: (
@@ -88,12 +92,18 @@ export const TripCompleteSummary: Story = {
 export const Interactive: Story = {
   render: function InteractiveMenu() {
     const [hideCompleted, setHideCompleted] = useState(false);
+    const [prioritizePickup, setPrioritizePickup] = useState(false);
+    const [promoteUnfinished, setPromoteUnfinished] = useState(true);
     return (
       <div className="flex w-80 justify-end rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 px-3 py-2">
         <RouteChecklistMenu
           hideCompleted={hideCompleted}
           completedCount={2}
           onToggleHistory={() => setHideCompleted((value) => !value)}
+          prioritizePickup={prioritizePickup}
+          onPrioritizePickupChange={setPrioritizePickup}
+          promoteUnfinished={promoteUnfinished}
+          onPromoteUnfinishedChange={setPromoteUnfinished}
           onCopyTrip={async () => {
             await new Promise((resolve) => setTimeout(resolve, 400));
           }}

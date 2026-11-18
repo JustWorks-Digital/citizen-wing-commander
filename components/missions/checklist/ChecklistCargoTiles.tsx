@@ -10,6 +10,7 @@ import {
 } from "@/lib/fixtures/commodityColors";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import type { StopTransferLedger } from "@/lib/missions/cargoInventory";
+import { stopCargoRole } from "@/lib/missions/stopDeliveryBoxes";
 import {
   estimateMissionHaulingRepXp,
   formatHaulingRepXp,
@@ -27,12 +28,17 @@ import { DeliveryTransferBlock, PickupTransferBlock } from "./TransferBlocks";
 
 export type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
 
-function groupCargoLines(lines: CargoLine[]): {
+function groupCargoLines(
+  lines: CargoLine[],
+  pickupFirst: boolean,
+): {
   role: "pickup" | "delivery" | null;
   items: CargoLine[];
 }[] {
-  /** Drop off before Pickup at both-stops (unload then load). */
-  const order: ("pickup" | "delivery" | null)[] = ["delivery", "pickup", null];
+  /** Default: Drop off before Pick up. Prefer pickup (or after drop-off done) flips it. */
+  const order: ("pickup" | "delivery" | null)[] = pickupFirst
+    ? ["pickup", "delivery", null]
+    : ["delivery", "pickup", null];
   const groups: { role: "pickup" | "delivery" | null; items: CargoLine[] }[] =
     [];
   for (const role of order) {
@@ -828,6 +834,8 @@ export function CargoGroups({
   pendingAddPickupKeys,
   onSetPickupScu,
   pendingSetPickupScuKeys,
+  prioritizePickup = false,
+  promoteUnfinished = true,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -869,8 +877,28 @@ export function CargoGroups({
     scu: number,
   ) => void;
   pendingSetPickupScuKeys?: ReadonlySet<string>;
+  /**
+   * When true (and both roles still open), Pick up renders above Drop off.
+   */
+  prioritizePickup?: boolean;
+  /**
+   * When true, after one role is marked done the unfinished section moves to
+   * the top. Turn off to keep Prioritize pickup order fixed.
+   */
+  promoteUnfinished?: boolean;
 }) {
-  const groups = groupCargoLines(cargoLines);
+  const deliveryHandled =
+    stopCargoRole.isHandled(row, "delivery") || row.isCompleted;
+  const pickupHandled =
+    stopCargoRole.isHandled(row, "pickup") || row.isCompleted;
+  // Optionally keep the unfinished role on top so the next action is visible.
+  const pickupFirst =
+    promoteUnfinished && deliveryHandled && !pickupHandled
+      ? true
+      : promoteUnfinished && pickupHandled && !deliveryHandled
+        ? false
+        : prioritizePickup;
+  const groups = groupCargoLines(cargoLines, pickupFirst);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
   const pickupTransfer =
     transferLedger != null && transferLedger.pickup !== false
@@ -928,7 +956,7 @@ export function CargoGroups({
                   shipName={shipName}
                   shipSlug={shipSlug}
                   transfer={pickupTransfer}
-                  isDone={row.isCompleted}
+                  isDone={pickupHandled}
                 />
               )
             : group.role === "delivery" && deliveryTransfer
@@ -939,7 +967,7 @@ export function CargoGroups({
                     shipName={shipName}
                     shipSlug={shipSlug}
                     transfer={deliveryTransfer}
-                    isDone={row.isCompleted}
+                    isDone={deliveryHandled}
                   />
                 )
               : null;
@@ -1087,26 +1115,53 @@ export function CargoGroups({
           </div>
         );
       })}
-      {!hasDeliveryGroup && deliveryTransfer ? (
-        <DeliveryTransferBlock
-          location={location}
-          locationSlug={row.locationSlug}
-          shipName={shipName}
-          shipSlug={shipSlug}
-          transfer={deliveryTransfer}
-          isDone={row.isCompleted}
-        />
-      ) : null}
-      {!hasPickupGroup && pickupTransfer ? (
-        <PickupTransferBlock
-          location={location}
-          locationSlug={row.locationSlug}
-          shipName={shipName}
-          shipSlug={shipSlug}
-          transfer={pickupTransfer}
-          isDone={row.isCompleted}
-        />
-      ) : null}
+      {pickupFirst ? (
+        <>
+          {!hasPickupGroup && pickupTransfer ? (
+            <PickupTransferBlock
+              location={location}
+              locationSlug={row.locationSlug}
+              shipName={shipName}
+              shipSlug={shipSlug}
+              transfer={pickupTransfer}
+              isDone={pickupHandled}
+            />
+          ) : null}
+          {!hasDeliveryGroup && deliveryTransfer ? (
+            <DeliveryTransferBlock
+              location={location}
+              locationSlug={row.locationSlug}
+              shipName={shipName}
+              shipSlug={shipSlug}
+              transfer={deliveryTransfer}
+              isDone={deliveryHandled}
+            />
+          ) : null}
+        </>
+      ) : (
+        <>
+          {!hasDeliveryGroup && deliveryTransfer ? (
+            <DeliveryTransferBlock
+              location={location}
+              locationSlug={row.locationSlug}
+              shipName={shipName}
+              shipSlug={shipSlug}
+              transfer={deliveryTransfer}
+              isDone={deliveryHandled}
+            />
+          ) : null}
+          {!hasPickupGroup && pickupTransfer ? (
+            <PickupTransferBlock
+              location={location}
+              locationSlug={row.locationSlug}
+              shipName={shipName}
+              shipSlug={shipSlug}
+              transfer={pickupTransfer}
+              isDone={pickupHandled}
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

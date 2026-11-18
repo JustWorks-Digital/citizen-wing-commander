@@ -120,6 +120,51 @@ export function TransferEndpointName({
   );
 }
 
+/** Large green check stamp over Station ↔ Ship when that role is marked done. */
+function TransferDoneStamp() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none inline-flex rotate-[-18deg] select-none text-rsi-success"
+    >
+      <svg
+        viewBox="0 0 120 120"
+        className="size-[4.75rem] sm:size-[5.5rem]"
+        role="img"
+      >
+        <circle
+          cx="60"
+          cy="60"
+          r="54"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          opacity="0.8"
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r="46"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeDasharray="3 2.5"
+          opacity="0.55"
+        />
+        <path
+          d="M36 64 L52 78 L86 44"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.75"
+        />
+      </svg>
+    </span>
+  );
+}
+
 export function TransferBlockFrame({
   title,
   isDone,
@@ -136,18 +181,25 @@ export function TransferBlockFrame({
     tone === "pickup"
       ? "border-rsi-accent/20 bg-rsi-accent-muted/20"
       : "border-rsi-gold/20 bg-rsi-gold-muted/20";
+  const doneLabel = tone === "pickup" ? "Picked up" : "Dropped off";
 
   return (
     <div
       className={[
         // Equal endpoint columns. Pickup: Station → Ship; Drop off: Ship → Station.
         // Text wraps; never truncates.
-        "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 rounded-rsi border px-3 py-4 sm:gap-x-4 sm:px-4",
+        "relative grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 overflow-hidden rounded-rsi border px-3 py-4 sm:gap-x-4 sm:px-4",
         surface,
-        isDone ? "opacity-70 text-rsi-text-muted" : "",
+        isDone ? "opacity-75 text-rsi-text-muted" : "",
       ].join(" ")}
-      title={title}
+      title={isDone ? `${title} — ${doneLabel}` : title}
+      aria-label={isDone ? `${title}. ${doneLabel}.` : undefined}
     >
+      {isDone ? (
+        <span className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
+          <TransferDoneStamp />
+        </span>
+      ) : null}
       {children}
     </div>
   );

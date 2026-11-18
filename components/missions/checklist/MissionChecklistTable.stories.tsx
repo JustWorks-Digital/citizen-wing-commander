@@ -171,7 +171,7 @@ export const EstimatedBoxSplits: Story = {
   render: (args) => <InteractiveTable {...args} />,
 };
 
-/** Initial page / session hydrate — spinner until checklist details arrive. */
+/** Initial page / session hydrate — Stops skeleton until checklist details arrive. */
 export const Loading: Story = {
   args: {
     rows: [],

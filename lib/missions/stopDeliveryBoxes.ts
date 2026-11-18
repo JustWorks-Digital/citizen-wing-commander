@@ -32,7 +32,7 @@ export type StopCargoBoxGroup = {
 };
 
 /** Empty cells between mission/commodity stacks on the reference pad. */
-const STACK_GAP_CELLS = 6;
+const STACK_GAP_CELLS = 3;
 /** Extra empty cells between delivery-location hangar piles. */
 const PILE_GAP_CELLS = 4;
 /** Pack each stack into a 2-wide column (fits 8 / 4 SCU crates). */
