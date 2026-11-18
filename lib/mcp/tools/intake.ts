@@ -141,6 +141,7 @@ import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 import { placementPlanLegend } from "@/lib/ships/cargoGridPlacement";
 
 
+import { mcpImagePreview } from "@/lib/mcp/mcpImagePreview";
 import {
   PLAYBOOK_PATH,
   imageResult,
@@ -718,17 +719,25 @@ export async function toolGetHaulingScreenshot(input: {
       });
     }
     const shot = await readHaulingScreenshot(logicalPath);
+    const preview = await mcpImagePreview(shot.buffer, shot.contentType);
     return imageResult({
       meta: {
         ok: true,
         logicalPath: shot.logicalPath,
         filename: shot.filename,
-        bytes: shot.bytes,
-        contentType: shot.contentType,
-        note: "Image is in the MCP image content block (not embedded in this JSON).",
+        originalBytes: shot.bytes,
+        originalContentType: shot.contentType,
+        previewBytes: preview.bytes,
+        previewContentType: preview.mimeType,
+        previewWidth: preview.width,
+        previewHeight: preview.height,
+        isPreview: preview.isPreview,
+        note: preview.isPreview
+          ? "MCP image block is a JPEG preview under ~1MB; original PNG stays on WC2 disk."
+          : "Image is in the MCP image content block (not embedded in this JSON).",
       },
-      imageBase64: shot.imageBase64,
-      mimeType: shot.contentType,
+      imageBase64: preview.imageBase64,
+      mimeType: preview.mimeType,
     });
   } catch (error) {
     return textResult({
@@ -770,18 +779,26 @@ export async function toolGetIntakeUpload(input: {
 }) {
   try {
     const shot = await readIntakeUpload(input);
+    const preview = await mcpImagePreview(shot.buffer, shot.contentType);
     return imageResult({
       meta: {
         ok: true,
         status: shot.status,
         logicalPath: shot.logicalPath,
         filename: shot.filename,
-        bytes: shot.bytes,
-        contentType: shot.contentType,
-        note: "Image is in the MCP image content block (not embedded in this JSON).",
+        originalBytes: shot.bytes,
+        originalContentType: shot.contentType,
+        previewBytes: preview.bytes,
+        previewContentType: preview.mimeType,
+        previewWidth: preview.width,
+        previewHeight: preview.height,
+        isPreview: preview.isPreview,
+        note: preview.isPreview
+          ? "MCP image block is a JPEG preview under ~1MB; original PNG stays on WC2 disk."
+          : "Image is in the MCP image content block (not embedded in this JSON).",
       },
-      imageBase64: shot.imageBase64,
-      mimeType: shot.contentType,
+      imageBase64: preview.imageBase64,
+      mimeType: preview.mimeType,
     });
   } catch (error) {
     return textResult({
