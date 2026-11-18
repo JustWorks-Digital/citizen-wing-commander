@@ -82,7 +82,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** Active tile + All / Recent menus with several trips. */
+/** Recent / All / + above the active trip tile. */
 export const ManySessions: Story = {
   args: {
     sessions: demoSessions,

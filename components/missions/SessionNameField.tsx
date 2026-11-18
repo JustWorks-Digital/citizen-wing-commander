@@ -7,6 +7,8 @@ export type SessionNameFieldProps = {
   onRename: (nextName: string) => void;
   disabled?: boolean;
   className?: string;
+  /** Smaller title for the trip side panel header. */
+  compact?: boolean;
 };
 
 /** Session title with inline rename (edit control + click-to-edit). */
@@ -15,6 +17,7 @@ export function SessionNameField({
   onRename,
   disabled = false,
   className,
+  compact = false,
 }: SessionNameFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -73,7 +76,9 @@ export function SessionNameField({
           }}
           className={[
             "w-full min-w-0 rounded-rsi border border-rsi-accent/50 bg-rsi-bg-deep px-2.5 py-1.5",
-            "text-lg font-semibold tracking-wide text-rsi-text sm:text-xl",
+            compact
+              ? "text-sm font-semibold tracking-wide text-rsi-text"
+              : "text-lg font-semibold tracking-wide text-rsi-text sm:text-xl",
             "outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
             "disabled:opacity-60",
           ].join(" ")}
@@ -85,7 +90,8 @@ export function SessionNameField({
   return (
     <div
       className={[
-        "group flex min-w-0 items-start gap-2",
+        "group inline-flex max-w-full min-w-0 gap-1.5",
+        compact ? "items-center" : "items-start",
         className,
       ]
         .filter(Boolean)
@@ -102,7 +108,10 @@ export function SessionNameField({
           setIsEditing(true);
         }}
         className={[
-          "min-w-0 flex-1 text-left text-lg font-semibold tracking-wide break-words text-rsi-text sm:text-xl",
+          "min-w-0 max-w-full text-left font-semibold tracking-wide text-rsi-text",
+          compact
+            ? "truncate text-sm"
+            : "break-words text-lg sm:text-xl",
           "rounded-sm transition-colors hover:text-rsi-accent",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
           "disabled:cursor-default disabled:hover:text-rsi-text",
@@ -121,7 +130,8 @@ export function SessionNameField({
           setIsEditing(true);
         }}
         className={[
-          "mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-rsi border border-rsi-border",
+          "inline-flex shrink-0 items-center justify-center rounded-rsi border border-rsi-border",
+          compact ? "size-5" : "mt-1 size-7",
           "bg-rsi-surface text-rsi-text-secondary transition-opacity",
           "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100",
           "hover:border-rsi-accent/50 hover:text-rsi-accent",
@@ -132,7 +142,7 @@ export function SessionNameField({
         <svg
           aria-hidden
           viewBox="0 0 24 24"
-          className="size-3.5"
+          className={compact ? "size-2.5" : "size-3.5"}
           fill="none"
           stroke="currentColor"
           strokeWidth="1.75"

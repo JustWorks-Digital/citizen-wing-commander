@@ -165,7 +165,7 @@ export function SessionCargoLayoutModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-rsi-bg-deep/85 p-3 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden overscroll-none bg-rsi-bg-deep/85 px-3 pt-14 pb-3 sm:px-6 sm:pt-16 sm:pb-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -177,13 +177,7 @@ export function SessionCargoLayoutModal({
         className="relative flex max-w-full flex-col items-stretch"
         style={{ width: widthPx }}
       >
-        <div className="pointer-events-none absolute inset-x-0 bottom-full mb-2 flex justify-end">
-          <ModalCloseButton
-            label="Dismiss"
-            onClick={onClose}
-            className="pointer-events-auto static top-auto right-auto rounded-rsi border border-rsi-border bg-rsi-bg-deep/90 shadow-rsi-panel"
-          />
-        </div>
+        <ModalCloseButton label="Dismiss" onClick={onClose} />
         <h2 id={titleId} className="sr-only">
           Cargo bays
         </h2>

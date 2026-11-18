@@ -58,8 +58,8 @@ export function TransferColumnLabel({ children }: { children: ReactNode }) {
 
 /**
  * Station / ship thumb + endpoint name.
- * Name beside the thumb from ~450px up (pickup / drop-off endpoints);
- * stacked under on narrower phones.
+ * Name stacks under the thumb when the transfer column is narrow;
+ * sits beside the thumb once the column has room.
  */
 export function TransferEndpointName({
   kind,
@@ -77,43 +77,45 @@ export function TransferEndpointName({
   strike: string;
 }) {
   return (
-    <div className="mb-2.5 flex min-w-0 flex-col items-start gap-1.5 self-stretch min-[450px]:flex-row min-[450px]:items-center min-[450px]:gap-2">
-      <span
-        aria-hidden
-        className={[
-          "inline-flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-rsi",
-          kind === "station"
-            ? "border border-rsi-border/70 bg-rsi-bg-deep/50"
-            : "",
-        ].join(" ")}
-      >
-        {imageSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
-          <img
-            src={imageSrc}
-            alt=""
-            className={
-              kind === "ship"
-                ? "h-full w-auto max-w-full object-contain"
-                : "size-full object-cover"
-            }
-          />
-        ) : kind === "ship" ? (
-          <SpaceshipIcon className="h-5 w-8 text-rsi-text-muted" />
-        ) : (
-          <span className="size-full bg-rsi-bg-deep/40" />
-        )}
-      </span>
-      <p
-        className={[
-          "min-w-0 w-full break-words text-left text-sm font-medium leading-5 min-[450px]:flex-1",
-          isDone ? mute : "text-rsi-text-muted",
-          strike,
-        ].join(" ")}
-        title={name}
-      >
-        {name}
-      </p>
+    <div className="@container/endpoint mb-2.5 w-full min-w-0 self-stretch">
+      <div className="flex min-w-0 flex-col items-start gap-1.5 @[11rem]/endpoint:flex-row @[11rem]/endpoint:items-center @[11rem]/endpoint:gap-2">
+        <span
+          aria-hidden
+          className={[
+            "inline-flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-rsi",
+            kind === "station"
+              ? "border border-rsi-border/70 bg-rsi-bg-deep/50"
+              : "",
+          ].join(" ")}
+        >
+          {imageSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
+            <img
+              src={imageSrc}
+              alt=""
+              className={
+                kind === "ship"
+                  ? "h-full w-auto max-w-full object-contain"
+                  : "size-full object-cover"
+              }
+            />
+          ) : kind === "ship" ? (
+            <SpaceshipIcon className="h-5 w-8 text-rsi-text-muted" />
+          ) : (
+            <span className="size-full bg-rsi-bg-deep/40" />
+          )}
+        </span>
+        <p
+          className={[
+            "min-w-0 w-full break-words [overflow-wrap:anywhere] text-left text-sm font-medium leading-5 @[11rem]/endpoint:flex-1",
+            isDone ? mute : "text-rsi-text-muted",
+            strike,
+          ].join(" ")}
+          title={name}
+        >
+          {name}
+        </p>
+      </div>
     </div>
   );
 }

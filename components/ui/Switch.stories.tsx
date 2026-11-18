@@ -3,10 +3,16 @@ import { useState } from "react";
 import { Switch } from "./Switch";
 
 function SwitchDemo() {
-  const [on, setOn] = useState(true);
+  const [names, setNames] = useState(true);
+  const [hologram, setHologram] = useState(false);
   return (
-    <div className="w-48 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 p-2">
-      <Switch label="Cargo names" checked={on} onCheckedChange={setOn} />
+    <div className="w-48 space-y-1.5 rounded-rsi border border-rsi-border bg-rsi-bg-deep/60 p-2">
+      <Switch label="Cargo names" checked={names} onCheckedChange={setNames} />
+      <Switch
+        label="Show hologram"
+        checked={hologram}
+        onCheckedChange={setHologram}
+      />
     </div>
   );
 }

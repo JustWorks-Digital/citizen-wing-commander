@@ -17,6 +17,8 @@ export type ShipSelectProps = {
   disabled?: boolean;
   isLoading?: boolean;
   error?: string | null;
+  /** Drop the md max-width cap (e.g. trip modal). */
+  fullWidth?: boolean;
 };
 
 function shipOptionLabel(ship: ShipSelectOption): string {
@@ -72,6 +74,7 @@ export function ShipSelect({
   disabled = false,
   isLoading = false,
   error = null,
+  fullWidth = false,
 }: ShipSelectProps) {
   const listId = useId();
   const inputId = useId();
@@ -139,7 +142,12 @@ export function ShipSelect({
   return (
     <div
       ref={rootRef}
-      className="relative w-full min-w-0 md:max-w-md"
+      className={[
+        "relative w-full min-w-0",
+        fullWidth ? "" : "md:max-w-md",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onMouseDown={(event) => {
         const target = event.target as HTMLElement;
         if (target.closest("input, button, [role='listbox']")) return;

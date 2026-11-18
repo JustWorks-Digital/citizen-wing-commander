@@ -29,6 +29,11 @@ export type SessionTabsProps = {
   /** Soft-delete / close a session after user confirms. */
   onClose?: (sessionId: string) => void;
   isBusy?: boolean;
+  /**
+   * When false, only Recent / All / + show (active trip lives in the panel header).
+   * Default true for standalone / Storybook use.
+   */
+  showActiveTrip?: boolean;
 };
 
 type OpenMenu = "all" | "recent" | null;
@@ -277,6 +282,7 @@ export function SessionTabs({
   onCreate,
   onClose,
   isBusy = false,
+  showActiveTrip = true,
 }: SessionTabsProps) {
   const [pendingClose, setPendingClose] = useState<SessionTabSummary | null>(
     null,
@@ -354,12 +360,79 @@ export function SessionTabs({
       <div
         role="tablist"
         aria-label="Hauling trips"
-        className="flex min-w-0 max-w-full flex-wrap items-stretch gap-1"
+        className="flex min-w-0 max-w-full flex-col gap-1.5"
       >
-        {activeSession ? (
+        <div className="flex min-w-0 flex-wrap items-stretch gap-1">
+          <SessionMenu
+            label="Recent"
+            ariaLabel="Recently viewed trips"
+            open={openMenu === "recent"}
+            onToggle={() =>
+              setOpenMenu((current) => (current === "recent" ? null : "recent"))
+            }
+            onCloseMenu={closeMenus}
+            disabled={recentSessions.length === 0}
+            emptyLabel="No recent trips"
+            items={recentSessions}
+            nowMs={nowMs}
+            activeSessionId={activeSessionId}
+            onSelect={onSelect}
+            onRequestClose={onClose ? requestClose : undefined}
+            isBusy={isBusy}
+          />
+
+          <SessionMenu
+            label={`All${otherSessions.length ? ` (${otherSessions.length})` : ""}`}
+            ariaLabel="All other trips, sorted by creation date"
+            open={openMenu === "all"}
+            onToggle={() =>
+              setOpenMenu((current) => (current === "all" ? null : "all"))
+            }
+            onCloseMenu={closeMenus}
+            disabled={otherSessions.length === 0}
+            emptyLabel="No other trips"
+            items={otherSessions}
+            nowMs={nowMs}
+            activeSessionId={activeSessionId}
+            onSelect={onSelect}
+            onRequestClose={onClose ? requestClose : undefined}
+            isBusy={isBusy}
+          />
+
+          <button
+            type="button"
+            aria-label="Add trip"
+            title="Add trip"
+            disabled={isBusy}
+            onClick={onCreate}
+            className={[
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-rsi border border-dashed border-rsi-border text-rsi-text-muted transition-colors",
+              "hover:border-rsi-accent hover:bg-rsi-surface/50 hover:text-rsi-accent",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+              isBusy ? "opacity-60" : "",
+            ].join(" ")}
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 16 16"
+              className="size-4"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8 3.5v9M3.5 8h9"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {showActiveTrip && activeSession ? (
           <div
             className={[
-              "group relative inline-flex min-w-0 max-w-[16rem] shrink-0 items-stretch sm:max-w-[18rem]",
+              "group relative flex min-w-0 w-full items-stretch",
               isBusy ? "opacity-60" : "",
             ].join(" ")}
           >
@@ -428,76 +501,11 @@ export function SessionTabs({
             ) : null}
           </div>
         ) : null}
-
-        <SessionMenu
-          label="Recent"
-          ariaLabel="Recently viewed trips"
-          open={openMenu === "recent"}
-          onToggle={() =>
-            setOpenMenu((current) => (current === "recent" ? null : "recent"))
-          }
-          onCloseMenu={closeMenus}
-          disabled={recentSessions.length === 0}
-          emptyLabel="No recent trips"
-          items={recentSessions}
-          nowMs={nowMs}
-          activeSessionId={activeSessionId}
-          onSelect={onSelect}
-          onRequestClose={onClose ? requestClose : undefined}
-          isBusy={isBusy}
-        />
-
-        <SessionMenu
-          label={`All${otherSessions.length ? ` (${otherSessions.length})` : ""}`}
-          ariaLabel="All other trips, sorted by creation date"
-          open={openMenu === "all"}
-          onToggle={() =>
-            setOpenMenu((current) => (current === "all" ? null : "all"))
-          }
-          onCloseMenu={closeMenus}
-          disabled={otherSessions.length === 0}
-          emptyLabel="No other trips"
-          items={otherSessions}
-          nowMs={nowMs}
-          activeSessionId={activeSessionId}
-          onSelect={onSelect}
-          onRequestClose={onClose ? requestClose : undefined}
-          isBusy={isBusy}
-        />
-
-        <button
-          type="button"
-          aria-label="Add trip"
-          title="Add trip"
-          disabled={isBusy}
-          onClick={onCreate}
-          className={[
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-rsi border border-dashed border-rsi-border text-rsi-text-muted transition-colors",
-            "hover:border-rsi-accent hover:bg-rsi-surface/50 hover:text-rsi-accent",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-            isBusy ? "opacity-60" : "",
-          ].join(" ")}
-        >
-          <svg
-            aria-hidden
-            viewBox="0 0 16 16"
-            className="size-4"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M8 3.5v9M3.5 8h9"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
       </div>
 
       {pendingClose ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 px-4 pt-14 pb-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="close-session-title"
@@ -505,7 +513,7 @@ export function SessionTabs({
             if (event.target === event.currentTarget) setPendingClose(null);
           }}
         >
-          <div className="relative w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 pr-12 shadow-rsi-panel sm:pr-14">
+          <div className="relative w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 shadow-rsi-panel">
             <ModalCloseButton
               label="Dismiss"
               onClick={() => setPendingClose(null)}

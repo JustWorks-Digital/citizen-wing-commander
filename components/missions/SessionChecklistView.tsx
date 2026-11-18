@@ -26,6 +26,7 @@ import { appPaths } from "@/lib/appPaths";
 import { useSessionMissionActions } from "@/hooks/useSessionMissionActions";
 import { useSessionRouteEdits } from "@/hooks/useSessionRouteEdits";
 import { useSyncCatalogBoxSplits } from "@/hooks/useSyncCatalogBoxSplits";
+import { Button } from "@/components/ui/Button";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import { ShipSelect } from "@/components/ui/ShipSelect";
 import {
@@ -46,7 +47,6 @@ import {
   type SessionChecklist,
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
-import { TripCompleteSummaryModal } from "@/components/missions/TripCompleteSummaryModal";
 import { TripCrashFinishModal } from "@/components/missions/TripCrashFinishModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
 import {
@@ -81,17 +81,22 @@ import { SessionScreenshotsPanel } from "./SessionScreenshotsPanel";
 import { SessionElapsedLabel } from "./SessionElapsedLabel";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 import { SessionStopsTimelineModal } from "./SessionStopsTimelineModal";
+import { RouteChecklistMenu } from "./RouteChecklistMenu";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
   SessionInventoryStat,
   RouteTripOverflowStats,
   SessionRouteProgressStats,
-  SessionSourceStat,
 } from "./SessionStatsStrip";
 import { CreateSessionModal } from "./CreateSessionModal";
 import { SessionNameField } from "./SessionNameField";
 import { SessionTabs } from "./SessionTabs";
+import { SessionTripSideNav } from "./SessionTripSideNav";
+import {
+  readSessionTripNavOpen,
+  writeSessionTripNavOpen,
+} from "@/lib/sessions/sessionTripNavPrefs";
 
 export type SessionChecklistViewProps = {
   /** Route param — which session this page is showing. */
@@ -129,17 +134,20 @@ export function SessionChecklistView({
   );
   const [tabsBusy, setTabsBusy] = useState(false);
   const [createSessionOpen, setCreateSessionOpen] = useState(false);
-  const [tripCompleteOpen, setTripCompleteOpen] = useState(false);
   const [crashFinishOpen, setCrashFinishOpen] = useState(false);
   const [crashFinishBusy, setCrashFinishBusy] = useState(false);
-  /** null until first observe — already-complete trips must not auto-open the report. */
-  const wasTripCompleteRef = useRef<boolean | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  /** After Continue on the finish report, show the last completed stop again. */
+  const [summaryDismissed, setSummaryDismissed] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
   const [missionsFocusId, setMissionsFocusId] = useState<string | null>(null);
   const [stopsOpen, setStopsOpen] = useState(false);
   const [cargoLayoutOpen, setCargoLayoutOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [screenshotsOpen, setScreenshotsOpen] = useState(false);
+  /** Default until mount — avoid localStorage in useState (SSR hydration mismatch). */
+  const [tripNavOpen, setTripNavOpen] = useState(true);
+  const [tripNavPrefsReady, setTripNavPrefsReady] = useState(false);
   const [pendingScreenshotCount, setPendingScreenshotCount] = useState(0);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
   /** Synthetic start → first-stop quantum marked done (feeds Distance traveled). */
@@ -402,17 +410,11 @@ export function SessionChecklistView({
         session.rows,
         session.startLocationSlug ?? null,
       );
-    const hasIncomplete = session.rows.some((row) => !row.isCompleted);
     if (
       focusedStopId &&
       (canFocusQuantum ||
         session.rows.some((row) => row.id === focusedStopId))
     ) {
-      // Trip finished: don't keep the last Done stop as the active focus.
-      if (!hasIncomplete && !canFocusQuantum) {
-        const focused = session.rows.find((row) => row.id === focusedStopId);
-        if (focused?.isCompleted) return null;
-      }
       return focusedStopId;
     }
     return defaultFocusedStopId(
@@ -422,6 +424,14 @@ export function SessionChecklistView({
   }, [focusedStopId, session.rows, session.startLocationSlug]);
 
   const selectedShipSlug = session.shipSlugs?.[0] ?? null;
+  const tripName = session.sessionName?.trim() ?? "";
+  /** Name + start + ship filled — trip chrome becomes a button-triggered modal. */
+  const isTripSetupComplete =
+    Boolean(tripName) &&
+    tripName !== "Loading…" &&
+    Boolean(session.startLocationSlug) &&
+    Boolean(selectedShipSlug);
+  const tripSetupCompleteRef = useRef<boolean | null>(null);
   const shipBySlug = new Map(shipCatalog.map((ship) => [ship.slug, ship]));
   const selectedShipName =
     (selectedShipSlug
@@ -458,31 +468,52 @@ export function SessionChecklistView({
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
   const isTripComplete = areAllLegsComplete(session.rows);
 
-  // Close the finish report on trip switch; edge-open when every stop becomes done.
   useEffect(() => {
-    setTripCompleteOpen(false);
-    wasTripCompleteRef.current = null;
-  }, [session.id]);
+    setTripNavOpen(readSessionTripNavOpen());
+    setTripNavPrefsReady(true);
+  }, []);
 
   useEffect(() => {
-    // Ignore the empty loading shell → hydrated body transition so an
-    // already-finished trip does not auto-open the finish report.
-    if (isTripLoading) {
-      wasTripCompleteRef.current = null;
-      return;
+    if (!tripNavPrefsReady) return;
+    writeSessionTripNavOpen(tripNavOpen);
+  }, [tripNavOpen, tripNavPrefsReady]);
+
+  // After the user finishes name / start / ship, collapse to the Setup button
+  // (do not leave the setup panel open as a modal).
+  useEffect(() => {
+    if (
+      tripSetupCompleteRef.current === false &&
+      isTripSetupComplete
+    ) {
+      setTripNavOpen(false);
     }
-    if (wasTripCompleteRef.current === null) {
-      wasTripCompleteRef.current = isTripComplete;
-      return;
-    }
-    if (isTripComplete && !wasTripCompleteRef.current) {
-      setTripCompleteOpen(true);
-    }
-    if (!isTripComplete) {
-      setTripCompleteOpen(false);
-    }
-    wasTripCompleteRef.current = isTripComplete;
-  }, [isTripComplete, isTripLoading]);
+    tripSetupCompleteRef.current = isTripSetupComplete;
+  }, [isTripSetupComplete]);
+
+  useEffect(() => {
+    if (!isTripComplete) setSummaryDismissed(false);
+  }, [isTripComplete]);
+
+  useEffect(() => {
+    setSummaryDismissed(false);
+    setHideCompleted(false);
+  }, [session.id]);
+
+  const openTripSummary = useCallback(() => {
+    setSummaryDismissed(false);
+    // Wait a frame so the panel mounts before scrolling.
+    requestAnimationFrame(() => {
+      document
+        .getElementById("trip-complete-summary")
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, []);
+
+  const dismissTripSummary = useCallback(() => {
+    const lastStop = session.rows[session.rows.length - 1];
+    if (lastStop) setFocusedStopId(lastStop.id);
+    setSummaryDismissed(true);
+  }, [session.rows]);
 
   const tripElapsedLabel = useMemo(
     () =>
@@ -512,7 +543,6 @@ export function SessionChecklistView({
       updatedAt: new Date().toISOString(),
     };
     // Optimistic UI first; defer server echo so packing / grid don't re-run twice urgently.
-    // Finish report opens via isTripComplete edge (wasTripCompleteRef), not here.
     setSession(stamped);
     return saveChecklist(stamped)
       .then((result) => {
@@ -680,14 +710,12 @@ export function SessionChecklistView({
         missionsCompleted={session.missionsCompleted ?? 0}
         missionCount={session.missionCount ?? 0}
         onboardScu={onboardScu}
+        peakScu={peakScu}
         totalCapacity={totalCapacity}
         isOverCapacity={isOverCapacity}
         auecEarned={auecEarned}
         auecProjected={auecProjected}
-        distanceTraveled={routeDistance.traveled}
-        distanceTotal={routeDistance.total}
         onMissionsClick={openMissions}
-        onStopsClick={openStops}
         onCapacityClick={openCargoLayout}
         cargoBayCount={cargoBayCount}
         elapsed={<SessionElapsedLabel session={elapsedSession} variant="value" />}
@@ -700,14 +728,12 @@ export function SessionChecklistView({
       session.missionsCompleted,
       session.missionCount,
       onboardScu,
+      peakScu,
       totalCapacity,
       isOverCapacity,
       auecEarned,
       auecProjected,
-      routeDistance.traveled,
-      routeDistance.total,
       openMissions,
-      openStops,
       openCargoLayout,
       cargoBayCount,
       elapsedSession,
@@ -720,11 +746,9 @@ export function SessionChecklistView({
       <RouteTripOverflowStats
         auecEarned={auecEarned}
         auecProjected={auecProjected}
-        distanceTraveled={routeDistance.traveled}
-        distanceTotal={routeDistance.total}
       />
     ),
-    [auecEarned, auecProjected, routeDistance.traveled, routeDistance.total],
+    [auecEarned, auecProjected],
   );
 
   const onOpenContracts = useCallback(
@@ -864,6 +888,97 @@ export function SessionChecklistView({
     );
   };
 
+  const tripSetupHeader = (
+    <div className="flex min-w-0 items-end justify-between gap-3">
+      <div className="min-w-0 flex-1 pr-2">
+        <p className="whitespace-nowrap font-mono text-[0.6rem] tracking-wide text-rsi-text-muted">
+          ID {session.id}
+        </p>
+        <SessionCreatedLabel
+          className="mt-0.5"
+          createdAt={
+            tabs.find((tab) => tab.id === session.id)?.createdAt ??
+            session.startedAt
+          }
+        />
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        title={
+          pendingScreenshotCount > 0
+            ? `${pendingScreenshotCount} pending Source shot${pendingScreenshotCount === 1 ? "" : "s"} for AI`
+            : "Contract screenshots (Source)"
+        }
+        onClick={() => setScreenshotsOpen(true)}
+        className="h-7 shrink-0 px-2.5 py-0 text-[0.55rem] tracking-[0.14em]"
+      >
+        Source
+        {pendingScreenshotCount > 0 ? (
+          <span className="inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rsi-accent/25 px-1 font-mono text-[0.55rem] tabular-nums leading-none text-rsi-accent">
+            {pendingScreenshotCount}
+          </span>
+        ) : null}
+      </Button>
+    </div>
+  );
+
+  const tripSetupFields = (
+    <>
+      <div className="min-w-0">
+        <LocationFuzzySearch
+          fullWidth
+          valueSlug={session.startLocationSlug ?? null}
+          onChange={(slug) => {
+            persistSession(
+              applySessionCompletionTiming({
+                ...session,
+                shipSlugs: session.shipSlugs ?? [],
+                startLocationSlug: slug,
+              }),
+            );
+          }}
+        />
+        {!session.startLocationSlug ? (
+          <p className="mt-1 text-sm text-rsi-text-muted">
+            Set where the crew begins so routing can use a start point.
+          </p>
+        ) : startLocation ? null : (
+          <p className="mt-1 text-sm text-rsi-warn">
+            Unknown start location slug: {session.startLocationSlug}
+          </p>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <ShipSelect
+          fullWidth
+          valueSlug={selectedShipSlug}
+          options={shipCatalog.map((ship) => ({
+            slug: ship.slug,
+            name: ship.name,
+            cargoScu: ship.cargoScu,
+          }))}
+          isLoading={shipsLoading}
+          error={shipsError}
+          onChange={(slug) => {
+            persistSession(
+              applySessionCompletionTiming({
+                ...session,
+                shipSlugs: slug ? [slug] : [],
+                startLocationSlug: session.startLocationSlug ?? null,
+              }),
+            );
+          }}
+        />
+      </div>
+
+      {loadError ? (
+        <p className="text-sm text-rsi-warn">{loadError}</p>
+      ) : null}
+    </>
+  );
+
   const closeSession = async (sessionId: string) => {
     if (initial) return;
     setTabsBusy(true);
@@ -905,26 +1020,10 @@ export function SessionChecklistView({
 
   return (
     <div
-      className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-clip"
+      className="flex min-w-0 max-w-full flex-col overflow-x-clip"
       data-testid="session-checklist"
       data-session-id={session.id}
     >
-      <SessionTabs
-        sessions={tabs}
-        activeSessionId={routeSessionId ?? activeSessionId ?? session.id}
-        onSelect={(id) => {
-          void selectSession(id);
-        }}
-        onCreate={() => {
-          if (initial) return;
-          setCreateSessionOpen(true);
-        }}
-        onClose={(id) => {
-          void closeSession(id);
-        }}
-        isBusy={tabsBusy}
-      />
-
       <CreateSessionModal
         open={createSessionOpen}
         isBusy={tabsBusy}
@@ -934,22 +1033,16 @@ export function SessionChecklistView({
         }}
       />
 
-      <TripCompleteSummaryModal
-        open={tripCompleteOpen && isTripComplete}
-        sessionName={session.sessionName}
-        elapsedLabel={tripElapsedLabel}
-        contractsDone={session.missionsCompleted ?? 0}
-        stopsDone={completedLegs}
-        peakScu={peakScu}
-        auecEarned={auecEarned}
-        xpEarned={xpEarned}
-        distanceTotal={routeDistance.total}
-        isBusy={tabsBusy}
-        onClose={() => setTripCompleteOpen(false)}
-        onRunAgain={() => {
-          void copyTrip();
-        }}
-      />
+      {isTripSetupComplete ? (
+        <SessionTripSideNav
+          presentation="modal"
+          open={tripNavOpen}
+          onOpenChange={setTripNavOpen}
+          header={tripSetupHeader}
+        >
+          {tripSetupFields}
+        </SessionTripSideNav>
+      ) : null}
 
       <TripCrashFinishModal
         open={crashFinishOpen}
@@ -972,96 +1065,6 @@ export function SessionChecklistView({
           }
         }}
       />
-
-      <div className="min-w-0 max-w-full">
-        <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
-          Trip
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <SessionNameField
-              name={session.sessionName}
-              disabled={Boolean(initial) || tabsBusy}
-              onRename={renameSession}
-            />
-            <p className="mt-1 break-all font-mono text-[0.65rem] tracking-wide text-rsi-text-muted">
-              ID {session.id}
-            </p>
-            <SessionCreatedLabel
-              className="mt-1"
-              createdAt={
-                tabs.find((tab) => tab.id === session.id)?.createdAt ??
-                session.startedAt
-              }
-            />
-          </div>
-          <SessionSourceStat
-            className="w-full sm:w-auto sm:shrink-0"
-            pendingScreenshotCount={pendingScreenshotCount}
-            onMissionsClick={() => setCatalogOpen(true)}
-            onClick={() => setScreenshotsOpen(true)}
-          />
-        </div>
-        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
-          <div className="min-w-0 flex-1">
-            <LocationFuzzySearch
-              valueSlug={session.startLocationSlug ?? null}
-              onChange={(slug) => {
-                persistSession(
-                  applySessionCompletionTiming({
-                    ...session,
-                    shipSlugs: session.shipSlugs ?? [],
-                    startLocationSlug: slug,
-                  }),
-                );
-              }}
-            />
-            {!session.startLocationSlug ? (
-              <p className="mt-1 text-sm text-rsi-text-muted">
-                Set where the crew begins so routing can use a start point.
-              </p>
-            ) : startLocation ? null : (
-              <p className="mt-1 text-sm text-rsi-warn">
-                Unknown start location slug: {session.startLocationSlug}
-              </p>
-            )}
-          </div>
-          <div className="min-w-0 w-full flex-1 md:flex md:justify-end">
-            <ShipSelect
-              valueSlug={selectedShipSlug}
-              options={shipCatalog.map((ship) => ({
-                slug: ship.slug,
-                name: ship.name,
-                cargoScu: ship.cargoScu,
-              }))}
-              isLoading={shipsLoading}
-              error={shipsError}
-              onChange={(slug) => {
-                persistSession(
-                  applySessionCompletionTiming({
-                    ...session,
-                    shipSlugs: slug ? [slug] : [],
-                    startLocationSlug: session.startLocationSlug ?? null,
-                  }),
-                );
-              }}
-            />
-          </div>
-        </div>
-        {loadError ? (
-          <p className="mt-1 text-sm text-rsi-warn">{loadError}</p>
-        ) : null}
-      </div>
-
-      {!tripCargoValidation.ok && !tripInvalidDismissed ? (
-        <TripPlanInvalidBanner
-          issues={tripCargoValidation.issues}
-          isRepairing={tripRepairBusy}
-          repairError={tripRepairError}
-          onRepair={repairInvalidTrip}
-          onDismiss={() => setTripInvalidDismissed(true)}
-        />
-      ) : null}
 
       <MissionChecklistTable
         rows={session.rows}
@@ -1088,24 +1091,144 @@ export function SessionChecklistView({
         onSetDeliveryScuAtStop={setDeliveryScuAtStop}
         isLoading={isTripLoading}
         toolbarStart={routeProgressStats}
-        toolbarEnd={tripOverflowStats}
-        onCopyTrip={initial ? undefined : copyTrip}
-        onRepairTrip={
-          !tripCargoValidation.ok && tripInvalidDismissed
-            ? repairInvalidTrip
-            : undefined
-        }
-        isRepairingTrip={tripRepairBusy}
-        onLogCrash={
-          initial || isSessionFinished(session)
-            ? undefined
-            : () => setCrashFinishOpen(true)
-        }
-        canLogCrash={!isSessionFinished(session)}
-        onOpenSummary={
-          isTripComplete ? () => setTripCompleteOpen(true) : undefined
+        distanceTraveled={routeDistance.traveled}
+        distanceTotal={routeDistance.total}
+        hideCompleted={hideCompleted}
+        onHideCompletedChange={setHideCompleted}
+        onOpenSummary={isTripComplete ? openTripSummary : undefined}
+        tripSummary={
+          isTripComplete && !summaryDismissed
+            ? {
+                sessionName: session.sessionName,
+                elapsedLabel: tripElapsedLabel,
+                contractsDone: session.missionsCompleted ?? 0,
+                stopsDone: completedLegs,
+                peakScu,
+                auecEarned,
+                xpEarned,
+                distanceTotal: routeDistance.total,
+                isBusy: tabsBusy,
+                onContinue: dismissTripSummary,
+                onRunAgain: () => {
+                  void copyTrip();
+                },
+              }
+            : null
         }
         onToggle={onToggleStop}
+        aboveChecklist={
+          <>
+            <div className="flex min-w-0 flex-col items-stretch gap-2">
+              <div className="flex w-full min-w-0 justify-start">
+                <SessionTabs
+                  sessions={tabs}
+                  activeSessionId={
+                    routeSessionId ?? activeSessionId ?? session.id
+                  }
+                  showActiveTrip={false}
+                  onSelect={(id) => {
+                    void selectSession(id);
+                  }}
+                  onCreate={() => {
+                    if (initial) return;
+                    setCreateSessionOpen(true);
+                  }}
+                  onClose={(id) => {
+                    void closeSession(id);
+                  }}
+                  isBusy={tabsBusy}
+                />
+              </div>
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+                <SessionNameField
+                  name={session.sessionName}
+                  disabled={Boolean(initial) || tabsBusy}
+                  onRename={renameSession}
+                  compact
+                  className="max-w-[min(100%,14rem)] sm:max-w-[18rem]"
+                />
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  {isTripSetupComplete ? (
+                    <button
+                      type="button"
+                      aria-expanded={tripNavOpen}
+                      aria-controls="session-trip-panel"
+                      title={tripNavOpen ? "Close setup" : "Open setup"}
+                      onClick={() => setTripNavOpen((open) => !open)}
+                      className={[
+                        "inline-flex h-9 shrink-0 items-center rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
+                        "hover:border-rsi-border-strong hover:bg-rsi-surface-raised hover:text-rsi-text",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+                        tripNavOpen
+                          ? "border-rsi-accent/50 text-rsi-accent"
+                          : "",
+                      ].join(" ")}
+                    >
+                      Setup
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setCatalogOpen(true)}
+                    className={[
+                      "inline-flex h-9 shrink-0 items-center rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
+                      "hover:border-rsi-border-strong hover:bg-rsi-surface-raised hover:text-rsi-text",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+                    ].join(" ")}
+                  >
+                    Find a Contract
+                  </button>
+                  <RouteChecklistMenu
+                    hideCompleted={hideCompleted}
+                    completedCount={completedLegs}
+                    onToggleHistory={() =>
+                      setHideCompleted((value) => !value)
+                    }
+                    onCopyTrip={initial ? undefined : copyTrip}
+                    onRepairTrip={
+                      !tripCargoValidation.ok && tripInvalidDismissed
+                        ? repairInvalidTrip
+                        : undefined
+                    }
+                    isRepairingTrip={tripRepairBusy}
+                    onLogCrash={
+                      initial || isSessionFinished(session)
+                        ? undefined
+                        : () => setCrashFinishOpen(true)
+                    }
+                    canLogCrash={!isSessionFinished(session)}
+                    onOpenSummary={
+                      isTripComplete ? openTripSummary : undefined
+                    }
+                    overflowStats={tripOverflowStats}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {!isTripSetupComplete ? (
+              <SessionTripSideNav
+                presentation="panel"
+                forceExpanded
+                open
+                onOpenChange={setTripNavOpen}
+                header={tripSetupHeader}
+              >
+                {tripSetupFields}
+              </SessionTripSideNav>
+            ) : null}
+
+            {!tripCargoValidation.ok && !tripInvalidDismissed ? (
+              <TripPlanInvalidBanner
+                issues={tripCargoValidation.issues}
+                isRepairing={tripRepairBusy}
+                repairError={tripRepairError}
+                onRepair={repairInvalidTrip}
+                onDismiss={() => setTripInvalidDismissed(true)}
+              />
+            ) : null}
+          </>
+        }
       />
 
       <SessionScreenshotsPanel

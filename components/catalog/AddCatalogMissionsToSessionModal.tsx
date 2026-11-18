@@ -101,7 +101,7 @@ export function AddCatalogMissionsToSessionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 px-3 pt-14 pb-3 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-14 sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-label="Add contracts to trip"
@@ -109,9 +109,10 @@ export function AddCatalogMissionsToSessionModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex w-full max-w-md flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
-        <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
-          <ModalCloseButton onClick={onClose} />
+      <div className="relative w-full max-w-md">
+        <ModalCloseButton onClick={onClose} />
+        <div className="flex w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
+        <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Catalog · Trip
           </p>
@@ -209,6 +210,7 @@ export function AddCatalogMissionsToSessionModal({
                   : "Add to trip"}
             </Button>
           </div>
+        </div>
         </div>
       </div>
     </div>

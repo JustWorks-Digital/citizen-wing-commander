@@ -739,7 +739,7 @@ const MissionContractRow = memo(function MissionContractRow({
           {rank ?? "—"}
         </span>
       </td>
-      <td className={`${tdClass} w-[14rem] max-w-[14rem]`}>
+      <td className={`${tdClass} max-w-[12rem]`}>
         <p
           className={[
             "text-[0.7rem] font-semibold tracking-wide break-words hyphens-auto",
@@ -782,13 +782,13 @@ const MissionContractRow = memo(function MissionContractRow({
       >
         {exp != null ? formatHaulingRepXp(exp) : "—"}
       </td>
-      <td className={tdClass}>
+      <td className={`${tdClass} max-w-[9rem]`}>
         <CatalogLocationBadges items={fromLocations} tone="from" />
       </td>
-      <td className={tdClass}>
+      <td className={`${tdClass} max-w-[9rem]`}>
         <CatalogLocationBadges items={toLocations} tone="to" />
       </td>
-      <td className={tdClass}>
+      <td className={`${tdClass} whitespace-nowrap`}>
         <MissionBoxesButton
           mission={mission}
           view={view}
@@ -1000,7 +1000,7 @@ export function SessionMissionsModal({
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/85 p-0 sm:items-center sm:p-4",
+        "fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/85 px-3 pt-14 pb-3 sm:items-center sm:px-4 sm:pt-14 sm:pb-4",
         open ? "" : "hidden",
       ].join(" ")}
       role="dialog"
@@ -1013,9 +1013,10 @@ export function SessionMissionsModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border">
-        <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
-          <ModalCloseButton onClick={onClose} />
+      <div className="relative flex h-[calc(100dvh-4.25rem)] w-full sm:h-auto sm:max-h-[90vh] sm:w-max sm:max-w-[min(100%,72rem)]">
+        <ModalCloseButton onClick={onClose} />
+        <div className="flex h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
+        <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="min-w-0 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
             Contracts
           </h2>
@@ -1026,11 +1027,11 @@ export function SessionMissionsModal({
           className="min-h-0 flex-1 overflow-auto overscroll-contain"
         >
           {enriched.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:px-5 sm:py-5">
+            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:min-w-[20rem] sm:px-5 sm:py-5">
               No contracts in this session.
             </p>
           ) : !paintRows ? (
-            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:px-5 sm:py-5">
+            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:min-w-[20rem] sm:px-5 sm:py-5">
               Loading contracts…
             </p>
           ) : (
@@ -1052,25 +1053,27 @@ export function SessionMissionsModal({
                 ))}
               </div>
 
-              {/* Desktop: full contracts table */}
-              <table className="hidden w-full min-w-[58rem] border-collapse text-left md:table">
+              {/* Desktop: column widths follow content; modal wraps tightly */}
+              <table className="hidden border-collapse text-left md:table">
                 <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
                   <tr>
-                    <th className={`${thClass} w-[5.25rem]`}>Rank</th>
-                    <th className={`${thClass} w-[14rem]`}>Title</th>
-                    <th className={`${thClass} w-[9.5rem] text-right`}>
+                    <th className={`${thClass} whitespace-nowrap`}>Rank</th>
+                    <th className={`${thClass} max-w-[12rem]`}>Title</th>
+                    <th className={`${thClass} whitespace-nowrap text-right`}>
                       Reward
                     </th>
-                    <th className={`${thClass} w-[7.5rem] text-right`}>SCU</th>
+                    <th className={`${thClass} whitespace-nowrap text-right`}>
+                      SCU
+                    </th>
                     <th
-                      className={`${thClass} w-[7.5rem] text-right`}
+                      className={`${thClass} whitespace-nowrap text-right`}
                       title="Approximate Covalex hauling reputation XP"
                     >
                       EXP
                     </th>
-                    <th className={`${thClass} w-[12%] min-w-0`}>From</th>
-                    <th className={`${thClass} w-[12%] min-w-0`}>To</th>
-                    <th className={`${thClass} min-w-[8rem] w-[14%]`}>Boxes</th>
+                    <th className={`${thClass} max-w-[9rem]`}>From</th>
+                    <th className={`${thClass} max-w-[9rem]`}>To</th>
+                    <th className={`${thClass} whitespace-nowrap`}>Boxes</th>
                     <th className={`${thClass} w-10`}>
                       <span className="sr-only">Actions</span>
                     </th>
@@ -1266,6 +1269,7 @@ export function SessionMissionsModal({
             </dl>
           </footer>
         ) : null}
+        </div>
       </div>
 
       {open && boxEditMission ? (

@@ -84,6 +84,11 @@ export type CargoGridIsoViewProps = {
   hiddenActions?: ReadonlySet<CargoGridBoxAction>;
   onToggleAction?: (action: CargoGridBoxAction) => void;
   /**
+   * When true, legend-hidden / layer-off crates render as barely-visible
+   * holograms instead of disappearing.
+   */
+  showHologram?: boolean;
+  /**
    * `placement`: keep only the Z=0 floor grid + cubes for highlighted cargo.
    * Empty upper cells are omitted.
    */
@@ -666,6 +671,8 @@ function visualHz(hz: number, peelStack: boolean): number {
 
 /** Inactive layers stay in the scene (no reflow) but are fully invisible. */
 const LAYER_OFF_OPACITY = 0;
+/** Barely-visible ghosts for legend/layer-hidden crates. */
+const HOLOGRAM_OPACITY = 0.12;
 
 export function CargoGridIsoView({
   sketch,
@@ -684,6 +691,7 @@ export function CargoGridIsoView({
   onToggleCommodity,
   hiddenActions = new Set(),
   onToggleAction,
+  showHologram = false,
   mode = "full",
   toolbarExtra = null,
   toolbarBelow = null,
@@ -1459,14 +1467,17 @@ export function CargoGridIsoView({
             cube.commodityName ?? tint?.commodityName ?? null;
           const action =
             cube.kind === "cargo" ? (cube.action ?? tint?.action) : undefined;
-          if (
+          const legendHidden =
             !isFloor &&
             ((commoditySlug != null &&
               hiddenCommodities.has(commoditySlug)) ||
-              (action != null && hiddenActions.has(action)))
-          ) {
+              (action != null && hiddenActions.has(action)) ||
+              (cube.deliveryLocationSlug != null &&
+                hiddenLocations.has(cube.deliveryLocationSlug)));
+          if (legendHidden && !showHologram) {
             return null;
           }
+          const isHologram = legendHidden && showHologram;
           const drawHz = isFloor ? 0 : visualHz(cube.hz, peelStack);
           const faces = isFloor
             ? floorFaces(
@@ -1487,7 +1498,7 @@ export function CargoGridIsoView({
                 yawCenterY,
                 projectStyle,
               );
-          const layerDimmed =
+          const layerOff =
             !isFloor &&
             Array.from(
               { length: cube.footprint.dz },
@@ -1495,6 +1506,7 @@ export function CargoGridIsoView({
             ).some((z) => hiddenLayers.has(z));
           const isSelected =
             cube.kind === "cargo" &&
+            !isHologram &&
             selectedCoord != null &&
             sameCargoGridCoord(selectedCoord, cube.coord);
           const commodityHex = resolveCommodityColorHex(
@@ -1519,7 +1531,8 @@ export function CargoGridIsoView({
                       ? facesFromCommodityHex(FALLBACK_PLACEMENT_HEX)
                       : (ZONE_FACE[zoneColorIndex.get(cube.zoneId) ?? 0] ??
                         ZONE_FACE[0]);
-          const canSelect = Boolean(onSelectCoord) && cube.kind === "cargo";
+          const canSelect =
+            Boolean(onSelectCoord) && cube.kind === "cargo" && !isHologram;
           const outline: LocationGroupBoxOutline | undefined = cube.boxId
             ? locationOutlines.get(cube.boxId)
             : undefined;
@@ -1630,12 +1643,17 @@ export function CargoGridIsoView({
               ) : (
                 <g
                   opacity={
-                    layerDimmed
-                      ? LAYER_OFF_OPACITY
-                      : isPlaceholder
-                        ? 0.45
-                        : 1
+                    isHologram
+                      ? HOLOGRAM_OPACITY
+                      : layerOff
+                        ? showHologram
+                          ? HOLOGRAM_OPACITY
+                          : LAYER_OFF_OPACITY
+                        : isPlaceholder
+                          ? 0.45
+                          : 1
                   }
+                  pointerEvents={isHologram ? "none" : undefined}
                 >
                   {leftGroupStroke || useFullGroupOutline ? (
                     <polygon

@@ -205,7 +205,7 @@ export function StopMissionBoxConfigModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 px-3 pt-14 pb-3 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-14 sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-label={`Box types for ${mission.title}`}
@@ -213,9 +213,10 @@ export function StopMissionBoxConfigModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:max-h-[90vh] sm:rounded-rsi sm:border">
-        <header className="relative shrink-0 border-b border-rsi-divider px-4 py-3 pr-12 sm:px-6 sm:py-4 sm:pr-14">
-          <ModalCloseButton onClick={onClose} />
+      <div className="relative flex max-h-[calc(100dvh-4.25rem)] w-full max-w-2xl sm:max-h-[90vh]">
+        <ModalCloseButton onClick={onClose} />
+        <div className="flex max-h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
+        <header className="shrink-0 border-b border-rsi-divider px-4 py-3 sm:px-6 sm:py-4">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Box types
           </p>
@@ -292,6 +293,7 @@ export function StopMissionBoxConfigModal({
               />
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

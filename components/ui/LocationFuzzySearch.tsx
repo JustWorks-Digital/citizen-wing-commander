@@ -10,6 +10,8 @@ export type LocationFuzzySearchProps = {
   label?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Drop the md max-width cap (e.g. trip modal). */
+  fullWidth?: boolean;
 };
 
 function ClearIcon({ className }: { className?: string }) {
@@ -63,6 +65,7 @@ export function LocationFuzzySearch({
   label = "Start location",
   placeholder = "Search locations…",
   disabled = false,
+  fullWidth = false,
 }: LocationFuzzySearchProps) {
   const listId = useId();
   const inputId = useId();
@@ -125,7 +128,8 @@ export function LocationFuzzySearch({
     <div
       ref={rootRef}
       className={[
-        "relative w-full md:max-w-md",
+        "relative w-full",
+        fullWidth ? "min-w-0" : "md:max-w-md",
         // Above MissionChecklistTable sticky toolbar (z-20) while the menu is open.
         menuOpen ? "z-30" : "z-0",
       ].join(" ")}

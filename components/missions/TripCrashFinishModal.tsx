@@ -42,7 +42,7 @@ export function TripCrashFinishModal({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-rsi-bg-deep/85 p-3 sm:p-6"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-rsi-bg-deep/85 px-3 pt-14 pb-3 sm:px-6 sm:pt-16 sm:pb-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -51,8 +51,8 @@ export function TripCrashFinishModal({
       }}
     >
       <div className="relative w-full max-w-md rounded-rsi border border-rsi-danger/40 bg-rsi-surface shadow-rsi-panel">
-        <div className="relative border-b border-rsi-border px-4 py-4 pr-12 sm:px-5">
-          <ModalCloseButton onClick={onClose} disabled={isBusy} />
+        <ModalCloseButton onClick={onClose} disabled={isBusy} />
+        <div className="border-b border-rsi-border px-4 py-4 sm:px-5">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-danger">
             Crash finish
           </p>

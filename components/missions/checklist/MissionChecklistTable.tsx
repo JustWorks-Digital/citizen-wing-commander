@@ -12,7 +12,6 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { RouteChecklistMenu } from "@/components/missions/RouteChecklistMenu";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
@@ -23,7 +22,6 @@ import {
   getLocationBySlug,
   getLocationImageSrc,
   getLocationShortName,
-  getShipIconSrc,
   sumCargoScu,
 } from "@/lib/fixtures";
 import {
@@ -46,7 +44,13 @@ import {
   estimateMissionsHaulingRepXp,
   formatHaulingRepXp,
 } from "@/lib/missions/haulingRepXp";
-import { formatDistanceToNext, isQuantumTravelRow, type HaulingChecklistRow, type RouteAction } from "@/lib/missions/sessionChecklist";
+import {
+  formatDistanceToNext,
+  isQuantumTravelRow,
+  type DistanceToNext,
+  type HaulingChecklistRow,
+  type RouteAction,
+} from "@/lib/missions/sessionChecklist";
 
 import {
   cargoInventory,
@@ -89,8 +93,11 @@ import {
 } from "./ChecklistDoneControls";
 import { AddStopAfterButton, LocationHeader } from "./ChecklistLocationHeader";
 import {
+  ChecklistProgressRail,
+  ChecklistProgressTimeline,
   CondensedStopRow,
   CompletedStopHistoryRow,
+  FinishRunTile,
   NextDistanceMeta,
   NextStopBridgeBand,
   PayoutExpMeta,
@@ -98,9 +105,15 @@ import {
 } from "./CompletedHistoryRow";
 import { QuantumTravelComposer } from "./QuantumTravelComposer";
 import { QuantumTravelRow } from "./QuantumTravelRow";
+import {
+  TripCompleteSummaryPanel,
+  type TripCompleteSummaryPanelProps,
+} from "@/components/missions/TripCompleteSummaryPanel";
 
 /** Display-only origin row when start ≠ first stop (matches route timeline). */
 export const QUANTUM_ORIGIN_ROW_ID = INSERT_AFTER_SESSION_START;
+
+export type MissionChecklistTripSummary = TripCompleteSummaryPanelProps;
 
 export type MissionChecklistTableProps = {
   rows: HaulingChecklistRow[];
@@ -112,19 +125,21 @@ export type MissionChecklistTableProps = {
   onFocusStop?: (rowId: string | null) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
-  /** Shown inside the ⋯ menu on small phones (Distance / aUEC overflow). */
-  toolbarEnd?: ReactNode;
-  /** ⋯ menu: duplicate this trip into a new session. */
-  onCopyTrip?: () => void | Promise<void>;
-  /** ⋯ menu: repair an invalid trip after the banner was dismissed. */
-  onRepairTrip?: () => void;
-  /** ⋯ menu: open crash-finish dialog. */
-  onLogCrash?: () => void;
-  /** Hide Crash out when the session is already finished. */
-  canLogCrash?: boolean;
-  /** ⋯ menu: reopen the finish report when every stop is done. */
+  /**
+   * Content stacked above the checklist card in the same column (e.g. trip
+   * expand/collapse). Matches checklist width beside the Progress rail.
+   */
+  aboveChecklist?: ReactNode;
+  /**
+   * Reopen / focus the inline finish report (FinishRunTile when summary was
+   * dismissed). ⋯ menu lives beside Find a Contract in the trip header.
+   */
   onOpenSummary?: () => void;
-  isRepairingTrip?: boolean;
+  /** Finish report shown in place of the active stop when the trip is complete. */
+  tripSummary?: MissionChecklistTripSummary | null;
+  /** Controlled hide-completed (⋯ menu lives outside this table). */
+  hideCompleted?: boolean;
+  onHideCompletedChange?: (hidden: boolean) => void;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
@@ -177,6 +192,9 @@ export type MissionChecklistTableProps = {
   /** Keyboard shortcuts: B cargo bays, S stops, C contracts. */
   onOpenCargoBays?: () => void;
   onOpenStops?: () => void;
+  /** Trip distance — shown in the Stops rail (not the sticky toolbar). */
+  distanceTraveled?: DistanceToNext | null;
+  distanceTotal?: DistanceToNext | null;
   /** Open contracts table; pass a mission id to highlight that row. */
   onOpenContracts?: (missionId?: string) => void;
   /** Persist crate mix for a session mission (Pickup / Drop off click). */
@@ -266,13 +284,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   focusedStopId = null,
   onFocusStop,
   toolbarStart = null,
-  toolbarEnd = null,
-  onCopyTrip,
-  onRepairTrip,
-  isRepairingTrip = false,
-  onLogCrash,
-  canLogCrash = true,
+  aboveChecklist = null,
   onOpenSummary,
+  tripSummary = null,
+  hideCompleted: hideCompletedProp,
+  onHideCompletedChange,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -286,6 +302,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onUpdateQuantumTravel,
   onOpenCargoBays,
   onOpenStops,
+  distanceTraveled = null,
+  distanceTotal = null,
   onOpenContracts,
   onSelectBoxBreakdown,
   onSaveMissionScuDraft,
@@ -314,7 +332,16 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const [pendingQuantumRowIds, setPendingQuantumRowIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompletedLocal, setHideCompletedLocal] = useState(false);
+  const isHideCompletedControlled = onHideCompletedChange != null;
+  const hideCompleted = isHideCompletedControlled
+    ? Boolean(hideCompletedProp)
+    : hideCompletedLocal;
+  const setHideCompleted = (value: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof value === "function" ? value(hideCompleted) : value;
+    if (isHideCompletedControlled) onHideCompletedChange(next);
+    else setHideCompletedLocal(next);
+  };
   /** Uncontrolled fallback when parent does not lift QT-origin departed. */
   const [quantumDepartedLocal, setQuantumDepartedLocal] = useState(false);
   const isQuantumOriginControlled = onQuantumOriginDepartedChange != null;
@@ -335,6 +362,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const [expandedCompletedRowId, setExpandedCompletedRowId] = useState<
     string | null
   >(null);
+  /** Progress timeline open/collapsed. */
+  const [isProgressExpanded, setIsProgressExpanded] = useState(true);
+  /** Current / viewing-completed card open/collapsed. */
+  const [isCurrentExpanded, setIsCurrentExpanded] = useState(true);
   const boxEditMission =
     boxEditMissionId == null
       ? null
@@ -343,6 +374,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   /** Next stop transition band — keyed by destination stop id. */
   const bridgeElsRef = useRef(new Map<string, HTMLElement>());
   const stickyToolbarRef = useRef<HTMLDivElement | null>(null);
+  /** Checklist card — desktop Progress rail matches this height. */
+  const [checklistPanelEl, setChecklistPanelEl] = useState<HTMLElement | null>(
+    null,
+  );
   const pendingScrollToIdRef = useRef<string | null>(null);
   /** Block history-strip Open after Done — click can retarget onto the strip. */
   const suppressHistoryOpenUntilRef = useRef(new Map<string, number>());
@@ -421,8 +456,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     const targetId = pendingScrollToIdRef.current;
     if (!targetId) return;
     pendingScrollToIdRef.current = null;
-    // Land the Next stop block (bridge, else stop card) flush under the sticky
-    // toolbar — use measured sticky height, not a guessed scroll-margin.
+    // Progress timeline selection only — land the opened stop under the sticky toolbar.
     const el =
       bridgeElsRef.current.get(targetId) ?? rowElsRef.current.get(targetId);
     const sticky = stickyToolbarRef.current;
@@ -431,7 +465,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     const delta = el.getBoundingClientRect().top - stickyBottom;
     if (Math.abs(delta) < 1) return;
     window.scrollBy({ top: delta, behavior: "smooth" });
-  }, [rows, visibleRows]);
+  }, [rows, visibleRows, focusedStopId, isCurrentExpanded]);
 
   async function copyStarmapName(rowId: string, name: string) {
     try {
@@ -519,23 +553,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const toolbar = (
     <div
       ref={stickyToolbarRef}
-      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-2.5 sm:gap-2 sm:px-3 sm:py-2"
+      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-1 sm:gap-2 sm:px-3"
     >
-      <div className="min-w-0 flex-1">{toolbarStart}</div>
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <RouteChecklistMenu
-          hideCompleted={hideCompleted}
-          completedCount={completedCount}
-          onToggleHistory={() => setHideCompleted((value) => !value)}
-          onCopyTrip={onCopyTrip}
-          onRepairTrip={onRepairTrip}
-          isRepairingTrip={isRepairingTrip}
-          onLogCrash={onLogCrash}
-          canLogCrash={canLogCrash}
-          onOpenSummary={onOpenSummary}
-          overflowStats={toolbarEnd}
-        />
-      </div>
+      <div className="flex min-w-0 flex-1 items-center">{toolbarStart}</div>
     </div>
   );
 
@@ -553,18 +573,15 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     cargoInventory.transferLedgerByStop(displayRows);
   const focusTargetsQuantum =
     focusedStopId === QUANTUM_ORIGIN_ROW_ID && showQuantumOrigin;
-  const hasIncompleteStop = displayRows.some((row) => !row.isCompleted);
   const focusedRow =
     focusedStopId && focusedStopId !== QUANTUM_ORIGIN_ROW_ID
       ? (displayRows.find((row) => row.id === focusedStopId) ?? null)
       : null;
-  // Trip finished: drop active focus so the last Done row shows green, not blue.
+  // Honor explicit focus (including completed stops after the trip is done).
   const activeRowId =
-    focusTargetsQuantum && (hasIncompleteStop || !quantumCompleted)
+    focusTargetsQuantum || focusedRow
       ? focusedStopId
-      : focusedRow && !(focusedRow.isCompleted && !hasIncompleteStop)
-        ? focusedStopId
-        : defaultFocusedStopId(displayRows, startLocationSlug);
+      : defaultFocusedStopId(displayRows, startLocationSlug);
   const firstStop = displayRows[0] ?? null;
   const quantumDestinationName = firstStop
     ? (getLocationBySlug(firstStop.locationSlug)?.name ??
@@ -572,13 +589,70 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     : null;
   const startSlugTrimmed = startLocationSlug?.trim() || null;
 
+  /**
+   * Visual order: progress timeline → open card at bottom.
+   * Timeline covers done / now / ahead; click a node to open that stop’s card.
+   */
+  const workingIncompleteId =
+    displayRows.find((row) => !row.isCompleted)?.id ?? null;
+  const openActiveId =
+    activeRowId === QUANTUM_ORIGIN_ROW_ID
+      ? QUANTUM_ORIGIN_ROW_ID
+      : activeRowId &&
+          displayRows.some((row) => row.id === activeRowId)
+        ? activeRowId
+        : (workingIncompleteId ?? null);
+  const isViewingCompleted = Boolean(
+    openActiveId &&
+      openActiveId !== QUANTUM_ORIGIN_ROW_ID &&
+      displayRows.some(
+        (row) => row.id === openActiveId && row.isCompleted,
+      ),
+  );
+  const activeListRows = visibleRows.filter((row) => row.id === openActiveId);
+  type ChecklistListItem =
+    | { kind: "section"; band: "completed" | "active" }
+    | { kind: "completedBand" }
+    | { kind: "quantum" }
+    | { kind: "stop"; row: (typeof visibleRows)[number] }
+    | { kind: "tripSummary" };
+  const checklistListItems: ChecklistListItem[] = [];
+  const pushSection = (band: "completed" | "active") => {
+    checklistListItems.push({ kind: "section", band });
+  };
+  const isTripComplete =
+    displayRows.length > 0 && displayRows.every((row) => row.isCompleted);
+  const showTripSummary = Boolean(isTripComplete && tripSummary);
+  // Keep the Stops rail after the last stop is done (even if history is hidden).
+  const showProgressTimeline =
+    displayRows.length > 0 && (isTripComplete || !hideCompleted);
+
+  if (showProgressTimeline) {
+    pushSection("completed");
+    checklistListItems.push({ kind: "completedBand" });
+  }
+  if (showTripSummary) {
+    pushSection("active");
+    checklistListItems.push({ kind: "tripSummary" });
+  } else if (
+    (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) ||
+    activeListRows.length > 0
+  ) {
+    pushSection("active");
+    if (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) {
+      checklistListItems.push({ kind: "quantum" });
+    }
+    for (const row of activeListRows) {
+      checklistListItems.push({ kind: "stop", row });
+    }
+  }
+
   const completeQuantumOrigin = () => {
     const nextIncomplete =
       rows.find((entry) => !entry.isCompleted) ?? firstStop;
     setQuantumDeparted(true);
     if (nextIncomplete) {
       startTransition(() => {
-        pendingScrollToIdRef.current = nextIncomplete.id;
         onFocusStop?.(nextIncomplete.id);
       });
     }
@@ -622,9 +696,12 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         return;
       }
       if (key === "d") {
-        if (!activeRowId) return;
+        const doneTargetId = isViewingCompleted
+          ? workingIncompleteId
+          : openActiveId;
+        if (!doneTargetId) return;
         event.preventDefault();
-        if (activeRowId === QUANTUM_ORIGIN_ROW_ID && showQuantumInList) {
+        if (doneTargetId === QUANTUM_ORIGIN_ROW_ID && showQuantumInList) {
           if (quantumCompleted) {
             setQuantumDeparted(false);
             onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
@@ -633,7 +710,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           }
           return;
         }
-        const row = rows.find((entry) => entry.id === activeRowId);
+        const row = rows.find((entry) => entry.id === doneTargetId);
         if (!row) return;
         if (pendingCompleteRowIds.has(row.id)) return;
         const completing = !row.isCompleted;
@@ -649,12 +726,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             .find((entry) => !entry.isCompleted);
           startTransition(() => {
             if (nextIncomplete) {
-              pendingScrollToIdRef.current = nextIncomplete.id;
               onFocusStop?.(nextIncomplete.id);
             } else {
               onFocusStop?.(null);
             }
           });
+        } else if (isViewingCompleted) {
+          // Undoing Done from a history view — return focus to this stop.
+          onFocusStop?.(row.id);
         }
       }
     };
@@ -662,7 +741,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
-    activeRowId,
+    openActiveId,
+    workingIncompleteId,
+    isViewingCompleted,
     completedCount,
     onFocusStop,
     onOpenCargoBays,
@@ -716,7 +797,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       .find((entry) => !entry.isCompleted);
     startTransition(() => {
       if (nextIncomplete) {
-        pendingScrollToIdRef.current = nextIncomplete.id;
         onFocusStop?.(nextIncomplete.id);
       } else {
         onFocusStop?.(null);
@@ -786,99 +866,242 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         })()
       : null;
 
-  return (
-    <div
-      className="min-w-0 max-w-full rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel"
-      aria-busy={isLoading || undefined}
-    >
-      {toolbar}
+  const progressTotal =
+    displayRows.length + (showQuantumInList ? 1 : 0);
+  const progressDone = Math.min(completedCount, progressTotal);
+  const progressStops = showProgressTimeline
+    ? [
+        ...(showQuantumInList && startSlugTrimmed
+          ? [
+              {
+                id: QUANTUM_ORIGIN_ROW_ID,
+                locationSlug: startSlugTrimmed,
+                step: "QT" as const,
+                isCompleted: quantumCompleted,
+                isCurrent:
+                  openActiveId === QUANTUM_ORIGIN_ROW_ID && !quantumCompleted,
+                isViewing:
+                  openActiveId === QUANTUM_ORIGIN_ROW_ID && quantumCompleted,
+              },
+            ]
+          : []),
+        ...displayRows.map((row) => ({
+          id: row.id,
+          locationSlug: row.locationSlug,
+          step: stepById.get(row.id) ?? 0,
+          isCompleted: row.isCompleted,
+          isCurrent: row.id === workingIncompleteId,
+          isViewing: row.id === openActiveId && row.isCompleted,
+        })),
+      ]
+    : [];
+  const onSelectProgressStop = (stopId: string) => {
+    onFocusStop?.(stopId);
+    pendingScrollToIdRef.current = stopId;
+  };
 
-      {isLoading ? (
-        <div
-          className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-rsi-accent"
-          role="status"
-          aria-live="polite"
-        >
-          <Spinner className="size-6" label="Loading trip" />
-          <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            Loading trip…
-          </span>
-        </div>
-      ) : (
-      <ul className="flex flex-col">
-        {visibleRows.length === 0 && !showQuantumInList ? (
-          <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
-            {emptyMessage}
-          </li>
-        ) : null}
-        {showQuantumInList && startSlugTrimmed && quantumDestinationName ? (
-          <>
-            <QuantumTravelRow
-              rowId={QUANTUM_ORIGIN_ROW_ID}
-              fromSlug={startSlugTrimmed}
-              destinationSlug={firstStop?.locationSlug ?? null}
-              destinationName={quantumDestinationName}
-              shipSlug={shipSlug}
-              distanceToNext={
-                firstStop
-                  ? distanceBetweenLocationSlugs(
-                      startSlugTrimmed,
-                      firstStop.locationSlug,
-                    )
-                  : null
-              }
-              isCompleted={quantumCompleted}
-              isFocused={activeRowId === QUANTUM_ORIGIN_ROW_ID}
-              isCopied={copiedRowId === QUANTUM_ORIGIN_ROW_ID}
-              onCopy={() => {
-                void copyStarmapName(
-                  QUANTUM_ORIGIN_ROW_ID,
-                  getLocationShortName(startSlugTrimmed),
-                );
-              }}
-              onFocus={() => {
-                setExpandedCompletedRowId(null);
-                onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
-              }}
-              onToggle={() => {
-                if (quantumCompleted) {
-                  setQuantumDeparted(false);
-                  onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
-                  return;
-                }
-                completeQuantumOrigin();
-              }}
-              isSavingSection={pendingQuantumRowIds.has(QUANTUM_ORIGIN_ROW_ID)}
-              onChangeFrom={
-                onUpdateQuantumTravel
-                  ? (slug) =>
-                      handleQuantumEndpointChange(QUANTUM_ORIGIN_ROW_ID, {
-                        fromSlug: slug,
-                      })
-                  : undefined
-              }
-              onChangeTo={
-                onUpdateQuantumTravel
-                  ? (slug) =>
-                      handleQuantumEndpointChange(QUANTUM_ORIGIN_ROW_ID, {
-                        toSlug: slug,
-                      })
-                  : undefined
-              }
-              footer={addStopFooter(QUANTUM_ORIGIN_ROW_ID)}
-              isHistoryExpanded={
-                expandedCompletedRowId === QUANTUM_ORIGIN_ROW_ID
-              }
-              onHistoryExpand={() => {
-                setExpandedCompletedRowId(QUANTUM_ORIGIN_ROW_ID);
-                onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
-              }}
-              onHistoryCollapse={() => setExpandedCompletedRowId(null)}
-            />
-            {draftingAfterRowId === QUANTUM_ORIGIN_ROW_ID ? draftComposer : null}
-          </>
-        ) : null}
-        {visibleRows.map((row) => {
+  const checklistBody = isLoading ? (
+    <div
+      className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-rsi-accent"
+      role="status"
+      aria-live="polite"
+    >
+      <Spinner className="size-6" label="Loading trip" />
+      <span className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+        Loading trip…
+      </span>
+    </div>
+  ) : (
+    <ul className="flex flex-col">
+      {checklistListItems.length === 0 ? (
+        <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
+          {emptyMessage}
+        </li>
+      ) : null}
+      {checklistListItems.map((item) => {
+          if (item.kind === "section") {
+            const isProgressSection = item.band === "completed";
+            const isExpanded = isProgressSection
+              ? isProgressExpanded
+              : isCurrentExpanded;
+            const distanceCompact =
+              distanceTotal || distanceTraveled
+                ? `${formatDistanceToNext(distanceTraveled, { compact: true })} / ${formatDistanceToNext(distanceTotal, { compact: true })}`
+                : null;
+            const label = isProgressSection
+              ? distanceCompact
+                ? `Stops · ${progressDone}/${progressTotal} · ${distanceCompact}`
+                : `Stops · ${progressDone}/${progressTotal}`
+              : showTripSummary
+                ? "Summary"
+                : "Current";
+            return (
+              <li
+                key={`section-${item.band}`}
+                className={[
+                  "border-b border-rsi-divider/60 bg-rsi-bg-deep/40",
+                  isProgressSection ? "lg:hidden" : "",
+                ].join(" ")}
+              >
+                <button
+                  type="button"
+                  aria-expanded={
+                    isProgressSection || showTripSummary
+                      ? undefined
+                      : isExpanded
+                  }
+                  aria-controls={
+                    isProgressSection
+                      ? undefined
+                      : "checklist-current-stop"
+                  }
+                  title={isProgressSection ? "Open stops" : undefined}
+                  onClick={() => {
+                    if (isProgressSection) {
+                      onOpenStops?.();
+                      return;
+                    }
+                    if (showTripSummary) return;
+                    setIsCurrentExpanded((open) => !open);
+                  }}
+                  className={[
+                    "flex w-full items-center gap-1.5 px-3 py-1.5 text-left",
+                    "hover:bg-rsi-surface-raised/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+                    showTripSummary && !isProgressSection
+                      ? "cursor-default"
+                      : "",
+                  ].join(" ")}
+                >
+                  {isProgressSection || showTripSummary ? null : (
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 20 20"
+                      className={[
+                        "size-3 shrink-0 text-rsi-text-muted transition-transform",
+                        isExpanded ? "rotate-90" : "",
+                      ].join(" ")}
+                      fill="currentColor"
+                    >
+                      <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                  )}
+                  <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                    {label}
+                  </span>
+                </button>
+              </li>
+            );
+          }
+
+          if (item.kind === "completedBand") {
+            if (!isProgressExpanded) return null;
+            return (
+              <li
+                id="checklist-progress-timeline"
+                key="completed-band"
+                className="border-b border-rsi-divider/80 bg-rsi-bg-deep/35 lg:hidden"
+              >
+                <ChecklistProgressTimeline
+                  stops={progressStops}
+                  onSelectStop={onSelectProgressStop}
+                />
+              </li>
+            );
+          }
+
+          if (item.kind === "tripSummary") {
+            if (!tripSummary) return null;
+            return (
+              <li
+                id="checklist-current-stop"
+                key="trip-complete-summary"
+                className="flex justify-center border-b border-rsi-divider/80 bg-rsi-bg-deep/25 px-3 py-4 sm:px-4"
+              >
+                <TripCompleteSummaryPanel {...tripSummary} />
+              </li>
+            );
+          }
+
+          if (item.kind === "quantum") {
+            if (!isCurrentExpanded) return null;
+            if (!startSlugTrimmed || !quantumDestinationName) return null;
+            return (
+              <Fragment key={QUANTUM_ORIGIN_ROW_ID}>
+                <QuantumTravelRow
+                  id="checklist-current-stop"
+                  rowId={QUANTUM_ORIGIN_ROW_ID}
+                  fromSlug={startSlugTrimmed}
+                  destinationSlug={firstStop?.locationSlug ?? null}
+                  destinationName={quantumDestinationName}
+                  shipSlug={shipSlug}
+                  distanceToNext={
+                    firstStop
+                      ? distanceBetweenLocationSlugs(
+                          startSlugTrimmed,
+                          firstStop.locationSlug,
+                        )
+                      : null
+                  }
+                  isCompleted={quantumCompleted}
+                  isFocused={openActiveId === QUANTUM_ORIGIN_ROW_ID}
+                  isCopied={copiedRowId === QUANTUM_ORIGIN_ROW_ID}
+                  onCopy={() => {
+                    void copyStarmapName(
+                      QUANTUM_ORIGIN_ROW_ID,
+                      getLocationShortName(startSlugTrimmed),
+                    );
+                  }}
+                  onFocus={() => {
+                    setExpandedCompletedRowId(null);
+                    onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+                  }}
+                  onToggle={() => {
+                    if (quantumCompleted) {
+                      setQuantumDeparted(false);
+                      onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+                      return;
+                    }
+                    completeQuantumOrigin();
+                  }}
+                  isSavingSection={pendingQuantumRowIds.has(
+                    QUANTUM_ORIGIN_ROW_ID,
+                  )}
+                  onChangeFrom={
+                    onUpdateQuantumTravel
+                      ? (slug) =>
+                          handleQuantumEndpointChange(QUANTUM_ORIGIN_ROW_ID, {
+                            fromSlug: slug,
+                          })
+                      : undefined
+                  }
+                  onChangeTo={
+                    onUpdateQuantumTravel
+                      ? (slug) =>
+                          handleQuantumEndpointChange(QUANTUM_ORIGIN_ROW_ID, {
+                            toSlug: slug,
+                          })
+                      : undefined
+                  }
+                  footer={addStopFooter(QUANTUM_ORIGIN_ROW_ID)}
+                  isHistoryExpanded={
+                    expandedCompletedRowId === QUANTUM_ORIGIN_ROW_ID
+                  }
+                  onHistoryExpand={() => {
+                    setExpandedCompletedRowId(QUANTUM_ORIGIN_ROW_ID);
+                    onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+                  }}
+                  onHistoryCollapse={() => setExpandedCompletedRowId(null)}
+                />
+                {draftingAfterRowId === QUANTUM_ORIGIN_ROW_ID
+                  ? draftComposer
+                  : null}
+              </Fragment>
+            );
+          }
+
+          if (!isCurrentExpanded) return null;
+
+          const row = item.row;
           const locationFixture = getLocationBySlug(row.locationSlug);
           const location = locationFixture?.name ?? row.locationSlug;
           const routeIndex = displayRows.findIndex(
@@ -892,7 +1115,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             : null;
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
-          const isFocused = row.id === activeRowId;
+          const isFocused = row.isCompleted
+            ? row.id === focusedStopId ||
+              expandedCompletedRowId === row.id
+            : row.id === openActiveId;
           const isPendingComplete = pendingCompleteRowIds.has(row.id);
           const isQuantumSaving = pendingQuantumRowIds.has(row.id);
           const isRowCargoPending = [...pendingCargoKeys].some((key) =>
@@ -908,7 +1134,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             if (pendingCompleteRowIds.has(stopId)) return;
             const completing = !isCompleted;
             void runRowPending(stopId, () => onToggle(stopId));
-            // Defer focus/scroll/bay replan so the checkbox paints first.
+            // Defer focus/bay replan so the checkbox paints first.
             // Always advance when completing — especially with history hidden,
             // the finished stop leaves the list and the next one should be active.
             if (completing) {
@@ -923,10 +1149,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                 .find((entry) => !entry.isCompleted);
               startTransition(() => {
                 if (nextIncomplete) {
-                  pendingScrollToIdRef.current = nextIncomplete.id;
                   onFocusStop?.(nextIncomplete.id);
                 } else {
-                  onFocusStop?.(null);
+                  // Keep last stop focused so the Stops rail stays sized /
+                  // marked complete while the summary fills the checklist.
+                  onFocusStop?.(stopId);
                 }
               });
             }
@@ -1108,9 +1335,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             ? (getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug)
             : null;
 
-          // Show-history: collapse completed stops to a strip unless expanded.
+          // Completed stops live in the completed chip band unless opened below.
           if (
             row.isCompleted &&
+            !isFocused &&
             !hideCompleted &&
             expandedCompletedRowId !== row.id
           ) {
@@ -1188,6 +1416,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           return (
             <Fragment key={row.id}>
             <li
+              id="checklist-current-stop"
               ref={(node) => {
                 if (node) rowElsRef.current.set(row.id, node);
                 else rowElsRef.current.delete(row.id);
@@ -1195,7 +1424,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               aria-checked={row.isCompleted}
               aria-busy={isRowSectionBusy}
               aria-current={isFocused ? "step" : undefined}
-              className="flex scroll-mt-20 flex-col border-b border-rsi-divider/80 pb-1 sm:scroll-mt-24"
+              className={[
+                "flex scroll-mt-20 flex-col border-b border-rsi-divider/80 sm:scroll-mt-24",
+                checklistRowToneClass(row.isCompleted, isFocused),
+              ].join(" ")}
               onClick={() => onFocusStop?.(row.id)}
             >
               {historyHiddenBridge && prevRow ? (
@@ -1210,27 +1442,21 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                   }}
                 />
               ) : null}
-              <div
-                className={[
-                  "flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1",
-                  checklistRowToneClass(row.isCompleted, isFocused),
-                ].join(" ")}
-              >
-                {row.isCompleted &&
-                !hideCompleted &&
-                expandedCompletedRowId === row.id ? (
+              <div className="flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1">
+                {row.isCompleted && isFocused ? (
                   <button
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
                       setExpandedCompletedRowId(null);
+                      onFocusStop?.(workingIncompleteId);
                     }}
                     className="mb-2 ml-auto block font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted hover:text-rsi-accent"
                   >
-                    Collapse
+                    Back to current
                   </button>
                 ) : null}
-                {/* Sticky Done shares this column height through Next stop so it can pin mid-ship. */}
+                {/* Sticky Done shares this column height so it can pin mid-header. */}
                 <div className="flex min-h-0 flex-1 gap-3">
                   <div className="hidden w-8 shrink-0 self-stretch md:block">
                     <div
@@ -1247,20 +1473,53 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                     </div>
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <LocationHeader
-                      row={row}
-                      location={location}
-                      hasOutdoorFreightElevator={Boolean(
-                        locationFixture?.hasOutdoorFreightElevator,
-                      )}
-                      isCopied={isCopied}
-                      onCopy={() => {
-                        void copyStarmapName(
-                          row.id,
-                          getLocationShortName(row.locationSlug),
-                        );
-                      }}
-                    />
+                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
+                      <div className="min-w-0 lg:flex-1">
+                        <LocationHeader
+                          row={row}
+                          location={location}
+                          hasOutdoorFreightElevator={Boolean(
+                            locationFixture?.hasOutdoorFreightElevator,
+                          )}
+                          isCopied={isCopied}
+                          onCopy={() => {
+                            void copyStarmapName(
+                              row.id,
+                              getLocationShortName(row.locationSlug),
+                            );
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0 lg:flex-1 lg:pt-0.5">
+                        {nextLocationSlug == null &&
+                        nextLocationName == null ? (
+                          <FinishRunTile
+                            isCompleted={row.isCompleted}
+                            isPending={isPendingComplete}
+                            onFinish={() => {
+                              if (!row.isCompleted) {
+                                toggleStopDone();
+                                return;
+                              }
+                              onOpenSummary?.();
+                            }}
+                          />
+                        ) : (
+                          <NextDistanceMeta
+                            row={row}
+                            nextLocationName={nextLocationName}
+                            nextLocationSlug={nextLocationSlug}
+                            shipSlug={shipSlug}
+                            variant="header"
+                            isPending={isPendingComplete}
+                            checkboxColumn="external"
+                            onToggle={
+                              row.isCompleted ? undefined : toggleStopDone
+                            }
+                          />
+                        )}
+                      </div>
+                    </div>
                     <div className="mt-5 overflow-x-clip pb-5">
                       {isRowSectionBusy ? (
                         <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
@@ -1462,26 +1721,13 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         aria-hidden
                       />
                     </div>
-                    <div className="mt-auto">
-                      <div className="mb-2 pt-3 md:hidden">
-                        <DoneStopButton
-                          location={location}
-                          step={step}
-                          isCompleted={row.isCompleted}
-                          isPending={isPendingComplete}
-                          onToggle={toggleStopDone}
-                        />
-                      </div>
-                      <NextDistanceMeta
-                        row={row}
-                        nextLocationName={nextLocationName}
-                        nextLocationSlug={nextLocationSlug}
-                        shipSlug={shipSlug}
+                    <div className="mt-auto mb-2 pt-3 md:hidden">
+                      <DoneStopButton
+                        location={location}
+                        step={step}
+                        isCompleted={row.isCompleted}
                         isPending={isPendingComplete}
-                        checkboxColumn="external"
-                        onToggle={
-                          row.isCompleted ? undefined : toggleStopDone
-                        }
+                        onToggle={toggleStopDone}
                       />
                     </div>
                   </div>
@@ -1493,20 +1739,60 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             </Fragment>
           );
         })}
-      </ul>
-      )}
-      {boxEditMission && onSelectBoxBreakdown ? (
-        <StopMissionBoxConfigModal
-          {...stopMissionBoxConfigModalProps({
-            mission: boxEditMission,
-            rows,
-            sessionId,
-            onClose: () => setBoxEditMissionId(null),
-            onSelectBoxBreakdown,
-            onSaveMissionScuDraft,
-          })}
-        />
+    </ul>
+  );
+
+  return (
+    <div className="flex min-w-0 max-w-full flex-col gap-4">
+      {aboveChecklist ? (
+        <div className="flex min-w-0 max-w-full items-start gap-4">
+          {showProgressTimeline ? (
+            <div
+              aria-hidden
+              className="hidden w-[8.75rem] shrink-0 lg:block"
+            />
+          ) : null}
+          <div className="flex min-w-0 max-w-full flex-1 flex-col gap-4">
+            {aboveChecklist}
+          </div>
+        </div>
       ) : null}
+
+      <div className="flex min-w-0 max-w-full items-start gap-4">
+        {showProgressTimeline ? (
+          <ChecklistProgressRail
+            stops={progressStops}
+            progressDone={progressDone}
+            progressTotal={progressTotal}
+            matchHeightEl={checklistPanelEl}
+            onSelectStop={onSelectProgressStop}
+            onOpenStops={onOpenStops}
+            distanceTraveled={distanceTraveled}
+            distanceTotal={distanceTotal}
+          />
+        ) : null}
+
+        <div
+          ref={setChecklistPanelEl}
+          className="min-w-0 max-w-full flex-1 rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel"
+          aria-busy={isLoading || undefined}
+        >
+          {toolbar}
+          {checklistBody}
+          {boxEditMission && onSelectBoxBreakdown ? (
+            <StopMissionBoxConfigModal
+              {...stopMissionBoxConfigModalProps({
+                mission: boxEditMission,
+                rows,
+                sessionId,
+                onClose: () => setBoxEditMissionId(null),
+                onSelectBoxBreakdown,
+                onSaveMissionScuDraft,
+              })}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 });

@@ -30,8 +30,8 @@ export type RouteChecklistMenuProps = {
 };
 
 /**
- * Right-edge ⋯ on the route checklist toolbar.
- * Holds Distance/aUEC on small phones, Copy trip, Hide / Show history,
+ * Trip-header ⋯ (beside Find a Contract).
+ * Holds aUEC on small phones, Copy trip, Hide / Show history,
  * Repair route (when the invalid banner is dismissed), Summary (when the
  * trip is complete), Controls, and Crash out.
  */
@@ -87,9 +87,8 @@ export function RouteChecklistMenu({
           aria-label="Route checklist menu"
           onClick={() => setOpen((value) => !value)}
           className={[
-            // Match Distance/aUEC/Time strip height + border/chrome.
-            "inline-flex h-[2.375rem] items-center justify-center rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 px-2.5 font-mono text-sm leading-none tracking-[0.2em] text-rsi-text-secondary transition-colors sm:h-[2.875rem] sm:px-3",
-            "hover:text-rsi-text",
+            // Match Find a Contract (h-9); Contracts-style fill.
+            "inline-flex h-9 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 font-mono text-sm leading-none tracking-[0.2em] text-rsi-text-secondary transition-colors hover:bg-rsi-surface-raised hover:text-rsi-text",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
           ].join(" ")}
         >

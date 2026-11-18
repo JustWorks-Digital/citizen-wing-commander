@@ -31,24 +31,33 @@ export function CondensedRowTrailing({
   scuTotal = null,
   hopLabel = null,
   hopTitle = null,
+  /** Badges only — no fixed SCU/hop columns (upcoming chips beside Next stop). */
+  badgesOnly = false,
 }: {
   routeAction: RouteAction;
   scuTotal?: number | null;
   hopLabel?: ReactNode;
   /** Full distance string for tooltip (when hopLabel is responsive). */
   hopTitle?: string | null;
+  badgesOnly?: boolean;
 }) {
   const titleText =
     hopTitle ?? (typeof hopLabel === "string" ? hopLabel : null);
+  const badges = (
+    <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 md:gap-2">
+      {routeActionBadges(routeAction).map((badge) => (
+        <Badge key={badge.label} variant={badge.variant} size="sm">
+          {badge.label}
+        </Badge>
+      ))}
+    </div>
+  );
+  if (badgesOnly) {
+    return <div className="shrink-0">{badges}</div>;
+  }
   return (
     <div className="grid w-[13.5rem] shrink-0 grid-cols-[minmax(5.75rem,1fr)_2.5rem_3.25rem] items-center gap-x-1 md:w-[18.75rem] md:grid-cols-[minmax(0,1fr)_3.5rem_4.75rem] md:gap-x-2.5">
-      <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 md:gap-2">
-        {routeActionBadges(routeAction).map((badge) => (
-          <Badge key={badge.label} variant={badge.variant} size="sm">
-            {badge.label}
-          </Badge>
-        ))}
-      </div>
+      {badges}
       <div
         className="whitespace-nowrap text-right font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-muted"
         title={scuTotal != null ? SCU_TITLE : undefined}

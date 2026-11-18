@@ -208,7 +208,7 @@ export function ImageLightbox({
       aria-label={label}
       className="fixed inset-0 z-[80] flex flex-col bg-rsi-bg"
     >
-      <div className="relative flex shrink-0 items-center gap-3 border-b border-rsi-border bg-rsi-bg-deep/80 px-4 py-3 pr-12 sm:pr-14">
+      <div className="relative flex shrink-0 items-center gap-3 border-b border-rsi-border bg-rsi-bg-deep/80 px-4 py-3">
         <p className="min-w-0 flex-1 truncate font-mono text-[0.7rem] uppercase tracking-[0.18em] text-rsi-text-muted">
           {label}
         </p>
@@ -224,7 +224,7 @@ export function ImageLightbox({
             {safeIndex + 1} / {gallery.length}
           </p>
         ) : null}
-        <ModalCloseButton onClick={onClose} />
+        <ModalCloseButton placement="inline" onClick={onClose} />
       </div>
       <div
         ref={scrollRef}

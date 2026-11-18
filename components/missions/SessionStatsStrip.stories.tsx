@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header; Contracts List on sm+), route toolbar as two strips — Contract/Stop/Bay left, Distance/aUEC/Time right-aligned (Saving… sits left of Distance so the trip strip does not shift; below sm, Distance/aUEC move to ⋯ and Time stays in the strip), Inventory totals in the Cargo bays modal header, stop transfer SCU in the modal footer.",
+          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard | Peak | Capacity), Stats right (Stats | Contracts | aUEC | Time); Contracts shows “N / M complete”. Saving… sits left of Stats; below sm, aUEC moves to ⋯ and Time stays in the strip. Distance lives in the Stops rail / mobile Stops section.",
       },
     },
   },
@@ -31,6 +31,12 @@ export const SourceWithPending: Story = {
   render: () => <SessionSourceStat pendingScreenshotCount={3} />,
 };
 
+export const SourcePlain: Story = {
+  render: () => (
+    <SessionSourceStat plain pendingScreenshotCount={2} />
+  ),
+};
+
 export const RouteProgress: Story = {
   render: () => (
     <SessionRouteProgressStats
@@ -39,13 +45,11 @@ export const RouteProgress: Story = {
       missionsCompleted={0}
       missionCount={2}
       onboardScu={24}
+      peakScu={72}
       totalCapacity={96}
       cargoBayCount={2}
       auecEarned={0}
       auecProjected={128000}
-      distanceTraveled={{ value: 12.4, unit: "Mm" }}
-      distanceTotal={{ value: 48.2, unit: "Mm" }}
-      onStopsClick={() => {}}
       onCapacityClick={() => {}}
       elapsed={<span>12m</span>}
     />
@@ -60,13 +64,11 @@ export const RouteProgressSingleBay: Story = {
       missionsCompleted={1}
       missionCount={2}
       onboardScu={24}
+      peakScu={72}
       totalCapacity={96}
       cargoBayCount={1}
       auecEarned={48000}
       auecProjected={128000}
-      distanceTraveled={{ value: 27, unit: "Gm" }}
-      distanceTotal={{ value: 91, unit: "Gm" }}
-      onStopsClick={() => {}}
       onCapacityClick={() => {}}
     />
   ),
@@ -191,6 +193,7 @@ export const AllPieces: Story = {
         missionsCompleted={0}
         missionCount={2}
         onboardScu={24}
+        peakScu={72}
         totalCapacity={96}
         auecEarned={0}
         auecProjected={144000}

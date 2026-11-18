@@ -69,7 +69,13 @@ export function AppShell({ children, activeNav }: AppShellProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-10">
+      <main
+        className={[
+          "mx-auto w-full min-w-0 flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-10",
+          // Trips need room for the pushable trip panel + checklist.
+          activeNav === "sessions" ? "max-w-7xl" : "max-w-6xl",
+        ].join(" ")}
+      >
         {children}
       </main>
     </div>

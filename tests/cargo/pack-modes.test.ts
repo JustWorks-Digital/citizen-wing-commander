@@ -5,6 +5,7 @@ import {
   TEST_SHIP_SLUGS,
   getTripStops,
   scuByCommodity,
+  scuDemandByCommodity,
   totalScu,
   type TestShipSlug,
 } from "./fixtures";
@@ -35,6 +36,34 @@ describe.each(TEST_SHIP_SLUGS)("pack modes at a stop (%s)", (shipSlug) => {
       );
       expect(totalScu(contract), `${stop.id} contract`).toBe(
         totalScu(suggested),
+      );
+    }
+  });
+
+  it("pack modes keep the same cargo-type SCU demand (placed + unplaced)", () => {
+    const stops = getTripStops("aboardCargo");
+    const grid = sketch(shipSlug);
+
+    for (const stop of stops) {
+      if (stop.routeAction === "quantum") continue;
+      const suggested = cargoBay.packAtStop(stop.id, grid, stops, {
+        packMode: "suggested",
+        includeAboardCargo: true,
+      });
+      const cargoType = cargoBay.packAtStop(stop.id, grid, stops, {
+        packMode: "by-cargo-type",
+        includeAboardCargo: true,
+      });
+      const contract = cargoBay.packAtStop(stop.id, grid, stops, {
+        packMode: "by-mission-location",
+        includeAboardCargo: true,
+      });
+      const expected = scuDemandByCommodity(suggested);
+      expect(scuDemandByCommodity(cargoType), `${stop.id} cargo-type`).toEqual(
+        expected,
+      );
+      expect(scuDemandByCommodity(contract), `${stop.id} contract`).toEqual(
+        expected,
       );
     }
   });
@@ -131,5 +160,31 @@ describe.each(TEST_SHIP_SLUGS)("pack modes at a stop (%s)", (shipSlug) => {
     const grid = sketch(shipSlug);
     const plan = cargoBay.packByCargoTypeAtStop("stop-2", grid, stops);
     expect(scuByCommodity(plan)).toEqual({ "pressurized-ice": 16 });
+  });
+
+  it("does not let one cargo type monopolize an overfull bay", () => {
+    const stops = getTripStops("aboardCargo");
+    const grid = sketch(shipSlug);
+    // Inflate stop-1 pickups so one commodity alone could fill the bay if
+    // cargo-type packed largest-group-first without interleaving.
+    const overloaded = stops.map((stop) => {
+      if (stop.id !== "stop-1") return stop;
+      return {
+        ...stop,
+        cargoDeliveries: stop.cargoDeliveries.map((cargo) =>
+          cargo.commoditySlug === "processed-food"
+            ? { ...cargo, scu: Math.max(cargo.scu, 900) }
+            : cargo,
+        ),
+      };
+    });
+    const plan = cargoBay.packAtStop("stop-1", grid, overloaded, {
+      packMode: "by-cargo-type",
+      includeAboardCargo: true,
+    });
+    const by = scuByCommodity(plan);
+    // Other pickup commodities must still get seats (not only processed-food).
+    expect((by["pressurized-ice"] ?? 0) > 0).toBe(true);
+    expect(Object.keys(by).length).toBeGreaterThan(1);
   });
 });

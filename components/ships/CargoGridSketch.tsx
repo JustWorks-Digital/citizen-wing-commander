@@ -2,6 +2,7 @@
 
 import {
   startTransition,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -227,6 +228,21 @@ function zoneOrdinalLabel(index: number): string {
   return `Zone ${index}`;
 }
 
+/** Keep hidden filters for slugs still in the bay; drop obsolete ones. */
+function pruneHiddenSet(
+  prev: ReadonlySet<string>,
+  available: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (prev.size === 0) return prev;
+  let changed = false;
+  const next = new Set<string>();
+  for (const slug of prev) {
+    if (available.has(slug)) next.add(slug);
+    else changed = true;
+  }
+  return changed ? next : prev;
+}
+
 /**
  * Cargo-grid sketch: 2D (overhead) and/or 3D isometric stacked cubes.
  * With `views="both"`, switch via 2D / 3D / Split tabs.
@@ -370,6 +386,11 @@ export function CargoGridSketch({
   const [debugBoxOutlines, setDebugBoxOutlines] = useState(false);
   /** Abbreviated commodity labels on 2D crates. */
   const [showCargoNames, setShowCargoNames] = useState(true);
+  /**
+   * Barely-visible ghosts for legend-hidden crates (and off layers in 3D)
+   * so stacked / surrounding cargo stays readable.
+   */
+  const [showHologram, setShowHologram] = useState(false);
 
   const {
     overflowScrollRef: topLegendScrollRef,
@@ -380,19 +401,38 @@ export function CargoGridSketch({
     overflowScrollClassName: splitLegendScrollClassName,
   } = useOverflowScrollY([collapsedLegendSections, panelHeightPx]);
 
-  const locationSlugsKey = locationLegendItems
-    .map((item) => item.locationSlug)
-    .join("|");
+  const commoditySlugsKey = useMemo(
+    () => [...commoditySlugs].sort().join("|"),
+    [commoditySlugs],
+  );
+  const locationSlugsKey = useMemo(
+    () =>
+      [...locationLegendItems.map((item) => item.locationSlug)]
+        .sort()
+        .join("|"),
+    [locationLegendItems],
+  );
+
+  // Pack mode / box order can reshuffle legend lists — keep user filters for
+  // slugs that are still present; only drop entries that left the bay.
+  useEffect(() => {
+    const available = new Set(commoditySlugs);
+    setHiddenCommodities((prev) => pruneHiddenSet(prev, available));
+  }, [commoditySlugsKey, commoditySlugs]);
 
   useEffect(() => {
-    // New stop / cargo click: show every material so the full location is visible.
+    const available = new Set(
+      locationLegendItems.map((item) => item.locationSlug),
+    );
+    setHiddenLocations((prev) => pruneHiddenSet(prev, available));
+  }, [locationSlugsKey, locationLegendItems]);
+
+  useEffect(() => {
+    // Optional cargo-focus highlight: reveal every material again.
+    if (focusCommoditySlug == null) return;
     setHiddenCommodities(new Set());
     setHiddenActions(new Set());
-  }, [focusCommoditySlug, commoditySlugs.join("|")]);
-
-  useEffect(() => {
-    setHiddenLocations(new Set());
-  }, [locationSlugsKey]);
+  }, [focusCommoditySlug]);
 
   function toggleCommodity(slug: string) {
     startTransition(() => {
@@ -476,23 +516,31 @@ export function CargoGridSketch({
   );
 
   const z = Math.min(Math.max(activeZ, 0), sketch.heightCells - 1);
-  const visiblePlacementBoxes = useMemo(() => {
-    return placementBoxes.filter((box) => {
-      if (hiddenCommodities.has(box.commoditySlug)) return false;
-      if (box.action != null && hiddenActions.has(box.action)) return false;
-      if (locationLegendItems.length === 0) return true;
+  const isPlacementBoxLegendHidden = useCallback(
+    (box: PlacedCargoBox) => {
+      if (hiddenCommodities.has(box.commoditySlug)) return true;
+      if (box.action != null && hiddenActions.has(box.action)) return true;
+      if (locationLegendItems.length === 0) return false;
       return (
-        box.deliveryLocationSlug != null &&
-        !hiddenLocations.has(box.deliveryLocationSlug)
+        box.deliveryLocationSlug == null ||
+        hiddenLocations.has(box.deliveryLocationSlug)
       );
-    });
-  }, [
-    placementBoxes,
-    hiddenCommodities,
-    hiddenActions,
-    hiddenLocations,
-    locationLegendItems.length,
-  ]);
+    },
+    [
+      hiddenCommodities,
+      hiddenActions,
+      hiddenLocations,
+      locationLegendItems.length,
+    ],
+  );
+  const visiblePlacementBoxes = useMemo(() => {
+    return placementBoxes.filter((box) => !isPlacementBoxLegendHidden(box));
+  }, [placementBoxes, isPlacementBoxLegendHidden]);
+  /** Solid crates + optional hologram ghosts of legend-hidden crates. */
+  const renderPlacementBoxes = useMemo(() => {
+    if (!showHologram) return visiblePlacementBoxes;
+    return placementBoxes;
+  }, [showHologram, visiblePlacementBoxes, placementBoxes]);
 
   /** 0-based Z layers that currently have at least one visible (legend-filtered) box. */
   const occupiedTopLayers = useMemo(() => {
@@ -837,7 +885,7 @@ export function CargoGridSketch({
         ) : null}
         {showScuSizeFilters ? (
           <CargoLegendSection
-            title={`${SCU_TITLE} sizes`}
+            title="SCU sizes"
             sectionId="scu-sizes"
             isExpanded={isLegendSectionExpanded("scuSizes")}
             onToggle={() => toggleLegendSection("scuSizes")}
@@ -973,12 +1021,20 @@ export function CargoGridSketch({
             onToggle={() => toggleLegendSection("settings")}
             showBorder
           >
-            <Switch
-              label="Cargo names"
-              checked={showCargoNames}
-              onCheckedChange={setShowCargoNames}
-              ariaLabel="Show cargo names on 2D crates"
-            />
+            <div className="space-y-1.5">
+              <Switch
+                label="Cargo names"
+                checked={showCargoNames}
+                onCheckedChange={setShowCargoNames}
+                ariaLabel="Show cargo names on 2D crates"
+              />
+              <Switch
+                label="Show hologram"
+                checked={showHologram}
+                onCheckedChange={setShowHologram}
+                ariaLabel="Show barely visible ghosts of hidden crates"
+              />
+            </div>
           </CargoLegendSection>
         ) : null}
         {useBoxFootprints ? (
@@ -1267,7 +1323,7 @@ export function CargoGridSketch({
                 }
 
                 const boxesOnLayer = useBoxFootprints
-                  ? visiblePlacementBoxes.filter(
+                  ? renderPlacementBoxes.filter(
                       (box) =>
                         box.origin.z <= z &&
                         z < box.origin.z + box.footprint.dz &&
@@ -1474,6 +1530,7 @@ export function CargoGridSketch({
                       );
                     })}
                     {boxesOnLayer.map((box) => {
+                      const isHologram = isPlacementBoxLegendHidden(box);
                       const hex =
                         resolveCommodityColorHex(
                           box.color,
@@ -1617,31 +1674,49 @@ export function CargoGridSketch({
                       return (
                         <div
                           key={box.id}
-                          title={`${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`}
-                          role={manualEdit ? "button" : undefined}
-                          aria-hidden={manualEdit ? undefined : true}
+                          title={
+                            isHologram
+                              ? undefined
+                              : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`
+                          }
+                          role={manualEdit && !isHologram ? "button" : undefined}
+                          aria-hidden={
+                            isHologram || !manualEdit ? true : undefined
+                          }
                           aria-label={
-                            manualEdit
+                            manualEdit && !isHologram
                               ? `Move ${box.commodityName} ${box.size} SCU crate`
                               : undefined
                           }
                           onPointerDown={
-                            manualEdit ? onManualPointerDown : undefined
+                            manualEdit && !isHologram
+                              ? onManualPointerDown
+                              : undefined
                           }
                           onPointerMove={
-                            manualEdit ? onManualPointerMove : undefined
+                            manualEdit && !isHologram
+                              ? onManualPointerMove
+                              : undefined
                           }
-                          onPointerUp={manualEdit ? endManualDrag : undefined}
+                          onPointerUp={
+                            manualEdit && !isHologram
+                              ? endManualDrag
+                              : undefined
+                          }
                           onPointerCancel={
-                            manualEdit ? endManualDrag : undefined
+                            manualEdit && !isHologram
+                              ? endManualDrag
+                              : undefined
                           }
                           className={[
-                            "absolute z-[5] box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
-                            // Keep pointer events so crate `title` (full commodity
-                            // name) works on hover — not only in Manual drag mode.
-                            manualEdit
-                              ? "pointer-events-auto cursor-grab touch-none active:cursor-grabbing"
-                              : "pointer-events-auto",
+                            "absolute box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
+                            isHologram
+                              ? "pointer-events-none z-[4]"
+                              : // Keep pointer events so crate `title` (full commodity
+                                // name) works on hover — not only in Manual drag mode.
+                                manualEdit
+                                ? "pointer-events-auto z-[5] cursor-grab touch-none active:cursor-grabbing"
+                                : "pointer-events-auto z-[5]",
                           ].join(" ")}
                           style={{
                             left,
@@ -1649,9 +1724,10 @@ export function CargoGridSketch({
                             width: boxWidthPx,
                             height: boxHeightPx,
                             backgroundColor: hex,
-                            opacity: 0.92,
+                            // Hologram: barely there so solid crates stay readable.
+                            opacity: isHologram ? 0.12 : 0.92,
                             ...borderStyle,
-                            ...(debugBoxOutlines
+                            ...(debugBoxOutlines && !isHologram
                               ? {
                                   boxShadow:
                                     "0 0 0 1px #000, 0 0 0 2.5px var(--rsi-warn)",
@@ -1660,7 +1736,8 @@ export function CargoGridSketch({
                               : null),
                           }}
                         >
-                          {groupStroke != null &&
+                          {!isHologram &&
+                          groupStroke != null &&
                           box.locationGroupIndex != null &&
                           locationLabelBoxIds.has(box.id) ? (
                             <span
@@ -1674,13 +1751,15 @@ export function CargoGridSketch({
                               {box.locationGroupIndex}
                             </span>
                           ) : null}
-                          {scuSizeBadges.has(8) && box.footprint.dz >= 2 ? (
+                          {!isHologram &&
+                          scuSizeBadges.has(8) &&
+                          box.footprint.dz >= 2 ? (
                             <span
                               aria-hidden
                               className="pointer-events-none absolute inset-[3px] rounded-[1px] border border-rsi-bg-deep/55"
                             />
                           ) : null}
-                          {showCargoNames ? (
+                          {!isHologram && showCargoNames ? (
                             <span
                               className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
                               style={{
@@ -1695,7 +1774,8 @@ export function CargoGridSketch({
                               {abbrev}
                             </span>
                           ) : null}
-                          {scuSizeBadges.has(box.size as CargoBoxScu) ? (
+                          {!isHologram &&
+                          scuSizeBadges.has(box.size as CargoBoxScu) ? (
                             <span
                               className="pointer-events-none absolute right-0.5 bottom-0.5 inline-flex min-w-[0.85rem] items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 px-0.5 font-mono text-[0.5rem] font-bold tabular-nums leading-none text-rsi-text"
                               title={`${box.size} ${SCU_TITLE}`}
@@ -1750,7 +1830,9 @@ export function CargoGridSketch({
                 onSelectCoord={onSelectCoord}
                 highlightedCoords={highlightedCoords}
                 placementTints={placementTints}
-                placementBoxes={visiblePlacementBoxes}
+                placementBoxes={
+                  showHologram ? placementBoxes : visiblePlacementBoxes
+                }
                 legendItems={legendItems}
                 locationLegendItems={locationLegendItems}
                 showLocationOutlines={showLocationOutlines}
@@ -1760,6 +1842,7 @@ export function CargoGridSketch({
                 onToggleCommodity={toggleCommodity}
                 hiddenActions={hiddenActions}
                 onToggleAction={toggleAction}
+                showHologram={showHologram}
                 mode={isPlacementView ? "placement" : "full"}
                 toolbarExtra={isoZoomControls}
                 toolbarBelow={isSplit ? null : isoToolbarBelow}

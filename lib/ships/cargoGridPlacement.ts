@@ -34,7 +34,10 @@ import {
   type PackSlotCandidateMetrics,
   type PackSlotPolicy,
 } from "@/lib/ships/packSlotPolicy";
-import { orderPackItemsByProgram } from "@/lib/ships/packItemOrder";
+import {
+  interleaveItemGroups,
+  orderPackItemsByProgram,
+} from "@/lib/ships/packItemOrder";
 import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
 import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
 import type { CargoDelivery, HaulingChecklistRow, RouteAction, ShipStorageLocation } from "@/lib/missions/sessionChecklist";
@@ -1217,7 +1220,7 @@ export function placeCargoItemsInZone(
           groupB[0]?.commodityName ?? b,
         );
       });
-      pending.length = 0;
+      const commodityQueues: CargoPlacementItem[][] = [];
       for (const commodity of commodityOrder) {
         const group = byCommodity.get(commodity)!;
         const byLocation = new Map<string, CargoPlacementItem[]>();
@@ -1246,12 +1249,17 @@ export function placeCargoItemsInZone(
           if (rankA !== rankB) return rankA - rankB;
           return a.localeCompare(b);
         });
+        const commodityItems: CargoPlacementItem[] = [];
         for (const loc of locationOrder) {
           const locGroup = byLocation.get(loc)!;
           sortItemsForStackPriority(locGroup, Boolean(missionPriorityBias));
-          pending.push(...locGroup);
+          commodityItems.push(...locGroup);
         }
+        commodityQueues.push(commodityItems);
       }
+      pending.length = 0;
+      // Interleave cargo types so one huge commodity cannot monopolize the bay.
+      pending.push(...interleaveItemGroups(commodityQueues));
     } else {
       // Group by cluster key; order by delivery rank when prioritized,
       // then by total SCU (largest cargo type first), then label.
@@ -1288,12 +1296,13 @@ export function placeCargoItemsInZone(
           itemClusterLabel(groupB[0]!),
         );
       });
-      pending.length = 0;
-      for (const key of keyOrder) {
+      const queues = keyOrder.map((key) => {
         const group = byKey.get(key)!;
         sortItemsForStackPriority(group, Boolean(missionPriorityBias));
-        pending.push(...group);
-      }
+        return group;
+      });
+      pending.length = 0;
+      pending.push(...interleaveItemGroups(queues));
     }
   } else {
     pending.sort((a, b) => b.size - a.size);

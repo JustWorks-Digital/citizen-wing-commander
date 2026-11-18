@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Right-edge ⋯ on the route checklist toolbar, sized and bordered to match the Distance/aUEC/Time strip. On small phones shows Distance/aUEC (Time stays in the strip); also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Summary (when the trip is complete), Controls, and Crash out.",
+          "Trip-header ⋯ beside Find a Contract (h-9, Contracts-style fill). On small phones shows aUEC; also Copy trip, Hide / Show history, Repair route (when the invalid banner was dismissed), Summary (when the trip is complete), Controls, and Crash out.",
       },
     },
   },

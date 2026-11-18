@@ -6,26 +6,39 @@ export type ModalCloseButtonProps = Omit<
 > & {
   /** Accessible name — defaults to "Close". */
   label?: string;
+  /**
+   * `corner` (default) — box above the panel, right edges flush.
+   * `inline` — flex/toolbar sibling (no absolute offset).
+   */
+  placement?: "corner" | "inline";
 };
 
 /**
- * Top-right modal dismiss control — X icon only (no text label in the UI).
- * Position the parent `relative` and leave right padding so content clears this button.
+ * Modal dismiss control — X icon only (no text label in the UI).
+ * Default is a rounded box sitting above the top edge of a `relative` panel,
+ * right-aligned flush with the panel. Do not reserve `pr-12` / `pr-14`.
  */
 export function ModalCloseButton({
   label = "Close",
+  placement = "corner",
   className = "",
   ...props
 }: ModalCloseButtonProps) {
+  const position =
+    placement === "inline"
+      ? "relative inline-flex shrink-0"
+      : "absolute right-0 bottom-full mb-2";
+
   return (
     <button
       type="button"
       aria-label={label}
       className={[
-        "absolute top-2 right-2 z-10 inline-flex size-9 items-center justify-center rounded-rsi text-rsi-text-muted transition-colors",
-        "hover:bg-rsi-bg-deep/60 hover:text-rsi-text",
+        position,
+        "z-20 inline-flex size-9 items-center justify-center rounded-rsi",
+        "border border-rsi-border bg-rsi-surface text-rsi-text-muted shadow-rsi-panel transition-colors",
+        "hover:border-rsi-border-strong hover:bg-rsi-surface-raised hover:text-rsi-text",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-        "sm:top-3 sm:right-3",
         className,
       ]
         .filter(Boolean)

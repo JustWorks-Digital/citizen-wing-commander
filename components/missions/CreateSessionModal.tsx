@@ -116,7 +116,7 @@ export function CreateSessionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 px-4 pt-14 pb-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-session-title"
@@ -124,7 +124,7 @@ export function CreateSessionModal({
         if (event.target === event.currentTarget && !isBusy) onClose();
       }}
     >
-      <div className="relative w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 pr-12 shadow-rsi-panel sm:pr-14">
+      <div className="relative w-full max-w-sm rounded-rsi border border-rsi-border bg-rsi-surface p-5 shadow-rsi-panel">
         <ModalCloseButton
           label="Dismiss"
           onClick={onClose}

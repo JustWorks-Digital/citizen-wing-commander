@@ -490,7 +490,7 @@ export function IntakeUploadsView({
 
       {unlinkedFilename ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/80 px-4 pt-14 pb-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="No catalog contract"
@@ -498,7 +498,7 @@ export function IntakeUploadsView({
             if (event.target === event.currentTarget) setUnlinkedFilename(null);
           }}
         >
-          <div className="relative w-full max-w-md rounded-rsi border border-rsi-border bg-rsi-surface px-5 py-4 pr-12 shadow-rsi-panel">
+          <div className="relative w-full max-w-md rounded-rsi border border-rsi-border bg-rsi-surface px-5 py-4 shadow-rsi-panel">
             <ModalCloseButton onClick={() => setUnlinkedFilename(null)} />
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               Processed

@@ -59,6 +59,7 @@ export function QuantumShipBadge({
 }
 
 export function QuantumTravelRow({
+  id,
   rowId,
   fromSlug,
   destinationSlug,
@@ -81,6 +82,7 @@ export function QuantumTravelRow({
   onHistoryExpand,
   onHistoryCollapse,
 }: {
+  id?: string;
   rowId: string;
   fromSlug: string;
   destinationSlug: string | null;
@@ -379,6 +381,7 @@ export function QuantumTravelRow({
 
   return (
     <li
+      id={id}
       aria-checked={isCompleted}
       aria-busy={sectionBusy}
       aria-current={isFocused ? "step" : undefined}

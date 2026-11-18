@@ -233,7 +233,7 @@ export function SessionScreenshotsPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 px-3 pt-14 pb-3 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-14 sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-label="Trip screenshots"
@@ -241,21 +241,19 @@ export function SessionScreenshotsPanel({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div
-        className={[
-          "flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border",
-          isDragging ? "ring-2 ring-[var(--rsi-ring)]" : "",
-        ].join(" ")}
-        onDragEnter={onDragEnter}
-        onDragLeave={onDragLeave}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-      >
-        <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
-          <ModalCloseButton
-            label="Close screenshots"
-            onClick={onClose}
-          />
+      <div className="relative flex h-[calc(100dvh-4.25rem)] w-full max-w-3xl sm:h-auto sm:max-h-[90vh]">
+        <ModalCloseButton label="Close screenshots" onClick={onClose} />
+        <div
+          className={[
+            "flex h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border",
+            isDragging ? "ring-2 ring-[var(--rsi-ring)]" : "",
+          ].join(" ")}
+          onDragEnter={onDragEnter}
+          onDragLeave={onDragLeave}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
+        <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
             <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
               Screenshots
@@ -385,6 +383,7 @@ export function SessionScreenshotsPanel({
             onClose={() => setLightbox(null)}
           />
         ) : null}
+        </div>
       </div>
     </div>
   );

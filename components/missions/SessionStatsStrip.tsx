@@ -46,7 +46,7 @@ function StatValue({
   return (
     <p
       className={[
-        "mt-1 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1.5 sm:text-sm",
+        "mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm",
         className,
       ]
         .filter(Boolean)
@@ -61,16 +61,18 @@ function Fraction({
   current,
   total,
   currentClassName,
+  totalClassName,
 }: {
   current: number | string;
   total: number | string;
   currentClassName?: string;
+  totalClassName?: string;
 }) {
   return (
     <span className="inline whitespace-nowrap">
       <span className={currentClassName}>{current}</span>
       <span className="mx-0.5 text-rsi-text-muted">/</span>
-      <span>{total}</span>
+      <span className={totalClassName}>{total}</span>
     </span>
   );
 }
@@ -80,13 +82,27 @@ const stripClass =
   "flex w-full min-w-0 max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto overscroll-x-contain rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
 
 const cellClass =
-  "flex shrink-0 flex-col justify-center px-2.5 py-1.5 text-left first:pl-3 last:pr-3 sm:min-w-[4.5rem] sm:px-3 sm:py-2 sm:first:pl-3.5 sm:last:pr-3.5";
+  "flex shrink-0 flex-col justify-center px-2.5 py-1 text-left first:pl-3 last:pr-3 sm:min-w-[4.5rem] sm:px-3 sm:py-1.5 sm:first:pl-3.5 sm:last:pr-3.5";
 
 const interactiveCellClass = [
   cellClass,
   // Raised fill vs strip `bg-rsi-bg-deep` so Contract / Stop / Bay read as clickable.
   "bg-rsi-surface/80 transition-colors hover:bg-rsi-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
 ].join(" ");
+
+/** Vertical section label — absolutely positioned so it does not inflate strip height. */
+function StripSpine({ label }: { label: string }) {
+  return (
+    <span
+      className="relative w-5 shrink-0 self-stretch border-r border-rsi-border bg-rsi-bg-deep/55 sm:w-6"
+      aria-hidden
+    >
+      <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.5rem] uppercase leading-none tracking-[0.18em] text-rsi-text-muted [writing-mode:vertical-rl] rotate-180">
+        {label}
+      </span>
+    </span>
+  );
+}
 
 export type SessionSourceStatProps = {
   /** Opens the contracts catalog for this session. */
@@ -96,6 +112,10 @@ export type SessionSourceStatProps = {
   /** Pending Source shots awaiting AI parse (badge on Source). */
   pendingScreenshotCount?: number;
   className?: string;
+  /** Full-width stacked rows (trip panel). */
+  stacked?: boolean;
+  /** Text links, no border / fill (trip header under Expand). */
+  plain?: boolean;
 };
 
 /** Header actions: Contracts catalog + Source screenshots. */
@@ -104,6 +124,8 @@ export function SessionSourceStat({
   onClick,
   pendingScreenshotCount = 0,
   className,
+  stacked = false,
+  plain = false,
 }: SessionSourceStatProps) {
   const actionLabelClass =
     "font-mono text-[0.5rem] uppercase leading-none tracking-[0.14em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]";
@@ -111,6 +133,81 @@ export function SessionSourceStat({
     Number.isFinite(pendingScreenshotCount) && pendingScreenshotCount > 0
       ? Math.floor(pendingScreenshotCount)
       : 0;
+  const sourceTitle =
+    pending > 0
+      ? `${pending} pending Source shot${pending === 1 ? "" : "s"} for AI`
+      : "Contract screenshots (Source)";
+
+  if (plain) {
+    const plainBtnClass = [
+      "inline-flex items-center gap-1 rounded-sm px-0.5 py-0.5 transition-colors",
+      "hover:text-rsi-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+      actionLabelClass,
+    ].join(" ");
+    return (
+      <div
+        className={["flex flex-wrap items-center justify-end gap-x-3 gap-y-1", className]
+          .filter(Boolean)
+          .join(" ")}
+        role="group"
+        aria-label="Trip actions"
+      >
+        <button type="button" onClick={onMissionsClick} className={plainBtnClass}>
+          Find a Contract
+        </button>
+        <button
+          type="button"
+          onClick={onClick}
+          title={sourceTitle}
+          className={plainBtnClass}
+        >
+          Source
+          {pending > 0 ? (
+            <span className="inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rsi-accent/25 px-1 font-mono text-[0.55rem] tabular-nums leading-none text-rsi-accent">
+              {pending}
+            </span>
+          ) : null}
+        </button>
+      </div>
+    );
+  }
+
+  if (stacked) {
+    const stackedBtnClass = [
+      "flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 py-2.5 transition-colors",
+      "hover:bg-rsi-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+    ].join(" ");
+    return (
+      <div
+        className={[
+          "flex w-full min-w-0 divide-x divide-rsi-border overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/80",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        role="group"
+        aria-label="Trip actions"
+      >
+        <button type="button" onClick={onMissionsClick} className={stackedBtnClass}>
+          <span className={actionLabelClass}>Find a Contract</span>
+        </button>
+        <button
+          type="button"
+          onClick={onClick}
+          title={sourceTitle}
+          className={stackedBtnClass}
+        >
+          <span className={actionLabelClass}>Source</span>
+          {pending > 0 ? (
+            <span className="inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-rsi-accent/25 px-1 font-mono text-[0.55rem] tabular-nums leading-none text-rsi-accent">
+              {pending}
+            </span>
+          ) : null}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={[stripClass, "sm:w-auto", className].filter(Boolean).join(" ")}
@@ -126,8 +223,8 @@ export function SessionSourceStat({
         ].join(" ")}
       >
         <span className={actionLabelClass}>
-          <span className="sm:hidden">Contracts</span>
-          <span className="hidden sm:inline">Contracts List</span>
+          <span className="sm:hidden">Find</span>
+          <span className="hidden sm:inline">Find a Contract</span>
         </span>
       </button>
       <button
@@ -137,11 +234,7 @@ export function SessionSourceStat({
           interactiveCellClass,
           "min-w-0 flex-1 items-center justify-center gap-1.5 px-3 py-2 sm:flex-none sm:px-3",
         ].join(" ")}
-        title={
-          pending > 0
-            ? `${pending} pending Source shot${pending === 1 ? "" : "s"} for AI`
-            : "Contract screenshots (Source)"
-        }
+        title={sourceTitle}
       >
         <span className={actionLabelClass}>Source</span>
         {pending > 0 ? (
@@ -161,6 +254,8 @@ export type SessionRouteProgressStatsProps = {
   missionCount: number;
   /** SCU currently aboard (completed stops). */
   onboardScu: number;
+  /** Highest SCU aboard if the full route is flown as planned. */
+  peakScu: number;
   /** Ship cargo bay capacity in SCU. */
   totalCapacity: number;
   isOverCapacity?: boolean;
@@ -171,12 +266,12 @@ export type SessionRouteProgressStatsProps = {
   auecEarned?: number;
   /** Sum of aUEC across visible (non-hidden) session contracts. */
   auecProjected?: number;
-  /** Distance already flown (completed legs). */
+  /** @deprecated Distance lives in the Stops rail. */
   distanceTraveled?: DistanceToNext | null;
-  /** Full route distance. */
+  /** @deprecated Distance lives in the Stops rail. */
   distanceTotal?: DistanceToNext | null;
   onMissionsClick?: () => void;
-  /** Opens the route stops timeline modal. */
+  /** @deprecated Stops open from the Stops rail / mobile Stops section. */
   onStopsClick?: () => void;
   /** Opens the storage bays (cargo) modal. */
   onCapacityClick?: () => void;
@@ -217,85 +312,61 @@ function formatToolbarAuec(amount: number): string {
 }
 
 /**
- * Distance + aUEC for the ⋯ menu on small phones (hidden from the strip below `sm`).
+ * aUEC for the ⋯ menu on small phones (hidden from the strip below `sm`).
+ * Distance lives in the Stops rail.
  */
 export function RouteTripOverflowStats({
   auecEarned = 0,
   auecProjected = 0,
-  distanceTraveled = null,
-  distanceTotal = null,
-}: Pick<
-  SessionRouteProgressStatsProps,
-  "auecEarned" | "auecProjected" | "distanceTraveled" | "distanceTotal"
->) {
+}: Pick<SessionRouteProgressStatsProps, "auecEarned" | "auecProjected">) {
   const showAuec = auecProjected > 0 || auecEarned > 0;
-  const showDistance = Boolean(distanceTotal || distanceTraveled);
-  if (!showDistance && !showAuec) return null;
-
-  const traveledCompact = formatDistanceToNext(distanceTraveled, {
-    compact: true,
-  });
-  const totalDistanceCompact = formatDistanceToNext(distanceTotal, {
-    compact: true,
-  });
-  const traveledLabel = formatDistanceToNext(distanceTraveled);
-  const totalDistanceLabel = formatDistanceToNext(distanceTotal);
+  if (!showAuec) return null;
 
   return (
     <div className="flex flex-col gap-1.5 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text">
-      {showDistance ? (
-        <div
-          title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
+      <div
+        title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+      >
+        <span
+          className="text-[0.45rem] tracking-[0.14em] text-rsi-text-muted"
+          title={AUEC_TITLE}
         >
-          <span className="text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            Dist{" "}
-          </span>
-          <Fraction current={traveledCompact} total={totalDistanceCompact} />
-        </div>
-      ) : null}
-      {showAuec ? (
-        <div
-          title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
-        >
-          <span
-            className="text-[0.45rem] tracking-[0.14em] text-rsi-text-muted"
-            title={AUEC_TITLE}
-          >
-            aUEC{" "}
-          </span>
-          <Fraction
-            current={formatToolbarAuec(auecEarned)}
-            total={formatToolbarAuec(auecProjected)}
-            currentClassName={
-              auecEarned > 0 && auecEarned >= auecProjected
-                ? "text-rsi-success"
-                : undefined
-            }
-          />
-        </div>
-      ) : null}
+          aUEC{" "}
+        </span>
+        <Fraction
+          current={formatToolbarAuec(auecEarned)}
+          total={formatToolbarAuec(auecProjected)}
+          currentClassName={
+            auecEarned > 0 && auecEarned >= auecProjected
+              ? "text-rsi-success"
+              : undefined
+          }
+        />
+      </div>
     </div>
   );
 }
 
 /**
- * Contracts / Stops / Bay strip, then Distance / aUEC / Time.
- * Below `sm`, Distance + aUEC move to the ⋯ menu; Time stays in the strip.
+ * Cargo strip left (Cargo | Aboard | Peak | Capacity); Stats strip right (Stats | Contracts | aUEC | Time).
+ * Below `sm`, aUEC moves to the ⋯ menu; Time stays in the strip.
+ * Distance lives in the Stops rail; Stops open from that rail / mobile section.
  */
 export function SessionRouteProgressStats({
-  completedLegs,
-  totalLegs,
+  completedLegs: _completedLegs,
+  totalLegs: _totalLegs,
   missionsCompleted,
   missionCount,
   onboardScu,
+  peakScu,
   totalCapacity,
   isOverCapacity = false,
   auecEarned = 0,
   auecProjected = 0,
-  distanceTraveled = null,
-  distanceTotal = null,
+  distanceTraveled: _distanceTraveled = null,
+  distanceTotal: _distanceTotal = null,
   onMissionsClick,
-  onStopsClick,
+  onStopsClick: _onStopsClick,
   onCapacityClick,
   cargoBayCount: _cargoBayCount = 1,
   elapsed = null,
@@ -305,38 +376,39 @@ export function SessionRouteProgressStats({
 }: SessionRouteProgressStatsProps) {
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const showAuec = auecProjected > 0 || auecEarned > 0;
-  const traveledLabel = formatDistanceToNext(distanceTraveled);
-  const totalDistanceLabel = formatDistanceToNext(distanceTotal);
-  const traveledCompact = formatDistanceToNext(distanceTraveled, {
-    compact: true,
-  });
-  const totalDistanceCompact = formatDistanceToNext(distanceTotal, {
-    compact: true,
-  });
-  const showDistance = Boolean(distanceTotal || distanceTraveled);
-  const stopsBody = (
+  const isPeakOverCapacity =
+    totalCapacity > 0 && peakScu > totalCapacity;
+  const bayAria = `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`;
+  const scuUnit = (
+    <span
+      className="ml-1 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
+      title={SCU_TITLE}
+    >
+      SCU
+    </span>
+  );
+  const aboardBody = (
     <>
-      <StatLabel>Stop</StatLabel>
-      <StatValue>
-        <Fraction current={completedLegs} total={totalLegs} />
+      <StatLabel title="SCU currently aboard">Aboard</StatLabel>
+      <StatValue className={isOverCapacity ? "text-rsi-warn" : undefined}>
+        {onboardScu}
+      </StatValue>
+    </>
+  );
+  const peakBody = (
+    <>
+      <StatLabel title="Highest SCU aboard during this trip">Peak</StatLabel>
+      <StatValue className={isPeakOverCapacity ? "text-rsi-warn" : undefined}>
+        {peakScu}
       </StatValue>
     </>
   );
   const capacityBody = (
     <>
-      <StatLabel title="Bay">Bay</StatLabel>
+      <StatLabel title="Ship cargo capacity">Capacity</StatLabel>
       <StatValue>
-        <Fraction
-          current={onboardScu}
-          total={capacityLabel}
-          currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
-        />
-        <span
-          className="ml-1 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
-          title={SCU_TITLE}
-        >
-          SCU
-        </span>
+        {capacityLabel}
+        {scuUnit}
       </StatValue>
     </>
   );
@@ -354,28 +426,12 @@ export function SessionRouteProgressStats({
               ? "text-rsi-success"
               : undefined
           }
+          /* Match Contracts total count (secondary). */
+          totalClassName="text-rsi-text-secondary"
         />
       </StatValue>
     </>
   );
-  const distanceBody = (
-    <>
-      <StatLabel title="Distance">
-        <span className="sm:hidden">Dist</span>
-        <span className="hidden sm:inline">Distance</span>
-      </StatLabel>
-      <StatValue>
-        <span className="md:hidden">
-          <Fraction current={traveledCompact} total={totalDistanceCompact} />
-        </span>
-        <span className="hidden md:inline">
-          <Fraction current={traveledLabel} total={totalDistanceLabel} />
-        </span>
-      </StatValue>
-    </>
-  );
-
-  const showTripGroup = showDistance || showAuec || Boolean(elapsed);
 
   return (
     <div
@@ -386,93 +442,110 @@ export function SessionRouteProgressStats({
       <div
         className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
-        aria-label="Contracts stops and bay"
+        aria-label={bayAria}
       >
-        <button
-          type="button"
-          onClick={onMissionsClick}
-          className={interactiveCellClass}
-        >
-          <StatLabel>Contract</StatLabel>
-          <StatValue>
-            <Fraction current={missionsCompleted} total={missionCount} />
-          </StatValue>
-        </button>
-        {onStopsClick ? (
-          <button
-            type="button"
-            onClick={onStopsClick}
-            className={interactiveCellClass}
-          >
-            {stopsBody}
-          </button>
-        ) : (
-          <div className={cellClass}>{stopsBody}</div>
-        )}
         {onCapacityClick ? (
           <button
             type="button"
             onClick={onCapacityClick}
-            className={interactiveCellClass}
+            className={[
+              interactiveCellClass,
+              "flex-row items-stretch gap-0 !p-0",
+            ].join(" ")}
             title="Open bays"
-            aria-label="Open bays"
+            aria-label={bayAria}
           >
-            {capacityBody}
+            <StripSpine label="Cargo" />
+            <span className={`${cellClass} border-0`}>{aboardBody}</span>
+            <span
+              className={`${cellClass} border-0 border-l border-rsi-border`}
+            >
+              {peakBody}
+            </span>
+            <span
+              className={`${cellClass} border-0 border-l border-rsi-border`}
+            >
+              {capacityBody}
+            </span>
           </button>
         ) : (
-          <div className={cellClass}>{capacityBody}</div>
+          <>
+            <StripSpine label="Cargo" />
+            <div className={cellClass}>{aboardBody}</div>
+            <div className={cellClass}>{peakBody}</div>
+            <div className={cellClass}>{capacityBody}</div>
+          </>
         )}
       </div>
-      {showTripGroup || isSaving ? (
-        <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
-          {isSaving ? (
-            <span
-              className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
-              role="status"
-              aria-live="polite"
+      <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
+        {isSaving ? (
+          <span
+            className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
+            role="status"
+            aria-live="polite"
+          >
+            <Spinner className="size-3 sm:size-3.5" label="Saving trip" />
+            <span className="hidden sm:inline">Saving…</span>
+          </span>
+        ) : null}
+        <div
+          className={[stripClass, "!w-fit max-w-full"].join(" ")}
+          role="group"
+          aria-label="Stats — contracts, payout and time"
+        >
+          <StripSpine label="Stats" />
+          <div className="group/contracts-auec flex min-w-0 items-stretch divide-x divide-rsi-border">
+            <button
+              type="button"
+              onClick={onMissionsClick}
+              className={[
+                cellClass,
+                "bg-rsi-surface/80 transition-colors group-hover/contracts-auec:bg-rsi-surface-raised",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+              ].join(" ")}
+              title={`${missionsCompleted} of ${missionCount} contracts completed`}
+              aria-label={`${missionsCompleted} of ${missionCount} contracts completed`}
             >
-              <Spinner className="size-3 sm:size-3.5" label="Saving trip" />
-              <span className="hidden sm:inline">Saving…</span>
-            </span>
-          ) : null}
-          {showTripGroup ? (
+              <StatLabel>Contracts</StatLabel>
+              <StatValue>
+                {missionsCompleted}
+                <span className="mx-0.5 text-rsi-text-muted" aria-hidden>
+                  /
+                </span>
+                <span className="text-rsi-text-secondary">{missionCount}</span>
+                <span className="ml-1.5 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]">
+                  completed
+                </span>
+              </StatValue>
+            </button>
+            {showAuec ? (
+              <button
+                type="button"
+                onClick={onMissionsClick}
+                className={[
+                  cellClass,
+                  "hidden shrink-0 bg-rsi-surface/80 transition-colors group-hover/contracts-auec:bg-rsi-surface-raised sm:flex",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+                ].join(" ")}
+                title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
+                aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)} — open contracts`}
+              >
+                {auecBody}
+              </button>
+            ) : null}
+          </div>
+          {elapsed ? (
             <div
-              className={[stripClass, "!w-fit max-w-full"].join(" ")}
-              role="group"
-              aria-label="Distance payout and time"
+              className={[cellClass, "shrink-0"].join(" ")}
+              title="Total time"
+              aria-label="Trip time"
             >
-              {showDistance ? (
-                <div
-                  className={[cellClass, "hidden sm:flex"].join(" ")}
-                  title={`Traveled ${traveledLabel}; trip total ${totalDistanceLabel}`}
-                  aria-label={`Trip distance ${traveledLabel} of ${totalDistanceLabel}`}
-                >
-                  {distanceBody}
-                </div>
-              ) : null}
-              {showAuec ? (
-                <div
-                  className={[cellClass, "hidden shrink-0 sm:flex"].join(" ")}
-                  title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
-                  aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`}
-                >
-                  {auecBody}
-                </div>
-              ) : null}
-              {elapsed ? (
-                <div
-                  className={[cellClass, "shrink-0"].join(" ")}
-                  title="Total time"
-                  aria-label="Trip time"
-                >
-                  <StatLabel>Time</StatLabel>
-                  <StatValue>{elapsed}</StatValue>
-                </div>
-              ) : null}
+              <StatLabel>Time</StatLabel>
+              <StatValue>{elapsed}</StatValue>
             </div>
           ) : null}
         </div>
-      ) : null}
+      </div>
       {trailing}
     </div>
   );

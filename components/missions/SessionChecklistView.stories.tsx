@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip shell for the route checklist and cargo bay. Inventory strip uses cargoInventory (fromCompleted / peakOnboard / missionBreakdown). Finish report opens on the incomplete→complete edge (not for already-done trips on load); concurrent Done saves keep the newest body.",
+          "Trip shell for the route checklist and cargo bay. Until name, start, and ship are set, trip setup stays inline. After that, a Setup button (left of Find a Contract) opens the same chrome as a modal. Desktop: Progress rail on the left; mobile Progress stays inline. Finish report opens on the incomplete→complete edge.",
       },
     },
   },

@@ -24,6 +24,30 @@ function totalScu(items: CargoPlacementItem[]): number {
 }
 
 /**
+ * Round-robin merge of pre-sorted groups.
+ * Cargo-type packing used to dump the largest group first — on overfull
+ * trips that monopolized the bay (e.g. all Processed Food / red) and starved
+ * every other commodity. Interleaving keeps cluster affinity via findSlot
+ * while giving each type a chance at cells.
+ */
+export function interleaveItemGroups(
+  groups: CargoPlacementItem[][],
+): CargoPlacementItem[] {
+  const queues = groups.map((group) => [...group]);
+  const out: CargoPlacementItem[] = [];
+  let remaining = queues.reduce((sum, queue) => sum + queue.length, 0);
+  while (remaining > 0) {
+    for (const queue of queues) {
+      const next = queue.shift();
+      if (!next) continue;
+      out.push(next);
+      remaining -= 1;
+    }
+  }
+  return out;
+}
+
+/**
  * Reorder placement items according to group/order pack primitives.
  * Stack/require/bias-xy do not affect this phase.
  */
@@ -86,7 +110,7 @@ export function orderPackItemsByProgram(
     (call) => call.call === "order" && call.target === "boxes-within-group",
   );
 
-  const out: CargoPlacementItem[] = [];
+  const sortedGroups: CargoPlacementItem[][] = [];
   for (const key of keyOrder) {
     const group = [...byKey.get(key)!];
     group.sort((a, b) => {
@@ -118,7 +142,13 @@ export function orderPackItemsByProgram(
       }
       return 0;
     });
-    out.push(...group);
+    sortedGroups.push(group);
   }
-  return out;
+
+  // Cargo-type: interleave so one huge commodity cannot fill an overfull bay alone.
+  // Delivery-location groups stay contiguous (contract piles).
+  if (groupBy === "cargo-type" && sortedGroups.length > 1) {
+    return interleaveItemGroups(sortedGroups);
+  }
+  return sortedGroups.flat();
 }

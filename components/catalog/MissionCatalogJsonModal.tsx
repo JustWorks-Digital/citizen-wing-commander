@@ -51,7 +51,7 @@ export function MissionCatalogJsonModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-rsi-bg-deep/80 px-3 pt-14 pb-3 backdrop-blur-sm sm:items-center sm:px-4 sm:pt-14 sm:pb-4"
       role="dialog"
       aria-modal="true"
       aria-label="Contract JSON"
@@ -59,9 +59,10 @@ export function MissionCatalogJsonModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:h-auto sm:max-h-[90vh] sm:rounded-rsi sm:border">
-        <header className="relative border-b border-rsi-divider px-4 py-3 pr-12 sm:px-5 sm:py-4 sm:pr-14">
-          <ModalCloseButton onClick={onClose} />
+      <div className="relative flex h-[calc(100dvh-4.25rem)] w-full max-w-3xl sm:h-auto sm:max-h-[90vh]">
+        <ModalCloseButton onClick={onClose} />
+        <div className="flex h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
+        <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
             Catalog · JSON
           </p>
@@ -104,6 +105,7 @@ export function MissionCatalogJsonModal({
           >
             <CollapsibleJsonTree value={asJsonValue(mission)} />
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -164,6 +164,17 @@ export function scuByCommodity(
   return by;
 }
 
+/** Placed + unplaced SCU by commodity — packing demand, not bay fit. */
+export function scuDemandByCommodity(
+  plan: CargoGridPlacementPlan,
+): Record<string, number> {
+  const by = scuByCommodity(plan);
+  for (const entry of plan.unplaced) {
+    by[entry.commoditySlug] = (by[entry.commoditySlug] ?? 0) + entry.size;
+  }
+  return by;
+}
+
 /** Real cargo-grid fixtures under `lib/fixtures/cargoGrids.json` — pack tests must use these. */
 export const TEST_SHIP_SLUGS = [
   "c2-hercules-starlifter",

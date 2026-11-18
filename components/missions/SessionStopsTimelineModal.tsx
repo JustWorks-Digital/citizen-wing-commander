@@ -84,7 +84,7 @@ function StopReorderHandle({
 }
 
 /**
- * Sticky-header Stops modal: compact route timeline with leg distances and
+ * Stops modal (from Stops rail / mobile Stops section): compact route timeline with leg distances and
  * traveled / remaining / total. Density scales with stop count so typical
  * routes fit without scrolling. Before the trip starts, stops can be
  * drag-reordered (Save / Cancel).
@@ -185,7 +185,7 @@ export function SessionStopsTimelineModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/85 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-rsi-bg-deep/85 px-4 pt-14 pb-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -193,13 +193,11 @@ export function SessionStopsTimelineModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex max-h-[min(42rem,92vh)] w-full max-w-lg flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
-        <div className="relative flex shrink-0 items-center gap-3 border-b border-rsi-border px-4 py-2.5 pr-12 sm:px-5 sm:pr-14">
-          <ModalCloseButton label="Dismiss" onClick={onClose} />
+      <div className="relative w-full max-w-lg">
+        <ModalCloseButton label="Dismiss" onClick={onClose} />
+        <div className="flex max-h-[min(42rem,92vh)] w-full flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
+        <div className="flex shrink-0 items-center gap-3 border-b border-rsi-border px-4 py-2.5 sm:px-5">
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[0.55rem] uppercase tracking-[0.2em] text-rsi-accent">
-              Trip
-            </p>
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id={titleId}
@@ -268,10 +266,10 @@ export function SessionStopsTimelineModal({
                     : [`#${node.stopNumber}`, role].filter(Boolean).join(" · ");
                 const imageSrc = getLocationImageSrc(node.locationSlug);
                 const thumbClass = isDense
-                  ? "h-8 w-12"
+                  ? "size-8"
                   : isCompact
-                    ? "h-9 w-14"
-                    : "h-11 w-16";
+                    ? "size-9"
+                    : "size-11";
                 const isStop = node.kind === "stop";
                 const isDragging = isStop && draggingStopId === node.id;
                 const isDragOver =
@@ -334,7 +332,7 @@ export function SessionStopsTimelineModal({
                     ) : null}
                     <div
                       className={[
-                        "relative shrink-0 overflow-hidden rounded-md border border-rsi-border/80 bg-rsi-bg-deep/60",
+                        "relative shrink-0 overflow-hidden rounded-full border border-rsi-border/80 bg-rsi-bg-deep/60",
                         thumbClass,
                         node.isCompleted ? "opacity-70" : "",
                         node.isNext
@@ -465,6 +463,7 @@ export function SessionStopsTimelineModal({
             </p>
           </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
