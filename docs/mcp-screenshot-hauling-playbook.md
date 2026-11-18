@@ -81,13 +81,15 @@ Catalog missions (`create_mission`) should pass **`scuSplits[]`** for each Prima
 
 **Certainty (pass when you know how sure you are):**
 
+Same fields on **`create_mission`** and each **`apply_hauling_contracts_intake`** `contracts[]` entry (session yellow under-stack dots use crate-mix certainty).
+
 | Field | Scope | Values | When |
 | --- | --- | --- | --- |
 | `scuTotalCertainty` | Mission SCU totals | `known` \| `estimated` \| `unknown` | Totals clearly readable → `known`; inferred → `estimated` |
-| `scuBoxSplitsCertainty` | Mission crate-mix **rollup** | same | Fallback / summary only |
+| `scuBoxSplitsCertainty` | Mission crate-mix **rollup** | same | Fallback / summary only; derived from the per-commodity map when omitted on apply |
 | `scuCargoBoxSplitsCertainty` | **Per commodity** (`{ slug: certainty }`) | same | Prefer this: AI greedy per line → `estimated`; sizes readable in shot → `known` |
 
-Example on `create_mission`:
+Example on `create_mission` or an intake contract:
 
 ```json
 {

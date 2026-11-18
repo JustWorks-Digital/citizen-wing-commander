@@ -5,6 +5,7 @@
  */
 
 import type { CatalogMissionReward } from "@/lib/missions/catalogMission";
+import type { ScuCertainty } from "@/lib/missions/scuCertainty";
 
 export type HaulingIntakeCargoLine = {
   /** Fixture name, code, or slug (e.g. "Iron (Ore)", "STIM", "waste"). */
@@ -63,6 +64,21 @@ export type HaulingIntakeContract = {
    * Allowed sizes: 1 / 2 / 4 / 8 / 16 / 32.
    */
   scuMaxContainerSize?: number;
+  /**
+   * Certainty that cargo SCU totals match the real contract
+   * (`known` | `estimated` | `unknown`). Same vocabulary as `create_mission`.
+   */
+  scuTotalCertainty?: ScuCertainty | null;
+  /**
+   * Mission rollup crate-mix certainty. Prefer `scuCargoBoxSplitsCertainty`
+   * for per-commodity AI vs known mixes; rollup is derived when omitted.
+   */
+  scuBoxSplitsCertainty?: ScuCertainty | null;
+  /**
+   * Per-commodity crate-mix certainty (commodity name/slug → certainty).
+   * Keys resolve to fixture slugs on apply.
+   */
+  scuCargoBoxSplitsCertainty?: Record<string, ScuCertainty | null>;
   /**
    * Optional per-site cargo split when totals are shared across pickups
    * (e.g. Lathan + Bezdek). Keys are location names/slugs.

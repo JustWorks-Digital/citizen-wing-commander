@@ -9,7 +9,10 @@ import {
 import { makeStop, cargo } from "../cargo/fixtures";
 import { applySessionCompletionTiming, type SessionChecklist } from "@/lib/missions/sessionChecklist";
 
-import type { SessionMission } from "@/lib/missions/sessionMissions";
+import {
+  sessionMissionFromIntakeContract,
+  type SessionMission,
+} from "@/lib/missions/sessionMissions";
 import { setMissionScuBoxSplits } from "@/lib/missions/rebuildSessionRoute";
 
 function sessionWithMission(): SessionChecklist {
@@ -193,5 +196,38 @@ describe("scuCertainty", () => {
       next.session.missions?.find((entry) => entry.id === "ice")
         ?.scuBoxSplitsCertainty,
     ).toBe("known");
+  });
+});
+
+describe("intake contract certainty", () => {
+  it("maps apply intake certainty onto the session mission", () => {
+    const mission = sessionMissionFromIntakeContract(
+      {
+        id: "stims-9",
+        title: "Small Cargo Haul",
+        from: ["Covalex Distribution Centre S4DC05"],
+        to: ["Shubin Mining Facility SM0-10"],
+        cargo: [
+          { commodity: "Stims", scu: 9 },
+          { commodity: "Waste", scu: 5 },
+        ],
+        scuMaxContainerSize: 4,
+        scuTotalCertainty: "known",
+        scuCargoBoxSplitsCertainty: {
+          Stims: "estimated",
+          waste: "unknown",
+        },
+      },
+      0,
+    );
+
+    expect(mission.scuTotalCertainty).toBe("known");
+    expect(mission.scuCargoBoxSplitsCertainty).toEqual({
+      stims: "estimated",
+      waste: "unknown",
+    });
+    // Rollup from per-commodity map when mission rollup omitted.
+    expect(mission.scuBoxSplitsCertainty).toBe("estimated");
+    expect(isScuBoxSplitsUncertain(mission.scuBoxSplitsCertainty)).toBe(true);
   });
 });

@@ -9,7 +9,11 @@ import {
   type ScuSplit,
 } from "@/lib/missions/catalogMission";
 import type { ScuCargoBoxSplits } from "@/lib/missions/cargoBoxSplits";
-import type { ScuCertainty } from "@/lib/missions/scuCertainty";
+import {
+  normalizeScuCertainty,
+  rollupScuBoxSplitsCertainty,
+  type ScuCertainty,
+} from "@/lib/missions/scuCertainty";
 import type {
   HaulingIntakeCargoLine,
   HaulingIntakeContract,
@@ -22,6 +26,26 @@ import {
   type MissionRank,
 } from "@/lib/missions/missionRank";
 import { normalizeSessionMissionScuSplits } from "@/lib/missions/missionScuSplits";
+import { resolveCommoditySlug } from "@/lib/sessions/resolveRefs";
+
+function commoditySlugFromIntake(nameOrSlug: string): string {
+  return (
+    resolveCommoditySlug(nameOrSlug) ?? nameOrSlug.trim().toLowerCase()
+  );
+}
+
+/** Normalize intake certainty map keys to commodity slugs. */
+function normalizeIntakeCargoCertaintyMap(
+  map: Record<string, ScuCertainty | null> | null | undefined,
+): Record<string, ScuCertainty | null> | undefined {
+  if (map == null) return undefined;
+  return Object.fromEntries(
+    Object.entries(map).map(([key, value]) => [
+      commoditySlugFromIntake(key),
+      normalizeScuCertainty(value),
+    ]),
+  );
+}
 
 /** Mission card stored on the active checklist session for UI / MCP. */
 export type SessionMission = {
@@ -227,6 +251,22 @@ export function sessionMissionFromIntakeContract(
   const title = stripped.title || contract.title;
   const rewards = normalizeCatalogRewards(contract.rewards);
   const rewardAuec = auecFromRewards(rewards);
+  const cargoSlugs = contract.cargo.map((line) =>
+    commoditySlugFromIntake(line.commodity),
+  );
+  const scuCargoBoxSplitsCertainty = normalizeIntakeCargoCertaintyMap(
+    contract.scuCargoBoxSplitsCertainty,
+  );
+  const scuBoxSplitsCertainty =
+    contract.scuBoxSplitsCertainty !== undefined
+      ? normalizeScuCertainty(contract.scuBoxSplitsCertainty)
+      : scuCargoBoxSplitsCertainty
+        ? rollupScuBoxSplitsCertainty(scuCargoBoxSplitsCertainty, cargoSlugs)
+        : undefined;
+  const scuTotalCertainty =
+    contract.scuTotalCertainty !== undefined
+      ? normalizeScuCertainty(contract.scuTotalCertainty)
+      : undefined;
   const base: SessionMission = {
     id,
     title,
@@ -248,6 +288,11 @@ export function sessionMissionFromIntakeContract(
         )
       : undefined,
     scuMaxContainerSize: contract.scuMaxContainerSize,
+    ...(scuTotalCertainty !== undefined ? { scuTotalCertainty } : {}),
+    ...(scuBoxSplitsCertainty !== undefined ? { scuBoxSplitsCertainty } : {}),
+    ...(scuCargoBoxSplitsCertainty !== undefined
+      ? { scuCargoBoxSplitsCertainty }
+      : {}),
     cargoSummary: cargoSummary(contract),
     isCompleted: false,
     isHidden: false,
@@ -291,6 +336,11 @@ export function intakeContractFromSessionMission(
         )
       : undefined,
     scuMaxContainerSize: normalized.scuMaxContainerSize,
+    scuTotalCertainty: normalized.scuTotalCertainty ?? undefined,
+    scuBoxSplitsCertainty: normalized.scuBoxSplitsCertainty ?? undefined,
+    scuCargoBoxSplitsCertainty: normalized.scuCargoBoxSplitsCertainty
+      ? { ...normalized.scuCargoBoxSplitsCertainty }
+      : undefined,
     screenshots: [...normalized.screenshots],
     transcript: normalized.transcript,
   };
