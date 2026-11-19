@@ -126,15 +126,20 @@ export function ChecklistProgressTimeline({
                     alt=""
                     className={[
                       "size-full object-cover",
-                      stop.isCompleted ? "opacity-70" : "",
+                      stop.isCompleted ? "opacity-45" : "",
                     ].join(" ")}
                     loading="lazy"
                     decoding="async"
                   />
                 ) : null}
                 {stop.isCompleted ? (
-                  <span className="absolute inset-0 flex items-center justify-center bg-rsi-success/35 font-mono text-[0.75rem] text-rsi-success">
-                    ✓
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 flex items-center justify-center bg-rsi-success/55"
+                  >
+                    <span className="flex size-5 items-center justify-center rounded-full bg-rsi-success font-mono text-[0.85rem] font-bold leading-none text-rsi-bg-deep shadow-[0_1px_2px_rgba(0,0,0,0.45)] sm:size-6 sm:text-[0.95rem]">
+                      ✓
+                    </span>
                   </span>
                 ) : null}
               </span>

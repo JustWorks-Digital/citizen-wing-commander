@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { describeCargoDeliveries, getCommodityIconSrc } from "@/lib/fixtures";
 import {
   commodityBadgeBackground,
@@ -28,17 +34,15 @@ import { DeliveryTransferBlock, PickupTransferBlock } from "./TransferBlocks";
 
 export type CargoLine = ReturnType<typeof describeCargoDeliveries>[number];
 
-function groupCargoLines(
-  lines: CargoLine[],
-  pickupFirst: boolean,
-): {
+function groupCargoLines(lines: CargoLine[]): {
   role: "pickup" | "delivery" | null;
   items: CargoLine[];
 }[] {
-  /** Default: Drop off before Pick up. Prefer pickup (or after drop-off done) flips it. */
-  const order: ("pickup" | "delivery" | null)[] = pickupFirst
-    ? ["pickup", "delivery", null]
-    : ["delivery", "pickup", null];
+  const order: ("pickup" | "delivery" | null)[] = [
+    "delivery",
+    "pickup",
+    null,
+  ];
   const groups: { role: "pickup" | "delivery" | null; items: CargoLine[] }[] =
     [];
   for (const role of order) {
@@ -57,12 +61,11 @@ function groupCargoLines(
   return groups;
 }
 
-export function CargoTileHandledMark({
-  isPickup,
-}: {
-  isPickup: boolean;
-}) {
-  const stroke = isPickup ? "var(--rsi-accent)" : "var(--rsi-gold)";
+function cargoRoleTabLabel(role: "pickup" | "delivery"): string {
+  return role === "pickup" ? "Pick up" : "Drop off";
+}
+
+export function CargoTileHandledMark() {
   return (
     <span
       aria-hidden
@@ -73,15 +76,15 @@ export function CargoTileHandledMark({
           cx="10"
           cy="10"
           r="8.25"
-          fill="var(--rsi-bg-deep)"
-          stroke={stroke}
-          strokeWidth="1.5"
+          fill="var(--rsi-success)"
+          stroke="rgba(0,0,0,0.35)"
+          strokeWidth="1"
         />
         <path
           d="M6.2 10.1 L8.7 12.5 L13.8 7.4"
           fill="none"
-          stroke={stroke}
-          strokeWidth="1.75"
+          stroke="var(--rsi-bg-deep)"
+          strokeWidth="1.85"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -440,7 +443,7 @@ export function CargoCommodityTile({
               <Spinner className="size-3.5 text-rsi-accent" />
             </span>
           ) : cleared ? (
-            <CargoTileHandledMark isPickup={isPickup} />
+            <CargoTileHandledMark />
           ) : null}
         </button>
       )}
@@ -710,7 +713,7 @@ function MissionStopCargoCard({
   return (
     <div
       className={[
-        "flex h-full min-w-0 flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
+        "flex min-w-0 flex-col self-start overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90",
         mission.isCompleted || row.isCompleted ? "opacity-70" : "",
       ].join(" ")}
     >
@@ -835,7 +838,6 @@ export function CargoGroups({
   onSetPickupScu,
   pendingSetPickupScuKeys,
   prioritizePickup = false,
-  promoteUnfinished = true,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -878,27 +880,16 @@ export function CargoGroups({
   ) => void;
   pendingSetPickupScuKeys?: ReadonlySet<string>;
   /**
-   * When true (and both roles still open), Pick up renders above Drop off.
+   * When true, Pick up is the left tab (and preferred when both are open).
+   * Default: Drop off left, Pick up right.
    */
   prioritizePickup?: boolean;
-  /**
-   * When true, after one role is marked done the unfinished section moves to
-   * the top. Turn off to keep Prioritize pickup order fixed.
-   */
-  promoteUnfinished?: boolean;
 }) {
   const deliveryHandled =
     stopCargoRole.isHandled(row, "delivery") || row.isCompleted;
   const pickupHandled =
     stopCargoRole.isHandled(row, "pickup") || row.isCompleted;
-  // Optionally keep the unfinished role on top so the next action is visible.
-  const pickupFirst =
-    promoteUnfinished && deliveryHandled && !pickupHandled
-      ? true
-      : promoteUnfinished && pickupHandled && !deliveryHandled
-        ? false
-        : prioritizePickup;
-  const groups = groupCargoLines(cargoLines, pickupFirst);
+  const groups = groupCargoLines(cargoLines);
   const missionById = new Map(missions.map((mission) => [mission.id, mission]));
   const pickupTransfer =
     transferLedger != null && transferLedger.pickup !== false
@@ -910,258 +901,440 @@ export function CargoGroups({
       : false;
   const hasPickupGroup = groups.some((group) => group.role === "pickup");
   const hasDeliveryGroup = groups.some((group) => group.role === "delivery");
+  const hasPickupSection = hasPickupGroup || Boolean(pickupTransfer);
+  const hasDeliverySection = hasDeliveryGroup || Boolean(deliveryTransfer);
+  const showRoleTabs = hasPickupSection && hasDeliverySection;
+  /** Preferred first tab when both roles are still open. */
+  const preferredRole: "pickup" | "delivery" = prioritizePickup
+    ? "pickup"
+    : "delivery";
 
-  return (
-    <div className="flex flex-col gap-5 text-sm md:gap-2">
-      {groups.map((group, groupIndex) => {
-        const roleClass =
-          group.role === "pickup"
-            ? "text-rsi-accent"
-            : group.role === "delivery"
-              ? "text-rsi-gold"
-              : "text-rsi-text-muted";
-        const prevRole = groups[groupIndex - 1]?.role;
-        const showRoleDivider =
-          groupIndex > 0 &&
-          prevRole != null &&
-          group.role != null &&
-          prevRole !== group.role;
+  const roleDefault = (): "pickup" | "delivery" => {
+    if (showRoleTabs) {
+      if (deliveryHandled && !pickupHandled) return "pickup";
+      if (pickupHandled && !deliveryHandled) return "delivery";
+      return preferredRole;
+    }
+    if (hasPickupSection && !hasDeliverySection) return "pickup";
+    return "delivery";
+  };
 
-        if (group.items.length === 1 && group.items[0]?.scu == null) {
-          return (
-            <span
-              key={`${row.id}-cargo-empty`}
-              className={[
-                "text-rsi-text-secondary",
-                row.isCompleted ? "opacity-70" : "",
-              ].join(" ")}
-            >
-              —
-            </span>
-          );
-        }
+  const [activeRole, setActiveRole] = useState<"pickup" | "delivery">(roleDefault);
 
-        const missionBuckets = partitionCargoByMission(
-          group.items,
-          row,
-          missions,
-          group.role,
-        );
-        const sectionTransfer =
-          group.role === "pickup" && pickupTransfer
-            ? (
-                <PickupTransferBlock
-                  location={location}
-                  locationSlug={row.locationSlug}
-                  shipName={shipName}
-                  shipSlug={shipSlug}
-                  transfer={pickupTransfer}
-                  isDone={pickupHandled}
-                />
-              )
-            : group.role === "delivery" && deliveryTransfer
-              ? (
-                  <DeliveryTransferBlock
-                    location={location}
-                    locationSlug={row.locationSlug}
-                    shipName={shipName}
-                    shipSlug={shipSlug}
-                    transfer={deliveryTransfer}
-                    isDone={deliveryHandled}
-                  />
-                )
-              : null;
+  useEffect(() => {
+    if (!showRoleTabs) {
+      setActiveRole(hasPickupSection ? "pickup" : "delivery");
+      return;
+    }
+    if (deliveryHandled && !pickupHandled) setActiveRole("pickup");
+    else if (pickupHandled && !deliveryHandled) setActiveRole("delivery");
+    else setActiveRole(preferredRole);
+  }, [
+    showRoleTabs,
+    hasPickupSection,
+    deliveryHandled,
+    pickupHandled,
+    preferredRole,
+  ]);
 
-        const sectionBody = (
-          <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-1">
-            {sectionTransfer}
-            <div className="grid grid-cols-1 gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2">
-              {missionBuckets.map((bucket) => {
-                // Skipped pick-ups stay at 0 SCU on the row — hide those tiles.
-                const activeItems = bucket.items.filter(
-                  (item) => (item.scu ?? 0) > 0,
-                );
-                const activeSlugs = new Set(
-                  activeItems
-                    .map((item) => item.commoditySlug)
-                    .filter((slug): slug is string => Boolean(slug)),
-                );
+  const cargoPanelsRef = useRef<HTMLDivElement | null>(null);
+  const [graphMinHeightPx, setGraphMinHeightPx] = useState<number | null>(null);
 
-                const mission =
-                  bucket.missionId != null
-                    ? (missionById.get(bucket.missionId) ?? null)
-                    : null;
-                const addOptions =
-                  group.role === "pickup" &&
-                  mission &&
-                  onAddPickup &&
-                  !mission.isCompleted &&
-                  !row.isCompleted
-                    ? addableMissionCargo(mission, activeSlugs)
-                    : [];
-                if (activeItems.length === 0 && addOptions.length === 0) {
-                  return null;
-                }
+  useLayoutEffect(() => {
+    if (!showRoleTabs) {
+      setGraphMinHeightPx(null);
+      return;
+    }
+    const root = cargoPanelsRef.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
 
-                const maxPickupScuBySlug =
-                  group.role === "pickup" && mission
-                    ? new Map(
-                        mission.cargo.map((cargoLine) => [
-                          commoditySlugOf(cargoLine.commodity),
-                          Math.max(0, Math.floor(Number(cargoLine.scu) || 0)),
-                        ]),
-                      )
-                    : null;
+    const measure = () => {
+      const isDesktop =
+        typeof window !== "undefined" &&
+        window.matchMedia("(min-width: 1024px)").matches;
+      if (!isDesktop) {
+        setGraphMinHeightPx(null);
+        return;
+      }
+      let max = 0;
+      for (const panel of root.querySelectorAll("[data-cargo-role-panel]")) {
+        const transfer = panel.querySelector("[data-cargo-transfer]");
+        const firstCard = panel.querySelector("[data-cargo-cards] > *");
+        const transferH =
+          transfer instanceof HTMLElement ? transfer.offsetHeight : 0;
+        const cardH =
+          firstCard instanceof HTMLElement ? firstCard.offsetHeight : 0;
+        const gap = transferH > 0 && cardH > 0 ? 8 : 0;
+        max = Math.max(max, transferH + gap + cardH);
+      }
+      setGraphMinHeightPx(max > 0 ? max : null);
+    };
 
-                const tiles =
-                  activeItems.length > 0 ? (
-                    <CargoCommodityTiles
-                      row={row}
-                      items={activeItems}
-                      role={group.role}
-                      pendingCargoKeys={pendingCargoKeys}
-                      onToggleCargoHandled={onToggleCargoHandled}
-                      missionId={bucket.missionId}
-                      onSkipPickup={
-                        group.role === "pickup" ? onSkipPickup : undefined
-                      }
-                      canSkipPickup={
-                        group.role === "pickup" ? canSkipPickup : undefined
-                      }
-                      pendingSkipPickupKeys={
-                        group.role === "pickup"
-                          ? pendingSkipPickupKeys
-                          : undefined
-                      }
-                      onSetPickupScu={
-                        group.role === "pickup" ? onSetPickupScu : undefined
-                      }
-                      pendingSetPickupScuKeys={
-                        group.role === "pickup"
-                          ? pendingSetPickupScuKeys
-                          : undefined
-                      }
-                      maxPickupScuBySlug={maxPickupScuBySlug}
-                    />
-                  ) : null;
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [showRoleTabs, activeRole, prioritizePickup, cargoLines, transferLedger]);
 
-                if (!mission) {
-                  return (
-                    <div
-                      key={`${row.id}-${group.role ?? "none"}-untagged`}
-                      className="min-w-0"
-                    >
-                      {tiles}
-                    </div>
-                  );
-                }
+  const renderRoleSection = (
+    role: "pickup" | "delivery" | null,
+    options?: { withAside?: boolean },
+  ) => {
+    const withAside = options?.withAside !== false;
+    const group =
+      groups.find((entry) => entry.role === role) ??
+      (role == null ? groups.find((entry) => entry.role == null) : undefined);
 
-                return (
-                  <MissionStopCargoCard
-                    key={`${row.id}-${group.role ?? "none"}-${mission.id}`}
-                    row={row}
-                    mission={mission}
-                    role={group.role}
-                    sessionId={sessionId}
-                    tiles={tiles}
-                    addOptions={addOptions}
-                    onAddPickup={onAddPickup}
-                    pendingAddPickupKeys={pendingAddPickupKeys}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        );
-
-        const sectionAside =
-          group.role === "pickup" || group.role === "delivery"
-            ? bayAside?.(group.role)
-            : null;
-
+    if (role == null) {
+      if (!group) return null;
+      if (group.items.length === 1 && group.items[0]?.scu == null) {
         return (
-          <div
-            key={`${row.id}-cargo-${group.role ?? "none"}`}
+          <span
             className={[
-              "flex flex-col gap-2",
-              showRoleDivider
-                ? "border-t border-rsi-divider pt-2 lg:pt-1.5"
-                : "",
+              "text-rsi-text-secondary",
+              row.isCompleted ? "opacity-70" : "",
             ].join(" ")}
           >
-            {group.role ? (
+            —
+          </span>
+        );
+      }
+      return null;
+    }
+
+    const roleHandled = role === "pickup" ? pickupHandled : deliveryHandled;
+    const hasGroup = role === "pickup" ? hasPickupGroup : hasDeliveryGroup;
+    const hasTransfer =
+      role === "pickup" ? Boolean(pickupTransfer) : Boolean(deliveryTransfer);
+
+    if (!hasGroup && !hasTransfer) return null;
+
+    if (group && group.items.length === 1 && group.items[0]?.scu == null) {
+      return (
+        <span
+          className={[
+            "text-rsi-text-secondary",
+            row.isCompleted ? "opacity-70" : "",
+          ].join(" ")}
+        >
+          —
+        </span>
+      );
+    }
+
+    const missionBuckets = group
+      ? partitionCargoByMission(group.items, row, missions, role)
+      : [];
+
+    const sectionTransfer =
+      role === "pickup" && pickupTransfer ? (
+        <PickupTransferBlock
+          location={location}
+          locationSlug={row.locationSlug}
+          shipName={shipName}
+          shipSlug={shipSlug}
+          transfer={pickupTransfer}
+          isDone={pickupHandled}
+        />
+      ) : role === "delivery" && deliveryTransfer ? (
+        <DeliveryTransferBlock
+          location={location}
+          locationSlug={row.locationSlug}
+          shipName={shipName}
+          shipSlug={shipSlug}
+          transfer={deliveryTransfer}
+          isDone={deliveryHandled}
+        />
+      ) : null;
+
+    const sectionBody = (
+      <div className="flex w-full min-w-0 flex-col gap-2 lg:flex-1">
+        {sectionTransfer ? (
+          <div data-cargo-transfer>{sectionTransfer}</div>
+        ) : null}
+        {missionBuckets.length > 0 ? (
+          <div
+            data-cargo-cards
+            className="grid grid-cols-1 items-start gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2"
+          >
+            {missionBuckets.map((bucket) => {
+              const activeItems = bucket.items.filter(
+                (item) => (item.scu ?? 0) > 0,
+              );
+              const activeSlugs = new Set(
+                activeItems
+                  .map((item) => item.commoditySlug)
+                  .filter((slug): slug is string => Boolean(slug)),
+              );
+
+              const mission =
+                bucket.missionId != null
+                  ? (missionById.get(bucket.missionId) ?? null)
+                  : null;
+              const addOptions =
+                role === "pickup" &&
+                mission &&
+                onAddPickup &&
+                !mission.isCompleted &&
+                !row.isCompleted
+                  ? addableMissionCargo(mission, activeSlugs)
+                  : [];
+              if (activeItems.length === 0 && addOptions.length === 0) {
+                return null;
+              }
+
+              const maxPickupScuBySlug =
+                role === "pickup" && mission
+                  ? new Map(
+                      mission.cargo.map((cargoLine) => [
+                        commoditySlugOf(cargoLine.commodity),
+                        Math.max(0, Math.floor(Number(cargoLine.scu) || 0)),
+                      ]),
+                    )
+                  : null;
+
+              const tiles =
+                activeItems.length > 0 ? (
+                  <CargoCommodityTiles
+                    row={row}
+                    items={activeItems}
+                    role={role}
+                    pendingCargoKeys={pendingCargoKeys}
+                    onToggleCargoHandled={onToggleCargoHandled}
+                    missionId={bucket.missionId}
+                    onSkipPickup={role === "pickup" ? onSkipPickup : undefined}
+                    canSkipPickup={
+                      role === "pickup" ? canSkipPickup : undefined
+                    }
+                    pendingSkipPickupKeys={
+                      role === "pickup" ? pendingSkipPickupKeys : undefined
+                    }
+                    onSetPickupScu={
+                      role === "pickup" ? onSetPickupScu : undefined
+                    }
+                    pendingSetPickupScuKeys={
+                      role === "pickup" ? pendingSetPickupScuKeys : undefined
+                    }
+                    maxPickupScuBySlug={maxPickupScuBySlug}
+                  />
+                ) : null;
+
+              if (!mission) {
+                return (
+                  <div
+                    key={`${row.id}-${role}-untagged`}
+                    className="min-w-0"
+                  >
+                    {tiles}
+                  </div>
+                );
+              }
+
+              return (
+                <MissionStopCargoCard
+                  key={`${row.id}-${role}-${mission.id}`}
+                  row={row}
+                  mission={mission}
+                  role={role}
+                  sessionId={sessionId}
+                  tiles={tiles}
+                  addOptions={addOptions}
+                  onAddPickup={onAddPickup}
+                  pendingAddPickupKeys={pendingAddPickupKeys}
+                />
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+
+    const sectionAside = withAside ? bayAside?.(role) : null;
+
+    return (
+      <div
+        key={`${row.id}-cargo-${role}`}
+        role={showRoleTabs ? "tabpanel" : undefined}
+        id={showRoleTabs ? `${row.id}-cargo-panel-${role}` : undefined}
+        aria-labelledby={
+          showRoleTabs ? `${row.id}-cargo-tab-${role}` : undefined
+        }
+        className="flex flex-col gap-2"
+      >
+        {!showRoleTabs ? (
+          <span
+            className={[
+              "w-fit border-b pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]",
+              role === "pickup" ? "text-rsi-accent" : "text-rsi-gold",
+              role === "pickup" ? "border-rsi-accent/45" : "border-rsi-gold/45",
+              roleHandled ? "opacity-70" : "",
+            ].join(" ")}
+          >
+            {cargoRoleTabLabel(role)}
+          </span>
+        ) : null}
+        {withAside ? (
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
+            {sectionBody}
+            {sectionAside ? (
+              <div className="flex min-h-0 w-full min-w-0 flex-col lg:w-1/2 lg:shrink-0 lg:[&>*]:h-full lg:[&>*]:min-h-0">
+                {sectionAside}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          sectionBody
+        )}
+      </div>
+    );
+  };
+
+  const tabRoles = (
+    prioritizePickup
+      ? (["pickup", "delivery"] as const)
+      : (["delivery", "pickup"] as const)
+  ).filter((role) =>
+    role === "pickup" ? hasPickupSection : hasDeliverySection,
+  );
+
+  const roleTabs = showRoleTabs ? (
+    <div
+      role="tablist"
+      aria-label="Stop cargo actions"
+      className="flex min-w-0 items-stretch gap-1 border-b border-rsi-divider"
+    >
+      {tabRoles.map((role) => {
+        const isActive = activeRole === role;
+        const isDone = role === "pickup" ? pickupHandled : deliveryHandled;
+        return (
+          <button
+            key={role}
+            type="button"
+            role="tab"
+            id={`${row.id}-cargo-tab-${role}`}
+            aria-selected={isActive}
+            aria-controls={`${row.id}-cargo-panel-${role}`}
+            tabIndex={isActive ? 0 : -1}
+            onClick={() => setActiveRole(role)}
+            className={[
+              "relative -mb-px inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+              isActive
+                ? role === "pickup"
+                  ? "border-b-2 border-rsi-accent text-rsi-accent"
+                  : "border-b-2 border-rsi-gold text-rsi-gold"
+                : "border-b-2 border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+              isDone && !isActive ? "opacity-70" : "",
+            ].join(" ")}
+          >
+            <span className="truncate">{cargoRoleTabLabel(role)}</span>
+            {isDone ? (
               <span
+                aria-hidden
                 className={[
-                  "w-fit border-b pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em]",
-                  roleClass,
-                  group.role === "pickup"
-                    ? "border-rsi-accent/45"
-                    : "border-rsi-gold/45",
+                  "inline-flex size-3.5 shrink-0 items-center justify-center rounded-full text-rsi-bg-deep shadow-[0_0_0_1px_rgba(0,0,0,0.25)]",
+                  isActive
+                    ? "bg-rsi-success/80 opacity-90"
+                    : "bg-rsi-success/55 opacity-70",
                 ].join(" ")}
               >
-                {group.role === "pickup" ? "Pick up" : "Drop off"}
+                <svg
+                  viewBox="0 0 12 12"
+                  className="size-2.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2.5 6.2 L4.8 8.5 L9.5 3.5" />
+                </svg>
               </span>
             ) : null}
-            {/* Role label sits above so transfer + pad tops line up;
-                stretch keeps the pad graph filling the left column height. */}
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4">
-              {sectionBody}
-              {sectionAside ? (
-                <div className="flex min-h-0 w-full min-w-0 flex-col lg:w-1/2 lg:shrink-0 lg:[&>*]:h-full lg:[&>*]:min-h-0">
-                  {sectionAside}
-                </div>
-              ) : null}
-            </div>
-          </div>
+          </button>
         );
       })}
-      {pickupFirst ? (
-        <>
-          {!hasPickupGroup && pickupTransfer ? (
-            <PickupTransferBlock
-              location={location}
-              locationSlug={row.locationSlug}
-              shipName={shipName}
-              shipSlug={shipSlug}
-              transfer={pickupTransfer}
-              isDone={pickupHandled}
-            />
-          ) : null}
-          {!hasDeliveryGroup && deliveryTransfer ? (
-            <DeliveryTransferBlock
-              location={location}
-              locationSlug={row.locationSlug}
-              shipName={shipName}
-              shipSlug={shipSlug}
-              transfer={deliveryTransfer}
-              isDone={deliveryHandled}
-            />
-          ) : null}
-        </>
-      ) : (
-        <>
-          {!hasDeliveryGroup && deliveryTransfer ? (
-            <DeliveryTransferBlock
-              location={location}
-              locationSlug={row.locationSlug}
-              shipName={shipName}
-              shipSlug={shipSlug}
-              transfer={deliveryTransfer}
-              isDone={deliveryHandled}
-            />
-          ) : null}
-          {!hasPickupGroup && pickupTransfer ? (
-            <PickupTransferBlock
-              location={location}
-              locationSlug={row.locationSlug}
-              shipName={shipName}
-              shipSlug={shipSlug}
-              transfer={pickupTransfer}
-              isDone={pickupHandled}
-            />
-          ) : null}
-        </>
-      )}
+    </div>
+  ) : null;
+
+  if (showRoleTabs) {
+    /**
+     * Desktop: stack both role panels/graphs in one grid cell with
+     * `invisible` (not `display:none`) so height stays at the taller
+     * role and tab switches don’t jump the scroll. Mobile: only active.
+     */
+    const desktopEqualHeight = (isActive: boolean) =>
+      [
+        "min-w-0",
+        "lg:col-start-1 lg:row-start-1",
+        isActive
+          ? ""
+          : "hidden lg:block lg:invisible lg:pointer-events-none",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+    return (
+      <div className="flex flex-col gap-3 text-sm lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4 lg:gap-y-2">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">{roleTabs}</div>
+        <div
+          ref={cargoPanelsRef}
+          className="min-w-0 lg:col-start-1 lg:row-start-2 lg:grid"
+        >
+          {tabRoles.map((role) => {
+            const isActive = role === activeRole;
+            return (
+              <div
+                key={`${row.id}-equal-panel-${role}`}
+                data-cargo-role-panel={role}
+                className={desktopEqualHeight(isActive)}
+                aria-hidden={!isActive}
+              >
+                {renderRoleSection(role, { withAside: false })}
+              </div>
+            );
+          })}
+        </div>
+        {/* Min height = transfer + first mission-card row (not the full card grid). */}
+        <div className="min-w-0 lg:col-start-2 lg:row-start-2 lg:grid">
+          {tabRoles.map((role) => {
+            const isActive = role === activeRole;
+            const aside = bayAside?.(role);
+            if (!aside) return null;
+            return (
+              <div
+                key={`${row.id}-equal-aside-${role}`}
+                className={[
+                  desktopEqualHeight(isActive),
+                  "flex w-full flex-col lg:[&>*]:min-h-0 lg:[&>*]:flex-1",
+                ].join(" ")}
+                style={
+                  graphMinHeightPx != null
+                    ? { minHeight: graphMinHeightPx }
+                    : undefined
+                }
+                aria-hidden={!isActive}
+              >
+                {aside}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      {hasPickupSection
+        ? renderRoleSection("pickup")
+        : hasDeliverySection
+          ? renderRoleSection("delivery")
+          : renderRoleSection(null)}
     </div>
   );
 }

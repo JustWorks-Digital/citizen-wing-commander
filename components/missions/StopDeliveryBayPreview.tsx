@@ -115,6 +115,10 @@ const padToggleClass = [
   "rounded-[calc(var(--radius-rsi)-2px)] px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
 ].join(" ");
 
+/** Shared so Dropped off matches Picked up when All / Per location is present. */
+const graphHeaderClass =
+  "flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5";
+
 function PadPeelButton({
   pressed,
   onPressedChange,
@@ -171,7 +175,7 @@ export function CargoRoleHandledCheckbox({
         onToggle();
       }}
       className={[
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors",
+        "inline-flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
         isPending
           ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
@@ -304,7 +308,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
   }
 
   const fillDesktop =
-    "md:flex md:h-full md:min-h-0 md:flex-col";
+    "md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col";
 
   return (
     <div
@@ -324,7 +328,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
             fillDesktop,
           ].join(" ")}
         >
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+          <div className={graphHeaderClass}>
             <div className="flex min-w-0 items-center gap-2">
               <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
                 Dropped off
@@ -386,7 +390,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
             fillDesktop,
           ].join(" ")}
         >
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5">
+          <div className={graphHeaderClass}>
             <div className="flex min-w-0 items-center gap-2">
               <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
                 Picked up

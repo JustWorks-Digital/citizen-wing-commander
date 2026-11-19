@@ -50,44 +50,23 @@ export function DoneCheckbox({
           : isCompleted
             ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
             : isActive
-              ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-accent"
-              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-accent",
+              ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-text"
+              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-text",
       ].join(" ")}
     >
       {isPending ? (
         <Spinner className={compact ? "size-2.5" : "size-4"} />
-      ) : isCompleted ? (
+      ) : (
         <span
           aria-hidden
           className={[
             "leading-none",
             compact ? "text-[0.65rem]" : "text-base",
+            isCompleted ? "" : "opacity-40 group-hover:opacity-100",
           ].join(" ")}
         >
           ✓
         </span>
-      ) : (
-        <>
-          <span
-            aria-hidden
-            className={[
-              "font-mono tabular-nums leading-none tracking-wide group-hover:hidden",
-              compact ? "text-[0.55rem]" : "text-[0.7rem]",
-              isActive ? "text-rsi-text-secondary" : "",
-            ].join(" ")}
-          >
-            {step}
-          </span>
-          <span
-            aria-hidden
-            className={[
-              "hidden leading-none group-hover:inline",
-              compact ? "text-[0.65rem]" : "text-base",
-            ].join(" ")}
-          >
-            ✓
-          </span>
-        </>
       )}
     </button>
   );

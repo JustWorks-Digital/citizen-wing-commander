@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
+import { Spinner } from "@/components/ui/Spinner";
 
 export type SessionScreenshotsPanelProps = {
   open: boolean;
@@ -29,6 +30,66 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Square thumb: pulse skeleton + spinner until the image paints. */
+function ScreenshotThumb({
+  src,
+  alt,
+  dimmed = false,
+}: {
+  src: string;
+  alt: string;
+  dimmed?: boolean;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [src]);
+
+  return (
+    <span className="relative block aspect-square w-full overflow-hidden bg-rsi-bg-deep/80">
+      {!isLoaded ? (
+        <span
+          className="absolute inset-0 flex items-center justify-center bg-rsi-surface-raised/80 animate-pulse"
+          aria-hidden
+        >
+          <Spinner className="size-5 text-rsi-accent" />
+        </span>
+      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={(node) => {
+          if (node?.complete && node.naturalWidth > 0) setIsLoaded(true);
+        }}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setIsLoaded(true)}
+        className={[
+          "aspect-square w-full object-cover object-top transition-opacity duration-200",
+          isLoaded ? (dimmed ? "opacity-70" : "opacity-100") : "opacity-0",
+        ].join(" ")}
+      />
+    </span>
+  );
+}
+
+function ScreenshotThumbSkeleton() {
+  return (
+    <li
+      className="relative overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/80"
+      aria-hidden
+    >
+      <span className="relative block aspect-square w-full">
+        <span className="absolute inset-0 flex items-center justify-center bg-rsi-surface-raised/80 animate-pulse">
+          <Spinner className="size-5 text-rsi-accent" />
+        </span>
+      </span>
+    </li>
+  );
 }
 
 /** Lucide-style clipboard (clearer clip + board silhouette). */
@@ -310,7 +371,17 @@ export function SessionScreenshotsPanel({
           ) : null}
 
           {isLoading ? (
-            <p className="font-mono text-sm text-rsi-text-muted">Loading…</p>
+            <ul
+              className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 md:grid-cols-5"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+              aria-label="Loading screenshots"
+            >
+              {Array.from({ length: 3 }, (_, index) => (
+                <ScreenshotThumbSkeleton key={`shot-skel-${index}`} />
+              ))}
+            </ul>
           ) : screenshots.length === 0 ? (
             <div className="rounded-rsi border border-dashed border-rsi-border bg-rsi-bg-deep/40 px-3 py-8 text-center text-sm text-rsi-text-muted">
               <p>
@@ -339,15 +410,10 @@ export function SessionScreenshotsPanel({
                     className="block w-full overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/80 transition-colors hover:border-rsi-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]"
                     onClick={() => setLightbox(shot)}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <ScreenshotThumb
                       src={shot.url}
                       alt={shot.filename}
-                      loading="lazy"
-                      className={[
-                        "aspect-square w-full object-cover object-top",
-                        isPending ? "" : "opacity-70",
-                      ].join(" ")}
+                      dimmed={!isPending}
                     />
                   </button>
                   <span

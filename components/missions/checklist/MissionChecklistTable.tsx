@@ -15,7 +15,6 @@ import {
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
-import { Spinner } from "@/components/ui/Spinner";
 import {
   describeCargoDeliveries,
   getCommodityIconSrc,
@@ -141,14 +140,9 @@ export type MissionChecklistTableProps = {
   /** Controlled hide-completed (⋯ menu lives outside this table). */
   hideCompleted?: boolean;
   onHideCompletedChange?: (hidden: boolean) => void;
-  /** Prefer Pick up above Drop off (⋯ Prioritize pickup). */
+  /** Prefer Pick up as the left cargo tab (⋯ Prioritize pickup). */
   prioritizePickup?: boolean;
-  /**
-   * After Drop off / Pick up done, move unfinished to top (⋯ Promote unfinished).
-   */
-  promoteUnfinished?: boolean;
   /** Session ship display name for pickup transfer labels. */
-  shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
   shipSlug?: string | null;
   /** Session missions — used to attach contract screenshot refs per stop. */
@@ -297,7 +291,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   hideCompleted: hideCompletedProp,
   onHideCompletedChange,
   prioritizePickup = false,
-  promoteUnfinished = true,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -557,10 +550,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     });
   };
 
+  /** Sibling of the checklist panel (not inside it) so sticky top gap shows page bg like Stops. */
   const toolbar = (
     <div
       ref={stickyToolbarRef}
-      className="sticky top-0 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 border-b border-rsi-divider bg-rsi-bg-deep/95 px-2.5 py-1 sm:gap-2 sm:px-3"
+      className="sticky top-1.5 z-20 flex w-full min-w-0 max-w-full items-center gap-1.5 rounded-rsi border border-rsi-border bg-rsi-surface/90 px-2.5 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:gap-2 sm:px-3"
     >
       <div className="flex min-w-0 flex-1 items-center">{toolbarStart}</div>
     </div>
@@ -653,6 +647,19 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       checklistListItems.push({ kind: "stop", row });
     }
   }
+
+  const activeSectionLocationName = (() => {
+    if (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) {
+      return startSlugTrimmed
+        ? (getLocationBySlug(startSlugTrimmed)?.name ?? startSlugTrimmed)
+        : null;
+    }
+    const openRow = activeListRows[0] ?? null;
+    if (!openRow) return null;
+    return (
+      getLocationBySlug(openRow.locationSlug)?.name ?? openRow.locationSlug
+    );
+  })();
 
   const completeQuantumOrigin = () => {
     const nextIncomplete =
@@ -921,13 +928,15 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               distanceTotal || distanceTraveled
                 ? `${formatDistanceToNext(distanceTraveled, { compact: true })} / ${formatDistanceToNext(distanceTotal, { compact: true })}`
                 : null;
+            const isLocationSection =
+              !isProgressSection && !showTripSummary;
             const label = isProgressSection
               ? distanceCompact
                 ? `Stops · ${progressDone}/${progressTotal} · ${distanceCompact}`
                 : `Stops · ${progressDone}/${progressTotal}`
               : showTripSummary
                 ? "Summary"
-                : "Current";
+                : (activeSectionLocationName ?? "Current");
             return (
               <li
                 key={`section-${item.band}`}
@@ -948,7 +957,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                     if (isProgressSection) {
                       onOpenStops?.();
                     }
-                    // Current / Summary header is display-only (chevron stays).
+                    // Location / Summary header is display-only (chevron stays).
                   }}
                   className={[
                     "flex w-full items-center gap-1.5 px-3 py-1.5 text-left",
@@ -958,7 +967,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                       : "cursor-default",
                   ].join(" ")}
                 >
-                  {!isProgressSection && !showTripSummary ? (
+                  {isLocationSection ? (
                     <svg
                       aria-hidden
                       viewBox="0 0 20 20"
@@ -968,7 +977,13 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                       <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
                     </svg>
                   ) : null}
-                  <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                  <span
+                    className={
+                      isLocationSection
+                        ? "truncate text-[0.7rem] font-medium text-rsi-text-secondary"
+                        : "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
+                    }
+                  >
                     {label}
                   </span>
                 </button>
@@ -1423,19 +1438,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                 />
               ) : null}
               <div className="flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1">
-                {row.isCompleted && isFocused ? (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setExpandedCompletedRowId(null);
-                      onFocusStop?.(workingIncompleteId);
-                    }}
-                    className="mb-2 ml-auto block font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-muted hover:text-rsi-accent"
-                  >
-                    Back to current
-                  </button>
-                ) : null}
                 {/* Sticky Done shares this column height so it can pin mid-header. */}
                 <div className="flex min-h-0 flex-1 gap-3">
                   <div className="hidden w-8 shrink-0 self-stretch md:block">
@@ -1501,12 +1503,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                       </div>
                     </div>
                     <div className="mt-5 overflow-x-clip pb-5">
-                      {isRowSectionBusy ? (
-                        <p className="mb-2 inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
-                          <Spinner className="size-3" />
-                          Saving…
-                        </p>
-                      ) : null}
                       <CargoGroups
                         row={row}
                         cargoLines={cargoLines}
@@ -1516,7 +1512,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         shipSlug={shipSlug}
                         sessionId={sessionId}
                         prioritizePickup={prioritizePickup}
-                        promoteUnfinished={promoteUnfinished}
                         transferLedger={
                           transferLedgerByStop.get(row.id) ?? null
                         }
@@ -1761,22 +1756,24 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
 
           <div
             ref={setChecklistPanelEl}
-            className="min-w-0 max-w-full flex-1 rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel"
+            className="flex min-w-0 max-w-full flex-1 flex-col gap-1.5"
           >
             {toolbar}
-            {checklistBody}
-            {boxEditMission && onSelectBoxBreakdown ? (
-              <StopMissionBoxConfigModal
-                {...stopMissionBoxConfigModalProps({
-                  mission: boxEditMission,
-                  rows,
-                  sessionId,
-                  onClose: () => setBoxEditMissionId(null),
-                  onSelectBoxBreakdown,
-                  onSaveMissionScuDraft,
-                })}
-              />
-            ) : null}
+            <div className="min-w-0 max-w-full flex-1 rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
+              {checklistBody}
+              {boxEditMission && onSelectBoxBreakdown ? (
+                <StopMissionBoxConfigModal
+                  {...stopMissionBoxConfigModalProps({
+                    mission: boxEditMission,
+                    rows,
+                    sessionId,
+                    onClose: () => setBoxEditMissionId(null),
+                    onSelectBoxBreakdown,
+                    onSaveMissionScuDraft,
+                  })}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       )}

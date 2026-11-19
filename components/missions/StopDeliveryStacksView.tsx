@@ -189,9 +189,7 @@ function stackViewBounds(
   widthCells: number,
   viewHeight: number,
   cellSize: number,
-  hasPileLabels: boolean,
 ): { minX: number; minY: number; width: number; height: number } {
-  const pileHeaderPad = hasPileLabels ? cellSize * 2.1 : 0;
   const bottomLabelPad = stackBottomLabelPad(cellSize);
   const corners = [
     project(0, 0, 0, cellSize),
@@ -217,10 +215,9 @@ function stackViewBounds(
   const padY = cellSize * 0.55;
   return {
     minX: minX - padX,
-    // Extra top room for pile headers when present.
-    minY: minY - padY - pileHeaderPad,
+    minY: minY - padY,
     width: maxX - minX + padX * 2,
-    height: maxY - minY + padY * 2 + pileHeaderPad + bottomLabelPad,
+    height: maxY - minY + padY * 2 + bottomLabelPad,
   };
 }
 
@@ -401,18 +398,11 @@ export function StopDeliveryStacksView({
   const showPeel = frameHeightCells > 1 && !hidePeel;
   const viewHeight = visualHz(frameHeightCells, peelStack);
   const stackWidthCells = 2;
-  const hasPileLabels = Boolean(pileLabels && pileLabels.length > 0);
 
   const baseBounds = useMemo(
     () =>
-      stackViewBounds(
-        frameLengthCells,
-        widthCells,
-        viewHeight,
-        cellPx,
-        hasPileLabels,
-      ),
-    [frameLengthCells, widthCells, viewHeight, cellPx, hasPileLabels],
+      stackViewBounds(frameLengthCells, widthCells, viewHeight, cellPx),
+    [frameLengthCells, widthCells, viewHeight, cellPx],
   );
 
   const fitZoom = useMemo(() => {
@@ -437,7 +427,6 @@ export function StopDeliveryStacksView({
         widthCells,
         viewHeight,
         cellPx * zoom,
-        hasPileLabels,
       ).height;
       if (renderedHeight <= availableH + 0.5 || renderedHeight <= 0) break;
       zoom *= availableH / renderedHeight;
@@ -453,7 +442,6 @@ export function StopDeliveryStacksView({
     widthCells,
     viewHeight,
     cellPx,
-    hasPileLabels,
   ]);
 
   useEffect(() => {
@@ -467,14 +455,8 @@ export function StopDeliveryStacksView({
 
   const bounds = useMemo(
     () =>
-      stackViewBounds(
-        frameLengthCells,
-        widthCells,
-        viewHeight,
-        renderCellPx,
-        hasPileLabels,
-      ),
-    [frameLengthCells, widthCells, viewHeight, renderCellPx, hasPileLabels],
+      stackViewBounds(frameLengthCells, widthCells, viewHeight, renderCellPx),
+    [frameLengthCells, widthCells, viewHeight, renderCellPx],
   );
 
   const floorTiles = useMemo(() => {
@@ -730,52 +712,6 @@ export function StopDeliveryStacksView({
                       />
                     </g>
                   ))}
-                </g>
-              );
-            })}
-            {pileLabels?.map((pile) => {
-              const left = project(pile.x, widthCells / 2, viewHeight, renderCellPx);
-              const right = project(
-                pile.x + pile.widthCells,
-                widthCells / 2,
-                viewHeight,
-                renderCellPx,
-              );
-              const midX = (left.x + right.x) / 2;
-              const topY = Math.min(left.y, right.y) - renderCellPx * 1.55;
-              const fontSize = Math.max(8, Math.round(renderCellPx * 0.55));
-              const unitSize = Math.max(6, Math.round(fontSize * 0.72));
-              return (
-                <g key={`pile-${pile.id}`}>
-                  <title>
-                    {pile.locationName} pile · {pile.scu} {SCU_TITLE}
-                  </title>
-                  <text
-                    x={midX}
-                    y={topY}
-                    textAnchor="middle"
-                    dominantBaseline="auto"
-                    fill="var(--rsi-text-secondary)"
-                    style={{
-                      fontFamily: "var(--font-mono, ui-monospace, monospace)",
-                      fontSize,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {pile.abbrev} – {pile.scu}
-                    <tspan
-                      fill="var(--rsi-text-muted)"
-                      dx="0.2em"
-                      style={{
-                        fontSize: unitSize,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      <title>{SCU_TITLE}</title>
-                      SCU
-                    </tspan>
-                  </text>
                 </g>
               );
             })}

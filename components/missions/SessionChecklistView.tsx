@@ -86,10 +86,6 @@ import {
   readPrioritizePickup,
   writePrioritizePickup,
 } from "@/lib/sessions/prioritizePickupPrefs";
-import {
-  readPromoteUnfinished,
-  writePromoteUnfinished,
-} from "@/lib/sessions/promoteUnfinishedPrefs";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
@@ -147,8 +143,6 @@ export function SessionChecklistView({
   const [hideCompleted, setHideCompleted] = useState(false);
   const [prioritizePickup, setPrioritizePickup] = useState(false);
   const [prioritizePickupReady, setPrioritizePickupReady] = useState(false);
-  const [promoteUnfinished, setPromoteUnfinished] = useState(true);
-  const [promoteUnfinishedReady, setPromoteUnfinishedReady] = useState(false);
   /** After Continue on the finish report, show the last completed stop again. */
   const [summaryDismissed, setSummaryDismissed] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
@@ -485,8 +479,6 @@ export function SessionChecklistView({
     setTripNavPrefsReady(true);
     setPrioritizePickup(readPrioritizePickup());
     setPrioritizePickupReady(true);
-    setPromoteUnfinished(readPromoteUnfinished());
-    setPromoteUnfinishedReady(true);
   }, []);
 
   useEffect(() => {
@@ -498,11 +490,6 @@ export function SessionChecklistView({
     if (!prioritizePickupReady) return;
     writePrioritizePickup(prioritizePickup);
   }, [prioritizePickup, prioritizePickupReady]);
-
-  useEffect(() => {
-    if (!promoteUnfinishedReady) return;
-    writePromoteUnfinished(promoteUnfinished);
-  }, [promoteUnfinished, promoteUnfinishedReady]);
 
   // After the user finishes name / start / ship, collapse to the Setup button
   // (do not leave the setup panel open as a modal).
@@ -1122,7 +1109,6 @@ export function SessionChecklistView({
         hideCompleted={hideCompleted}
         onHideCompletedChange={setHideCompleted}
         prioritizePickup={prioritizePickup}
-        promoteUnfinished={promoteUnfinished}
         onOpenSummary={isTripComplete ? openTripSummary : undefined}
         tripSummary={
           isTripComplete && !summaryDismissed
@@ -1214,8 +1200,6 @@ export function SessionChecklistView({
                   }
                   prioritizePickup={prioritizePickup}
                   onPrioritizePickupChange={setPrioritizePickup}
-                  promoteUnfinished={promoteUnfinished}
-                  onPromoteUnfinishedChange={setPromoteUnfinished}
                   onCopyTrip={initial ? undefined : copyTrip}
                     onRepairTrip={
                       !tripCargoValidation.ok && tripInvalidDismissed

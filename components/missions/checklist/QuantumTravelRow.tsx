@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from "react";
 import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
-import { Spinner } from "@/components/ui/Spinner";
 import {
   getLocationBySlug,
   getLocationShortName,
@@ -420,12 +419,6 @@ export function QuantumTravelRow({
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {isSavingSection ? (
-            <p className="inline-flex items-center gap-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-accent">
-              <Spinner className="size-3" />
-              Saving…
-            </p>
-          ) : null}
           {/* Mobile: current → ship line → destination. Desktop: 50/50 with ship on left col. */}
           <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 md:items-center md:gap-3">
             <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">

@@ -1,27 +1,21 @@
 const STORAGE_KEY = "cwc.prioritizePickup";
 
-/** Default: Drop off before Pick up (unload then load). */
-const DEFAULT_PRIORITIZE_PICKUP = false;
-
 function canUseStorage(): boolean {
-  return (
-    typeof window !== "undefined" && typeof window.localStorage !== "undefined"
-  );
+  return typeof window !== "undefined" && Boolean(window.localStorage);
 }
 
-/** Read Prefer pickup-first section order (browser only). */
+/** Default off — Drop off tab first. */
 export function readPrioritizePickup(): boolean {
-  if (!canUseStorage()) return DEFAULT_PRIORITIZE_PICKUP;
+  if (!canUseStorage()) return false;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return DEFAULT_PRIORITIZE_PICKUP;
-    return raw === "1";
+    if (raw == null) return false;
+    return raw === "1" || raw === "true";
   } catch {
-    return DEFAULT_PRIORITIZE_PICKUP;
+    return false;
   }
 }
 
-/** Persist Prefer pickup-first section order (browser only). */
 export function writePrioritizePickup(prioritize: boolean): void {
   if (!canUseStorage()) return;
   try {
