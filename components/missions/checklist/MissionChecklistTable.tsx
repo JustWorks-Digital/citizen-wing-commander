@@ -1003,17 +1003,17 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             const isProgressSection = item.band === "completed";
             const distanceCompact =
               distanceTotal || distanceTraveled
-                ? `${formatDistanceToNext(distanceTraveled, { compact: true })} / ${formatDistanceToNext(distanceTotal, { compact: true })}`
+                ? `${formatDistanceToNext(distanceTraveled, { compact: true })}/${formatDistanceToNext(distanceTotal, { compact: true })}`
                 : null;
             const isLocationSection =
               !isProgressSection && !showTripSummary;
             const label = isProgressSection
-              ? distanceCompact
-                ? `Stops · ${progressDone}/${progressTotal} · ${distanceCompact}`
-                : `Stops · ${progressDone}/${progressTotal}`
+              ? null
               : showTripSummary
                 ? "Summary"
                 : (activeSectionLocationName ?? "Current");
+            const monoLabelClass =
+              "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted";
             return (
               <li
                 key={`section-${item.band}`}
@@ -1054,15 +1054,26 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                       <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
                     </svg>
                   ) : null}
-                  <span
-                    className={
-                      isLocationSection
-                        ? "truncate text-[0.7rem] font-medium text-rsi-text-secondary"
-                        : "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
-                    }
-                  >
-                    {label}
-                  </span>
+                  {isProgressSection ? (
+                    <span className={`flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 ${monoLabelClass}`}>
+                      <span>
+                        Stops: {progressDone}/{progressTotal}
+                      </span>
+                      {distanceCompact ? (
+                        <span>Distance: {distanceCompact}</span>
+                      ) : null}
+                    </span>
+                  ) : (
+                    <span
+                      className={
+                        isLocationSection
+                          ? "truncate text-[0.7rem] font-medium text-rsi-text-secondary"
+                          : monoLabelClass
+                      }
+                    >
+                      {label}
+                    </span>
+                  )}
                 </button>
               </li>
             );

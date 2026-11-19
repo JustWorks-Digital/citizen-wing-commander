@@ -46,7 +46,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat pickup/delivery crate stacks with Peel, crate-mix dot legend, and zoom (− / % / +).",
+          "Flat pickup/delivery crate stacks with Peel, crate-mix dot legend, and zoom (− / % / +). Viewport caps at 340px so mobile pickup/drop-off piles stay readable.",
       },
     },
   },

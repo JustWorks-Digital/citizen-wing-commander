@@ -73,9 +73,10 @@ const VIEWPORT_PAD_Y = 14;
 const STACK_FIT_PAD_PX = 8;
 /**
  * Cap graph frame height so tall piles zoom out instead of stretching the
- * stop card / introducing a default vertical scroll.
+ * stop card / introducing a default vertical scroll. Keep mobile tall enough
+ * that pickup/drop-off stacks stay readable (not a short stub).
  */
-const MAX_VIEWPORT_HEIGHT_PX = 253;
+const MAX_VIEWPORT_HEIGHT_PX = 340;
 
 const FLOOR_TOP =
   "color-mix(in srgb, var(--rsi-surface) 70%, var(--rsi-bg-deep))";
