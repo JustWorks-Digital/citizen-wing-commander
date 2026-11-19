@@ -1,0 +1,73 @@
+{
+  "at": "2026-11-19T19:50:34.840Z",
+  "baseUrl": "http://localhost:3000",
+  "sessionId": "f6b69016-01d4-44d3-a7ec-598a70ae71d8",
+  "pollEra": {
+    "checklistGetCount": 158548,
+    "checklistPutCount": 550,
+    "checklistGetsPerPut": 288.2690909090909,
+    "meaning": "checklist GETs / PUTs — how many checklist reads ran for each write. High under polling (idle tabs keep GETting); lower under SSE (reads mostly follow real updates)."
+  },
+  "livePoll": {
+    "mode": "poll",
+    "idleMs": 12000,
+    "activeMs": 10000,
+    "observers": 2,
+    "checklistGetCount": 21,
+    "checklistGetIdleCount": 12,
+    "checklistSessionsGetCount": 21,
+    "checklistPutCount": 7,
+    "checklistGetsPerPut": 3,
+    "sessionsGetsPerPut": 3,
+    "sseEventCount": 0,
+    "checklistGetP50Ms": 143.39154099999996,
+    "checklistGetP95Ms": 1076.8630410000005,
+    "checklistSessionsGetP50Ms": 281.58404199999995,
+    "checklistSessionsGetP95Ms": 1465.2965000000004,
+    "checklistPutP50Ms": 18.820040999999037,
+    "checklistPutP95Ms": 280.4228749999999,
+    "syncLagP50Ms": null,
+    "syncLagP95Ms": null
+  },
+  "liveSse": {
+    "mode": "sse",
+    "idleMs": 12000,
+    "activeMs": 10000,
+    "observers": 2,
+    "checklistGetCount": 16,
+    "checklistGetIdleCount": 0,
+    "checklistSessionsGetCount": 16,
+    "checklistPutCount": 7,
+    "checklistGetsPerPut": 2.2857142857142856,
+    "sessionsGetsPerPut": 2.2857142857142856,
+    "sseEventCount": 14,
+    "checklistGetP50Ms": 80.44931250000081,
+    "checklistGetP95Ms": 301.12995850000334,
+    "checklistSessionsGetP50Ms": 287.48081249999814,
+    "checklistSessionsGetP95Ms": 1358.6591874999986,
+    "checklistPutP50Ms": 14.652333000005456,
+    "checklistPutP95Ms": 114.75643399999599,
+    "syncLagP50Ms": 458.4577919999974,
+    "syncLagP95Ms": 1644.6661062500032
+  },
+  "deltas": {
+    "idleChecklistGets": {
+      "poll": 12,
+      "sse": 0,
+      "reductionPct": 100
+    },
+    "getsPerPut": {
+      "meaning": "checklist GETs / PUTs — how many checklist reads ran for each write. High under polling (idle tabs keep GETting); lower under SSE (reads mostly follow real updates).",
+      "pollEra": 288.2690909090909,
+      "livePoll": 3,
+      "liveSse": 2.2857142857142856,
+      "liveImprovementPct": 23.809523809523814
+    },
+    "checklistGetCount": {
+      "pollEra": 158548,
+      "livePoll": 21,
+      "liveSse": 16,
+      "liveReductionPct": 23.809523809523807
+    }
+  }
+}

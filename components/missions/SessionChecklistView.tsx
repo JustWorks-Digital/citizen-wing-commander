@@ -14,6 +14,7 @@ import {
   copyChecklistSession,
   createChecklistSession,
   deleteChecklistSession,
+  checklistEventsUrl,
   fetchChecklist,
   fetchChecklistSessions,
   saveChecklist,
@@ -109,7 +110,9 @@ export type SessionChecklistViewProps = {
   initial?: SessionChecklist;
 };
 
-/** Near-live while the tab is focused; slower when backgrounded. */
+/** Fallback poll while SSE is connected (catch missed events / tab list drift). */
+const POLL_SSE_CONNECTED_MS = 60_000;
+/** Near-live while the tab is focused and SSE is down. */
 const POLL_VISIBLE_MS = 1500;
 /** While Contracts / catalog modals are open, poll less so list scroll stays smooth. */
 const POLL_MODAL_MS = 8000;
@@ -267,6 +270,15 @@ export function SessionChecklistView({
 
     let cancelled = false;
     let timer: number | null = null;
+    let eventSource: EventSource | null = null;
+    let sseConnected = false;
+    let syncLagStartedAt: number | null = null;
+
+    const markPerf = (name: string, valueMs: number, tags?: Record<string, string | boolean | number>) => {
+      void import("@/lib/perf/clientMarks").then(({ reportPerfMark }) => {
+        reportPerfMark(name, valueMs, tags);
+      });
+    };
 
     const schedule = () => {
       if (cancelled) return;
@@ -274,9 +286,11 @@ export function SessionChecklistView({
       const delay =
         document.visibilityState !== "visible"
           ? POLL_HIDDEN_MS
-          : overlayOpenRef.current
-            ? POLL_MODAL_MS
-            : POLL_VISIBLE_MS;
+          : sseConnected
+            ? POLL_SSE_CONNECTED_MS
+            : overlayOpenRef.current
+              ? POLL_MODAL_MS
+              : POLL_VISIBLE_MS;
       timer = window.setTimeout(() => {
         void load().finally(schedule);
       }, delay);
@@ -343,9 +357,15 @@ export function SessionChecklistView({
       setSession(next);
       setActiveSessionId(next.id);
       setLoadError(null);
+      if (syncLagStartedAt != null) {
+        markPerf("checklist.sync_lag_ms", performance.now() - syncLagStartedAt, {
+          via: "sse",
+        });
+        syncLagStartedAt = null;
+      }
     };
 
-    const load = async () => {
+    const load = async (opts?: { fromSse?: boolean }) => {
       try {
         await refreshTabs();
         if (cancelled) return;
@@ -363,6 +383,9 @@ export function SessionChecklistView({
           hydratedFromServerRef.current = true;
           setIsTripLoading(false);
         }
+        if (opts?.fromSse) {
+          markPerf("checklist.sse.refetch", 0, { notModified: result.notModified });
+        }
       } catch (error) {
         if (!cancelled) {
           setLoadError(
@@ -375,8 +398,55 @@ export function SessionChecklistView({
       }
     };
 
+    const connectSse = () => {
+      if (cancelled || typeof EventSource === "undefined") return;
+      eventSource?.close();
+      const es = new EventSource(checklistEventsUrl(routeSessionId));
+      eventSource = es;
+
+      es.addEventListener("connected", () => {
+        if (cancelled) return;
+        sseConnected = true;
+        markPerf("checklist.sse.open", 0, { sessionId: routeSessionId });
+        schedule();
+      });
+
+      es.addEventListener("checklist_updated", (msg) => {
+        if (cancelled) return;
+        syncLagStartedAt = performance.now();
+        markPerf("checklist.sse.event", 0, { sessionId: routeSessionId });
+        try {
+          const data = JSON.parse(String((msg as MessageEvent).data)) as {
+            updatedAt?: string;
+          };
+          if (
+            data.updatedAt &&
+            data.updatedAt === sessionRef.current.updatedAt &&
+            hydratedFromServerRef.current
+          ) {
+            syncLagStartedAt = null;
+            return;
+          }
+        } catch {
+          /* refetch anyway */
+        }
+        void load({ fromSse: true });
+      });
+
+      es.onerror = () => {
+        if (cancelled) return;
+        const wasConnected = sseConnected;
+        sseConnected = false;
+        if (wasConnected) {
+          markPerf("checklist.sse.reconnect", 0, { sessionId: routeSessionId });
+        }
+        schedule();
+      };
+    };
+
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
+        connectSse();
         void load();
         schedule();
       }
@@ -385,12 +455,15 @@ export function SessionChecklistView({
     void activateChecklistSession(routeSessionId).catch(() => {
       /* selection is best-effort; GET still works by id */
     });
+    connectSse();
     void load().finally(schedule);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
       if (timer != null) window.clearTimeout(timer);
+      eventSource?.close();
+      eventSource = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
     // router via routerRef — unstable identity must not cancel in-flight hydrate.

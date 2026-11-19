@@ -20,6 +20,7 @@ import {
   type SessionTabSummary,
 } from "@/lib/missions/sessionChecklist";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
+import { publishChecklistUpdated } from "@/lib/sessions/checklistSseHub";
 export type { SessionTabSummary };
 
 export function checklistEtag(session: SessionChecklist): string {
@@ -143,7 +144,9 @@ export async function saveChecklistSession(
       checklist: emptySessionChecklist(session),
       select: true,
     });
-    return rowToChecklist(created);
+    const checklist = rowToChecklist(created);
+    publishChecklistUpdated(checklist.id, checklist.updatedAt);
+    return checklist;
   }
 
   const updated = await updateDeliverySessionChecklist(id, session);
@@ -154,9 +157,13 @@ export async function saveChecklistSession(
       checklist: { ...session, id },
       select: true,
     });
-    return rowToChecklist(created);
+    const checklist = rowToChecklist(created);
+    publishChecklistUpdated(checklist.id, checklist.updatedAt);
+    return checklist;
   }
-  return rowToChecklist(updated);
+  const checklist = rowToChecklist(updated);
+  publishChecklistUpdated(checklist.id, checklist.updatedAt);
+  return checklist;
 }
 
 export async function replaceChecklistRows(

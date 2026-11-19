@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip shell for the route checklist and cargo bay. While the trip hydrates, Stops show skeletons and Setup stays hidden. Once loaded: incomplete setup stays inline; complete setup uses a Setup button (left of Find a Contract) for the modal. Desktop: Progress rail on the left; mobile Progress stays inline. Finish report opens on the incomplete→complete edge.",
+          "Trip shell for the route checklist and cargo bay. Live sessions subscribe to checklist SSE (`/api/checklist/events`) and fall back to slow poll when the stream is down; Storybook `initial` skips network sync. While the trip hydrates, Stops show skeletons and Setup stays hidden. Once loaded: incomplete setup stays inline; complete setup uses a Setup button (left of Find a Contract) for the modal. Desktop: Progress rail on the left; mobile Progress stays inline. Finish report opens on the incomplete→complete edge.",
       },
     },
   },

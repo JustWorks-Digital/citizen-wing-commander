@@ -4,6 +4,8 @@
  */
 export const appApi = {
   checklist: "/api/checklist",
+  /** SSE stream for near-real-time checklist updates (`?sessionId=`). */
+  checklistEvents: "/api/checklist/events",
   checklistSessions: "/api/checklist/sessions",
   checklistSession: (sessionId: string) =>
     `/api/checklist/sessions/${encodeURIComponent(sessionId)}`,

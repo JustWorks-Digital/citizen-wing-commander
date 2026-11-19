@@ -18,6 +18,13 @@ function checklistUrl(sessionId?: string | null): string {
   return `${url.pathname}${url.search}`;
 }
 
+/** SSE endpoint for a session (use with `EventSource`). */
+export function checklistEventsUrl(sessionId: string): string {
+  const url = new URL(appApi.checklistEvents, "http://local");
+  url.searchParams.set("sessionId", sessionId);
+  return `${url.pathname}${url.search}`;
+}
+
 /** Load a checklist session (defaults to active). Conditional GET via ETag. */
 export async function fetchChecklist(
   etag: string | null,

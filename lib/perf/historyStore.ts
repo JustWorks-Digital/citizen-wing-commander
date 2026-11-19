@@ -15,6 +15,7 @@ import {
 import type {
   PerfHistoryIndex,
   PerfHistoryIndexEntry,
+  PerfMetricAgg,
   PerfRun,
   PerfSample,
 } from "@/lib/perf/types";
@@ -67,27 +68,9 @@ function runId(at: Date, sha: string | null): string {
   return sha ? `${stamp}-${sha}` : stamp;
 }
 
-/** Save samples as a git-tracked history run. */
-export function savePerfRun(input: {
-  samples: PerfSample[];
-  source: PerfRun["source"];
-}): PerfRun {
+function writePerfRun(run: PerfRun): PerfRun {
   ensureHistoryDir();
-  const at = new Date();
-  const gitSha = readGitShaShort();
-  const id = runId(at, gitSha);
-  const metrics = aggregateSamples(input.samples);
-  const run: PerfRun = {
-    id,
-    at: at.toISOString(),
-    gitSha,
-    source: input.source,
-    sampleCount: input.samples.length,
-    metrics,
-    recentSamples: input.samples.slice(-PERF_RECENT_SAMPLE_CAP),
-  };
-
-  const file = path.join(PERF_HISTORY_DIR, `${id}.json`);
+  const file = path.join(PERF_HISTORY_DIR, `${run.id}.json`);
   fs.writeFileSync(file, `${JSON.stringify(run, null, 2)}\n`);
 
   const index = getPerfHistoryIndex();
@@ -99,11 +82,63 @@ export function savePerfRun(input: {
     sampleCount: run.sampleCount,
     metricCount: run.metrics.length,
   };
-  index.runs = [entry, ...index.runs.filter((r) => r.id !== id)].slice(0, 200);
-  index.updatedAt = at.toISOString();
+  index.runs = [entry, ...index.runs.filter((r) => r.id !== run.id)].slice(
+    0,
+    200,
+  );
+  index.updatedAt = run.at;
   writeIndex(index);
 
   return run;
+}
+
+/** Save samples as a git-tracked history run. */
+export function savePerfRun(input: {
+  samples: PerfSample[];
+  source: PerfRun["source"];
+}): PerfRun {
+  const at = new Date();
+  const gitSha = readGitShaShort();
+  const id = runId(at, gitSha);
+  const metrics = aggregateSamples(input.samples);
+  return writePerfRun({
+    id,
+    at: at.toISOString(),
+    gitSha,
+    source: input.source,
+    sampleCount: input.samples.length,
+    metrics,
+    recentSamples: input.samples.slice(-PERF_RECENT_SAMPLE_CAP),
+  });
+}
+
+/**
+ * Save a curated metric snapshot (e.g. poll-era baseline) without re-aggregating
+ * raw samples. Use for promoting a filtered subset of an existing run.
+ */
+export function savePerfMetricSnapshot(input: {
+  metrics: PerfMetricAgg[];
+  source: PerfRun["source"];
+  sampleCount?: number;
+  recentSamples?: PerfSample[];
+  /** Optional id suffix after timestamp-sha, e.g. `poll-pre-sse`. */
+  idSuffix?: string;
+}): PerfRun {
+  const at = new Date();
+  const gitSha = readGitShaShort();
+  const baseId = runId(at, gitSha);
+  const id = input.idSuffix ? `${baseId}-${input.idSuffix}` : baseId;
+  return writePerfRun({
+    id,
+    at: at.toISOString(),
+    gitSha,
+    source: input.source,
+    sampleCount: input.sampleCount ?? input.metrics.reduce((n, m) => n + m.count, 0),
+    metrics: [...input.metrics].sort(
+      (a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name),
+    ),
+    recentSamples: (input.recentSamples ?? []).slice(-PERF_RECENT_SAMPLE_CAP),
+  });
 }
 
 /** Flush the live session buffer into perf/history/. */
