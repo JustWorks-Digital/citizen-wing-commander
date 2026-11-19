@@ -16,6 +16,17 @@ npm run storybook
 - You do not need to update Storybook on every mid-iteration tweak while coding, but Storybook must be up to date at commit time.
 - A Husky pre-commit hook runs `scripts/check-storybook-gate.sh` and fails if UI sources are staged without story changes. Bypass intentionally with `SKIP_STORYBOOK_GATE=1`.
 
+## Pre-push typecheck
+
+Railway runs `next build`, which typechecks. A Husky **pre-push** hook runs `npm run typecheck` (`tsc --noEmit`) so TS errors fail locally before they break auto-deploy.
+
+```bash
+npm run typecheck    # same check as the hook
+npm run verify:push  # alias — extend later if we add more push gates
+```
+
+Bypass intentionally with `SKIP_PUSH_VERIFY=1 git push …` (prefer fixing instead).
+
 ## Cursor rules
 
 Project conventions live in `.cursor/rules/` (index: `.cursor/rules/README.md`). Add new rules there as the team invents them.
@@ -40,6 +51,8 @@ Production / staging deploys: set `DATABASE_URL` and run `npm run db:upgrade` (s
 | `npm run storybook` | Design system / UI workshop |
 | `npm run build-storybook` | Static Storybook build |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript (`tsc --noEmit`; also Husky pre-push) |
+| `npm run verify:push` | Local push gate (typecheck today) |
 | `npm run db:generate` | Generate SQL from `db/schema.ts` |
 | `npm run db:upgrade` | Apply pending migrations (`scripts/db-upgrade.mjs`) |
 | `npm run db:migrate` | Alias for `db:upgrade` |

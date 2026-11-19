@@ -41,6 +41,7 @@ function InteractiveTable(args: {
   sessionId?: string | null;
   startLocationSlug?: string | null;
   shipSlug?: string | null;
+  shipName?: string | null;
 }) {
   const [rows, setRows] = useState(args.rows);
   const [missions, setMissions] = useState(
@@ -52,6 +53,8 @@ function InteractiveTable(args: {
   const [focusedStopId, setFocusedStopId] = useState<string | null>(
     defaultFocusedStopId(args.rows, args.startLocationSlug),
   );
+  const resolvedShipSlug =
+    args.shipSlug ?? mockSessionChecklist.shipSlugs?.[0] ?? null;
 
   return (
     <MissionChecklistTable
@@ -61,9 +64,8 @@ function InteractiveTable(args: {
       missions={missions}
       sessionId={args.sessionId ?? mockSessionChecklist.id}
       startLocationSlug={startLocationSlug}
-      shipSlug={
-        args.shipSlug ?? mockSessionChecklist.shipSlugs?.[0] ?? null
-      }
+      shipSlug={resolvedShipSlug}
+      shipName={args.shipName ?? null}
       onInsertQuantumTravel={({ afterRowId, fromSlug, toSlug, reasonShopSlug }) => {
         setRows((prev) =>
           insertQuantumTravelAfter(prev, afterRowId, {

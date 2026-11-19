@@ -10,6 +10,7 @@ Living project rules for Citizen Wing Commander. Add new `.mdc` / `.md` rule fil
 | [`mcp-server.mdc`](./mcp-server.mdc) | MCP `/mcp` tools for ChatGPT checklist updates; playbook `docs/mcp-screenshot-hauling-playbook.md` |
 | [`pending-backend-ui.mdc`](./pending-backend-ui.mdc) | Spinner on the control/section waiting for backend persist |
 | [`storybook-gate.mdc`](./storybook-gate.mdc) | Storybook required before UI commits |
+| [`pre-push-verify.mdc`](./pre-push-verify.mdc) | Husky pre-push typecheck before git push (catch Railway build breakers) |
 | [`database.mdc`](./database.mdc) | Postgres + Drizzle schema & migrations |
 | [`ai-progress.mdc`](./ai-progress.mdc) | Gitignored AI progress MD scratch files |
 | [`naming.mdc`](./naming.mdc) | TypeScript/React/DB/token naming conventions |

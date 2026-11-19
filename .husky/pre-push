@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Block push when TypeScript fails — same class of errors that fail Railway `next build`.
+if [ "${SKIP_PUSH_VERIFY:-}" = "1" ]; then
+  echo "[pre-push] SKIP_PUSH_VERIFY=1 set — skipping typecheck."
+  exit 0
+fi
+
+echo "[pre-push] Running typecheck (tsc --noEmit)…"
+npm run typecheck

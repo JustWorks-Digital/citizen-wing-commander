@@ -153,6 +153,7 @@ export type MissionChecklistTableProps = {
   /** Prefer Pick up as the left cargo tab (⋯ Prioritize pickup). */
   prioritizePickup?: boolean;
   /** Session ship display name for pickup transfer labels. */
+  shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
   shipSlug?: string | null;
   /** Session missions — used to attach contract screenshot refs per stop. */

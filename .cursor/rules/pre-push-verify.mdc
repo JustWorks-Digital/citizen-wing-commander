@@ -1,0 +1,6 @@
+# Pre-push verify
+
+- Husky **pre-push** runs `npm run typecheck` (`tsc --noEmit`) so TypeScript errors fail locally before Railway `next build` fails.
+- Agents: before `git push`, run `npm run typecheck` (or `npm run verify:push`) if the hook might be skipped; fix failures — do not push red builds.
+- Intentional bypass only: `SKIP_PUSH_VERIFY=1` (same idea as `SKIP_STORYBOOK_GATE=1` on commit).
+- Full `npm run build` is slower but closest to Railway; typecheck catches the usual auto-deploy breakers.
