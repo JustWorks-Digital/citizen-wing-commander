@@ -8,7 +8,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stops rail + checklist card placeholders shown while a trip session hydrates.",
+          "Stops rail + sticky toolbar + stop-card placeholders (Drop off / Pick up tabs, transfer + mission cards, pad graph) while a trip session hydrates.",
       },
     },
   },

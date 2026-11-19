@@ -37,6 +37,7 @@ import {
 import {
   interleaveItemGroups,
   orderPackItemsByProgram,
+  partitionStayUnderTransfer,
 } from "@/lib/ships/packItemOrder";
 import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
 import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
@@ -1361,8 +1362,10 @@ export function placeCargoItemsInZone(
         if (regionKey) occupiedRegions.set(key, regionKey);
       }
       const idRoot = options?.idNamespace ?? zone;
+      // Include origin so repeated placeCargoItemsInZone calls (stay →
+      // pickup → delivery partitions) cannot collide on index+size+cluster.
       boxes.push({
-        id: `${idRoot}-${index}-${item.size}-${clusterKey}`,
+        id: `${idRoot}-${index}-${item.size}-${clusterKey}-${origin.x}-${origin.y}-${origin.z}`,
         size: item.size,
         origin,
         footprint,
@@ -2280,7 +2283,13 @@ function applyDeliveryLocationSplitsToBoxes(
 
   const pending = boxes
     .map((box) => ({ box, assigned: false }))
-    .sort((a, b) => b.box.size - a.box.size);
+    .sort((a, b) => {
+      if (b.box.size !== a.box.size) return b.box.size - a.box.size;
+      // Prefer top-of-stack crates for the current delivery (unload UX).
+      const topA = a.box.origin.z + a.box.footprint.dz;
+      const topB = b.box.origin.z + b.box.footprint.dz;
+      return topB - topA;
+    });
   const tagged: PlacedCargoBox[] = [];
   const needBySlug = new Map(
     splits.map((split) => [split.locationSlug, split.scu]),
@@ -2298,7 +2307,12 @@ function applyDeliveryLocationSplitsToBoxes(
         exact ??
         pending
           .filter((entry) => !entry.assigned && entry.box.size <= need)
-          .sort((a, b) => b.box.size - a.box.size)[0];
+          .sort((a, b) => {
+            if (b.box.size !== a.box.size) return b.box.size - a.box.size;
+            const topA = a.box.origin.z + a.box.footprint.dz;
+            const topB = b.box.origin.z + b.box.footprint.dz;
+            return topB - topA;
+          })[0];
       if (!fit) break;
       fit.assigned = true;
       need -= fit.box.size;
@@ -2620,24 +2634,28 @@ export function packByCargoTypeAtStop(
     sketch,
     itemsByStorage,
   )) {
-    let ordered = items;
-    let itemsPreordered = false;
-    if (packProgram) {
-      ordered = orderPackItemsByProgram(items, packProgram);
-      itemsPreordered = true;
-    }
-    const placed = placeCargoItemsInZone(sketch, storage, ordered, {
-      occupied,
-      occupiedClusters,
-      clusterByKey: true,
-      missionPriorityBias,
-      packSlotPolicy,
-      itemsPreordered,
-    });
-    boxes.push(...placed.boxes);
-    unplaced.push(...placed.unplaced);
-    for (const box of placed.boxes) {
-      occupied.push(...box.cells);
+    // Stay first (low Z), then pickup, then delivery (high Z) so Transfer
+    // scope crates are reachable top → bottom.
+    for (const part of partitionStayUnderTransfer(items)) {
+      let ordered = part;
+      let itemsPreordered = false;
+      if (packProgram) {
+        ordered = orderPackItemsByProgram(part, packProgram);
+        itemsPreordered = true;
+      }
+      const placed = placeCargoItemsInZone(sketch, storage, ordered, {
+        occupied,
+        occupiedClusters,
+        clusterByKey: true,
+        missionPriorityBias,
+        packSlotPolicy,
+        itemsPreordered,
+      });
+      boxes.push(...placed.boxes);
+      unplaced.push(...placed.unplaced);
+      for (const box of placed.boxes) {
+        occupied.push(...box.cells);
+      }
     }
   }
 
@@ -2807,45 +2825,42 @@ export function packDeliveriesFromStop(
       };
     };
 
+    const placeStayUnderTransfer = (list: CargoPlacementItem[]) => {
+      for (const part of partitionStayUnderTransfer(list)) {
+        const { ordered, itemsPreordered } = orderMaybe(part);
+        appendPlaced(
+          placeCargoItemsInZone(sketch, storage, ordered, {
+            occupied,
+            occupiedClusters,
+            occupiedRegions,
+            clusterByKey: true,
+            preferRegionStacking: true,
+            requireRegionContiguity: true,
+            forbidForeignRegionSupport: true,
+            // End bias comes from preferBayEnd on each item, not rank/max.
+            missionPriorityBias: null,
+            packSlotPolicy,
+            itemsPreordered,
+          }),
+        );
+      }
+    };
+
     for (const priorityItems of priorityByRank) {
       if (priorityItems.length === 0) continue;
-      const { ordered, itemsPreordered } = orderMaybe(priorityItems);
-      appendPlaced(
-        placeCargoItemsInZone(sketch, storage, ordered, {
-          occupied,
-          occupiedClusters,
-          occupiedRegions,
-          clusterByKey: true,
-          preferRegionStacking: true,
-          requireRegionContiguity: true,
-          forbidForeignRegionSupport: true,
-          // End bias comes from preferBayEnd on each item, not rank/max.
-          missionPriorityBias: null,
-          packSlotPolicy,
-          itemsPreordered,
-        }),
-      );
+      placeStayUnderTransfer(priorityItems);
     }
 
     if (restItems.length > 0) {
-      const { ordered, itemsPreordered } = orderMaybe(restItems);
-      appendPlaced(
-        placeCargoItemsInZone(sketch, storage, ordered, {
-          occupied,
-          occupiedClusters,
-          occupiedRegions,
-          clusterByKey: true,
-          forbidForeignRegionSupport: true,
-          // Fill leftover (typically mid-bay) by cargo type.
-          missionPriorityBias: null,
-          packSlotPolicy,
-          itemsPreordered,
-        }),
-      );
+      placeStayUnderTransfer(restItems);
     }
   }
 
-  return { zone: "front", boxes, unplaced };
+  return {
+    zone: "front",
+    boxes,
+    unplaced,
+  };
 }
 
 /** Flat set of all occupied cells in a plan (for view highlighting). */

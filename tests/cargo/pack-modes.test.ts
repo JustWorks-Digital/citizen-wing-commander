@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { cargoBay } from "@/lib/ships/cargoBay";
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
+import { partitionStayUnderTransfer } from "@/lib/ships/packItemOrder";
+import type { CargoPlacementItem } from "@/lib/ships/cargoGridPlacement";
 import {
   TEST_SHIP_SLUGS,
   getTripStops,
@@ -9,6 +11,35 @@ import {
   totalScu,
   type TestShipSlug,
 } from "./fixtures";
+
+function placementStub(
+  action: CargoPlacementItem["action"],
+  slug: string,
+): CargoPlacementItem {
+  return {
+    size: 1,
+    commoditySlug: slug,
+    commodityName: slug,
+    color: null,
+    color2: null,
+    action,
+  };
+}
+
+describe("partitionStayUnderTransfer", () => {
+  it("orders stay, then pickup, then delivery for bottom-up placement", () => {
+    const parts = partitionStayUnderTransfer([
+      placementStub("delivery", "d"),
+      placementStub(undefined, "s"),
+      placementStub("pickup", "p"),
+    ]);
+    expect(parts.map((part) => part.map((item) => item.commoditySlug))).toEqual([
+      ["s"],
+      ["p"],
+      ["d"],
+    ]);
+  });
+});
 
 function sketch(shipSlug: TestShipSlug) {
   const value = getCargoGridSketchBySlug(shipSlug);
@@ -108,6 +139,43 @@ describe.each(TEST_SHIP_SLUGS)("pack modes at a stop (%s)", (shipSlug) => {
       }
     }
     expect(totalScu({ ...plan, boxes: transfer })).toBe(40);
+  });
+
+  it("keeps stay cargo from burying transfer crates (top-first Transfer UX)", () => {
+    const stops = getTripStops("aboardCargo");
+    const grid = sketch(shipSlug);
+    const modes = [
+      "by-cargo-type",
+      "by-mission-location",
+    ] as const;
+    for (const packMode of modes) {
+      const plan = cargoBay.packAtStop("stop-2", grid, stops, {
+        packMode,
+        includeAboardCargo: true,
+      });
+      const transfer = plan.boxes.filter(
+        (box) => box.action === "pickup" || box.action === "delivery",
+      );
+      const stay = plan.boxes.filter((box) => box.action == null);
+      expect(transfer.length, packMode).toBeGreaterThan(0);
+      expect(stay.length, packMode).toBeGreaterThan(0);
+      for (const box of transfer) {
+        for (const cell of box.cells) {
+          const stayAbove = stay.some((stayBox) =>
+            stayBox.cells.some(
+              (stayCell) =>
+                stayCell.x === cell.x &&
+                stayCell.y === cell.y &&
+                stayCell.z > cell.z,
+            ),
+          );
+          expect(
+            stayAbove,
+            `${packMode}: stay above transfer ${box.commoditySlug} at ${cell.x},${cell.y},${cell.z}`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 
   it("tags only this stop’s transfers with pickup/delivery (stay cargo has no action)", () => {

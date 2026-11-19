@@ -278,8 +278,16 @@ export function MissionsCatalogView({
     });
   };
 
+  const fillHeight = !showHeading;
+
   return (
-    <div className="space-y-6">
+    <div
+      className={
+        fillHeight
+          ? "flex h-full min-h-0 flex-col gap-3"
+          : "space-y-6"
+      }
+    >
       {showHeading ? (
         <div>
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-rsi-accent">
@@ -291,7 +299,7 @@ export function MissionsCatalogView({
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-rsi-warn">{error}</p> : null}
+      {error ? <p className="shrink-0 text-sm text-rsi-warn">{error}</p> : null}
 
       {isLoading ? (
         <MissionCatalogSkeleton />
@@ -299,19 +307,28 @@ export function MissionsCatalogView({
         <p className="text-sm text-rsi-text-muted">No catalog contracts yet.</p>
       ) : (
         <>
-          <MissionCatalogFilters
-            missions={missions}
-            query={query}
-            onQueryChange={setQuery}
-            filters={filters}
-            onFiltersChange={setFilters}
-            resultCount={visible.length}
-            totalCount={missions.length}
-            visibleColumns={visibleColumns}
-            onVisibleColumnsChange={setVisibleColumnsAndPersist}
-          />
+          <div className={fillHeight ? "shrink-0" : undefined}>
+            <MissionCatalogFilters
+              missions={missions}
+              query={query}
+              onQueryChange={setQuery}
+              filters={filters}
+              onFiltersChange={setFilters}
+              resultCount={visible.length}
+              totalCount={missions.length}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={setVisibleColumnsAndPersist}
+            />
+          </div>
           {checkedMissions.length > 0 ? (
-            <div className="space-y-2 rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 py-2">
+            <div
+              className={[
+                "space-y-2 rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 py-2",
+                fillHeight ? "shrink-0" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-muted">
                   {checkedMissions.length} selected
@@ -467,27 +484,32 @@ export function MissionsCatalogView({
               </dl>
             </div>
           ) : null}
-          {addError ? <p className="text-sm text-rsi-warn">{addError}</p> : null}
+          {addError ? (
+            <p className="shrink-0 text-sm text-rsi-warn">{addError}</p>
+          ) : null}
           {addStatus ? (
-            <p className="text-sm text-rsi-accent">{addStatus}</p>
+            <p className="shrink-0 text-sm text-rsi-accent">{addStatus}</p>
           ) : null}
           {visible.length === 0 ? (
             <p className="text-sm text-rsi-text-muted">
               No contracts match these filters.
             </p>
           ) : (
-            <MissionCatalogTable
-              missions={visible}
-              selectedId={selected?.id ?? null}
-              onSelect={setSelected}
-              onViewSource={openSource}
-              onViewObject={setJsonMission}
-              sort={sort}
-              onSortChange={setSort}
-              checkedIds={checkedIds}
-              onCheckedIdsChange={setCheckedIds}
-              visibleColumns={visibleColumns}
-            />
+            <div className={fillHeight ? "min-h-0 flex-1" : undefined}>
+              <MissionCatalogTable
+                missions={visible}
+                selectedId={selected?.id ?? null}
+                onSelect={setSelected}
+                onViewSource={openSource}
+                onViewObject={setJsonMission}
+                sort={sort}
+                onSortChange={setSort}
+                checkedIds={checkedIds}
+                onCheckedIdsChange={setCheckedIds}
+                visibleColumns={visibleColumns}
+                fillHeight={fillHeight}
+              />
+            </div>
           )}
         </>
       )}

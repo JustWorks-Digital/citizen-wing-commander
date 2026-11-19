@@ -4,6 +4,7 @@ import {
   Fragment,
   memo,
   startTransition,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -112,6 +113,15 @@ import {
 
 /** Display-only origin row when start ≠ first stop (matches route timeline). */
 export const QUANTUM_ORIGIN_ROW_ID = INSERT_AFTER_SESSION_START;
+
+/** Pinwheel in the Done checkbox before the checkmark commits. */
+const STOP_COMPLETE_SPINNER_MS = 900;
+/** Brief hold on the checkmark before advancing to the next stop. */
+const STOP_COMPLETE_CHECKMARK_HOLD_MS = 350;
+
+type StopCompleteHandoff = {
+  fromStopId: string;
+};
 
 export type MissionChecklistTripSummary = TripCompleteSummaryPanelProps;
 
@@ -379,6 +389,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     null,
   );
   const pendingScrollToIdRef = useRef<string | null>(null);
+  const [completeHandoff, setCompleteHandoff] =
+    useState<StopCompleteHandoff | null>(null);
+  const handoffTimerRef = useRef<number | null>(null);
   /** Block history-strip Open after Done — click can retarget onto the strip. */
   const suppressHistoryOpenUntilRef = useRef(new Map<string, number>());
   const displayRows = rows;
@@ -392,11 +405,17 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const completedCount =
     rows.filter((row) => row.isCompleted).length +
     (showQuantumOrigin && quantumCompleted ? 1 : 0);
+  // Keep the stop just completed visible during handoff (even if history is hidden).
   const visibleRows = hideCompleted
-    ? displayRows.filter((row) => !row.isCompleted)
+    ? displayRows.filter(
+        (row) =>
+          !row.isCompleted || row.id === completeHandoff?.fromStopId,
+      )
     : displayRows;
   const showQuantumInList =
-    showQuantumOrigin && !(hideCompleted && quantumCompleted);
+    showQuantumOrigin &&
+    (!(hideCompleted && quantumCompleted) ||
+      completeHandoff?.fromStopId === QUANTUM_ORIGIN_ROW_ID);
   const canAddStops = Boolean(onInsertQuantumTravel);
 
   /** Keys: `missionId::commoditySlug::locationSlug` that can absorb a skip. */
@@ -501,6 +520,61 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       markPendingId(setPendingCompleteRowIds, rowId, false);
     });
   };
+
+  const clearCompleteHandoffTimer = useCallback(() => {
+    if (handoffTimerRef.current == null) return;
+    window.clearTimeout(handoffTimerRef.current);
+    handoffTimerRef.current = null;
+  }, []);
+
+  const setCompleteHandoffPending = useCallback(
+    (stopId: string, pending: boolean) => {
+      if (stopId === QUANTUM_ORIGIN_ROW_ID) {
+        markPendingId(setPendingQuantumRowIds, stopId, pending);
+        return;
+      }
+      markPendingId(setPendingCompleteRowIds, stopId, pending);
+    },
+    [],
+  );
+
+  /**
+   * Done click: pinwheel → checkmark (commit) → brief hold → advance focus.
+   */
+  const scheduleAdvanceAfterComplete = useCallback(
+    (
+      fromStopId: string,
+      nextIncomplete: HaulingChecklistRow | null | undefined,
+      commit: () => void | Promise<void>,
+    ) => {
+      clearCompleteHandoffTimer();
+      setCompleteHandoff({ fromStopId });
+      setCompleteHandoffPending(fromStopId, true);
+      onFocusStop?.(fromStopId);
+      handoffTimerRef.current = window.setTimeout(() => {
+        void Promise.resolve(commit())
+          .catch(() => undefined)
+          .finally(() => {
+            setCompleteHandoffPending(fromStopId, false);
+            handoffTimerRef.current = window.setTimeout(() => {
+              handoffTimerRef.current = null;
+              setCompleteHandoff(null);
+              startTransition(() => {
+                if (nextIncomplete) {
+                  pendingScrollToIdRef.current = nextIncomplete.id;
+                  onFocusStop?.(nextIncomplete.id);
+                } else {
+                  onFocusStop?.(fromStopId);
+                }
+              });
+            }, STOP_COMPLETE_CHECKMARK_HOLD_MS);
+          });
+      }, STOP_COMPLETE_SPINNER_MS);
+    },
+    [clearCompleteHandoffTimer, onFocusStop, setCompleteHandoffPending],
+  );
+
+  useEffect(() => () => clearCompleteHandoffTimer(), [clearCompleteHandoffTimer]);
 
   const runCargoPending = (
     rowId: string,
@@ -664,12 +738,13 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const completeQuantumOrigin = () => {
     const nextIncomplete =
       rows.find((entry) => !entry.isCompleted) ?? firstStop;
-    setQuantumDeparted(true);
-    if (nextIncomplete) {
-      startTransition(() => {
-        onFocusStop?.(nextIncomplete.id);
-      });
-    }
+    scheduleAdvanceAfterComplete(
+      QUANTUM_ORIGIN_ROW_ID,
+      nextIncomplete ?? null,
+      () => {
+        setQuantumDeparted(true);
+      },
+    );
   };
 
   useEffect(() => {
@@ -728,7 +803,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         if (!row) return;
         if (pendingCompleteRowIds.has(row.id)) return;
         const completing = !row.isCompleted;
-        void runRowPending(row.id, () => onToggle(row.id));
         if (completing) {
           suppressHistoryOpenUntilRef.current.set(row.id, Date.now() + 500);
           setExpandedCompletedRowId((current) =>
@@ -738,16 +812,17 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           const nextIncomplete = rows
             .slice(routeIndex + 1)
             .find((entry) => !entry.isCompleted);
-          startTransition(() => {
-            if (nextIncomplete) {
-              onFocusStop?.(nextIncomplete.id);
-            } else {
-              onFocusStop?.(null);
-            }
-          });
-        } else if (isViewingCompleted) {
-          // Undoing Done from a history view — return focus to this stop.
-          onFocusStop?.(row.id);
+          scheduleAdvanceAfterComplete(row.id, nextIncomplete ?? null, () =>
+            onToggle(row.id),
+          );
+        } else {
+          clearCompleteHandoffTimer();
+          setCompleteHandoff(null);
+          void runRowPending(row.id, () => onToggle(row.id));
+          if (isViewingCompleted) {
+            // Undoing Done from a history view — return focus to this stop.
+            onFocusStop?.(row.id);
+          }
         }
       }
     };
@@ -768,6 +843,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     quantumCompleted,
     rows,
     showQuantumInList,
+    scheduleAdvanceAfterComplete,
+    clearCompleteHandoffTimer,
   ]);
 
   const confirmQuantumDraft = (input: {
@@ -1054,10 +1131,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                   }}
                   onToggle={() => {
                     if (quantumCompleted) {
+                      clearCompleteHandoffTimer();
+                      setCompleteHandoffPending(QUANTUM_ORIGIN_ROW_ID, false);
+                      setCompleteHandoff(null);
                       setQuantumDeparted(false);
                       onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
                       return;
                     }
+                    if (pendingQuantumRowIds.has(QUANTUM_ORIGIN_ROW_ID)) return;
                     completeQuantumOrigin();
                   }}
                   isSavingSection={pendingQuantumRowIds.has(
@@ -1128,10 +1209,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           ) => {
             if (pendingCompleteRowIds.has(stopId)) return;
             const completing = !isCompleted;
-            void runRowPending(stopId, () => onToggle(stopId));
-            // Defer focus/bay replan so the checkbox paints first.
-            // Always advance when completing — especially with history hidden,
-            // the finished stop leaves the list and the next one should be active.
             if (completing) {
               // Force history-strip condensation even if this stop was expanded.
               // Also ignore Open for a beat — Done click can land on the strip.
@@ -1142,15 +1219,15 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               const nextIncomplete = displayRows
                 .slice(stopRouteIndex + 1)
                 .find((entry) => !entry.isCompleted);
-              startTransition(() => {
-                if (nextIncomplete) {
-                  onFocusStop?.(nextIncomplete.id);
-                } else {
-                  // Keep last stop focused so the Stops rail stays sized /
-                  // marked complete while the summary fills the checklist.
-                  onFocusStop?.(stopId);
-                }
-              });
+              scheduleAdvanceAfterComplete(
+                stopId,
+                nextIncomplete ?? null,
+                () => onToggle(stopId),
+              );
+            } else {
+              clearCompleteHandoffTimer();
+              setCompleteHandoff(null);
+              void runRowPending(stopId, () => onToggle(stopId));
             }
           };
           const openCompletedHistory = (stopId: string) => {

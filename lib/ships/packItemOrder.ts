@@ -48,6 +48,25 @@ export function interleaveItemGroups(
 }
 
 /**
+ * Bottom-up placer: earlier partitions sit lower. Stay cargo first, then
+ * pickups, then deliveries — so Transfer-tab crates end on top for
+ * unload/load (top → bottom) UX.
+ */
+export function partitionStayUnderTransfer(
+  items: CargoPlacementItem[],
+): CargoPlacementItem[][] {
+  const stay: CargoPlacementItem[] = [];
+  const pickups: CargoPlacementItem[] = [];
+  const deliveries: CargoPlacementItem[] = [];
+  for (const item of items) {
+    if (item.action === "delivery") deliveries.push(item);
+    else if (item.action === "pickup") pickups.push(item);
+    else stay.push(item);
+  }
+  return [stay, pickups, deliveries].filter((part) => part.length > 0);
+}
+
+/**
  * Reorder placement items according to group/order pack primitives.
  * Stack/require/bias-xy do not affect this phase.
  */

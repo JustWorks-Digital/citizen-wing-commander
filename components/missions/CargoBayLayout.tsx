@@ -100,12 +100,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     sortingMode,
     lastAutoPackMode,
     prioritized,
+    topZoom,
+    isoZoom,
     setLegendHidden,
     setSortingHidden,
     setViewTab,
     setSortingMode,
     setLastAutoPackMode,
     setPrioritized,
+    setTopZoom,
+    setIsoZoom,
   } = useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
   const [manualSession, setManualSession] =
@@ -845,6 +849,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               onManualDragStart={onManualDragStart}
               onManualDragDelta={onManualDragDelta}
               onManualDragEnd={onManualDragEnd}
+              topZoom={topZoom}
+              onTopZoomChange={setTopZoom}
+              isoZoom={isoZoom}
+              onIsoZoomChange={setIsoZoom}
             />
           </div>
           <p className="sr-only">

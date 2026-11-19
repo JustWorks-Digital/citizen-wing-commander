@@ -14,6 +14,7 @@ import {
   focusPickupHangarPile,
   type StopCargoStacksPlan,
 } from "@/lib/missions/stopDeliveryBoxes";
+import { useRightClickPan } from "@/hooks/useRightClickPan";
 import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
@@ -68,6 +69,8 @@ const ZOOM_STEP = 0.25;
 const VIEWPORT_PAD_X = 20;
 /** Vertical padding on the scroll viewport (`pt-1` + `pb-2.5`). */
 const VIEWPORT_PAD_Y = 14;
+/** Leave room so fit-zoom doesn't sit on the scroll edge (matches cargo grid). */
+const STACK_FIT_PAD_PX = 8;
 /**
  * Cap graph frame height so tall piles zoom out instead of stretching the
  * stop card / introducing a default vertical scroll.
@@ -274,6 +277,9 @@ export function StopDeliveryStacksView({
   const [isDesktop, setIsDesktop] = useState(false);
   const [pileIndex, setPileIndex] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
+  /** Overflow scroller inside the measure shell (right-click pan target). */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useRightClickPan(scrollRef);
   /** Last committed measure — ignore tiny scrollbar / subpixel noise. */
   const viewportSizeRef = useRef({ w: 0, h: 0 });
   const stretchToParent = fillAvailableHeight && isDesktop;
@@ -406,32 +412,60 @@ export function StopDeliveryStacksView({
   );
 
   const fitZoom = useMemo(() => {
-    const availableW = Math.max(0, viewportWidth - VIEWPORT_PAD_X);
+    const availableW = Math.max(
+      0,
+      viewportWidth - VIEWPORT_PAD_X - STACK_FIT_PAD_PX,
+    );
     // Desktop fill: use the stretched parent height. Otherwise keep the fixed
     // max so tall piles zoom out instead of a content-sized feedback loop.
     const frameH =
       stretchToParent && viewportHeight > 0
         ? viewportHeight
         : MAX_VIEWPORT_HEIGHT_PX;
-    const availableH = Math.max(0, frameH - VIEWPORT_PAD_Y);
+    const availableH = Math.max(
+      0,
+      frameH - VIEWPORT_PAD_Y - STACK_FIT_PAD_PX,
+    );
     if (availableW <= 0 || baseBounds.width <= 0) return 1;
     let zoom = Math.min(
       availableW / baseBounds.width,
       baseBounds.height > 0 ? availableH / baseBounds.height : 1,
     );
-    // Under-stack labels use floored font sizes, so bounds height is not linear
-    // in zoom — iterate until the rendered frame actually fits (no y-scroll).
+    // Under-stack labels use floored font sizes, so bounds are not linear in
+    // zoom — iterate until the rendered frame fits (no H/V scroll at fit).
     for (let i = 0; i < 10; i++) {
-      const renderedHeight = stackViewBounds(
+      const rendered = stackViewBounds(
         frameLengthCells,
         widthCells,
         viewHeight,
         cellPx * zoom,
-      ).height;
-      if (renderedHeight <= availableH + 0.5 || renderedHeight <= 0) break;
-      zoom *= availableH / renderedHeight;
+      );
+      const scaleW =
+        rendered.width > availableW + 0.5 && rendered.width > 0
+          ? availableW / rendered.width
+          : 1;
+      const scaleH =
+        rendered.height > availableH + 0.5 && rendered.height > 0
+          ? availableH / rendered.height
+          : 1;
+      const scale = Math.min(scaleW, scaleH);
+      if (scale >= 1) break;
+      zoom *= scale;
     }
-    return clampZoom(zoom);
+    // Rounding in clampZoom can nudge over the edge — shrink once more if needed.
+    zoom = clampZoom(zoom);
+    const finalBounds = stackViewBounds(
+      frameLengthCells,
+      widthCells,
+      viewHeight,
+      cellPx * zoom,
+    );
+    const finalScale = Math.min(
+      finalBounds.width > 0 ? availableW / finalBounds.width : 1,
+      finalBounds.height > 0 ? availableH / finalBounds.height : 1,
+    );
+    if (finalScale < 1) zoom = clampZoom(zoom * finalScale);
+    return zoom;
   }, [
     viewportWidth,
     viewportHeight,
@@ -623,13 +657,11 @@ export function StopDeliveryStacksView({
         }
       >
         <div
+          ref={scrollRef}
           className={[
             "h-full min-h-0 min-w-0",
-            // Default fit zoom must not introduce a vertical scrollbar; allow it
-            // only after the user zooms in past the auto-fit scale.
-            zoom > fitZoom + 0.01
-              ? "overflow-auto"
-              : "overflow-x-auto overflow-y-hidden",
+            // Auto-fit: clip (no phantom H scroll). Scroll + pan only after zoom-in.
+            zoom > fitZoom + 0.01 ? "overflow-auto" : "overflow-hidden",
           ].join(" ")}
         >
         <div

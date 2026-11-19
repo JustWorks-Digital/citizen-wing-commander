@@ -55,6 +55,7 @@ import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { stopMissionBoxConfigModalProps } from "@/lib/missions/stopMissionBoxConfig";
 import { resolveLocationSlug } from "@/lib/sessions/resolveRefs";
+import { SessionAcceptedContractsSkeleton } from "./SessionAcceptedContractsSkeleton";
 import { StopMissionBoxConfigModal } from "./StopMissionBoxConfigModal";
 
 export type SessionMissionsModalProps = {
@@ -927,27 +928,16 @@ export function SessionMissionsModal({
 
   const columnTotals = useMemo(() => {
     let rewardAuec = 0;
-    let rewardEarned = 0;
     let scu = 0;
-    let scuEarned = 0;
     let exp = 0;
-    let expEarned = 0;
     let boxes = 0;
     for (const mission of enriched) {
-      const missionScu = missionTotalScu(mission);
-      const missionReward = missionAuecAmount(mission);
-      const missionExp = estimateMissionHaulingRepXp(mission) ?? 0;
-      rewardAuec += missionReward;
-      scu += missionScu;
-      exp += missionExp;
+      rewardAuec += missionAuecAmount(mission);
+      scu += missionTotalScu(mission);
+      exp += estimateMissionHaulingRepXp(mission) ?? 0;
       boxes += missionBoxCount(mission);
-      if (mission.isCompleted) {
-        rewardEarned += missionReward;
-        scuEarned += missionScu;
-        expEarned += missionExp;
-      }
     }
-    return { rewardAuec, rewardEarned, scu, scuEarned, exp, expEarned, boxes };
+    return { rewardAuec, scu, exp, boxes };
   }, [enriched]);
 
   const onToggleSelect = useCallback((missionId: string) => {
@@ -1005,7 +995,7 @@ export function SessionMissionsModal({
       ].join(" ")}
       role="dialog"
       aria-modal={open}
-      aria-label="Contracts"
+      aria-label="Accepted Contracts"
       aria-hidden={!open}
       inert={!open ? true : undefined}
       onClick={(event) => {
@@ -1018,7 +1008,7 @@ export function SessionMissionsModal({
         <div className="flex h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
         <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="min-w-0 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
-            Contracts
+            Accepted Contracts
           </h2>
         </header>
 
@@ -1031,9 +1021,9 @@ export function SessionMissionsModal({
               No contracts in this session.
             </p>
           ) : !paintRows ? (
-            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:min-w-[20rem] sm:px-5 sm:py-5">
-              Loading contracts…
-            </p>
+            <SessionAcceptedContractsSkeleton
+              rows={Math.min(Math.max(enriched.length, 3), 8)}
+            />
           ) : (
             <>
               {/* Mobile: stacked cards — no horizontal scroll */}
@@ -1104,68 +1094,25 @@ export function SessionMissionsModal({
                     <td
                       className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
                       colSpan={2}
-                      title="Earned / session total aUEC"
+                      title="Contracts total aUEC"
                     >
-                      {columnTotals.rewardAuec > 0 ? (
-                        <>
-                          <span
-                            className={
-                              columnTotals.rewardEarned > 0
-                                ? "text-rsi-success"
-                                : undefined
-                            }
-                          >
-                            {Math.floor(
-                              columnTotals.rewardEarned,
-                            ).toLocaleString("en-US")}
-                          </span>
-                          {" / "}
-                          {Math.floor(columnTotals.rewardAuec).toLocaleString(
-                            "en-US",
-                          )}{" "}
-                          aUEC
-                        </>
-                      ) : (
-                        "—"
-                      )}
+                      {columnTotals.rewardAuec > 0
+                        ? `${Math.floor(columnTotals.rewardAuec).toLocaleString("en-US")} aUEC`
+                        : "—"}
                     </td>
                     <td
                       className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                      title="Completed contract SCU / session total SCU"
+                      title="Contracts total SCU"
                     >
-                      <span
-                        className={
-                          columnTotals.scuEarned > 0
-                            ? "text-rsi-success"
-                            : undefined
-                        }
-                      >
-                        {columnTotals.scuEarned}
-                      </span>
-                      {" / "}
                       {columnTotals.scu} SCU
                     </td>
                     <td
                       className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                      title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
+                      title={`Contracts total approximate hauling EXP: ${columnTotals.exp.toLocaleString("en-US")}`}
                     >
-                      {columnTotals.exp > 0 ? (
-                        <>
-                          <span
-                            className={
-                              columnTotals.expEarned > 0
-                                ? "text-rsi-success"
-                                : undefined
-                            }
-                          >
-                            {formatHaulingRepXp(columnTotals.expEarned)}
-                          </span>
-                          {" / "}
-                          {formatHaulingRepXp(columnTotals.exp)} EXP
-                        </>
-                      ) : (
-                        "—"
-                      )}
+                      {columnTotals.exp > 0
+                        ? `${formatHaulingRepXp(columnTotals.exp)} EXP`
+                        : "—"}
                     </td>
                     <td className={`${tdClass} py-2.5`} />
                     <td className={`${tdClass} py-2.5`} />
@@ -1188,76 +1135,34 @@ export function SessionMissionsModal({
               Total
             </p>
             <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.65rem] tabular-nums text-rsi-text">
-              <div title="Earned / session total aUEC">
+              <div title="Contracts total aUEC">
                 <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
                   aUEC
                 </dt>
                 <dd className="mt-0.5">
-                  {columnTotals.rewardAuec > 0 ? (
-                    <>
-                      <span
-                        className={
-                          columnTotals.rewardEarned > 0
-                            ? "text-rsi-success"
-                            : undefined
-                        }
-                      >
-                        {Math.floor(columnTotals.rewardEarned).toLocaleString(
-                          "en-US",
-                        )}
-                      </span>
-                      {" / "}
-                      {Math.floor(columnTotals.rewardAuec).toLocaleString(
+                  {columnTotals.rewardAuec > 0
+                    ? Math.floor(columnTotals.rewardAuec).toLocaleString(
                         "en-US",
-                      )}
-                    </>
-                  ) : (
-                    "—"
-                  )}
+                      )
+                    : "—"}
                 </dd>
               </div>
-              <div title="Completed contract SCU / session total SCU">
+              <div title="Contracts total SCU">
                 <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
                   SCU
                 </dt>
-                <dd className="mt-0.5">
-                  <span
-                    className={
-                      columnTotals.scuEarned > 0
-                        ? "text-rsi-success"
-                        : undefined
-                    }
-                  >
-                    {columnTotals.scuEarned}
-                  </span>
-                  {" / "}
-                  {columnTotals.scu}
-                </dd>
+                <dd className="mt-0.5">{columnTotals.scu}</dd>
               </div>
               <div
-                title={`Earned / session total approximate hauling EXP: ${columnTotals.expEarned.toLocaleString("en-US")} / ${columnTotals.exp.toLocaleString("en-US")}`}
+                title={`Contracts total approximate hauling EXP: ${columnTotals.exp.toLocaleString("en-US")}`}
               >
                 <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
                   EXP
                 </dt>
                 <dd className="mt-0.5">
-                  {columnTotals.exp > 0 ? (
-                    <>
-                      <span
-                        className={
-                          columnTotals.expEarned > 0
-                            ? "text-rsi-success"
-                            : undefined
-                        }
-                      >
-                        {formatHaulingRepXp(columnTotals.expEarned)}
-                      </span>
-                      {" / "}
-                      {formatHaulingRepXp(columnTotals.exp)}
-                    </>
-                  ) : (
-                    "—"
-                  )}
+                  {columnTotals.exp > 0
+                    ? formatHaulingRepXp(columnTotals.exp)
+                    : "—"}
                 </dd>
               </div>
               <div>

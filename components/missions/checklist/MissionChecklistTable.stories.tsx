@@ -178,6 +178,14 @@ export const Loading: Story = {
     onToggle: () => {},
     isLoading: true,
   },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Uses ChecklistStopsSkeleton: Stops rail, sticky Cargo/Stats toolbar, and stop cards with Drop off / Pick up tabs, transfer + mission cards, and pad graph.",
+      },
+    },
+  },
 };
 
 /** Start differs from first stop — compact Quantum origin row is active. */

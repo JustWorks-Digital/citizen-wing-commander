@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
+import { useRightClickPan } from "@/hooks/useRightClickPan";
+import { useWheelZoom } from "@/hooks/useWheelZoom";
 import {
   cargoGridCargoLength,
   cargoGridHasExplicitPlacement,
@@ -76,9 +78,38 @@ type LegendSectionKey =
 
 const GRID_ZOOM_MIN = 0.5;
 const GRID_ZOOM_MAX = 2.5;
-const GRID_ZOOM_STEP = 0.25;
+/** Finer than 0.25 so 2D / Split / 3D zoom clicks are more precise. */
+const GRID_ZOOM_STEP = 0.1;
+/** Larger than click step so wheel in/out covers the range faster. */
+const GRID_WHEEL_ZOOM_STEP = 0.25;
+/** Leave a little room so fit-zoom doesn't sit on the scroll edge. */
+const GRID_FIT_PAD_PX = 8;
 /** Top-view size badge toggles (ascending). */
 const SCU_SIZE_BADGE_OPTIONS = [1, 2, 4, 8, 16, 32] as const satisfies readonly CargoBoxScu[];
+
+function clampGridZoom(value: number): number {
+  return Math.min(
+    GRID_ZOOM_MAX,
+    Math.max(GRID_ZOOM_MIN, Math.round(value * 100) / 100),
+  );
+}
+
+/** Zoom that fits content in the scroll viewport (no H/V scroll). */
+function fitZoomForViewport(
+  scrollEl: HTMLElement | null,
+  contentEl: HTMLElement | null,
+  currentZoom: number,
+): number {
+  if (!scrollEl || !contentEl || currentZoom <= 0) return 1;
+  const availW = Math.max(0, scrollEl.clientWidth - GRID_FIT_PAD_PX);
+  const availH = Math.max(0, scrollEl.clientHeight - GRID_FIT_PAD_PX);
+  const contentW = contentEl.offsetWidth;
+  const contentH = contentEl.offsetHeight;
+  if (availW <= 0 || availH <= 0 || contentW <= 0 || contentH <= 0) return 1;
+  const baseW = contentW / currentZoom;
+  const baseH = contentH / currentZoom;
+  return clampGridZoom(Math.min(availW / baseW, availH / baseH));
+}
 
 function CargoGridZoomControls({
   zoom,
@@ -118,8 +149,8 @@ function CargoGridZoomControls({
         max={GRID_ZOOM_MAX}
         onChange={onZoomChange}
         onClick={onReset}
-        title="Reset zoom · double-click to set"
-        aria-label="Reset zoom"
+        title="Fit grid in view · double-click to set"
+        aria-label="Fit grid in view"
         className={`${buttonClass} min-w-[2.25rem] border-0 border-r border-rsi-border px-1 text-[0.5rem] tabular-nums sm:min-w-[2.75rem] sm:px-1.5 sm:text-[0.6rem]`}
       />
       <button
@@ -205,6 +236,12 @@ export type CargoGridSketchProps = {
     deltaCellsY: number,
   ) => void;
   onManualDragEnd?: () => void;
+  /** Controlled 2D zoom (Split left). Falls back to internal state. */
+  topZoom?: number;
+  onTopZoomChange?: (zoom: number) => void;
+  /** Controlled 3D zoom (Split right). Falls back to internal state. */
+  isoZoom?: number;
+  onIsoZoomChange?: (zoom: number) => void;
 };
 
 const CARGO_ZONE_FILL = [
@@ -274,6 +311,10 @@ export function CargoGridSketch({
   onManualDragStart,
   onManualDragDelta,
   onManualDragEnd,
+  topZoom: topZoomProp,
+  onTopZoomChange,
+  isoZoom: isoZoomProp,
+  onIsoZoomChange,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
@@ -286,8 +327,31 @@ export function CargoGridSketch({
     lastDy: number;
   } | null>(null);
   /** Independent zooms so split view can scale 2D and 3D separately. */
-  const [topZoom, setTopZoom] = useState(1);
-  const [isoZoom, setIsoZoom] = useState(1);
+  const [topZoomInternal, setTopZoomInternal] = useState(1);
+  const [isoZoomInternal, setIsoZoomInternal] = useState(1);
+  const topZoom = topZoomProp ?? topZoomInternal;
+  const isoZoom = isoZoomProp ?? isoZoomInternal;
+  const setTopZoom = useCallback(
+    (next: number | ((value: number) => number)) => {
+      const value =
+        typeof next === "function" ? next(topZoomProp ?? topZoomInternal) : next;
+      if (onTopZoomChange) onTopZoomChange(value);
+      else setTopZoomInternal(value);
+    },
+    [onTopZoomChange, topZoomInternal, topZoomProp],
+  );
+  const setIsoZoom = useCallback(
+    (next: number | ((value: number) => number)) => {
+      const value =
+        typeof next === "function" ? next(isoZoomProp ?? isoZoomInternal) : next;
+      if (onIsoZoomChange) onIsoZoomChange(value);
+      else setIsoZoomInternal(value);
+    },
+    [isoZoomInternal, isoZoomProp, onIsoZoomChange],
+  );
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const topContentRef = useRef<HTMLDivElement | null>(null);
+  const isoFitZoomRef = useRef<(() => number) | null>(null);
   /** 2D square facing — separate from 3D iso facing inside CargoGridIsoView. */
   const [topFacing, setTopFacing] = useState<BayFacing>(defaultBayFacing);
   const topFacingDegrees = bayFacingSquareDegrees(topFacing);
@@ -300,6 +364,15 @@ export function CargoGridSketch({
     views === "iso" || isSplit || (tabbed && viewTab === "iso");
   const showTop =
     views === "top" || isSplit || (tabbed && viewTab === "top");
+  /** Legend → Settings: wheel over the bay zooms (default on). */
+  const [wheelZoom, setWheelZoom] = useState(true);
+  useRightClickPan(topScrollRef, showTop);
+  useWheelZoom(topScrollRef, topContentRef, topZoom, setTopZoom, {
+    enabled: showTop && wheelZoom,
+    min: GRID_ZOOM_MIN,
+    max: GRID_ZOOM_MAX,
+    step: GRID_WHEEL_ZOOM_STEP,
+  });
   const totalLength = cargoGridTotalLength(sketch);
   const cargoLength = cargoGridCargoLength(sketch);
   const totalScu = cargoGridTotalScu(sketch);
@@ -324,17 +397,11 @@ export function CargoGridSketch({
   const viewCellPx = Math.max(4, Math.round(cellPx * topScale * topZoom));
   const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * isoScale * isoZoom));
 
-  function clampGridZoom(value: number): number {
-    return Math.min(
-      GRID_ZOOM_MAX,
-      Math.max(GRID_ZOOM_MIN, Math.round(value * 100) / 100),
-    );
-  }
-
   function makeZoomControls(
     zoom: number,
     setZoom: (next: number | ((value: number) => number)) => void,
     ariaLabel: string,
+    fitZoom: () => number,
   ): ReactNode {
     return (
       <CargoGridZoomControls
@@ -343,15 +410,26 @@ export function CargoGridSketch({
         onZoomOut={() =>
           setZoom((value) => clampGridZoom(value - GRID_ZOOM_STEP))
         }
-        onReset={() => setZoom(1)}
+        onReset={() => setZoom(fitZoom())}
         onZoomChange={(next) => setZoom(clampGridZoom(next))}
         ariaLabel={ariaLabel}
       />
     );
   }
 
-  const topZoomControls = makeZoomControls(topZoom, setTopZoom, "2D grid zoom");
-  const isoZoomControls = makeZoomControls(isoZoom, setIsoZoom, "3D grid zoom");
+  const topZoomControls = makeZoomControls(
+    topZoom,
+    setTopZoom,
+    "2D grid zoom",
+    () =>
+      fitZoomForViewport(topScrollRef.current, topContentRef.current, topZoom),
+  );
+  const isoZoomControls = makeZoomControls(
+    isoZoom,
+    setIsoZoom,
+    "3D grid zoom",
+    () => isoFitZoomRef.current?.() ?? 1,
+  );
   const commoditySlugs = useMemo(() => {
     if (legendItems && legendItems.length > 0) {
       return legendItems.map((item) => item.commoditySlug);
@@ -563,12 +641,13 @@ export function CargoGridSketch({
     return empty;
   }, [occupiedTopLayers, sketch.heightCells]);
 
-  // If legend filters clear the active 2D layer, jump to the lowest occupied one.
+  // If legend/Transfer filters clear the active 2D layer, jump to the
+  // highest occupied one (load/unload is top → bottom).
   useEffect(() => {
     if (sketch.heightCells <= 0) return;
     if (occupiedTopLayers.size === 0) return;
     if (occupiedTopLayers.has(activeZ)) return;
-    const next = [...occupiedTopLayers].sort((a, b) => a - b)[0];
+    const next = [...occupiedTopLayers].sort((a, b) => b - a)[0];
     if (next != null) setActiveZ(next);
   }, [activeZ, occupiedTopLayers, sketch.heightCells]);
 
@@ -1034,6 +1113,12 @@ export function CargoGridSketch({
                 onCheckedChange={setShowHologram}
                 ariaLabel="Show barely visible ghosts of hidden crates"
               />
+              <Switch
+                label="Mouse wheel zoom"
+                checked={wheelZoom}
+                onCheckedChange={setWheelZoom}
+                ariaLabel="Zoom the bay with the mouse wheel"
+              />
             </div>
           </CargoLegendSection>
         ) : null}
@@ -1261,12 +1346,20 @@ export function CargoGridSketch({
                 })}
               </div>
             ) : null}
-            <div className="min-h-0 flex-1 overflow-auto">
             <div
-              className="flex min-h-full min-w-full items-center justify-center"
+              ref={topScrollRef}
+              className="min-h-0 flex-1 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
+            <div
+              className="flex min-h-full min-w-full"
               role="img"
               aria-label={`${sketch.shipName} 2D cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
+              {/*
+                `m-auto` centers when the bay fits, and still lets overflow
+                scroll/pan reach every edge when zoomed in (unlike justify-center).
+              */}
+              <div ref={topContentRef} className="m-auto w-fit shrink-0">
               <RotatableTopBay degrees={topFacingDegrees}>
               <ShipBayEndsFrame
                 compact={isSplit}
@@ -1816,6 +1909,7 @@ export function CargoGridSketch({
               </div>
               </ShipBayEndsFrame>
               </RotatableTopBay>
+              </div>
             </div>
             </div>
           </div>
@@ -1826,6 +1920,9 @@ export function CargoGridSketch({
               <CargoGridIsoView
                 sketch={sketch}
                 cellPx={viewIsoCellPx}
+                zoom={isoZoom}
+                fitZoomGetterRef={isoFitZoomRef}
+                onZoomChange={wheelZoom ? setIsoZoom : undefined}
                 selectedCoord={selectedCoord}
                 onSelectCoord={onSelectCoord}
                 highlightedCoords={highlightedCoords}

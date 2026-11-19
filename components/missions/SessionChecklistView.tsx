@@ -1159,7 +1159,7 @@ export function SessionChecklistView({
                   disabled={Boolean(initial) || tabsBusy}
                   onRename={renameSession}
                   compact
-                  className="max-w-[min(100%,14rem)] sm:max-w-[18rem]"
+                  className="max-w-[min(100%,14rem)] md:max-w-none"
                 />
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   {!isTripLoading && isTripSetupComplete ? (

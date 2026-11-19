@@ -48,6 +48,10 @@ export type CargoBayChromePrefs = {
   lastAutoPackMode: CargoBayAutoPackMode;
   /** Prioritized packing toggle (Cargo type + ships that support it). */
   prioritized: boolean;
+  /** 2D (and Split left) grid zoom — survives modal close/reopen. */
+  topZoom: number;
+  /** 3D (and Split right) grid zoom — survives modal close/reopen. */
+  isoZoom: number;
 };
 
 export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
@@ -57,7 +61,21 @@ export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   sortingMode: "suggested",
   lastAutoPackMode: "suggested",
   prioritized: false,
+  topZoom: 1,
+  isoZoom: 1,
 };
+
+/** Matches CargoGridSketch zoom clamps. */
+export const CARGO_BAY_GRID_ZOOM_MIN = 0.5;
+export const CARGO_BAY_GRID_ZOOM_MAX = 2.5;
+
+export function clampCargoBayGridZoom(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(
+    CARGO_BAY_GRID_ZOOM_MAX,
+    Math.max(CARGO_BAY_GRID_ZOOM_MIN, Math.round(value * 100) / 100),
+  );
+}
 
 function isCargoBayViewTab(value: unknown): value is CargoBayViewTab {
   return value === "top" || value === "iso" || value === "split";
@@ -208,6 +226,14 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
       typeof record.prioritized === "boolean"
         ? record.prioritized
         : DEFAULT_CARGO_BAY_CHROME_PREFS.prioritized,
+    topZoom:
+      typeof record.topZoom === "number"
+        ? clampCargoBayGridZoom(record.topZoom)
+        : DEFAULT_CARGO_BAY_CHROME_PREFS.topZoom,
+    isoZoom:
+      typeof record.isoZoom === "number"
+        ? clampCargoBayGridZoom(record.isoZoom)
+        : DEFAULT_CARGO_BAY_CHROME_PREFS.isoZoom,
   };
 }
 

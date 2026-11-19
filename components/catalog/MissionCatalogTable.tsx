@@ -44,10 +44,14 @@ export type MissionCatalogTableProps = {
    * Does not affect search/filters — display only.
    */
   visibleColumns?: CatalogTableColumnKey[];
+  /** Fill parent height and scroll inside (modal embed). Sticky header. */
+  fillHeight?: boolean;
 };
 
-const thClass =
-  "px-2.5 py-2 text-left font-mono text-[0.55rem] font-medium uppercase tracking-[0.16em] text-rsi-text-muted sm:px-3";
+const thClass = [
+  "sticky top-0 z-10 px-2.5 py-2 text-left font-mono text-[0.55rem] font-medium uppercase tracking-[0.16em] text-rsi-text-muted sm:px-3",
+  "border-b border-rsi-divider bg-rsi-bg-deep",
+].join(" ");
 
 const tdClass =
   "px-2.5 py-2 align-top text-xs leading-snug text-rsi-text-secondary sm:px-3";
@@ -172,6 +176,7 @@ export function MissionCatalogTable({
   checkedIds,
   onCheckedIdsChange,
   visibleColumns: visibleColumnsProp,
+  fillHeight = false,
 }: MissionCatalogTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -230,7 +235,14 @@ export function MissionCatalogTable({
   };
 
   return (
-    <div className="overflow-x-auto rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
+    <div
+      className={[
+        "rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel",
+        fillHeight
+          ? "h-full min-h-0 overflow-auto overscroll-contain"
+          : "overflow-x-auto",
+      ].join(" ")}
+    >
       {/*
         min-w keeps a usable layout under ~1000px without forcing scroll on
         typical smaller desktops; overflow-x-auto still allows scroll below that.
@@ -257,7 +269,7 @@ export function MissionCatalogTable({
           })}
         </colgroup>
         <thead>
-          <tr className="border-b border-rsi-divider bg-rsi-bg-deep/50">
+          <tr>
             {canCheck ? (
               <th scope="col" className={`${thClass} px-2 sm:px-2`}>
                 <input

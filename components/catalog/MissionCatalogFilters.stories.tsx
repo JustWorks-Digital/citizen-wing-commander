@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Desktop: search beside a 2×3 filter grid (Route type / Category / Rank, then From / To / Cargo).",
+          "Search plus a collapsible 2×3 filter grid (Route type / Category / Rank, then From / To / Cargo).",
       },
     },
   },

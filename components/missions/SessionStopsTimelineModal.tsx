@@ -85,7 +85,7 @@ function StopReorderHandle({
 
 /**
  * Stops modal (from Stops rail / mobile Stops section): compact route timeline with leg distances and
- * traveled / remaining / total. Density scales with stop count so typical
+ * overview (stop count / total distance). Density scales with stop count so typical
  * routes fit without scrolling. Before the trip starts, stops can be
  * drag-reordered (Save / Cancel).
  */
@@ -204,9 +204,6 @@ export function SessionStopsTimelineModal({
                 className="text-sm font-semibold tracking-wide text-rsi-text"
               >
                 Stops
-                <span className="ml-1.5 font-mono text-[0.65rem] font-normal tabular-nums tracking-wide text-rsi-text-secondary">
-                  - {timeline.completedStopCount}/{timeline.totalStopCount}
-                </span>
               </h2>
               {onResetTrip ? (
                 <button
@@ -378,10 +375,6 @@ export function SessionStopsTimelineModal({
                           <span className="shrink-0 font-mono text-[0.45rem] uppercase tracking-[0.12em] text-rsi-accent">
                             Next
                           </span>
-                        ) : node.kind === "stop" ? (
-                          <span className="shrink-0 font-mono text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                            Ahead
-                          </span>
                         ) : null}
                       </div>
                       <div className="flex items-baseline justify-between gap-2">
@@ -437,31 +430,23 @@ export function SessionStopsTimelineModal({
               </div>
             </div>
           ) : null}
-          <div className="grid grid-cols-3 gap-2">
-          <div>
-            <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-              Traveled
-            </p>
-            <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
-              {formatDistanceToNext(timeline.traveled)}
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-              Remaining
-            </p>
-            <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
-              {formatDistanceToNext(timeline.remaining)}
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-              Total
-            </p>
-            <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
-              {formatDistanceToNext(timeline.total)}
-            </p>
-          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                Stops
+              </p>
+              <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
+                {timeline.totalStopCount}
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                Total
+              </p>
+              <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
+                {formatDistanceToNext(timeline.total)}
+              </p>
+            </div>
           </div>
         </div>
         </div>

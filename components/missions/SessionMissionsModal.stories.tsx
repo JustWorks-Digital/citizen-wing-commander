@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session contracts: stacked cards on small screens (no horizontal scroll); Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions table from md+. Under the title, cargo amounts use commodity-colored badges (not a bullet list). From/To use the same short-name location badges as the mission catalog (accent / success). Boxes always label the cargo type above the mix icons. Footer totals show earned/total for aUEC, SCU, and EXP; ⋯ menu for complete/hide/delete.",
+          "Session contracts (Accepted Contracts): stacked cards on small screens (no horizontal scroll); Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions table from md+. Shows a table/card skeleton while rows paint. Under the title, cargo amounts use commodity-colored badges (not a bullet list). From/To use the same short-name location badges as the mission catalog (accent / success). Boxes always label the cargo type above the mix icons. Footer totals are contract sums for aUEC, SCU, EXP, and boxes; ⋯ menu for complete/hide/delete.",
       },
     },
   },

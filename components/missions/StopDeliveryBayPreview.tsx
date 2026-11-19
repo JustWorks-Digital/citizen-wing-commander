@@ -147,7 +147,7 @@ function planCanPeel(plan: StopCargoStacksPlan): boolean {
   return plan.heightCells > 1;
 }
 
-/** Role handled mark — shared by pad graph header and left Drop off / Pick up. */
+/** Role handled mark — checkbox + label; clicking either toggles. */
 export function CargoRoleHandledCheckbox({
   role,
   checked,
@@ -160,6 +160,15 @@ export function CargoRoleHandledCheckbox({
   onToggle: () => void;
 }) {
   const label = role === "pickup" ? "Picked up" : "Dropped off";
+  const labelTone =
+    role === "pickup" ? "text-rsi-accent" : "text-rsi-gold";
+  const markTone = isPending
+    ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
+    : checked
+      ? role === "pickup"
+        ? "border-rsi-accent bg-rsi-accent text-rsi-bg-deep"
+        : "border-rsi-gold bg-rsi-gold text-rsi-bg-deep"
+      : "border-rsi-border bg-transparent text-transparent group-hover:border-rsi-border-strong";
   return (
     <button
       type="button"
@@ -175,33 +184,42 @@ export function CargoRoleHandledCheckbox({
         onToggle();
       }}
       className={[
-        "inline-flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+        "group inline-flex min-w-0 items-center gap-2 rounded-rsi",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-        isPending
-          ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
-          : checked
-            ? role === "pickup"
-              ? "border-rsi-accent bg-rsi-accent text-rsi-bg-deep"
-              : "border-rsi-gold bg-rsi-gold text-rsi-bg-deep"
-            : "border-rsi-border bg-transparent text-transparent hover:border-rsi-border-strong",
+        isPending ? "cursor-wait" : "cursor-pointer",
       ].join(" ")}
     >
-      {isPending ? (
-        <Spinner className="size-2.5" label={label} />
-      ) : checked ? (
-        <svg
-          viewBox="0 0 12 12"
-          className="size-2.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M2.5 6.2 L4.8 8.5 L9.5 3.5" />
-        </svg>
-      ) : null}
+      <span
+        className={[
+          "inline-flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+          markTone,
+        ].join(" ")}
+        aria-hidden
+      >
+        {isPending ? (
+          <Spinner className="size-2.5" label={label} />
+        ) : checked ? (
+          <svg
+            viewBox="0 0 12 12"
+            className="size-2.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2.5 6.2 L4.8 8.5 L9.5 3.5" />
+          </svg>
+        ) : null}
+      </span>
+      <span
+        className={[
+          "font-mono text-[0.5rem] uppercase tracking-[0.12em]",
+          labelTone,
+        ].join(" ")}
+      >
+        {label}
+      </span>
     </button>
   );
 }
@@ -330,9 +348,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         >
           <div className={graphHeaderClass}>
             <div className="flex min-w-0 items-center gap-2">
-              <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-                Dropped off
-              </p>
               {!hideRoleHandledCheckbox &&
               (onSetCargoRoleHandled || deliveryHandled) ? (
                 <CargoRoleHandledCheckbox
@@ -347,7 +362,11 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                     );
                   }}
                 />
-              ) : null}
+              ) : (
+                <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
+                  Dropped off
+                </p>
+              )}
             </div>
             {showDeliveryPeel ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -392,9 +411,6 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
         >
           <div className={graphHeaderClass}>
             <div className="flex min-w-0 items-center gap-2">
-              <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-                Picked up
-              </p>
               {!hideRoleHandledCheckbox &&
               (onSetCargoRoleHandled || pickupHandled) ? (
                 <CargoRoleHandledCheckbox
@@ -406,7 +422,11 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                     void onSetCargoRoleHandled("pickup", !pickupRoleHandled);
                   }}
                 />
-              ) : null}
+              ) : (
+                <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
+                  Picked up
+                </p>
+              )}
             </div>
             {showPickupPeel || showPickupModes ? (
               <div className="flex flex-wrap items-center gap-1.5">

@@ -122,7 +122,7 @@ export function SessionNameField({
         className={[
           "min-w-0 max-w-full text-left font-semibold tracking-wide text-rsi-text",
           compact
-            ? "truncate text-sm"
+            ? "truncate text-sm md:whitespace-normal md:break-words"
             : "break-words text-lg sm:text-xl",
           "rounded-sm transition-colors hover:text-rsi-accent",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",

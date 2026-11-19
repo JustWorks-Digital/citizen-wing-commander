@@ -1,7 +1,16 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
+import { useRightClickPan } from "@/hooks/useRightClickPan";
+import { useWheelZoom } from "@/hooks/useWheelZoom";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
@@ -95,6 +104,15 @@ export type CargoGridIsoViewProps = {
   mode?: "full" | "placement";
   /** Extra toolbar controls (e.g. zoom) shown in the bottom-right corner. */
   toolbarExtra?: ReactNode;
+  /**
+   * Current zoom multiplier (1 = fixture scale). Used with
+   * `fitZoomGetterRef` so the percent control can fit the full bay.
+   */
+  zoom?: number;
+  /** Parent reads this to fit the 3D bay in the scroll viewport. */
+  fitZoomGetterRef?: MutableRefObject<(() => number) | null>;
+  /** Wheel zoom over the 3D surface (controlled zoom). */
+  onZoomChange?: (zoom: number | ((value: number) => number)) => void;
   /** Controls stacked above Peel (e.g. cargo grouping). */
   toolbarBelow?: ReactNode;
   /**
@@ -563,7 +581,7 @@ function buildCubes(
             continue;
           }
           cubes.push({
-            key: `cargo-${box.id}`,
+            key: `cargo-${box.id}-${origin.x}-${origin.y}-${origin.z}`,
             coord: origin,
             lx: origin.x,
             wy: origin.y,
@@ -695,6 +713,9 @@ export function CargoGridIsoView({
   mode = "full",
   toolbarExtra = null,
   toolbarBelow = null,
+  zoom = 1,
+  fitZoomGetterRef,
+  onZoomChange,
   showFacingPad = true,
   embedded = false,
   hideLegend = false,
@@ -710,6 +731,21 @@ export function CargoGridIsoView({
   onDebugBoxOutlinesChange,
   panelHeightPx = 26 * 16,
 }: CargoGridIsoViewProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  useRightClickPan(scrollRef);
+  useWheelZoom(
+    scrollRef,
+    contentRef,
+    zoom,
+    onZoomChange ?? (() => undefined),
+    {
+      enabled: Boolean(onZoomChange),
+      min: 0.5,
+      max: 2.5,
+      step: 0.25,
+    },
+  );
   const [peelStackInternal, setPeelStackInternal] = useState(false);
   const peelStack = peelStackProp ?? peelStackInternal;
   const [facing, setFacing] = useState<CargoGridIsoFacing>(
@@ -1067,6 +1103,32 @@ export function CargoGridIsoView({
     yawCenterY,
     projectStyle,
   ]);
+
+  useLayoutEffect(() => {
+    if (!fitZoomGetterRef) return;
+    const FIT_PAD_PX = 8;
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 2.5;
+    fitZoomGetterRef.current = () => {
+      const scrollEl = scrollRef.current;
+      const contentEl = contentRef.current;
+      if (!scrollEl || !contentEl || zoom <= 0) return 1;
+      const availW = Math.max(0, scrollEl.clientWidth - FIT_PAD_PX);
+      const availH = Math.max(0, scrollEl.clientHeight - FIT_PAD_PX);
+      const contentW = contentEl.offsetWidth;
+      const contentH = contentEl.offsetHeight;
+      if (availW <= 0 || availH <= 0 || contentW <= 0 || contentH <= 0) {
+        return 1;
+      }
+      const baseW = contentW / zoom;
+      const baseH = contentH / zoom;
+      const fit = Math.min(availW / baseW, availH / baseH);
+      return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(fit * 100) / 100));
+    };
+    return () => {
+      fitZoomGetterRef.current = null;
+    };
+  }, [fitZoomGetterRef, zoom, bounds.width, bounds.height, cellPx]);
 
   const endLabels = bounds.labels;
 
@@ -1447,8 +1509,16 @@ export function CargoGridIsoView({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="flex min-h-full min-w-full items-center justify-center">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex min-h-full min-w-full">
+      {/*
+        `m-auto` centers when the bay fits, and still lets overflow
+        scroll/pan reach every edge when zoomed in (unlike justify-center).
+      */}
+      <div ref={contentRef} className="m-auto w-fit shrink-0">
       <svg
         role="img"
         aria-label={`${sketch.shipName} isometric cargo grid, ${cubes.length} cubes. Rear left, front right by default.`}
@@ -1896,6 +1966,7 @@ export function CargoGridIsoView({
           </text>
         ))}
       </svg>
+      </div>
         </div>
       </div>
     </div>

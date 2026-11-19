@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { CatalogMission } from "@/db/schema";
 import { CatalogColumnsMenu } from "@/components/catalog/CatalogColumnsMenu";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -79,6 +79,10 @@ export function MissionCatalogFilters({
 
   const filtersActive = catalogTableFiltersAreActive(filters);
   const hasActive = Boolean(query.trim()) || filtersActive;
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const activeFilterFieldCount = DROPDOWN_FIELDS.filter(
+    (field) => (filters[field.key] ?? []).length > 0,
+  ).length;
 
   const activeBadges = useMemo(() => {
     const badges: Array<{
@@ -145,8 +149,8 @@ export function MissionCatalogFilters({
       aria-label="Catalog filters"
       className="rounded-rsi border border-rsi-border bg-rsi-surface/80 p-3 shadow-rsi-panel sm:p-4"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-        <div className="relative min-w-0 w-full lg:w-[18rem] lg:shrink-0 lg:pt-[1.15rem]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 w-full flex-1 sm:max-w-[22rem]">
           <input
             type="text"
             inputMode="search"
@@ -182,23 +186,56 @@ export function MissionCatalogFilters({
             </button>
           ) : null}
         </div>
+        <button
+          type="button"
+          aria-expanded={filtersOpen}
+          aria-controls="catalog-filter-grid"
+          onClick={() => setFiltersOpen((open) => !open)}
+          className={[
+            "inline-flex shrink-0 items-center gap-1.5 self-start rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 px-2.5 py-1.5 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
+            "hover:border-rsi-border-strong hover:text-rsi-text",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+            filtersOpen ? "border-rsi-accent/40 text-rsi-accent" : "",
+          ].join(" ")}
+        >
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            className={[
+              "size-3 shrink-0 transition-transform",
+              filtersOpen ? "rotate-90" : "",
+            ].join(" ")}
+            fill="currentColor"
+          >
+            <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
+          </svg>
+          Filters
+          {activeFilterFieldCount > 0 ? (
+            <span className="tabular-nums text-rsi-accent">
+              {activeFilterFieldCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
 
-        {/* Beside search on desktop: 2 rows × 3 columns. */}
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
-          {DROPDOWN_FIELDS.map((field) => (
-            <SearchableSelect
-              key={field.key}
-              label={field.label}
-              multiple={field.multiple !== false}
-              values={filters[field.key] ?? []}
-              options={optionsByKey[field.key]}
-              placeholder={field.label}
-              onChange={(values) =>
-                setFilter(field.key, values, field.multiple !== false)
-              }
-            />
-          ))}
-        </div>
+      <div
+        id="catalog-filter-grid"
+        hidden={!filtersOpen}
+        className="mt-3 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3"
+      >
+        {DROPDOWN_FIELDS.map((field) => (
+          <SearchableSelect
+            key={field.key}
+            label={field.label}
+            multiple={field.multiple !== false}
+            values={filters[field.key] ?? []}
+            options={optionsByKey[field.key]}
+            placeholder={field.label}
+            onChange={(values) =>
+              setFilter(field.key, values, field.multiple !== false)
+            }
+          />
+        ))}
       </div>
 
       {activeBadges.length > 0 ? (

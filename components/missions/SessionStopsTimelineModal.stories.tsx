@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip stops timeline from the sticky Stops stat: eyebrow Trip, title Stops - N/M (ASCII hyphen). Before any stop is complete, drag handles reorder stops (Save order / Cancel). Reset trip clears stop completion only (contracts stay) to unlock reorder. Continuous completion progress bar above the distance summary. Location thumbnails per stop, completed vs ahead, leg distances, traveled / remaining / total. Start is omitted when it matches stop 1. Density scales with stop count.",
+          "Trip stops timeline from the sticky Stops stat. Title is Stops (no N/M). Before any stop is complete, drag handles reorder stops (Save order / Cancel). Reset trip clears stop completion only (contracts stay) to unlock reorder. Continuous completion progress bar above the overview (Stops count / Total distance). Location thumbnails per stop (Done / Next badges), leg distances. Start is omitted when it matches stop 1. Density scales with stop count.",
       },
     },
   },

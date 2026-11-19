@@ -12,8 +12,8 @@ import {
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 
 /**
- * Per-session Legend / Packing visibility, packing type, and 2D/Split/3D view
- * in `localStorage`. Survives modal close/reopen.
+ * Per-session Legend / Packing visibility, packing type, 2D/Split/3D view,
+ * and grid zooms in `localStorage`. Survives modal close/reopen.
  */
 export function useSessionCargoBayChrome(
   sessionId: string | null | undefined,
@@ -24,12 +24,16 @@ export function useSessionCargoBayChrome(
   sortingMode: CargoBaySortingMode;
   lastAutoPackMode: CargoBayAutoPackMode;
   prioritized: boolean;
+  topZoom: number;
+  isoZoom: number;
   setLegendHidden: (hidden: boolean) => void;
   setSortingHidden: (hidden: boolean) => void;
   setViewTab: (tab: CargoBayViewTab) => void;
   setSortingMode: (mode: CargoBaySortingMode) => void;
   setLastAutoPackMode: (mode: CargoBayAutoPackMode) => void;
   setPrioritized: (prioritized: boolean) => void;
+  setTopZoom: (zoom: number) => void;
+  setIsoZoom: (zoom: number) => void;
 } {
   const [prefs, setPrefs] = useState<CargoBayChromePrefs>(
     DEFAULT_CARGO_BAY_CHROME_PREFS,
@@ -92,6 +96,20 @@ export function useSessionCargoBayChrome(
     [patchPrefs],
   );
 
+  const setTopZoom = useCallback(
+    (zoom: number) => {
+      patchPrefs({ topZoom: zoom });
+    },
+    [patchPrefs],
+  );
+
+  const setIsoZoom = useCallback(
+    (zoom: number) => {
+      patchPrefs({ isoZoom: zoom });
+    },
+    [patchPrefs],
+  );
+
   return {
     legendHidden: prefs.legendHidden,
     sortingHidden: prefs.sortingHidden,
@@ -99,11 +117,15 @@ export function useSessionCargoBayChrome(
     sortingMode: prefs.sortingMode,
     lastAutoPackMode: prefs.lastAutoPackMode,
     prioritized: prefs.prioritized,
+    topZoom: prefs.topZoom,
+    isoZoom: prefs.isoZoom,
     setLegendHidden,
     setSortingHidden,
     setViewTab,
     setSortingMode,
     setLastAutoPackMode,
     setPrioritized,
+    setTopZoom,
+    setIsoZoom,
   };
 }
