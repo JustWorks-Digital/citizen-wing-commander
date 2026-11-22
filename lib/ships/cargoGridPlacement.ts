@@ -284,6 +284,12 @@ type FindSlotCluster = {
    */
   requireRegionContiguity?: boolean;
   /**
+   * When this cargo-type cluster already exists anywhere, only accept slots
+   * that touch it in *this* bay. Callers try each disconnected zone and only
+   * seed a new island after every existing island is full (Galaxy lifts).
+   */
+  requireClusterContiguity?: boolean;
+  /**
    * Never sit on a different region's crates (keeps priority mission piles
    * clear of foreign cargo on top).
    */
@@ -299,6 +305,11 @@ type FindSlotCluster = {
   missionPriorityBias?: MissionPriorityPackBias;
   /** When set, slot pick uses pack-program tiered compare. */
   packSlotPolicy?: PackSlotPolicy | null;
+  /**
+   * Ship deck width in cells — enables Galaxy Lift L/R aisle bias
+   * (outer wall → middle for exclusive piles; mixes prefer aisle).
+   */
+  shipWidthCells?: number;
 };
 
 /** Neighbor cells (face-adjacent) — used to keep same-commodity crates clustered. */
@@ -517,6 +528,53 @@ function edgeDistanceFromBayCenter(
   return Math.abs(fx - bayCx) + Math.abs(fy - bayCy);
 }
 
+/** |footprint Y − ship center Y| (Galaxy side-lift aisle bias). */
+function shipCenterYDistance(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  shipWidthCells: number,
+): number {
+  const shipCy = (shipWidthCells - 1) / 2;
+  const fy = origin.y + (footprint.dy - 1) / 2;
+  return Math.abs(fy - shipCy);
+}
+
+/** Bay entirely on one side of ship center (Galaxy Lift L / Lift R). */
+function isSideBayBounds(bounds: ZoneBounds, shipWidthCells: number): boolean {
+  const shipCy = (shipWidthCells - 1) / 2;
+  return bounds.yEnd - 1 < shipCy || bounds.yStart > shipCy;
+}
+
+/** Another cargo-type cluster already occupies cells in this bay. */
+function foreignClusterInBounds(
+  bounds: ZoneBounds,
+  clusterKey: string,
+  occupiedClusters: ReadonlyMap<string, string> | undefined,
+): boolean {
+  if (!occupiedClusters) return false;
+  for (const [key, owner] of occupiedClusters) {
+    if (owner === clusterKey) continue;
+    const [xRaw, yRaw, zRaw] = key.split(",");
+    const x = Number(xRaw);
+    const y = Number(yRaw);
+    const z = Number(zRaw);
+    if (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(z) &&
+      x >= bounds.xStart &&
+      x < bounds.xEnd &&
+      y >= bounds.yStart &&
+      y < bounds.yEnd &&
+      z >= 0 &&
+      z < bounds.zEnd
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Signed offset along bay length from center (positive = high-X / rear side). */
 function lengthOffsetFromBayCenter(
   origin: CargoGridCoord,
@@ -580,6 +638,230 @@ function regionOccupiesBounds(
     }
   }
   return false;
+}
+
+function clusterOccupiesBounds(
+  bounds: ZoneBounds,
+  clusterKey: string | undefined,
+  occupiedClusters: ReadonlyMap<string, string> | undefined,
+): boolean {
+  if (!clusterKey || !occupiedClusters) return false;
+  for (const [key, owner] of occupiedClusters) {
+    if (owner !== clusterKey) continue;
+    const [xRaw, yRaw, zRaw] = key.split(",");
+    const x = Number(xRaw);
+    const y = Number(yRaw);
+    const z = Number(zRaw);
+    if (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(z) &&
+      x >= bounds.xStart &&
+      x < bounds.xEnd &&
+      y >= bounds.yStart &&
+      y < bounds.yEnd &&
+      z >= 0 &&
+      z < bounds.zEnd
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Prefer bays that already hold this cargo-type cluster (Galaxy multi-lift). */
+function boundsPreferringCluster(
+  boundsList: ZoneBounds[],
+  clusterKey: string,
+  occupiedClusters: ReadonlyMap<string, string>,
+): ZoneBounds[] {
+  const withCluster: ZoneBounds[] = [];
+  const without: ZoneBounds[] = [];
+  for (const bounds of boundsList) {
+    if (clusterOccupiesBounds(bounds, clusterKey, occupiedClusters)) {
+      withCluster.push(bounds);
+    } else {
+      without.push(bounds);
+    }
+  }
+  return withCluster.length > 0 ? [...withCluster, ...without] : boundsList;
+}
+
+/** Occupied cell count inside a bay AABB (any commodity). */
+function occupiedCountInBounds(
+  bounds: ZoneBounds,
+  occupied: ReadonlySet<string>,
+): number {
+  let count = 0;
+  for (const key of occupied) {
+    const [xRaw, yRaw, zRaw] = key.split(",");
+    const x = Number(xRaw);
+    const y = Number(yRaw);
+    const z = Number(zRaw);
+    if (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(z) &&
+      x >= bounds.xStart &&
+      x < bounds.xEnd &&
+      y >= bounds.yStart &&
+      y < bounds.yEnd &&
+      z >= 0 &&
+      z < bounds.zEnd
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function boundsCellCapacity(bounds: ZoneBounds): number {
+  return (
+    Math.max(0, bounds.xEnd - bounds.xStart) *
+    Math.max(0, bounds.yEnd - bounds.yStart) *
+    Math.max(0, bounds.zEnd)
+  );
+}
+
+/** Distinct cluster keys that already occupy cells in this bay. */
+function clusterKeysInBounds(
+  bounds: ZoneBounds,
+  occupiedClusters: ReadonlyMap<string, string>,
+): string[] {
+  const keys = new Set<string>();
+  for (const [cellKey, owner] of occupiedClusters) {
+    const [xRaw, yRaw, zRaw] = cellKey.split(",");
+    const x = Number(xRaw);
+    const y = Number(yRaw);
+    const z = Number(zRaw);
+    if (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(z) &&
+      x >= bounds.xStart &&
+      x < bounds.xEnd &&
+      y >= bounds.yStart &&
+      y < bounds.yEnd &&
+      z >= 0 &&
+      z < bounds.zEnd
+    ) {
+      keys.add(owner);
+    }
+  }
+  return [...keys];
+}
+
+function zoneBoundsKey(bounds: ZoneBounds): string {
+  return `${bounds.xStart}:${bounds.xEnd}:${bounds.yStart}:${bounds.yEnd}:${bounds.zEnd}`;
+}
+
+/**
+ * True when `clusterKey` still has a contiguous legal slot in this bay
+ * (same-type grow). Used to keep a lift reserved for its primary commodity.
+ */
+function clusterCanGrowInBounds(
+  bounds: ZoneBounds,
+  clusterKey: string,
+  boxScu: number,
+  occupied: Set<string>,
+  occupiedSizes: ReadonlyMap<string, number>,
+  occupiedClusters: ReadonlyMap<string, string>,
+  zone: CargoGridStorageLocation,
+  packSlotPolicy: PackSlotPolicy | null,
+): boolean {
+  const cluster: FindSlotCluster = {
+    clusterKey,
+    occupiedClusters,
+    requireClusterContiguity: true,
+    packSlotPolicy,
+  };
+  const sizes: CargoBoxScu[] = [32, 16, 8, 4, 2, 1];
+  const tryScu = sizes.includes(boxScu as CargoBoxScu)
+    ? (boxScu as CargoBoxScu)
+    : 8;
+  for (const footprint of cargoBoxOrientations(tryScu)) {
+    if (
+      findSlot(bounds, footprint, occupied, occupiedSizes, zone, cluster)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Multi-bay cargo-type: a lift stays exclusive to its primary commodity until
+ * that type is finished or can no longer grow there — so we pack all PF into
+ * Lift L before letting QF/SA mix in.
+ */
+function boundsOpenForNewCluster(
+  bounds: ZoneBounds,
+  newClusterKey: string,
+  bayPrimary: ReadonlyMap<string, string>,
+  remainingByCluster: ReadonlyMap<string, number>,
+  occupied: Set<string>,
+  occupiedSizes: ReadonlyMap<string, number>,
+  occupiedClusters: ReadonlyMap<string, string>,
+  zone: CargoGridStorageLocation,
+  packSlotPolicy: PackSlotPolicy | null,
+): boolean {
+  const primary = bayPrimary.get(zoneBoundsKey(bounds));
+  if (!primary || primary === newClusterKey) return true;
+  if ((remainingByCluster.get(primary) ?? 0) <= 0) return true;
+  // Primary still has crates waiting — keep the bay unless they cannot grow here.
+  for (const scu of [8, 4, 2, 1] as const) {
+    if (scu > (remainingByCluster.get(primary) ?? 0)) continue;
+    if (
+      clusterCanGrowInBounds(
+        bounds,
+        primary,
+        scu,
+        occupied,
+        occupiedSizes,
+        occupiedClusters,
+        zone,
+        packSlotPolicy,
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * When seeding a new cargo type, prefer empty disconnected bays first; then
+ * join the bay whose residents have the least SCU still waiting to place (so
+ * we do not carve into a large unfinished Galaxy lift pile).
+ */
+function boundsPreferringEmptier(
+  boundsList: ZoneBounds[],
+  occupied: ReadonlySet<string>,
+  occupiedClusters: ReadonlyMap<string, string>,
+  remainingByCluster: ReadonlyMap<string, number>,
+): ZoneBounds[] {
+  if (boundsList.length <= 1) return boundsList;
+  const residentRemaining = (bounds: ZoneBounds) => {
+    let sum = 0;
+    for (const key of clusterKeysInBounds(bounds, occupiedClusters)) {
+      sum += remainingByCluster.get(key) ?? 0;
+    }
+    return sum;
+  };
+  return [...boundsList].sort((a, b) => {
+    const occA = occupiedCountInBounds(a, occupied);
+    const occB = occupiedCountInBounds(b, occupied);
+    const emptyA = occA === 0 ? 0 : 1;
+    const emptyB = occB === 0 ? 0 : 1;
+    if (emptyA !== emptyB) return emptyA - emptyB;
+    const remA = residentRemaining(a);
+    const remB = residentRemaining(b);
+    if (remA !== remB) return remA - remB;
+    const freeA = boundsCellCapacity(a) - occA;
+    const freeB = boundsCellCapacity(b) - occB;
+    if (freeA !== freeB) return freeB - freeA;
+    return occA - occB;
+  });
 }
 
 /** Strong pull toward a chosen bay end for mission priority piles. */
@@ -696,6 +978,17 @@ function findSlot(
     cluster?.requireRegionContiguity ||
       cluster?.packSlotPolicy?.requireRegionContiguity,
   );
+  const requireClusterContiguity = Boolean(cluster?.requireClusterContiguity);
+  const shipWidthCells = cluster?.shipWidthCells;
+  const foreignInBay =
+    Boolean(cluster) &&
+    foreignClusterInBounds(
+      bounds,
+      cluster!.clusterKey,
+      cluster!.occupiedClusters,
+    );
+  const sideBay =
+    shipWidthCells != null && isSideBayBounds(bounds, shipWidthCells);
   const forbidForeignRegionSupport = Boolean(
     cluster?.forbidForeignRegionSupport ||
       cluster?.packSlotPolicy?.forbidForeignSupport,
@@ -795,6 +1088,12 @@ function findSlot(
         cluster?.preferBayEnd,
       ),
       edgeDistance: edgeDistanceFromBayCenter(origin, footprint, bounds),
+      shipCenterYDistance:
+        shipWidthCells != null
+          ? shipCenterYDistance(origin, footprint, shipWidthCells)
+          : null,
+      foreignInBay,
+      isSideBay: sideBay,
       identicalSizeStack,
       placementRuleScore: score,
     };
@@ -847,6 +1146,20 @@ function findSlot(
         return null;
       }
       // Else: region only exists in another disconnected bay — seed island.
+    }
+    if (requireClusterContiguity && hasCluster) {
+      const touchingCluster = candidates.filter(
+        (c) =>
+          c.affinity.horizontal > 0 ||
+          c.affinity.vertical > 0 ||
+          c.sameSupport > 0,
+      );
+      if (touchingCluster.length > 0) {
+        pool = touchingCluster;
+      } else {
+        // Do not open a second island in this bay while contiguity is required.
+        return null;
+      }
     }
     // New pile: seed on deck when possible (matches require/order z intent).
     if (!hasCluster) {
@@ -1114,6 +1427,9 @@ function findSlot(
       pool = sideOrOwnStack;
     } else if (onOwn.length > 0) {
       pool = onOwn;
+    } else if (requireClusterContiguity) {
+      // Cluster exists elsewhere / no touch in this bay — caller may seed later.
+      return null;
     }
   } else if (hasRegion && !preferRegionStacking) {
     // New cargo type inside an existing location blob: stay beside it.
@@ -1123,7 +1439,10 @@ function findSlot(
     if (besideRegion.length > 0) pool = besideRegion;
   }
 
-  if (pool.length === 0) pool = candidates;
+  if (pool.length === 0) {
+    if (requireClusterContiguity && hasCluster) return null;
+    pool = candidates;
+  }
 
   let best: Candidate | null = null;
   for (const candidate of pool) {
@@ -1227,6 +1546,11 @@ export type PlaceCargoInZoneOptions = {
    * collide when zone/index/size/commodity repeat.
    */
   idNamespace?: string;
+  /**
+   * Pack only into these cargo/overflow zone ids (Manual bulk drop onto one
+   * Galaxy lift). When set, bounds outside the set are ignored.
+   */
+  restrictZoneIds?: readonly string[];
 };
 
 function sizesForSegment(segment: CargoPlacementSegment): CargoBoxScu[] {
@@ -1274,7 +1598,20 @@ export function placeCargoItemsInZone(
   items: CargoPlacementItem[],
   options?: PlaceCargoInZoneOptions,
 ): CargoGridPlacementPlan {
-  const boundsList = zoneBoundsListForStorage(sketch, zone);
+  let boundsList = zoneBoundsListForStorage(sketch, zone);
+  const restrictZoneIds = options?.restrictZoneIds;
+  if (restrictZoneIds && restrictZoneIds.length > 0) {
+    const allow = new Set(restrictZoneIds);
+    boundsList = [];
+    for (const span of cargoGridZoneSpans(sketch)) {
+      if (
+        (span.zone.kind === "cargo" || span.zone.kind === "overflow") &&
+        allow.has(span.zone.id)
+      ) {
+        boundsList.push(boundsFromSpan(span));
+      }
+    }
+  }
   const boxes: PlacedCargoBox[] = [];
   const unplaced: CargoGridPlacementPlan["unplaced"] = [];
   const occupied = new Set<string>(
@@ -1372,7 +1709,7 @@ export function placeCargoItemsInZone(
         commodityQueues.push(commodityItems);
       }
       pending.length = 0;
-      // Interleave cargo types so one huge commodity cannot monopolize the bay.
+      // Chunked interleave: compact same-type batches, still share the bay.
       pending.push(...interleaveItemGroups(commodityQueues));
     } else {
       // Group by cluster key; order by delivery rank when prioritized,
@@ -1423,7 +1760,13 @@ export function placeCargoItemsInZone(
   }
 
   let index = 0;
-  for (const item of pending) {
+  /** First commodity to seed each disconnected bay (Galaxy lift ownership). */
+  const bayPrimaryCluster = new Map<string, string>();
+  const multiBay = boundsList.length > 1;
+  /** Cargo-type: retry once at end after primaries finish their lifts. */
+  const deferredOnce = new WeakSet<object>();
+  for (let pendingIndex = 0; pendingIndex < pending.length; pendingIndex += 1) {
+    const item = pending[pendingIndex]!;
     const clusterKey = itemClusterKey(item);
     const regionKey = item.regionKey;
     const preferRegionStacking =
@@ -1435,39 +1778,112 @@ export function placeCargoItemsInZone(
     const forbidForeignRegionSupport =
       options?.forbidForeignRegionSupport ||
       Boolean(packSlotPolicy?.forbidForeignSupport);
-    const cluster: FindSlotCluster | null =
-      options?.clusterByKey || packSlotPolicy
-        ? {
-            clusterKey,
+    // Cargo-type: fill one disconnected bay (Galaxy lift) before spilling.
+    const preferClusterContiguity =
+      Boolean(options?.clusterByKey) ||
+      Boolean(packSlotPolicy?.preferSameCargoType);
+    const hasExistingCluster = [...occupiedClusters.values()].includes(
+      clusterKey,
+    );
+    const remainingByCluster = new Map<string, number>();
+    if (preferClusterContiguity) {
+      for (let j = pendingIndex; j < pending.length; j += 1) {
+        const key = itemClusterKey(pending[j]!);
+        remainingByCluster.set(
+          key,
+          (remainingByCluster.get(key) ?? 0) + pending[j]!.size,
+        );
+      }
+    }
+    const orderedBounds = hasExistingCluster
+      ? boundsPreferringCluster(boundsList, clusterKey, occupiedClusters)
+      : preferClusterContiguity
+        ? boundsPreferringEmptier(
+            boundsList,
+            occupied,
             occupiedClusters,
-            regionKey,
-            occupiedRegions,
-            preferRegionStacking,
-            requireRegionContiguity,
-            forbidForeignRegionSupport,
-            preferBayEnd: item.preferBayEnd,
-            missionRank: item.missionRank,
-            missionRankMax,
-            missionPriorityBias:
-              missionPriorityBias ??
-              packSlotPolicy?.biasXyMode ??
-              undefined,
-            packSlotPolicy,
-          }
-        : null;
+            remainingByCluster,
+          )
+        : boundsList;
     let placed = false;
     for (const footprint of cargoBoxOrientations(item.size)) {
       let origin: CargoGridCoord | null = null;
-      for (const bounds of boundsList) {
-        origin = findSlot(
-          bounds,
-          footprint,
-          occupied,
-          occupiedSizes,
-          zone,
-          cluster,
-        );
-        if (origin) break;
+      let placedBounds: ZoneBounds | null = null;
+      const tryBounds = (
+        boundsOrder: ZoneBounds[],
+        requireClusterContiguity: boolean,
+      ) => {
+        const cluster: FindSlotCluster | null =
+          options?.clusterByKey || packSlotPolicy
+            ? {
+                clusterKey,
+                occupiedClusters,
+                regionKey,
+                occupiedRegions,
+                preferRegionStacking,
+                requireRegionContiguity,
+                requireClusterContiguity,
+                forbidForeignRegionSupport,
+                preferBayEnd: item.preferBayEnd,
+                missionRank: item.missionRank,
+                missionRankMax,
+                missionPriorityBias:
+                  missionPriorityBias ??
+                  packSlotPolicy?.biasXyMode ??
+                  undefined,
+                packSlotPolicy,
+                // RSI Galaxy Lift L/R outer walls — aisle bias (also Manual
+                // fill into a single side lift). Other ships keep legacy XY.
+                shipWidthCells:
+                  sketch.shipSlug === "galaxy" ? sketch.widthCells : undefined,
+              }
+            : null;
+        for (const bounds of boundsOrder) {
+          // Multi-bay: do not spill/seed into another type's lift while that
+          // type can still grow there (pack all PF before mixing SA/QF in).
+          if (preferClusterContiguity && multiBay) {
+            const allowed = boundsOpenForNewCluster(
+              bounds,
+              clusterKey,
+              bayPrimaryCluster,
+              remainingByCluster,
+              occupied,
+              occupiedSizes,
+              occupiedClusters,
+              zone,
+              packSlotPolicy,
+            );
+            if (!allowed) continue;
+          }
+          const found = findSlot(
+            bounds,
+            footprint,
+            occupied,
+            occupiedSizes,
+            zone,
+            cluster,
+          );
+          if (!found) continue;
+          // Cargo-type: never stack on a different commodity (bury minority).
+          if (preferClusterContiguity && found.z > 0) {
+            const support = supportClusterCounts(
+              found,
+              footprint,
+              clusterKey,
+              occupiedClusters,
+            );
+            if (support.other > 0) continue;
+          }
+          placedBounds = bounds;
+          return found;
+        }
+        return null;
+      };
+      if (preferClusterContiguity && hasExistingCluster) {
+        origin = tryBounds(orderedBounds, true);
+      }
+      if (!origin) {
+        origin = tryBounds(orderedBounds, false);
       }
       if (!origin) continue;
       const cells = cellsForBox(origin, footprint);
@@ -1477,6 +1893,12 @@ export function placeCargoItemsInZone(
         occupiedSizes.set(key, item.size);
         occupiedClusters.set(key, clusterKey);
         if (regionKey) occupiedRegions.set(key, regionKey);
+      }
+      if (placedBounds && preferClusterContiguity) {
+        const bKey = zoneBoundsKey(placedBounds);
+        if (!bayPrimaryCluster.has(bKey)) {
+          bayPrimaryCluster.set(bKey, clusterKey);
+        }
       }
       const idRoot = options?.idNamespace ?? zone;
       // Include origin so repeated placeCargoItemsInZone calls (stay →
@@ -1502,7 +1924,19 @@ export function placeCargoItemsInZone(
       break;
     }
     if (!placed) {
-      unplaced.push(unplacedFromItem(item));
+      // Minority types arrive mid-queue while every lift is still reserved to a
+      // primary that can grow. Push once to the end so they fill residual space
+      // after those primaries finish (instead of staying permanently unplaced).
+      if (
+        preferClusterContiguity &&
+        multiBay &&
+        !deferredOnce.has(item as object)
+      ) {
+        deferredOnce.add(item as object);
+        pending.push(item);
+      } else {
+        unplaced.push(unplacedFromItem(item));
+      }
     }
   }
 

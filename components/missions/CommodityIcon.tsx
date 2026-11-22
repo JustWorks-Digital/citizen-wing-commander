@@ -9,7 +9,7 @@ export type CommodityIconProps = {
   label: string;
   color?: string | null;
   color2?: string | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   /** Hover delay before the tooltip appears (ms). */
   tooltipDelayMs?: number;
   /** When false, no hover/focus tooltip (use when the label is shown inline). */
@@ -17,6 +17,7 @@ export type CommodityIconProps = {
 };
 
 const SIZE_CLASS = {
+  xs: "size-3",
   sm: "size-4",
   md: "size-5",
 } as const;

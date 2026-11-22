@@ -55,7 +55,8 @@
         "guidelines": [
           "Packable zones: Lift L/R (256 each), Lift (144), Hangar L/R (32 each) = 720.",
           "Hangar main is an empty floor grid (12→6 width taper); do not pack into it yet.",
-          "Keep the Door and lift side gaps clear."
+          "Keep the Door and lift side gaps clear.",
+          "Lift L/R have outer walls — pack exclusive piles from the outer wall toward the aisle so residual / minority cargo stays toward the ship middle (not buried against the wall)."
         ]
       }
     }

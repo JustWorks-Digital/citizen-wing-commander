@@ -768,7 +768,8 @@ export type SessionCurrentStopPickupGridProps = {
 };
 
 /**
- * Stop transfer SCU by cargo type — left of Contracts in the cargo-bays footer.
+ * Stop transfer SCU by cargo type — under the cargo-bay graphs.
+ * Sized to content (no inner scroll for typical 2-column stop lists).
  */
 export function SessionCurrentStopPickupGrid({
   transfers,
@@ -782,23 +783,21 @@ export function SessionCurrentStopPickupGrid({
 
   return (
     <div
-      className={["flex w-fit max-w-full shrink-0 justify-start", className]
+      className={["w-fit max-w-full shrink-0", className]
         .filter(Boolean)
         .join(" ")}
     >
       <div
-        className={[stripClass, "h-auto !w-fit max-w-full items-center"].join(
-          " ",
-        )}
+        className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 px-2 py-1.5"
         role="group"
         aria-label={`${title} cargo`}
       >
-        <div className="flex h-auto w-max max-w-full flex-col gap-1.5 px-2 py-1.5">
+        <div className="flex w-max max-w-full flex-col gap-1.5">
           <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
             {title}
           </p>
           <ul
-            className="grid w-max grid-flow-col auto-cols-max gap-x-3 gap-y-1.5 overflow-x-auto"
+            className="grid w-max grid-flow-col auto-cols-max gap-x-3 gap-y-1.5"
             style={{
               gridTemplateRows: `repeat(${rowsPerColumn}, auto)`,
             }}

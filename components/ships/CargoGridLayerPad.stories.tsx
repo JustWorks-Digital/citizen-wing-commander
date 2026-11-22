@@ -66,7 +66,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Bottom-center Z-layer pad for 2D (select) and 3D (toggle). Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
+          "Top-center Z-layer pad for 2D (select) and 3D (toggle). Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
       },
     },
   },

@@ -24,24 +24,40 @@ function totalScu(items: CargoPlacementItem[]): number {
 }
 
 /**
- * Round-robin merge of pre-sorted groups.
+ * How many crates of one type to place before rotating to the next type.
+ * Single-crate round-robin made Galaxy Lift packs into long 1-wide stripes
+ * of alternating commodities. Chunks let each type grow a compact multi-row
+ * block while still giving other types seats on overfull trips. Zone
+ * consolidation (one commodity per Galaxy lift) is handled by placement
+ * contiguity + seeding into emptier bays — not by a huge chunk.
+ */
+export const CARGO_TYPE_INTERLEAVE_CHUNK = 4;
+
+/**
+ * Round-robin merge of pre-sorted groups, taking `chunkSize` crates per group
+ * each turn (default {@link CARGO_TYPE_INTERLEAVE_CHUNK}).
+ *
  * Cargo-type packing used to dump the largest group first — on overfull
  * trips that monopolized the bay (e.g. all Processed Food / red) and starved
- * every other commodity. Interleaving keeps cluster affinity via findSlot
- * while giving each type a chance at cells.
+ * every other commodity. Chunked interleaving keeps cluster affinity via
+ * findSlot while giving each type a chance at cells.
  */
 export function interleaveItemGroups(
   groups: CargoPlacementItem[][],
+  chunkSize: number = CARGO_TYPE_INTERLEAVE_CHUNK,
 ): CargoPlacementItem[] {
+  const take = Math.max(1, Math.floor(chunkSize));
   const queues = groups.map((group) => [...group]);
   const out: CargoPlacementItem[] = [];
   let remaining = queues.reduce((sum, queue) => sum + queue.length, 0);
   while (remaining > 0) {
     for (const queue of queues) {
-      const next = queue.shift();
-      if (!next) continue;
-      out.push(next);
-      remaining -= 1;
+      for (let n = 0; n < take && queue.length > 0; n += 1) {
+        const next = queue.shift();
+        if (!next) break;
+        out.push(next);
+        remaining -= 1;
+      }
     }
   }
   return out;
@@ -164,10 +180,11 @@ export function orderPackItemsByProgram(
     sortedGroups.push(group);
   }
 
-  // Cargo-type: interleave so one huge commodity cannot fill an overfull bay alone.
+  // Cargo-type: chunked interleave so one huge commodity cannot fill an
+  // overfull bay alone, while same types still place in compact batches.
   // Delivery-location groups stay contiguous (contract piles).
   if (groupBy === "cargo-type" && sortedGroups.length > 1) {
-    return interleaveItemGroups(sortedGroups);
+    return interleaveItemGroups(sortedGroups, CARGO_TYPE_INTERLEAVE_CHUNK);
   }
   return sortedGroups.flat();
 }

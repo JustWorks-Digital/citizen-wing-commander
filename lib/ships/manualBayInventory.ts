@@ -36,6 +36,23 @@ export type ManualBayInventoryMissionGroup = {
   lines: ManualBayInventoryLine[];
 };
 
+/** Remaining crates for one commodity within a mission (all SCU sizes). */
+export type ManualBayInventoryCommodityGroup = {
+  key: string;
+  missionId: string | null;
+  missionTitle: string;
+  commoditySlug: string;
+  commodityName: string;
+  color: string | null;
+  color2: string | null;
+  /** Remaining crate count (all sizes). */
+  remainingCrates: number;
+  /** Remaining SCU. */
+  remainingScu: number;
+  /** Size lines with remaining > 0, largest first. */
+  lines: ManualBayInventoryLine[];
+};
+
 function inventoryLineKey(
   missionId: string | null,
   commoditySlug: string,
@@ -141,8 +158,51 @@ export function demandManualBayInventoryLines(
   });
 }
 
+/**
+ * Collapse mission inventory lines into per-commodity groups (largest sizes
+ * first) for Manual bulk fill-onto-section drag.
+ */
+export function commodityGroupsFromMission(
+  group: ManualBayInventoryMissionGroup,
+): ManualBayInventoryCommodityGroup[] {
+  const bySlug = new Map<string, ManualBayInventoryLine[]>();
+  for (const line of group.lines) {
+    const list = bySlug.get(line.commoditySlug) ?? [];
+    list.push(line);
+    bySlug.set(line.commoditySlug, list);
+  }
+  const out: ManualBayInventoryCommodityGroup[] = [];
+  for (const [commoditySlug, lines] of bySlug) {
+    const withRemaining = lines
+      .filter((line) => line.remaining > 0)
+      .sort((a, b) => b.size - a.size);
+    if (withRemaining.length === 0) continue;
+    const head = withRemaining[0]!;
+    let remainingCrates = 0;
+    let remainingScu = 0;
+    for (const line of withRemaining) {
+      remainingCrates += line.remaining;
+      remainingScu += line.remaining * line.size;
+    }
+    out.push({
+      key: `${group.missionId ?? "_"}:${commoditySlug}:bulk`,
+      missionId: group.missionId,
+      missionTitle: group.missionTitle,
+      commoditySlug,
+      commodityName: head.commodityName,
+      color: head.color,
+      color2: head.color2,
+      remainingCrates,
+      remainingScu,
+      lines: withRemaining,
+    });
+  }
+  return out.sort((a, b) => a.commodityName.localeCompare(b.commodityName));
+}
+
 export const manualBayInventory = {
   demandLines: demandManualBayInventoryLines,
+  commodityGroupsFromMission,
 
   /** Demand minus crates already on the grid, grouped by mission. */
   remainingByMission(

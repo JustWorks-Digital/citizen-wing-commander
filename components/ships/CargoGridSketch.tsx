@@ -46,8 +46,11 @@ import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 import {
   cargoCellCoordFromPoint,
+  previewManualBayDrop,
   previewManualBayPlacement,
+  previewManualBayZoneFill,
   type ManualBayAddBoxSpec,
+  type ManualBayBulkFillSpec,
 } from "@/lib/ships/manualBayMove";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { cargoBaySidePanelClassName } from "./cargoBaySidePanel";
@@ -332,17 +335,34 @@ export type CargoGridSketchProps = {
    */
   manualEdit?: boolean;
   /** Fired when a 2D drag starts (snapshot base layout). */
-  onManualDragStart?: (boxId: string) => void;
-  /**
-   * Cell delta from drag start (sketch axes: +X nose→ramp, +Y port→starboard).
-   * Parent validates and updates placementBoxes.
-   */
-  onManualDragDelta?: (
+  onManualDragStart?: (
     boxId: string,
-    deltaCellsX: number,
-    deltaCellsY: number,
+    clientX: number,
+    clientY: number,
   ) => void;
-  onManualDragEnd?: () => void;
+  /** Pointer moved while dragging — parent updates the floating ghost. */
+  onManualDragMove?: (
+    boxId: string,
+    clientX: number,
+    clientY: number,
+  ) => void;
+  /** Pointer up / cancel — parent commits drop or reverts. */
+  onManualDragEnd?: (
+    boxId: string,
+    clientX: number,
+    clientY: number,
+  ) => void;
+  /**
+   * Live placed-crate drag — footprint cells light up under the pointer
+   * (accent = legal drop, danger = gap / collision / miss).
+   */
+  manualCrateDrag?: {
+    boxId: string;
+    clientX: number;
+    clientY: number;
+    grabOffsetX: number;
+    grabOffsetY: number;
+  } | null;
   /**
    * Manual tray drag-and-drop onto a 2D cell.
    * Enable with `manualTrayDrop`. Parent places on drag end.
@@ -350,6 +370,10 @@ export type CargoGridSketchProps = {
   manualTrayDrop?: boolean;
   /** Active Manual tray drag — footprint highlight under cursor. */
   trayDragSpec?: ManualBayAddBoxSpec | null;
+  /** Bulk cargo-type fill — footprint highlight sized to the cargo load. */
+  trayBulkFill?: boolean;
+  /** Crates for bulk-fill footprint estimate (with `trayBulkFill`). */
+  trayBulkFillSpec?: Pick<ManualBayBulkFillSpec, "crates"> | null;
   /**
    * Full bay occupancy for tray fit checks (includes stay cargo when Transfer
    * hides it). Defaults to `placementBoxes`.
@@ -450,10 +474,13 @@ export function CargoGridSketch({
   panelHeightPx = 26 * 16,
   manualEdit = false,
   onManualDragStart,
-  onManualDragDelta,
+  onManualDragMove,
   onManualDragEnd,
+  manualCrateDrag = null,
   manualTrayDrop = false,
   trayDragSpec = null,
+  trayBulkFill = false,
+  trayBulkFillSpec = null,
   trayCollisionBoxes,
   trayOrientationIndex = 0,
   trayPointerClient = null,
@@ -470,11 +497,189 @@ export function CargoGridSketch({
   const manualDragRef = useRef<{
     boxId: string;
     pointerId: number;
-    startClientX: number;
-    startClientY: number;
-    lastDx: number;
-    lastDy: number;
+    lastClientX: number;
+    lastClientY: number;
   } | null>(null);
+  /** Pending press — drag only after moving past threshold (keeps dbl-click). */
+  const manualPressRef = useRef<{
+    boxId: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+  } | null>(null);
+  const manualLastTapRef = useRef<{ boxId: string; at: number } | null>(null);
+  /** Active Manual crate drag — other crates go pointer-events-none. */
+  const [draggingManualBoxId, setDraggingManualBoxId] = useState<string | null>(
+    null,
+  );
+  const onManualDragStartRef = useRef(onManualDragStart);
+  const onManualDragMoveRef = useRef(onManualDragMove);
+  const onManualDragEndRef = useRef(onManualDragEnd);
+  const onManualBoxRemoveRef = useRef(onManualBoxRemove);
+  const manualDragWindowCleanupRef = useRef<(() => void) | null>(null);
+  onManualDragStartRef.current = onManualDragStart;
+  onManualDragMoveRef.current = onManualDragMove;
+  onManualDragEndRef.current = onManualDragEnd;
+  onManualBoxRemoveRef.current = onManualBoxRemove;
+
+  useEffect(
+    () => () => {
+      manualDragWindowCleanupRef.current?.();
+      manualDragWindowCleanupRef.current = null;
+    },
+    [],
+  );
+
+  const MANUAL_DRAG_THRESHOLD_PX = 6;
+  const MANUAL_DOUBLE_CLICK_MS = 400;
+
+  const beginManualBoxDrag = useCallback(
+    (
+      boxId: string,
+      pointerId: number,
+      clientX: number,
+      clientY: number,
+    ) => {
+      manualDragWindowCleanupRef.current?.();
+      manualDragRef.current = {
+        boxId,
+        pointerId,
+        lastClientX: clientX,
+        lastClientY: clientY,
+      };
+      setDraggingManualBoxId(boxId);
+      onManualDragStartRef.current?.(boxId, clientX, clientY);
+
+      const onMove = (event: PointerEvent) => {
+        const drag = manualDragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        drag.lastClientX = event.clientX;
+        drag.lastClientY = event.clientY;
+        onManualDragMoveRef.current?.(
+          drag.boxId,
+          event.clientX,
+          event.clientY,
+        );
+      };
+
+      const endDrag = (event: PointerEvent) => {
+        if (event.pointerId !== pointerId) return;
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", endDrag);
+        window.removeEventListener("pointercancel", endDrag);
+        manualDragWindowCleanupRef.current = null;
+        const drag = manualDragRef.current;
+        if (!drag || drag.pointerId !== pointerId) return;
+        const endX = event.clientX;
+        const endY = event.clientY;
+        manualDragRef.current = null;
+        setDraggingManualBoxId(null);
+        onManualDragEndRef.current?.(drag.boxId, endX, endY);
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", endDrag);
+      window.addEventListener("pointercancel", endDrag);
+      manualDragWindowCleanupRef.current = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", endDrag);
+        window.removeEventListener("pointercancel", endDrag);
+        const drag = manualDragRef.current;
+        if (drag?.pointerId === pointerId) {
+          const { boxId: id, lastClientX, lastClientY } = drag;
+          manualDragRef.current = null;
+          setDraggingManualBoxId(null);
+          onManualDragEndRef.current?.(id, lastClientX, lastClientY);
+        }
+        manualDragWindowCleanupRef.current = null;
+      };
+    },
+    [],
+  );
+
+  /** Arm press: double-click returns to tray; move past threshold starts drag. */
+  const armManualBoxPointer = useCallback(
+    (
+      boxId: string,
+      pointerId: number,
+      clientX: number,
+      clientY: number,
+    ) => {
+      manualDragWindowCleanupRef.current?.();
+      manualPressRef.current = {
+        boxId,
+        pointerId,
+        startX: clientX,
+        startY: clientY,
+        dragging: false,
+      };
+
+      const detach = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+
+      const onMove = (event: PointerEvent) => {
+        const press = manualPressRef.current;
+        if (!press || press.pointerId !== event.pointerId || press.dragging) {
+          return;
+        }
+        const dist = Math.hypot(
+          event.clientX - press.startX,
+          event.clientY - press.startY,
+        );
+        if (dist < MANUAL_DRAG_THRESHOLD_PX) return;
+        press.dragging = true;
+        manualLastTapRef.current = null;
+        detach();
+        beginManualBoxDrag(
+          press.boxId,
+          press.pointerId,
+          press.startX,
+          press.startY,
+        );
+        onManualDragMoveRef.current?.(
+          press.boxId,
+          event.clientX,
+          event.clientY,
+        );
+      };
+
+      const onUp = (event: PointerEvent) => {
+        if (event.pointerId !== pointerId) return;
+        detach();
+        manualDragWindowCleanupRef.current = null;
+        const press = manualPressRef.current;
+        manualPressRef.current = null;
+        if (!press || press.pointerId !== pointerId || press.dragging) return;
+
+        const now = Date.now();
+        const last = manualLastTapRef.current;
+        if (
+          last &&
+          last.boxId === press.boxId &&
+          now - last.at <= MANUAL_DOUBLE_CLICK_MS
+        ) {
+          manualLastTapRef.current = null;
+          onManualBoxRemoveRef.current?.(press.boxId);
+          return;
+        }
+        manualLastTapRef.current = { boxId: press.boxId, at: now };
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+      manualDragWindowCleanupRef.current = () => {
+        detach();
+        manualPressRef.current = null;
+        manualDragWindowCleanupRef.current = null;
+      };
+    },
+    [beginManualBoxDrag],
+  );
   /** Zooms — independent unless syncedZoom. */
   const [topZoomInternal, setTopZoomInternal] = useState(1);
   const [isoZoomInternal, setIsoZoomInternal] = useState(1);
@@ -632,7 +837,7 @@ export function CargoGridSketch({
   const [hiddenIsoLayers, setHiddenIsoLayers] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
-  /** Bottom-center layer pads on the 2D / 3D grids (toggled from legend). */
+  /** Top-center layer pads on the 2D / 3D grids (toggled from legend). */
   const [topLayerPadVisible, setTopLayerPadVisible] = useState(true);
   const [isoLayerPadVisible, setIsoLayerPadVisible] = useState(true);
   const { top: topScale, iso: isoScale } = getCargoGridViewScale(
@@ -938,17 +1143,20 @@ export function CargoGridSketch({
   );
 
   useEffect(() => {
-    if (!trayDragSpec) setTrayHoverCoord(null);
-  }, [trayDragSpec]);
+    if (!trayDragSpec && !manualCrateDrag) setTrayHoverCoord(null);
+  }, [manualCrateDrag, trayDragSpec]);
 
   useEffect(() => {
-    if (!trayDragSpec || !trayPointerClient) return;
-    const coord = cargoCellCoordFromPoint(
-      trayPointerClient.x,
-      trayPointerClient.y,
-    );
+    const pointer = manualCrateDrag
+      ? { x: manualCrateDrag.clientX, y: manualCrateDrag.clientY }
+      : trayDragSpec && trayPointerClient
+        ? trayPointerClient
+        : null;
+    if (!pointer) return;
+    const coord = cargoCellCoordFromPoint(pointer.x, pointer.y);
     setTrayHoverCoord((prev) => {
-      if (!coord) return prev;
+      // Clear when over a gap / off-grid so the highlight matches drop behavior.
+      if (!coord) return null;
       if (
         prev &&
         prev.x === coord.x &&
@@ -959,11 +1167,19 @@ export function CargoGridSketch({
       }
       return coord;
     });
-  }, [trayDragSpec, trayPointerClient]);
+  }, [manualCrateDrag, trayDragSpec, trayPointerClient]);
 
   const trayFitBoxes = trayCollisionBoxes ?? placementBoxes;
   const trayDropPreview = useMemo(() => {
-    if (!trayDragSpec || !trayHoverCoord) return null;
+    if (!trayDragSpec || !trayHoverCoord || manualCrateDrag) return null;
+    if (trayBulkFill) {
+      return previewManualBayZoneFill(
+        sketch,
+        trayHoverCoord,
+        trayBulkFillSpec,
+        trayFitBoxes,
+      );
+    }
     return previewManualBayPlacement(
       sketch,
       trayFitBoxes,
@@ -972,23 +1188,51 @@ export function CargoGridSketch({
       trayOrientationIndex,
     );
   }, [
+    manualCrateDrag,
     sketch,
+    trayBulkFill,
+    trayBulkFillSpec,
     trayDragSpec,
     trayFitBoxes,
     trayHoverCoord,
     trayOrientationIndex,
   ]);
-  const trayPreviewKeys = useMemo(() => {
-    if (!trayDropPreview) return null;
+  const bulkFillFootprint =
+    trayBulkFill &&
+    trayDropPreview &&
+    "footprint" in trayDropPreview &&
+    trayDropPreview.footprint
+      ? (trayDropPreview.footprint as {
+          dx: number;
+          dy: number;
+          origin: { x: number; y: number; z: number };
+        })
+      : null;
+  const crateDropPreview = useMemo(() => {
+    if (!manualCrateDrag || !trayHoverCoord) return null;
+    return previewManualBayDrop(
+      sketch,
+      trayFitBoxes,
+      manualCrateDrag.boxId,
+      trayHoverCoord,
+      {
+        dx: manualCrateDrag.grabOffsetX,
+        dy: manualCrateDrag.grabOffsetY,
+      },
+    );
+  }, [manualCrateDrag, sketch, trayFitBoxes, trayHoverCoord]);
+  const dropPreviewKeys = useMemo(() => {
+    const preview = crateDropPreview ?? trayDropPreview;
+    if (!preview) return null;
     return {
-      fits: trayDropPreview.fits,
+      fits: preview.fits,
       keys: new Set(
-        trayDropPreview.cells
+        preview.cells
           .filter((cell) => cell.z === activeZ)
           .map((cell) => cargoGridCoordKey(cell)),
       ),
     };
-  }, [activeZ, trayDropPreview]);
+  }, [activeZ, crateDropPreview, trayDropPreview]);
   const isPlacementView =
     compact &&
     (highlightedCoords.length > 0 ||
@@ -1816,16 +2060,17 @@ export function CargoGridSketch({
                   }
                 }
 
+                // Anchor by origin cell (not full footprint) so a cross-zone
+                // move keeps one DOM host until the origin enters the next zone.
                 const boxesOnLayer = useBoxFootprints
                   ? renderPlacementBoxes.filter(
                       (box) =>
                         box.origin.z <= z &&
                         z < box.origin.z + box.footprint.dz &&
                         box.origin.x >= zoneX0 &&
-                        box.origin.x + box.footprint.dx <=
-                          zoneX0 + zone.lengthCells &&
+                        box.origin.x < zoneX0 + zone.lengthCells &&
                         box.origin.y >= yOffset &&
-                        box.origin.y + box.footprint.dy <= yOffset + zoneWidth,
+                        box.origin.y < yOffset + zoneWidth,
                     )
                   : [];
 
@@ -1910,7 +2155,10 @@ export function CargoGridSketch({
 
                 const cargoGrid = (
                   <div
-                    className={["relative grid border", fillClass].join(" ")}
+                    className={[
+                      "relative grid overflow-visible border",
+                      fillClass,
+                    ].join(" ")}
                     style={{
                       gridTemplateColumns: `repeat(${zone.lengthCells}, ${viewCellPx}px)`,
                       gridTemplateRows: `repeat(${zoneWidth}, ${viewCellPx}px)`,
@@ -1958,10 +2206,10 @@ export function CargoGridSketch({
                       const canTrayPlace = Boolean(
                         manualTrayDrop && trayDragSpec,
                       );
-                      const isTrayPreview = Boolean(
-                        trayPreviewKeys?.keys.has(coordKey),
+                      const isDropPreview = Boolean(
+                        dropPreviewKeys?.keys.has(coordKey),
                       );
-                      const trayPreviewFits = trayPreviewKeys?.fits === true;
+                      const dropPreviewFits = dropPreviewKeys?.fits === true;
                       const cellCoord = { x: cell.x, y: cell.y, z };
                       return (
                         <button
@@ -1989,7 +2237,8 @@ export function CargoGridSketch({
                             selectCell(cellCoord);
                           }}
                           onPointerEnter={
-                            manualTrayDrop && trayDragSpec
+                            (manualTrayDrop && trayDragSpec) ||
+                            manualCrateDrag
                               ? () => {
                                   setTrayHoverCoord((prev) =>
                                     prev &&
@@ -2007,8 +2256,8 @@ export function CargoGridSketch({
                             canSelect || canTrayPlace
                               ? "cursor-pointer hover:bg-rsi-accent/25"
                               : "cursor-default",
-                            isTrayPreview
-                              ? trayPreviewFits
+                            isDropPreview
+                              ? dropPreviewFits
                                 ? "z-[7] bg-rsi-accent/45 ring-2 ring-inset ring-rsi-accent"
                                 : "z-[7] bg-rsi-danger/35 ring-2 ring-inset ring-rsi-danger"
                               : isSelected
@@ -2026,7 +2275,7 @@ export function CargoGridSketch({
                                         : "",
                           ].join(" ")}
                           style={
-                            isTrayPreview
+                            isDropPreview
                               ? undefined
                               : tintHex && isHighlightExact
                                 ? {
@@ -2138,82 +2387,45 @@ export function CargoGridSketch({
                       const onManualPointerDown = (
                         event: ReactPointerEvent<HTMLDivElement>,
                       ) => {
-                        if (!manualEdit) return;
-                        event.preventDefault();
+                        if (!manualEdit || event.button !== 0) return;
                         event.stopPropagation();
-                        manualDragRef.current = {
-                          boxId: box.id,
-                          pointerId: event.pointerId,
-                          startClientX: event.clientX,
-                          startClientY: event.clientY,
-                          lastDx: 0,
-                          lastDy: 0,
-                        };
-                        try {
-                          event.currentTarget.setPointerCapture(
-                            event.pointerId,
-                          );
-                        } catch {
-                          // Synthetic / already-captured pointers still drag via box events.
-                        }
-                        onManualDragStart?.(box.id);
-                      };
-                      const onManualPointerMove = (
-                        event: ReactPointerEvent<HTMLDivElement>,
-                      ) => {
-                        const drag = manualDragRef.current;
-                        if (
-                          !manualEdit ||
-                          !drag ||
-                          drag.boxId !== box.id ||
-                          drag.pointerId !== event.pointerId
-                        ) {
-                          return;
-                        }
-                        // Top view mirrors X (ramp left / nose right): +screenX → −sketchX.
-                        const dx = Math.round(
-                          -(event.clientX - drag.startClientX) / viewCellPx,
+                        // Don't start drag yet — threshold keeps double-click
+                        // (return to tray) working. Window listeners survive
+                        // cross-zone remounts once the drag begins.
+                        armManualBoxPointer(
+                          box.id,
+                          event.pointerId,
+                          event.clientX,
+                          event.clientY,
                         );
-                        const dy = Math.round(
-                          (event.clientY - drag.startClientY) / viewCellPx,
-                        );
-                        if (dx === drag.lastDx && dy === drag.lastDy) return;
-                        drag.lastDx = dx;
-                        drag.lastDy = dy;
-                        onManualDragDelta?.(box.id, dx, dy);
                       };
-                      const endManualDrag = (
-                        event: ReactPointerEvent<HTMLDivElement>,
-                      ) => {
-                        const drag = manualDragRef.current;
-                        if (
-                          !drag ||
-                          drag.boxId !== box.id ||
-                          drag.pointerId !== event.pointerId
-                        ) {
-                          return;
-                        }
-                        manualDragRef.current = null;
-                        try {
-                          event.currentTarget.releasePointerCapture(
-                            event.pointerId,
-                          );
-                        } catch {
-                          // Already released.
-                        }
-                        onManualDragEnd?.();
-                      };
+                      const isDraggingThis =
+                        draggingManualBoxId != null &&
+                        draggingManualBoxId === box.id;
+                      const cratePointerClass = isHologram
+                        ? "pointer-events-none z-[4]"
+                        : draggingManualBoxId != null
+                          ? // While dragging, crates must not steal hits over empty cells.
+                            "pointer-events-none z-[5]"
+                          : manualEdit
+                            ? "pointer-events-auto z-[5] cursor-grab touch-none active:cursor-grabbing"
+                            : "pointer-events-auto z-[5]";
                       return (
                         <div
                           key={box.id}
                           title={
                             isHologram
                               ? undefined
-                              : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move" : ""}`
+                              : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move · double-click to return to tray" : ""}`
                           }
                           role={manualEdit && !isHologram ? "button" : undefined}
                           aria-hidden={
                             isHologram || !manualEdit ? true : undefined
+                          }
+                          aria-grabbed={
+                            manualEdit && !isHologram
+                              ? isDraggingThis
+                              : undefined
                           }
                           aria-label={
                             manualEdit && !isHologram
@@ -2225,39 +2437,23 @@ export function CargoGridSketch({
                               ? onManualPointerDown
                               : undefined
                           }
-                          onPointerMove={
-                            manualEdit && !isHologram
-                              ? onManualPointerMove
-                              : undefined
-                          }
-                          onPointerUp={
-                            manualEdit && !isHologram
-                              ? endManualDrag
-                              : undefined
-                          }
-                          onPointerCancel={
-                            manualEdit && !isHologram
-                              ? endManualDrag
-                              : undefined
-                          }
                           onDoubleClick={
+                            // Handled in armManualBoxPointer (pointer path);
+                            // keep this as a fallback when the browser fires it.
                             manualEdit && !isHologram && onManualBoxRemove
                               ? (event) => {
                                   event.preventDefault();
                                   event.stopPropagation();
+                                  manualLastTapRef.current = null;
+                                  manualPressRef.current = null;
+                                  manualDragWindowCleanupRef.current?.();
                                   onManualBoxRemove(box.id);
                                 }
                               : undefined
                           }
                           className={[
                             "absolute box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
-                            isHologram
-                              ? "pointer-events-none z-[4]"
-                              : // Keep pointer events so crate `title` (full commodity
-                                // name) works on hover — not only in Manual drag mode.
-                                manualEdit
-                                ? "pointer-events-auto z-[5] cursor-grab touch-none active:cursor-grabbing"
-                                : "pointer-events-auto z-[5]",
+                            cratePointerClass,
                           ].join(" ")}
                           style={{
                             left,
@@ -2266,7 +2462,12 @@ export function CargoGridSketch({
                             height: boxHeightPx,
                             backgroundColor: hex,
                             // Hologram: barely there so solid crates stay readable.
-                            opacity: isHologram ? 0.12 : 0.92,
+                            // Dragging: leave a faint footprint while the ghost follows the cursor.
+                            opacity: isHologram
+                              ? 0.12
+                              : isDraggingThis
+                                ? 0.28
+                                : 0.92,
                             ...borderStyle,
                             ...(debugBoxOutlines && !isHologram
                               ? {
@@ -2354,6 +2555,22 @@ export function CargoGridSketch({
                 );
               });
               })()}
+              {useAbsoluteFloor && bulkFillFootprint ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute z-20 box-border border-2 border-dashed border-rsi-accent bg-rsi-accent/25"
+                  style={{
+                    left:
+                      (totalLength -
+                        bulkFillFootprint.origin.x -
+                        bulkFillFootprint.dx) *
+                      viewCellPx,
+                    top: bulkFillFootprint.origin.y * viewCellPx,
+                    width: bulkFillFootprint.dx * viewCellPx,
+                    height: bulkFillFootprint.dy * viewCellPx,
+                  }}
+                />
+              ) : null}
               </div>
               </ShipBayEndsFrame>
               </RotatableTopBay>

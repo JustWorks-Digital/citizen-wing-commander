@@ -14,6 +14,8 @@ import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
 import { cargoBaySidePanelClassName } from "@/components/ships/cargoBaySidePanel";
 import {
   ManualBayBoxTray,
+  ManualBayPlacedBoxDragGhost,
+  ManualBayTrayBulkDragGhost,
   ManualBayTrayDragGhost,
 } from "@/components/missions/ManualBayBoxTray";
 import { SessionCurrentStopPickupGrid } from "@/components/missions/SessionStatsStrip";
@@ -30,12 +32,13 @@ import {
   MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import {
-  applyManualBayPoses,
+  boxesFromManualPreset,
   getManualBayLayoutStopState,
   newManualBayPresetId,
   nextManualPresetName,
   posesFromBoxes,
   readManualBayLayoutSession,
+  storedBoxesFromPlaced,
   writeManualBayLayoutSession,
   type ManualBayLayoutPreset,
   type ManualBayLayoutSessionState,
@@ -55,9 +58,11 @@ import {
   cargoCellCoordFromPoint,
   nextManualBayOrientationIndex,
   tryAddManualBayBox,
-  tryMoveManualBayBox,
+  tryDropManualBayBox,
+  tryFillManualBayZoneWithCargoType,
   tryRemoveManualBayBox,
   type ManualBayAddBoxSpec,
+  type ManualBayBulkFillSpec,
 } from "@/lib/ships/manualBayMove";
 import { cargoBay } from "@/lib/ships/cargoBay";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
@@ -148,7 +153,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     null,
   );
   const [trayPlacement, setTrayPlacement] = useState<{
+    mode: "single" | "bulk";
     spec: ManualBayAddBoxSpec;
+    bulk?: ManualBayBulkFillSpec;
+    bulkRemainingScu?: number;
     lineKey: string;
     orientationIndex: number;
   } | null>(null);
@@ -159,6 +167,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const trayPlacementRef = useRef(trayPlacement);
   trayPlacementRef.current = trayPlacement;
   const manualDragBaseRef = useRef<PlacedCargoBox[] | null>(null);
+  /** Cursor-follow drag for a placed crate (ghost); drop commits or reverts. */
+  const [crateDrag, setCrateDrag] = useState<{
+    boxId: string;
+    clientX: number;
+    clientY: number;
+    grabOffsetX: number;
+    grabOffsetY: number;
+  } | null>(null);
+  const crateDragRef = useRef(crateDrag);
+  crateDragRef.current = crateDrag;
   const { heightPx, setHeightPx, resetHeightPx } =
     useSessionCargoBayLayoutHeight(sessionId);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -300,10 +318,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     if (isManual) {
       return manualLiveBoxes
         ? manualLiveBoxes
-        : applyManualBayPoses(basePlan.boxes, activeManualPreset?.poses);
+        : boxesFromManualPreset(activeManualPreset, basePlan.boxes);
     }
     return basePlan.boxes;
-  }, [activeManualPreset?.poses, basePlan, isManual, manualLiveBoxes]);
+  }, [activeManualPreset, basePlan, isManual, manualLiveBoxes]);
 
   const displayBoxes = useMemo(() => {
     // Transfer: show only pickup / delivery; stay stays packed underneath.
@@ -380,10 +398,32 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         name: nextManualPresetName(presets),
         stopId,
         poses: posesFromBoxes(boxes),
+        boxes: storedBoxesFromPlaced(boxes),
         updatedAt: new Date().toISOString(),
       };
     },
     [manualStop.presets, stopId],
+  );
+
+  const patchActivePresetBoxes = useCallback(
+    (boxes: PlacedCargoBox[]) => {
+      const presetId = manualStop.activePresetId;
+      if (!presetId || !stopId) return;
+      updateStopManual((current) => ({
+        ...current,
+        presets: current.presets.map((preset) =>
+          preset.id === presetId
+            ? {
+                ...preset,
+                poses: posesFromBoxes(boxes),
+                boxes: storedBoxesFromPlaced(boxes),
+                updatedAt: new Date().toISOString(),
+              }
+            : preset,
+        ),
+      }));
+    },
+    [manualStop.activePresetId, stopId, updateStopManual],
   );
 
   const selectAutoMode = useCallback(
@@ -408,7 +448,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           isManual && manualLiveBoxes
             ? manualLiveBoxes
             : isManual
-              ? applyManualBayPoses(basePlan.boxes, activeManualPreset?.poses)
+              ? boxesFromManualPreset(activeManualPreset, basePlan.boxes)
               : basePlan.boxes;
         const preset = createManualPresetFromBoxes(sourceBoxes);
         if (!preset) return;
@@ -417,16 +457,24 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           presets: [...current.presets, preset],
         }));
         setManualLiveBoxes(sourceBoxes);
-      } else if (!manualStop.activePresetId && manualStop.presets[0]) {
-        updateStopManual((current) => ({
-          ...current,
-          activePresetId: current.presets[0]!.id,
-        }));
+      } else {
+        const preset =
+          manualStop.presets.find(
+            (entry) => entry.id === manualStop.activePresetId,
+          ) ?? manualStop.presets[0]!;
+        if (!manualStop.activePresetId || preset.id !== manualStop.activePresetId) {
+          updateStopManual((current) => ({
+            ...current,
+            activePresetId: preset.id,
+          }));
+        }
+        // Restore snapshot — pose-only presets cannot rematch after Clear/Fill.
+        setManualLiveBoxes(boxesFromManualPreset(preset, basePlan.boxes));
       }
       setSortingMode("manual");
     },
     [
-      activeManualPreset?.poses,
+      activeManualPreset,
       basePlan,
       createManualPresetFromBoxes,
       isManual,
@@ -463,68 +511,84 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   );
 
   const onManualDragStart = useCallback(
-    (_boxId: string) => {
-      manualDragBaseRef.current = workingBoxes.map((box) => ({ ...box }));
+    (boxId: string, clientX: number, clientY: number) => {
+      const base = workingBoxes.map((box) => ({ ...box }));
+      manualDragBaseRef.current = base;
+      // Keep bay crates at the pre-drag pose; the ghost follows the cursor.
+      setManualLiveBoxes(base);
+      const box = base.find((entry) => entry.id === boxId);
+      const grabCell = cargoCellCoordFromPoint(clientX, clientY);
+      const grabOffsetX =
+        box && grabCell ? grabCell.x - box.origin.x : 0;
+      const grabOffsetY =
+        box && grabCell ? grabCell.y - box.origin.y : 0;
+      setCrateDrag({
+        boxId,
+        clientX,
+        clientY,
+        grabOffsetX,
+        grabOffsetY,
+      });
     },
     [workingBoxes],
   );
 
-  const onManualDragDelta = useCallback(
-    (boxId: string, deltaCellsX: number, deltaCellsY: number) => {
-      if (!sketch) return;
-      const base = manualDragBaseRef.current;
-      if (!base) return;
-      const next = tryMoveManualBayBox(
-        sketch,
-        base,
-        boxId,
-        deltaCellsX,
-        deltaCellsY,
+  const onManualDragMove = useCallback(
+    (boxId: string, clientX: number, clientY: number) => {
+      setCrateDrag((current) =>
+        current && current.boxId === boxId
+          ? { ...current, clientX, clientY }
+          : current,
       );
-      if (!next) return;
-      setManualLiveBoxes(next);
     },
-    [sketch],
+    [],
   );
 
-  const onManualDragEnd = useCallback(() => {
-    const boxes = manualLiveBoxes;
-    const presetId = manualStop.activePresetId;
-    manualDragBaseRef.current = null;
-    if (!boxes || !presetId || !stopId) return;
-    updateStopManual((current) => ({
-      ...current,
-      presets: current.presets.map((preset) =>
-        preset.id === presetId
-          ? {
-              ...preset,
-              poses: posesFromBoxes(boxes),
-              updatedAt: new Date().toISOString(),
-            }
-          : preset,
-      ),
-    }));
-  }, [manualLiveBoxes, manualStop.activePresetId, stopId, updateStopManual]);
+  const onManualDragEnd = useCallback(
+    (boxId: string, clientX: number, clientY: number) => {
+      const base = manualDragBaseRef.current;
+      const drag = crateDragRef.current;
+      setCrateDrag(null);
+      manualDragBaseRef.current = null;
+      const presetId = manualStop.activePresetId;
+
+      const revert = () => {
+        if (base) setManualLiveBoxes(base);
+      };
+
+      if (!base || !sketch || !drag || drag.boxId !== boxId) {
+        revert();
+        return;
+      }
+
+      const dropCell = cargoCellCoordFromPoint(clientX, clientY);
+      if (!dropCell) {
+        revert();
+        return;
+      }
+
+      const next = tryDropManualBayBox(sketch, base, boxId, dropCell, {
+        dx: drag.grabOffsetX,
+        dy: drag.grabOffsetY,
+      });
+      if (!next) {
+        revert();
+        return;
+      }
+
+      setManualLiveBoxes(next);
+      if (!presetId || !stopId) return;
+      patchActivePresetBoxes(next);
+    },
+    [manualStop.activePresetId, patchActivePresetBoxes, sketch, stopId],
+  );
 
   const persistManualBoxes = useCallback(
     (boxes: PlacedCargoBox[]) => {
       setManualLiveBoxes(boxes);
-      const presetId = manualStop.activePresetId;
-      if (!presetId || !stopId) return;
-      updateStopManual((current) => ({
-        ...current,
-        presets: current.presets.map((preset) =>
-          preset.id === presetId
-            ? {
-                ...preset,
-                poses: posesFromBoxes(boxes),
-                updatedAt: new Date().toISOString(),
-              }
-            : preset,
-        ),
-      }));
+      patchActivePresetBoxes(boxes);
     },
-    [manualStop.activePresetId, stopId, updateStopManual],
+    [patchActivePresetBoxes],
   );
 
   const manualInventoryGroups = useMemo(() => {
@@ -550,6 +614,17 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     (coord: CargoGridCoord) => {
       const current = trayPlacementRef.current;
       if (!sketch || !isManual || !current) return false;
+      if (current.mode === "bulk" && current.bulk) {
+        const result = tryFillManualBayZoneWithCargoType(
+          sketch,
+          workingBoxes,
+          coord,
+          current.bulk,
+        );
+        if (!result || result.placedCount === 0) return false;
+        persistManualBoxes(result.boxes);
+        return true;
+      }
       const next = tryAddManualBayBox(
         sketch,
         workingBoxes,
@@ -740,7 +815,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   /** Pack mode / graph top inset under Packing (+ Peel) toggles. */
   const pushPackTopClass = showPeelToggle ? "top-14 sm:top-8" : "top-8";
   const pushPackOpen = !sidePanelsOverlay && !sortingHidden;
-  const pushGraphTopClass = pushPackOpen
+  /** Overlay off: clear Packing (+ Peel); keep 2D/Split/3D above the grid. */
+  const pushGraphTopClass = !sidePanelsOverlay
     ? showPeelToggle
       ? "pt-14 sm:pt-8"
       : "pt-8"
@@ -809,13 +885,36 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       </div>
 
       {trayPlacement && trayPointerClient ? (
-        <ManualBayTrayDragGhost
-          spec={trayPlacement.spec}
-          orientationIndex={trayPlacement.orientationIndex}
-          clientX={trayPointerClient.x}
-          clientY={trayPointerClient.y}
-        />
+        trayPlacement.mode === "bulk" && trayPlacement.bulk ? (
+          <ManualBayTrayBulkDragGhost
+            fill={trayPlacement.bulk}
+            remainingScu={trayPlacement.bulkRemainingScu ?? 0}
+            clientX={trayPointerClient.x}
+            clientY={trayPointerClient.y}
+          />
+        ) : (
+          <ManualBayTrayDragGhost
+            spec={trayPlacement.spec}
+            orientationIndex={trayPlacement.orientationIndex}
+            clientX={trayPointerClient.x}
+            clientY={trayPointerClient.y}
+          />
+        )
       ) : null}
+      {crateDrag
+        ? (() => {
+            const dragged = workingBoxes.find(
+              (box) => box.id === crateDrag.boxId,
+            );
+            return dragged ? (
+              <ManualBayPlacedBoxDragGhost
+                box={dragged}
+                clientX={crateDrag.clientX}
+                clientY={crateDrag.clientY}
+              />
+            ) : null;
+          })()
+        : null}
 
       {!sketch ? (
         <p className="py-6 text-center text-sm text-rsi-text-muted">
@@ -862,20 +961,22 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   </button>
                 ) : null}
               </div>
-              <button
-                type="button"
-                aria-pressed={!legendHidden}
-                aria-label={legendHidden ? "Show legend" : "Hide legend"}
-                onClick={() => setLegendHidden(!legendHidden)}
-                className={[
-                  "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
-                  !legendHidden
-                    ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                    : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                ].join(" ")}
-              >
-                Legend
-              </button>
+              {sidePanelsOverlay ? (
+                <button
+                  type="button"
+                  aria-pressed={!legendHidden}
+                  aria-label={legendHidden ? "Show legend" : "Hide legend"}
+                  onClick={() => setLegendHidden(!legendHidden)}
+                  className={[
+                    "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                    !legendHidden
+                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                  ].join(" ")}
+                >
+                  Legend
+                </button>
+              ) : null}
               {!sortingHidden ? (
                 <div
                   role="region"
@@ -1007,56 +1108,68 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                     </button>
                   ) : null}
                   {isManual ? (
-                    <div className="flex min-h-0 flex-1 flex-col space-y-1.5">
-                      <div className="flex flex-wrap gap-1">
-                        {manualStop.presets.map((preset) => {
-                          const selected =
-                            preset.id === manualStop.activePresetId;
-                          return (
-                            <span
-                              key={preset.id}
-                              className={[
-                                "inline-flex items-center gap-0.5 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.1em]",
-                                selected
-                                  ? "border-rsi-border-strong bg-rsi-surface text-rsi-text"
-                                  : "border-rsi-border/80 bg-rsi-bg-deep/60 text-rsi-text-muted",
-                              ].join(" ")}
-                            >
-                              <button
-                                type="button"
-                                title={`Use ${preset.name}`}
-                                onClick={() => {
-                                  updateStopManual((current) => ({
-                                    ...current,
-                                    activePresetId: preset.id,
-                                  }));
-                                  setManualLiveBoxes(null);
-                                }}
-                                className="hover:text-rsi-text"
+                    <div className="flex min-h-0 flex-1 flex-col gap-1">
+                      <div className="flex min-w-0 items-center gap-1">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
+                          {manualStop.presets.map((preset) => {
+                            const selected =
+                              preset.id === manualStop.activePresetId;
+                            return (
+                              <span
+                                key={preset.id}
+                                className={[
+                                  "inline-flex max-w-full items-center rounded border px-1 py-px font-mono text-[0.45rem] uppercase tracking-[0.08em]",
+                                  selected
+                                    ? "border-rsi-border-strong bg-rsi-surface text-rsi-text"
+                                    : "border-rsi-border/70 bg-rsi-bg-deep/50 text-rsi-text-muted",
+                                ].join(" ")}
                               >
-                                {preset.name}
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Delete ${preset.name}`}
-                                title="Delete preset"
-                                onClick={() => deleteManualPreset(preset.id)}
-                                className="ml-0.5 text-rsi-text-muted hover:text-rsi-danger"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          );
-                        })}
+                                <button
+                                  type="button"
+                                  title={`Use ${preset.name}`}
+                                  onClick={() => {
+                                    updateStopManual((current) => ({
+                                      ...current,
+                                      activePresetId: preset.id,
+                                    }));
+                                    setManualLiveBoxes(
+                                      boxesFromManualPreset(
+                                        preset,
+                                        basePlan?.boxes ?? [],
+                                      ),
+                                    );
+                                  }}
+                                  className="truncate hover:text-rsi-text"
+                                >
+                                  {preset.name}
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Delete ${preset.name}`}
+                                  title="Delete preset"
+                                  onClick={() =>
+                                    deleteManualPreset(preset.id)
+                                  }
+                                  className="ml-0.5 shrink-0 leading-none text-rsi-text-muted hover:text-rsi-danger"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          title="Snapshot the current layout as a new preset"
+                          aria-label="Add preset"
+                          onClick={() =>
+                            enterManualMode({ addPreset: true })
+                          }
+                          className="inline-flex size-5 shrink-0 items-center justify-center rounded border border-dashed border-rsi-border/80 font-mono text-[0.7rem] leading-none text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
+                        >
+                          +
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        title="Snapshot the current layout as a new preset"
-                        onClick={() => enterManualMode({ addPreset: true })}
-                        className="w-full rounded-rsi border border-dashed border-rsi-border/80 px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
-                      >
-                        + Preset
-                      </button>
                       {manualInventoryGroups.length > 0 ? (
                         <ManualBayBoxTray
                           groups={manualInventoryGroups}
@@ -1067,7 +1180,32 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                           }
                           onTrayDragStart={(spec, lineKey) => {
                             const next = {
+                              mode: "single" as const,
                               spec,
+                              lineKey,
+                              orientationIndex: 0,
+                            };
+                            trayPlacementRef.current = next;
+                            setTrayPlacement(next);
+                          }}
+                          onTrayBulkDragStart={(fill, lineKey) => {
+                            const remainingScu = fill.crates.reduce(
+                              (sum, line) => sum + line.size * line.count,
+                              0,
+                            );
+                            const next = {
+                              mode: "bulk" as const,
+                              spec: {
+                                size: fill.crates[0]?.size ?? 8,
+                                commoditySlug: fill.commoditySlug,
+                                commodityName: fill.commodityName,
+                                color: fill.color,
+                                color2: fill.color2,
+                                missionId: fill.missionId,
+                                action: "pickup" as const,
+                              },
+                              bulk: fill,
+                              bulkRemainingScu: remainingScu,
                               lineKey,
                               orientationIndex: 0,
                             };
@@ -1086,7 +1224,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                             clearTrayPlacement();
                           }}
                           onTrayDragCancel={clearTrayPlacement}
-                          className="mt-2 min-h-0 flex-1"
+                          className="min-h-0 flex-1"
                         />
                       ) : null}
                     </div>
@@ -1101,18 +1239,27 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               .filter(Boolean)
               .join(" ") || undefined}
           >
-            <div className="relative">
-              {!sidePanelsOverlay ? (
-                <div
+            {/* Overlay off: 2D / Split / 3D left, Legend right — same row above the grid. */}
+            {showViewTabs && !sidePanelsOverlay ? (
+              <div className="mb-2 flex items-center justify-between gap-2">
+                {viewTabList}
+                <button
+                  type="button"
+                  aria-pressed={!legendHidden}
+                  aria-label={legendHidden ? "Show legend" : "Hide legend"}
+                  onClick={() => setLegendHidden(!legendHidden)}
                   className={[
-                    "pointer-events-none absolute left-2 z-20",
-                    // Clear Packing (+ Peel) so the tab strip is not a ghost box under them.
-                    showPeelToggle ? "top-10" : "top-9",
+                    "shrink-0 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                    !legendHidden
+                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
                   ].join(" ")}
                 >
-                  <div className="pointer-events-auto">{viewTabList}</div>
-                </div>
-              ) : null}
+                  Legend
+                </button>
+              </div>
+            ) : null}
+            <div className="relative">
               <CargoGridSketch
                 sketch={sketch}
                 cellPx={14}
@@ -1143,14 +1290,31 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 showLocationOutlines={showLocationOutlines}
                 manualEdit={isManual && (viewTab === "top" || viewTab === "split")}
                 onManualDragStart={onManualDragStart}
-                onManualDragDelta={onManualDragDelta}
+                onManualDragMove={onManualDragMove}
                 onManualDragEnd={onManualDragEnd}
+                manualCrateDrag={
+                  isManual && (viewTab === "top" || viewTab === "split")
+                    ? crateDrag
+                    : null
+                }
                 manualTrayDrop={
                   isManual && (viewTab === "top" || viewTab === "split")
                 }
                 trayDragSpec={
                   isManual && (viewTab === "top" || viewTab === "split")
                     ? (trayPlacement?.spec ?? null)
+                    : null
+                }
+                trayBulkFill={
+                  isManual &&
+                  (viewTab === "top" || viewTab === "split") &&
+                  trayPlacement?.mode === "bulk"
+                }
+                trayBulkFillSpec={
+                  isManual &&
+                  (viewTab === "top" || viewTab === "split") &&
+                  trayPlacement?.mode === "bulk"
+                    ? (trayPlacement.bulk ?? null)
                     : null
                 }
                 trayCollisionBoxes={isManual ? workingBoxes : undefined}

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
   ManualBayBoxTray,
+  ManualBayPlacedBoxDragGhost,
+  ManualBayTrayBulkDragGhost,
   ManualBayTrayDragGhost,
 } from "./ManualBayBoxTray";
 import type { ManualBayInventoryMissionGroup } from "@/lib/ships/manualBayInventory";
@@ -22,6 +24,19 @@ const groups: ManualBayInventoryMissionGroup[] = [
         demanded: 4,
         placed: 1,
         remaining: 3,
+      },
+      {
+        key: "mission-a:processed-food:2",
+        missionId: "mission-a",
+        missionTitle: "Senior Medium Cargo Haul A",
+        commoditySlug: "processed-food",
+        commodityName: "Processed Food",
+        size: 2,
+        color: "red",
+        color2: null,
+        demanded: 2,
+        placed: 0,
+        remaining: 2,
       },
       {
         key: "mission-a:hydrogen-fuel:8",
@@ -66,7 +81,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Manual packing tray: remaining crates by mission × commodity × SCU size. Drag a chip onto the 2D grid to place. R rotates; Esc cancels.",
+          "Manual packing tray: compact Fill rows (drag to pack a cargo type). Chevron expands size chips for one-at-a-time place. R rotates; Esc cancels.",
       },
     },
   },
@@ -91,6 +106,9 @@ export const Dragging: Story = {
   },
   render: (args) => (
     <div className="relative min-h-[16rem]">
+      <p className="mb-2 text-[0.65rem] text-rsi-text-muted">
+        Expand Sizes on Processed Food to drag individual chips.
+      </p>
       <ManualBayBoxTray {...args} />
       <ManualBayTrayDragGhost
         spec={{
@@ -105,6 +123,65 @@ export const Dragging: Story = {
         orientationIndex={0}
         clientX={220}
         clientY={120}
+      />
+    </div>
+  ),
+};
+
+export const BulkFillDragging: Story = {
+  args: {
+    groups,
+    onClearBay: () => undefined,
+    draggingLineKey: "mission-a:processed-food:bulk",
+  },
+  render: (args) => (
+    <div className="relative min-h-[16rem]">
+      <ManualBayBoxTray {...args} />
+      <ManualBayTrayBulkDragGhost
+        fill={{
+          missionId: "mission-a",
+          commoditySlug: "processed-food",
+          commodityName: "Processed Food",
+          color: "red",
+          color2: null,
+          crates: [
+            { size: 8, count: 3 },
+            { size: 2, count: 2 },
+          ],
+        }}
+        remainingScu={28}
+        clientX={240}
+        clientY={130}
+      />
+    </div>
+  ),
+};
+
+export const PlacedCrateCursorGhost: Story = {
+  args: {
+    groups,
+  },
+  render: () => (
+    <div className="relative min-h-[12rem] rounded-rsi border border-rsi-border bg-rsi-bg-deep/40">
+      <p className="p-3 text-sm text-rsi-text-muted">
+        Placed-crate drag ghost follows the pointer across gaps; drop on an
+        invalid cell reverts.
+      </p>
+      <ManualBayPlacedBoxDragGhost
+        box={{
+          id: "demo-crate",
+          size: 4,
+          origin: { x: 0, y: 0, z: 0 },
+          footprint: { dx: 2, dy: 2, dz: 1 },
+          commoditySlug: "processed-food",
+          commodityName: "Processed Food",
+          color: "red",
+          color2: null,
+          cells: [],
+          action: "pickup",
+        }}
+        clientX={180}
+        clientY={100}
       />
     </div>
   ),

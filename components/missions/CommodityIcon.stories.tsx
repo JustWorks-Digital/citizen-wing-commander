@@ -56,6 +56,15 @@ export const InlineLabel: Story = {
   ),
 };
 
+/** Compact tray Fill rows. */
+export const ExtraSmall: Story = {
+  args: {
+    showTooltip: false,
+    label: "Processed Food",
+    size: "xs",
+  },
+};
+
 /** Kind crate tint as family base; per-slug uniquify keeps siblings distinct. */
 export const DistinctSameKind: Story = {
   args: {

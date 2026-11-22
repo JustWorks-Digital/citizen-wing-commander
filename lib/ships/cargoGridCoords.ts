@@ -115,6 +115,21 @@ export function cargoGridZoneAtXY(
   return overflow ?? fallback;
 }
 
+/**
+ * Zone that hosts a placed crate in 2D and 3D bay views.
+ * Uses the origin cell (not whole-footprint containment) so overflow straddles
+ * stay visible in both projections.
+ */
+export function cargoBayViewHostZone(
+  sketch: ShipCargoGridSketch,
+  origin: Pick<CargoGridCoord, "x" | "y">,
+): CargoGridZone | null {
+  const zone = cargoGridZoneAtXY(sketch, origin.x, origin.y);
+  if (!zone) return null;
+  if (zone.kind !== "cargo" && zone.kind !== "overflow") return null;
+  return zone;
+}
+
 export function isValidCargoGridCoord(
   sketch: ShipCargoGridSketch,
   coord: CargoGridCoord,

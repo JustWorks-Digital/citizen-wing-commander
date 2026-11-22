@@ -21,6 +21,7 @@ import {
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
 import {
+  cargoBayViewHostZone,
   cargoGridCoordKey,
   formatCargoGridCoord,
   sameCargoGridCoord,
@@ -142,7 +143,7 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
-  /** Show bottom-center Z-layer pad on the grid (default on). */
+  /** Show top-center Z-layer pad on the grid (default on). */
   showLayerPad?: boolean;
   onShowLayerPadChange?: (value: boolean) => void;
   /**
@@ -569,72 +570,8 @@ function buildCubes(
           }
         }
 
-        if (zone.kind !== "cargo" && zone.kind !== "overflow") continue;
-
-        // Structured placement list (may be empty after location filters).
-        // Do not fall back to highlightKeys — an empty filter must show no crates.
-        const occupiedKeys = new Set(
-          placementBoxes.flatMap((box) =>
-            box.cells.map((cell) => cargoGridCoordKey(cell)),
-          ),
-        );
-        const placeholderKeys = new Set<string>();
-        for (const box of placementBoxes) {
-          const { origin, footprint } = box;
-          // Whole footprint must sit in this bay (not just the origin cell).
-          if (
-            origin.x < zoneX0 ||
-            origin.x + footprint.dx > zoneX1 ||
-            origin.y < zoneY0 ||
-            origin.y + footprint.dy > zoneY1
-          ) {
-            continue;
-          }
-          cubes.push({
-            key: `cargo-${box.id}-${origin.x}-${origin.y}-${origin.z}`,
-            coord: origin,
-            lx: origin.x,
-            wy: origin.y,
-            hz: origin.z,
-            zoneId: zone.id,
-            kind: "cargo",
-            footprint,
-            boxId: box.id,
-            commoditySlug: box.commoditySlug,
-            commodityName: box.commodityName,
-            color: box.color,
-            color2: box.color2,
-            action: box.action,
-            deliveryLocationSlug: box.deliveryLocationSlug,
-            locationGroupIndex: box.locationGroupIndex,
-          });
-          // Ghost pads under elevated crates so stack height stays readable.
-          for (let ox = 0; ox < footprint.dx; ox += 1) {
-            for (let oy = 0; oy < footprint.dy; oy += 1) {
-              for (let below = 0; below < origin.z; below += 1) {
-                const support = {
-                  x: origin.x + ox,
-                  y: origin.y + oy,
-                  z: below,
-                };
-                const supportKey = cargoGridCoordKey(support);
-                if (occupiedKeys.has(supportKey)) continue;
-                if (placeholderKeys.has(supportKey)) continue;
-                placeholderKeys.add(supportKey);
-                cubes.push({
-                  key: `placeholder-${zone.id}-${support.x}-${support.y}-${support.z}`,
-                  coord: support,
-                  lx: support.x,
-                  wy: support.y,
-                  hz: below,
-                  zoneId: zone.id,
-                  kind: "placeholder",
-                  footprint: UNIT_FOOTPRINT,
-                });
-              }
-            }
-          }
-        }
+        // Crates are emitted once after all floors — see below (origin-hosted,
+        // same as 2D). Whole-footprint-in-zone used to drop overflow straddles.
       }
     } else if (
       zone.kind === "cargo" ||
@@ -660,6 +597,66 @@ function buildCubes(
                 zone.kind === "empty" || zone.kind === "overflow"
                   ? "floor"
                   : "cargo",
+              footprint: UNIT_FOOTPRINT,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (mode === "placement" && placementBoxes.length > 0) {
+    // Host each crate by origin cell (same rule as 2D). Requiring the whole
+    // footprint inside one zone dropped Galaxy overflow straddles in 3D only.
+    const occupiedKeys = new Set(
+      placementBoxes.flatMap((box) =>
+        box.cells.map((cell) => cargoGridCoordKey(cell)),
+      ),
+    );
+    const placeholderKeys = new Set<string>();
+    for (const box of placementBoxes) {
+      const { origin, footprint } = box;
+      const hostZone = cargoBayViewHostZone(sketch, origin);
+      if (!hostZone) continue;
+      cubes.push({
+        key: `cargo-${box.id}-${origin.x}-${origin.y}-${origin.z}`,
+        coord: origin,
+        lx: origin.x,
+        wy: origin.y,
+        hz: origin.z,
+        zoneId: hostZone.id,
+        kind: "cargo",
+        footprint,
+        boxId: box.id,
+        commoditySlug: box.commoditySlug,
+        commodityName: box.commodityName,
+        color: box.color,
+        color2: box.color2,
+        action: box.action,
+        deliveryLocationSlug: box.deliveryLocationSlug,
+        locationGroupIndex: box.locationGroupIndex,
+      });
+      // Ghost pads under elevated crates so stack height stays readable.
+      for (let ox = 0; ox < footprint.dx; ox += 1) {
+        for (let oy = 0; oy < footprint.dy; oy += 1) {
+          for (let below = 0; below < origin.z; below += 1) {
+            const support = {
+              x: origin.x + ox,
+              y: origin.y + oy,
+              z: below,
+            };
+            const supportKey = cargoGridCoordKey(support);
+            if (occupiedKeys.has(supportKey)) continue;
+            if (placeholderKeys.has(supportKey)) continue;
+            placeholderKeys.add(supportKey);
+            cubes.push({
+              key: `placeholder-${hostZone.id}-${support.x}-${support.y}-${support.z}`,
+              coord: support,
+              lx: support.x,
+              wy: support.y,
+              hz: below,
+              zoneId: hostZone.id,
+              kind: "placeholder",
               footprint: UNIT_FOOTPRINT,
             });
           }

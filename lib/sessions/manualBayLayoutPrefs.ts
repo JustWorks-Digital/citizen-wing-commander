@@ -1,21 +1,50 @@
 /**
  * Session-scoped Manual bay layout presets (browser localStorage).
- * Poses override auto-pack origins; 2D edit and 3D share the same boxes.
+ * Full box snapshots are the source of truth — poses alone cannot restore
+ * Clear/Fill layouts after auto-pack regenerates crate ids.
  */
 
 import type { CargoGridCoord } from "@/lib/ships/cargoGridCoords";
-import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
+import type {
+  CargoGridBoxAction,
+  PlacedCargoBox,
+} from "@/lib/ships/cargoGridPlacement";
+import type { CargoBoxFootprint, CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 
 export type ManualBayBoxPose = {
   boxId: string;
   origin: CargoGridCoord;
 };
 
+/** Serializable Manual bay crate (cells rebuilt on load). */
+export type ManualBayStoredBox = {
+  id: string;
+  size: CargoBoxScu | number;
+  origin: CargoGridCoord;
+  footprint: CargoBoxFootprint;
+  commoditySlug: string;
+  commodityName: string;
+  color: string | null;
+  color2: string | null;
+  action?: CargoGridBoxAction;
+  missionId?: string | null;
+  deliveryLocationSlug?: string;
+  deliveryLocationName?: string;
+  locationGroupIndex?: number;
+  isOverflow?: boolean;
+};
+
 export type ManualBayLayoutPreset = {
   id: string;
   name: string;
   stopId: string;
+  /**
+   * @deprecated Pose overrides matched by auto-pack box id. Kept for older
+   * presets; prefer `boxes` when present.
+   */
   poses: ManualBayBoxPose[];
+  /** Full bay layout when the preset was saved (Manual source of truth). */
+  boxes?: ManualBayStoredBox[];
   updatedAt: string;
 };
 
@@ -39,18 +68,150 @@ function emptyStopState(): ManualBayLayoutStopState {
   return { activePresetId: null, presets: [] };
 }
 
-function normalizePose(raw: unknown): ManualBayBoxPose | null {
+function cellsForOrigin(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+): CargoGridCoord[] {
+  const cells: CargoGridCoord[] = [];
+  for (let dx = 0; dx < footprint.dx; dx += 1) {
+    for (let dy = 0; dy < footprint.dy; dy += 1) {
+      for (let dz = 0; dz < footprint.dz; dz += 1) {
+        cells.push({
+          x: origin.x + dx,
+          y: origin.y + dy,
+          z: origin.z + dz,
+        });
+      }
+    }
+  }
+  return cells;
+}
+
+function normalizeCoord(raw: unknown): CargoGridCoord | null {
   if (!raw || typeof raw !== "object") return null;
-  const record = raw as Record<string, unknown>;
-  const boxId = typeof record.boxId === "string" ? record.boxId.trim() : "";
-  const origin = record.origin;
-  if (!boxId || !origin || typeof origin !== "object") return null;
-  const o = origin as Record<string, unknown>;
+  const o = raw as Record<string, unknown>;
   const x = Number(o.x);
   const y = Number(o.y);
   const z = Number(o.z);
   if (![x, y, z].every((n) => Number.isInteger(n))) return null;
-  return { boxId, origin: { x, y, z } };
+  return { x, y, z };
+}
+
+function normalizeFootprint(raw: unknown): CargoBoxFootprint | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const dx = Number(o.dx);
+  const dy = Number(o.dy);
+  const dz = Number(o.dz);
+  if (
+    ![dx, dy, dz].every((n) => Number.isInteger(n) && n > 0) ||
+    dx * dy * dz <= 0
+  ) {
+    return null;
+  }
+  return { dx, dy, dz };
+}
+
+function normalizePose(raw: unknown): ManualBayBoxPose | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  const boxId = typeof record.boxId === "string" ? record.boxId.trim() : "";
+  const origin = normalizeCoord(record.origin);
+  if (!boxId || !origin) return null;
+  return { boxId, origin };
+}
+
+function normalizeStoredBox(raw: unknown): ManualBayStoredBox | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  const commoditySlug =
+    typeof record.commoditySlug === "string" ? record.commoditySlug.trim() : "";
+  const commodityName =
+    typeof record.commodityName === "string"
+      ? record.commodityName.trim()
+      : commoditySlug;
+  const size = Number(record.size);
+  const origin = normalizeCoord(record.origin);
+  const footprint = normalizeFootprint(record.footprint);
+  if (!id || !commoditySlug || !Number.isFinite(size) || size <= 0 || !origin || !footprint) {
+    return null;
+  }
+  const action =
+    record.action === "pickup" || record.action === "delivery"
+      ? record.action
+      : undefined;
+  return {
+    id,
+    size,
+    origin,
+    footprint,
+    commoditySlug,
+    commodityName,
+    color: typeof record.color === "string" ? record.color : null,
+    color2: typeof record.color2 === "string" ? record.color2 : null,
+    action,
+    missionId:
+      typeof record.missionId === "string" || record.missionId === null
+        ? (record.missionId as string | null)
+        : undefined,
+    deliveryLocationSlug:
+      typeof record.deliveryLocationSlug === "string"
+        ? record.deliveryLocationSlug
+        : undefined,
+    deliveryLocationName:
+      typeof record.deliveryLocationName === "string"
+        ? record.deliveryLocationName
+        : undefined,
+    locationGroupIndex:
+      typeof record.locationGroupIndex === "number"
+        ? record.locationGroupIndex
+        : undefined,
+    isOverflow: record.isOverflow === true ? true : undefined,
+  };
+}
+
+export function storedBoxesFromPlaced(
+  boxes: readonly PlacedCargoBox[],
+): ManualBayStoredBox[] {
+  return boxes.map((box) => ({
+    id: box.id,
+    size: box.size,
+    origin: { ...box.origin },
+    footprint: { ...box.footprint },
+    commoditySlug: box.commoditySlug,
+    commodityName: box.commodityName,
+    color: box.color,
+    color2: box.color2,
+    action: box.action,
+    missionId: box.missionId,
+    deliveryLocationSlug: box.deliveryLocationSlug,
+    deliveryLocationName: box.deliveryLocationName,
+    locationGroupIndex: box.locationGroupIndex,
+    isOverflow: box.isOverflow,
+  }));
+}
+
+export function placedBoxesFromStored(
+  boxes: readonly ManualBayStoredBox[],
+): PlacedCargoBox[] {
+  return boxes.map((box) => ({
+    id: box.id,
+    size: box.size,
+    origin: { ...box.origin },
+    footprint: { ...box.footprint },
+    commoditySlug: box.commoditySlug,
+    commodityName: box.commodityName,
+    color: box.color,
+    color2: box.color2,
+    cells: cellsForOrigin(box.origin, box.footprint),
+    action: box.action,
+    missionId: box.missionId,
+    deliveryLocationSlug: box.deliveryLocationSlug,
+    deliveryLocationName: box.deliveryLocationName,
+    locationGroupIndex: box.locationGroupIndex,
+    isOverflow: box.isOverflow,
+  }));
 }
 
 function normalizePreset(raw: unknown): ManualBayLayoutPreset | null {
@@ -65,11 +226,17 @@ function normalizePreset(raw: unknown): ManualBayLayoutPreset | null {
         .map(normalizePose)
         .filter((pose): pose is ManualBayBoxPose => pose != null)
     : [];
+  const boxes = Array.isArray(record.boxes)
+    ? record.boxes
+        .map(normalizeStoredBox)
+        .filter((box): box is ManualBayStoredBox => box != null)
+    : undefined;
   return {
     id,
     name,
     stopId,
     poses,
+    boxes,
     updatedAt:
       typeof record.updatedAt === "string"
         ? record.updatedAt
@@ -149,6 +316,22 @@ export function posesFromBoxes(boxes: PlacedCargoBox[]): ManualBayBoxPose[] {
   }));
 }
 
+/**
+ * Restore a Manual preset onto the live bay.
+ * Prefers the saved box snapshot; falls back to pose overlays on auto-pack.
+ */
+export function boxesFromManualPreset(
+  preset: ManualBayLayoutPreset | null | undefined,
+  autoBoxes: readonly PlacedCargoBox[],
+): PlacedCargoBox[] {
+  if (!preset) return [...autoBoxes];
+  // Empty array is a valid Clear snapshot — only fall back when missing.
+  if (preset.boxes != null) {
+    return placedBoxesFromStored(preset.boxes);
+  }
+  return applyManualBayPoses(autoBoxes, preset.poses);
+}
+
 export function newManualBayPresetId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -165,31 +348,12 @@ export function nextManualPresetName(existing: ManualBayLayoutPreset[]): string 
   return `Manual ${max + 1}`;
 }
 
-function cellsForOrigin(
-  origin: CargoGridCoord,
-  footprint: PlacedCargoBox["footprint"],
-): CargoGridCoord[] {
-  const cells: CargoGridCoord[] = [];
-  for (let dx = 0; dx < footprint.dx; dx += 1) {
-    for (let dy = 0; dy < footprint.dy; dy += 1) {
-      for (let dz = 0; dz < footprint.dz; dz += 1) {
-        cells.push({
-          x: origin.x + dx,
-          y: origin.y + dy,
-          z: origin.z + dz,
-        });
-      }
-    }
-  }
-  return cells;
-}
-
 /** Apply saved poses onto auto-planned boxes (matched by id). */
 export function applyManualBayPoses(
-  boxes: PlacedCargoBox[],
+  boxes: readonly PlacedCargoBox[],
   poses: ManualBayBoxPose[] | null | undefined,
 ): PlacedCargoBox[] {
-  if (!poses || poses.length === 0) return boxes;
+  if (!poses || poses.length === 0) return [...boxes];
   const byId = new Map(poses.map((pose) => [pose.boxId, pose.origin]));
   return boxes.map((box) => {
     const origin = byId.get(box.id);

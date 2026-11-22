@@ -13,6 +13,13 @@ alwaysApply: false
   - `prefer-flat-layers` — fill lower Z before stacking higher.
   - `prefer-flat-stable-support` — prefer solid/larger support under footprints.
   - `prefer-back-when-full-height` — full-height crates pack from high X so they do not wall off the bay.
+- Cargo-type multi-bay (Galaxy lifts):
+  - `requireClusterContiguity` — grow the existing commodity island in a zone before seeding another disconnected cargo AABB; spill only when that bay cannot take another touching crate.
+  - New cargo types seed into empty lifts first, else the bay whose residents have the least SCU still waiting (avoid carving into a large unfinished pile).
+  - Bay reservation — first type to seed a lift owns it until that type is done or cannot grow there; do not spill/seed other commodities into that lift meanwhile.
+  - Never stack on a different commodity’s support (do not bury minority under majority).
+  - Failed minority placements defer once to the end of the queue so they fill residual free space after primaries finish (regression: `tests/cargo/galaxy-cargo-type-compact.test.ts`).
+  - Galaxy Lift L/R outer walls: exclusive piles grow wall→aisle; mixes prefer aisle + door (high X) so minority is not buried against the outer wall.
 
 ## Pack program DSL (Sorting UI + MCP)
 

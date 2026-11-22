@@ -26,6 +26,15 @@ export type PackSlotCandidateMetrics = {
   emptyCellsOnSameZ: number;
   bayEndToward: number;
   edgeDistance: number;
+  /**
+   * |footprint Y − ship center Y| — Galaxy side lifts use this so exclusive
+   * packs grow from the outer wall toward the aisle, and mixes prefer aisle.
+   */
+  shipCenterYDistance: number | null;
+  /** True when another cargo type already occupies this bay (mix / residual). */
+  foreignInBay: boolean;
+  /** True when this bay sits entirely on one side of ship center (Lift L/R). */
+  isSideBay: boolean;
   identicalSizeStack: boolean;
   /** Optional legacy placement-rule score (higher = better); final tiebreak only. */
   placementRuleScore?: number;
@@ -211,6 +220,31 @@ export function comparePackSlotCandidates(
         return a.edgeDistance - b.edgeDistance;
       }
     }
+  }
+
+  // Galaxy Lift L/R: outer walls — exclusive packs grow wall→aisle so residual
+  // minority lands toward the middle; mixes prefer aisle + door (high X).
+  if (
+    a.isSideBay &&
+    b.isSideBay &&
+    a.shipCenterYDistance != null &&
+    b.shipCenterYDistance != null
+  ) {
+    if (a.foreignInBay || b.foreignInBay) {
+      if (a.shipCenterYDistance !== b.shipCenterYDistance) {
+        return a.shipCenterYDistance - b.shipCenterYDistance;
+      }
+      if (a.origin.x !== b.origin.x) return b.origin.x - a.origin.x;
+    } else if (a.shipCenterYDistance !== b.shipCenterYDistance) {
+      return b.shipCenterYDistance - a.shipCenterYDistance;
+    }
+  } else if (
+    a.shipCenterYDistance != null &&
+    b.shipCenterYDistance != null &&
+    a.shipCenterYDistance !== b.shipCenterYDistance
+  ) {
+    // Center lift / single bay: prefer toward ship middle (not outer edges).
+    return a.shipCenterYDistance - b.shipCenterYDistance;
   }
 
   // Prefer richer placement-rule score when pack calls tied.
