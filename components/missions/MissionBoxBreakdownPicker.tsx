@@ -13,6 +13,7 @@ import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import type { ScuBoxSplits } from "@/lib/missions/catalogMission";
 import { scuBoxSplitsForScu } from "@/lib/missions/catalogMission";
 import {
+  BOX_BREAKDOWN_SEARCH_CAP,
   boxCountsFromBreakdown,
   breakdownKey,
   enumerateBoxBreakdowns,
@@ -124,25 +125,37 @@ export function MissionBoxBreakdownPicker({
   const [query, setQuery] = useState("");
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
 
+  // Full search (not optionLimit) so box-count filter can reach mixes like
+  // 5×4+1 for 21 SCU that sit outside the unfiltered top-N.
   const enumerated = useMemo(
-    () => enumerateBoxBreakdowns(totalScu, scuMaxContainerSize, optionLimit),
-    [totalScu, scuMaxContainerSize, optionLimit],
+    () =>
+      optionsProp
+        ? null
+        : enumerateBoxBreakdowns(
+            totalScu,
+            scuMaxContainerSize,
+            BOX_BREAKDOWN_SEARCH_CAP,
+          ),
+    [optionsProp, totalScu, scuMaxContainerSize],
   );
   // Enumerated rows are valid picker options (`value` optional).
-  const options: BoxBreakdownPickerOption[] = optionsProp ?? enumerated;
+  const options: BoxBreakdownPickerOption[] = optionsProp ?? enumerated ?? [];
 
   const filteredOptions = useMemo(() => {
     const matched = options.filter((option) =>
       matchesBoxCountQuery(option.boxCount, query),
     );
-    if (!query.trim()) return matched;
-    return [...matched].sort(
-      (a, b) =>
-        boxCountQueryRank(a.boxCount, query) -
-          boxCountQueryRank(b.boxCount, query) ||
-        a.boxCount - b.boxCount,
-    );
-  }, [options, query]);
+    if (query.trim()) {
+      return [...matched].sort(
+        (a, b) =>
+          boxCountQueryRank(a.boxCount, query) -
+            boxCountQueryRank(b.boxCount, query) ||
+          a.boxCount - b.boxCount,
+      );
+    }
+    // Unfiltered menu: fewest crates first, capped for the dropdown.
+    return matched.slice(0, optionLimit);
+  }, [options, query, optionLimit]);
 
   const autoId = useMemo(() => {
     if (autoSelected) return breakdownKey(autoSelected);

@@ -18,6 +18,8 @@ export type EditableZoomPercentProps = {
   onChange: (zoom: number) => void;
   /** Single-click action (reset / fit). Suppressed when entering edit. */
   onClick?: () => void;
+  /** Freeze click / edit (e.g. zoom lock). */
+  disabled?: boolean;
   className?: string;
   title?: string;
   "aria-label"?: string;
@@ -49,6 +51,7 @@ export function EditableZoomPercent({
   max,
   onChange,
   onClick,
+  disabled = false,
   className = "",
   title = "Double-click to set zoom",
   "aria-label": ariaLabel = "Zoom percent",
@@ -80,6 +83,7 @@ export function EditableZoomPercent({
   }, []);
 
   function beginEdit() {
+    if (disabled) return;
     if (clickTimerRef.current != null) {
       window.clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -104,6 +108,7 @@ export function EditableZoomPercent({
   }
 
   function handleButtonClick(event: MouseEvent<HTMLButtonElement>) {
+    if (disabled) return;
     // Second click of a double-click — wait for dblclick instead of resetting.
     if (event.detail > 1) return;
     if (!onClick) return;
@@ -162,6 +167,7 @@ export function EditableZoomPercent({
       type="button"
       aria-label={ariaLabel}
       title={title}
+      disabled={disabled}
       onClick={handleButtonClick}
       onDoubleClick={(event) => {
         event.preventDefault();

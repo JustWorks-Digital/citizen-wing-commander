@@ -687,6 +687,7 @@ export function StopDeliveryStacksView({
                 stroke="var(--rsi-border)"
                 strokeWidth={0.4}
                 opacity={0.9}
+                pointerEvents="none"
               />
             ))}
             {boxes.map((box) => {
@@ -709,8 +710,23 @@ export function StopDeliveryStacksView({
                 ? "color-mix(in srgb, var(--rsi-accent) 32%, var(--rsi-border-strong))"
                 : "color-mix(in srgb, var(--rsi-gold) 42%, var(--rsi-border-strong))";
               const actionDash = isPickup ? undefined : "2.5 2";
+              const boxMissionId = box.missionId ?? null;
+              const canEditBox =
+                Boolean(onEditMissionBoxes) && Boolean(boxMissionId);
               return (
-                <g key={box.id}>
+                <g
+                  key={box.id}
+                  style={canEditBox ? { cursor: "pointer" } : undefined}
+                  onClick={
+                    canEditBox && boxMissionId
+                      ? (event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onEditMissionBoxes?.(boxMissionId);
+                        }
+                      : undefined
+                  }
+                >
                   <title>
                     {box.deliveryLocationName
                       ? `${box.deliveryLocationName} pile`
@@ -718,6 +734,7 @@ export function StopDeliveryStacksView({
                         ? "Pick up"
                         : "Drop off"}{" "}
                     · {box.commodityName} · {box.size} SCU
+                    {canEditBox ? " · Click to edit box types" : ""}
                   </title>
                   <polygon points={faces.west} fill={colors.west} />
                   <polygon points={faces.south} fill={colors.south} />
@@ -725,7 +742,7 @@ export function StopDeliveryStacksView({
                   <polygon points={faces.top} fill={colors.top} />
                   {/* Explicit edges: black under + blue/green action rim. */}
                   {faces.edges.map((points, edgeIndex) => (
-                    <g key={`${box.id}-edge-${edgeIndex}`}>
+                    <g key={`${box.id}-edge-${edgeIndex}`} pointerEvents="none">
                       <polyline
                         points={points}
                         fill="none"
@@ -1033,9 +1050,12 @@ export function StopDeliveryStacksView({
                           cursor: canEditStopScu ? "text" : undefined,
                         }}
                         onClick={(event) => {
-                          // Don't open box-types modal from the SCU strip.
                           event.preventDefault();
                           event.stopPropagation();
+                          if (isEditingScu) return;
+                          // Single click still opens box types (strip sits on top of the badge).
+                          if (!canEditBoxes || !label.missionId) return;
+                          onEditMissionBoxes?.(label.missionId);
                         }}
                         onDoubleClick={(event) => {
                           event.preventDefault();

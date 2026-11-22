@@ -177,9 +177,12 @@ export const FinishRun: StoryObj<typeof FinishRunTile> = {
     </div>
   ),
   args: {
+    location: "Orison",
+    step: 4,
     isCompleted: false,
+    isActive: true,
     isPending: false,
-    onFinish: () => {},
+    onToggle: () => {},
   },
 };
 
@@ -190,8 +193,12 @@ export const FinishRunCompleted: StoryObj<typeof FinishRunTile> = {
     </div>
   ),
   args: {
+    location: "Orison",
+    step: 4,
     isCompleted: true,
+    isActive: true,
     isPending: false,
-    onFinish: () => {},
+    onToggle: () => {},
+    onOpenSummary: () => {},
   },
 };

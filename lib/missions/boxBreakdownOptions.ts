@@ -90,10 +90,22 @@ export function formatBreakdownLabel(breakdown: ScuBoxSplits): string {
 }
 
 /**
+ * Safety cap on coin-change combinations (powers-of-two crate sizes stay
+ * modest; still bound worst-case SCU totals).
+ */
+export const BOX_BREAKDOWN_SEARCH_CAP = 5000;
+
+/**
  * Ways to fill `scu` with crates of size ≤ maxContainer (from allowed set).
  * Without a max, uses deprecated `DEFAULT_MAX_CARGO_BOX_SCU` (8). Prefer
- * passing an explicit contract/catalog max. Sorted fewest crates first;
- * capped for UI. Stops once enough options are found (largest-first DFS).
+ * passing an explicit contract/catalog max.
+ *
+ * Collects combinations with largest-first DFS up to
+ * {@link BOX_BREAKDOWN_SEARCH_CAP}, then sorts fewest crates first. `limit`
+ * only trims the returned list after a full search — do not use a small
+ * limit as a search budget (that dropped valid mixes like 5×4+1 for 21 SCU).
+ * Pass a high limit (or {@link BOX_BREAKDOWN_SEARCH_CAP}) when the UI filters
+ * by box count and needs the complete set.
  */
 export function enumerateBoxBreakdowns(
   scu: number,
@@ -113,16 +125,17 @@ export function enumerateBoxBreakdowns(
 
   const sizes = CARGO_BOX_SCU.filter((size) => size <= maxAllowed);
   const found: ScuBoxSplits[] = [];
-  const target = Math.max(1, limit);
+  const searchTarget = BOX_BREAKDOWN_SEARCH_CAP;
+  const returnLimit = Math.max(1, Math.floor(limit));
 
   function walk(remaining: number, startIndex: number, current: ScuBoxSplits) {
-    if (found.length >= target) return;
+    if (found.length >= searchTarget) return;
     if (remaining === 0) {
       found.push({ ...current });
       return;
     }
     for (let i = startIndex; i < sizes.length; i += 1) {
-      if (found.length >= target) return;
+      if (found.length >= searchTarget) return;
       const size = sizes[i]!;
       if (size > remaining) continue;
       const next = { ...current };
@@ -149,7 +162,7 @@ export function enumerateBoxBreakdowns(
     return a.scuOne - b.scuOne;
   });
 
-  const capped = found.slice(0, target);
+  const capped = found.slice(0, returnLimit);
   // Ensure greedy default is present even if beyond the cap.
   if (!capped.some((row) => breakdownKey(row) === defaultKey)) {
     capped.unshift(defaultBreakdown);

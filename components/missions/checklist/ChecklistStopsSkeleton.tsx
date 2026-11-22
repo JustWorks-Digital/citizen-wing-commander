@@ -40,16 +40,8 @@ function PadGraphBone() {
 function StopCardBone() {
   return (
     <div className="flex flex-col border-b border-rsi-divider/80 px-3 pt-4.5 pb-1">
-      <div className="flex min-h-0 flex-1 gap-3">
-        {/* Desktop sticky Done (circular, matches DoneCheckbox) */}
-        <div className="hidden w-8 shrink-0 self-stretch md:block">
-          <div className="flex h-14 items-center justify-center sm:h-16">
-            <div className={`size-8 rounded-full ${bone}`} />
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* Location + next hop */}
+      <div className="flex min-w-0 flex-1 flex-col">
+          {/* Location + next hop (Done sits before ship on the right) */}
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
             <div className="min-w-0 space-y-2 lg:flex-1">
               <div className="flex items-center gap-2">
@@ -63,9 +55,13 @@ function StopCardBone() {
                 </div>
               </div>
             </div>
-            <div className="min-w-0 space-y-1.5 lg:flex-1 lg:pt-0.5">
-              <div className={`h-2.5 w-16 ${bone}`} />
-              <div className={`h-8 w-full max-w-xs ${bone}`} />
+            <div className="flex min-w-0 items-center gap-2 lg:flex-1 lg:pt-0.5">
+              <div className={`h-12 w-20 shrink-0 ${bone}`} />
+              <div className={`size-8 shrink-0 rounded-full ${bone}`} />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className={`h-2.5 w-16 ${bone}`} />
+                <div className={`h-4 w-full max-w-[10rem] ${bone}`} />
+              </div>
             </div>
           </div>
 
@@ -102,11 +98,6 @@ function StopCardBone() {
             <div className="hidden lg:block lg:w-1/2 lg:shrink-0" aria-hidden />
           </div>
 
-          {/* Mobile Done */}
-          <div className="mt-auto mb-2 pt-3 md:hidden">
-            <div className={`h-10 w-full ${bone}`} />
-          </div>
-        </div>
       </div>
     </div>
   );

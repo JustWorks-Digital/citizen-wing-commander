@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard | Peak | Capacity), Stats right (Stats | Contracts | aUEC | Time); Contracts shows “N / M complete”. Saving… sits left of Stats; below sm, aUEC moves to ⋯ and Time stays in the strip. Distance lives in the Stops rail / mobile Stops section.",
+          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard | Peak | Capacity | stop ↓pickup / ↑drop-off), Stats right (Stats | Contracts | aUEC | Time); Contracts shows “N / M complete”. Saving… sits left of Stats; below sm, aUEC moves to ⋯ and Time stays in the strip. Distance lives in the Stops rail / mobile Stops section.",
       },
     },
   },
@@ -47,6 +47,8 @@ export const RouteProgress: Story = {
       onboardScu={24}
       peakScu={72}
       totalCapacity={96}
+      stopPickupScu={727}
+      stopDeliveryScu={0}
       cargoBayCount={2}
       auecEarned={0}
       auecProjected={128000}
@@ -66,6 +68,8 @@ export const RouteProgressSingleBay: Story = {
       onboardScu={24}
       peakScu={72}
       totalCapacity={96}
+      stopPickupScu={190}
+      stopDeliveryScu={128}
       cargoBayCount={1}
       auecEarned={48000}
       auecProjected={128000}

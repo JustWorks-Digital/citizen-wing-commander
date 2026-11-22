@@ -33,9 +33,7 @@ export function QuantumTravelComposer({
 
   return (
     <li className="scroll-mt-20 border-b border-rsi-divider/80 bg-rsi-accent-muted/20 px-3 py-3 sm:scroll-mt-24">
-      <div className="flex gap-3">
-        <div className="hidden h-14 w-8 shrink-0 md:block" aria-hidden />
-        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-start md:gap-4">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:gap-4">
           <div className="min-w-0 flex-1">
             <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-rsi-text-muted">
               Current location
@@ -121,7 +119,6 @@ export function QuantumTravelComposer({
               </button>
             </div>
           </div>
-        </div>
       </div>
     </li>
   );

@@ -5,6 +5,7 @@ import {
   type ScuBoxSplits,
 } from "@/lib/missions/catalogMission";
 import {
+  BOX_BREAKDOWN_SEARCH_CAP,
   boxCountsFromBreakdown,
   breakdownKey,
   enumerateBoxBreakdowns,
@@ -447,10 +448,11 @@ export const cargoBoxSplits = {
     const primaryAuto =
       mission.scuCargoBoxSplitsAutoSelected?.[primary.commoditySlug] ??
       scuBoxSplitsForScu(primary.scu, mission.scuMaxContainerSize ?? null);
+    // Full enum; MissionBoxBreakdownPicker caps the unfiltered menu.
     const primaryOptions = enumerateBoxBreakdowns(
       primary.scu,
       mission.scuMaxContainerSize,
-      optionLimit,
+      BOX_BREAKDOWN_SEARCH_CAP,
     );
     return primaryOptions.map((option): TotalStyleBoxOption => {
       const preferredMax = cargoBoxSplits.preferredMaxFromSplits(

@@ -86,11 +86,6 @@ import { StopDeliveryBayPreview } from "../StopDeliveryBayPreview";
 import { StopMissionBoxConfigModal } from "../StopMissionBoxConfigModal";
 import { StopMissionScreenshots } from "../StopMissionScreenshots";
 import { cargoPendingKey, CargoGroups } from "./ChecklistCargoTiles";
-import {
-  DoneCheckbox,
-  DoneStopButton,
-  STICKY_DONE_TOP,
-} from "./ChecklistDoneControls";
 import { AddStopAfterButton, LocationHeader } from "./ChecklistLocationHeader";
 import {
   ChecklistProgressRail,
@@ -301,7 +296,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   tripSummary = null,
   hideCompleted: hideCompletedProp,
   onHideCompletedChange,
-  prioritizePickup = false,
+  prioritizePickup = true,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -1527,23 +1522,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                 />
               ) : null}
               <div className="flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1">
-                {/* Sticky Done shares this column height so it can pin mid-header. */}
-                <div className="flex min-h-0 flex-1 gap-3">
-                  <div className="hidden w-8 shrink-0 self-stretch md:block">
-                    <div
-                      className={`${STICKY_DONE_TOP} flex h-14 items-center justify-center sm:h-16`}
-                    >
-                      <DoneCheckbox
-                        location={location}
-                        step={step}
-                        isCompleted={row.isCompleted}
-                        isActive={isFocused}
-                        isPending={isPendingComplete}
-                        onToggle={toggleStopDone}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
                       <div className="min-w-0 lg:flex-1">
                         <LocationHeader
@@ -1565,15 +1544,13 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         {nextLocationSlug == null &&
                         nextLocationName == null ? (
                           <FinishRunTile
+                            location={location}
+                            step={step}
                             isCompleted={row.isCompleted}
+                            isActive={isFocused}
                             isPending={isPendingComplete}
-                            onFinish={() => {
-                              if (!row.isCompleted) {
-                                toggleStopDone();
-                                return;
-                              }
-                              onOpenSummary?.();
-                            }}
+                            onToggle={toggleStopDone}
+                            onOpenSummary={onOpenSummary}
                           />
                         ) : (
                           <NextDistanceMeta
@@ -1583,10 +1560,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                             shipSlug={shipSlug}
                             variant="header"
                             isPending={isPendingComplete}
-                            checkboxColumn="external"
-                            onToggle={
-                              row.isCompleted ? undefined : toggleStopDone
-                            }
+                            locationLabel={location}
+                            step={step}
+                            isActive={isFocused}
+                            onToggle={toggleStopDone}
                           />
                         )}
                       </div>
@@ -1731,8 +1708,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                                     const mission = missions.find(
                                       (entry) => entry.id === missionId,
                                     );
-                                    if (!mission || mission.isCompleted)
-                                      return;
+                                    // Completed missions still open (modal is read-only).
+                                    if (!mission) return;
                                     setBoxEditMissionId(missionId);
                                   }
                                 : undefined
@@ -1787,16 +1764,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         aria-hidden
                       />
                     </div>
-                    <div className="mt-auto mb-2 pt-3 md:hidden">
-                      <DoneStopButton
-                        location={location}
-                        step={step}
-                        isCompleted={row.isCompleted}
-                        isPending={isPendingComplete}
-                        onToggle={toggleStopDone}
-                      />
-                    </div>
-                  </div>
                 </div>
                 {addStopFooter(row.id)}
               </div>

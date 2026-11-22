@@ -44,7 +44,11 @@ import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
-import { MANUAL_BAY_TRAY_MIME } from "@/lib/ships/manualBayMove";
+import {
+  cargoCellCoordFromPoint,
+  previewManualBayPlacement,
+  type ManualBayAddBoxSpec,
+} from "@/lib/ships/manualBayMove";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { cargoBaySidePanelClassName } from "./cargoBaySidePanel";
 import { CargoBoxCountIcons } from "./CargoBoxSizeIcon";
@@ -79,7 +83,7 @@ type LegendSectionKey =
   | "settings"
   | "debugging";
 
-const GRID_ZOOM_MIN = 0.5;
+const GRID_ZOOM_MIN = 0.25;
 const GRID_ZOOM_MAX = 2.5;
 /** Finer than 0.25 so 2D / Split / 3D zoom clicks are more precise. */
 const GRID_ZOOM_STEP = 0.1;
@@ -114,12 +118,68 @@ function fitZoomForViewport(
   return clampGridZoom(Math.min(availW / baseW, availH / baseH));
 }
 
+function ZoomLockIcon({ locked }: { locked: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="0.85em"
+      height="0.85em"
+      aria-hidden
+      className="block"
+    >
+      {locked ? (
+        <>
+          <rect
+            x="3.5"
+            y="7"
+            width="9"
+            height="6.5"
+            rx="1.25"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M5.25 7V5.25a2.75 2.75 0 0 1 5.5 0V7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </>
+      ) : (
+        <>
+          <rect
+            x="3.5"
+            y="7"
+            width="9"
+            height="6.5"
+            rx="1.25"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
+          <path
+            d="M5.25 7V5.25a2.75 2.75 0 0 1 5.25-1.15"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function CargoGridZoomControls({
   zoom,
   onZoomIn,
   onZoomOut,
   onReset,
   onZoomChange,
+  locked = false,
+  onLockedChange,
   ariaLabel = "Grid zoom",
 }: {
   zoom: number;
@@ -127,6 +187,8 @@ function CargoGridZoomControls({
   onZoomOut: () => void;
   onReset: () => void;
   onZoomChange: (zoom: number) => void;
+  locked?: boolean;
+  onLockedChange?: (locked: boolean) => void;
   ariaLabel?: string;
 }) {
   const buttonClass =
@@ -135,12 +197,12 @@ function CargoGridZoomControls({
     <div
       className="inline-flex overflow-hidden rounded-rsi border border-rsi-border"
       role="group"
-      aria-label={ariaLabel}
+      aria-label={locked ? `${ariaLabel} (locked)` : ariaLabel}
     >
       <button
         type="button"
         aria-label="Zoom out"
-        disabled={zoom <= GRID_ZOOM_MIN}
+        disabled={locked || zoom <= GRID_ZOOM_MIN}
         onClick={onZoomOut}
         className={`${buttonClass} border-0 border-r border-rsi-border`}
       >
@@ -152,19 +214,42 @@ function CargoGridZoomControls({
         max={GRID_ZOOM_MAX}
         onChange={onZoomChange}
         onClick={onReset}
-        title="Fit grid in view · double-click to set"
-        aria-label="Fit grid in view"
+        disabled={locked}
+        title={
+          locked
+            ? "Zoom locked"
+            : "Fit grid in view · double-click to set"
+        }
+        aria-label={locked ? "Zoom locked" : "Fit grid in view"}
         className={`${buttonClass} min-w-[2.25rem] border-0 border-r border-rsi-border px-1 text-[0.5rem] tabular-nums sm:min-w-[2.75rem] sm:px-1.5 sm:text-[0.6rem]`}
       />
       <button
         type="button"
         aria-label="Zoom in"
-        disabled={zoom >= GRID_ZOOM_MAX}
+        disabled={locked || zoom >= GRID_ZOOM_MAX}
         onClick={onZoomIn}
-        className={`${buttonClass} border-0`}
+        className={`${buttonClass} border-0 border-r border-rsi-border`}
       >
         +
       </button>
+      {onLockedChange ? (
+        <button
+          type="button"
+          aria-label={locked ? "Unlock zoom" : "Lock zoom"}
+          aria-pressed={locked}
+          title={locked ? "Unlock zoom" : "Lock zoom"}
+          onClick={() => onLockedChange(!locked)}
+          className={[
+            buttonClass,
+            "border-0",
+            locked
+              ? "bg-rsi-accent-muted/40 text-rsi-accent"
+              : "",
+          ].join(" ")}
+        >
+          <ZoomLockIcon locked={locked} />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -200,7 +285,8 @@ export type CargoGridSketchProps = {
   compact?: boolean;
   /**
    * Which projections to render.
-   * `"both"` shows 2D / 3D / Split tabs. `"split"` stacks 2D above 3D.
+   * `"both"` shows 2D / 3D / Split tabs. `"split"` shows both panes
+   * (side-by-side or stacked via `splitOrientation`).
    * Session overview uses `"top"` (2D).
    */
   views?: "both" | CargoGridViewTab;
@@ -221,6 +307,18 @@ export type CargoGridSketchProps = {
    */
   sidePanelsOverlay?: boolean;
   onSidePanelsOverlayChange?: (overlay: boolean) => void;
+  /** Split layout: left/right (`horizontal`) or top/bottom (`vertical`). */
+  splitOrientation?: "horizontal" | "vertical";
+  onSplitOrientationChange?: (orientation: "horizontal" | "vertical") => void;
+  /** When true, 2D and 3D zoom stay at the same percentage. */
+  syncedZoom?: boolean;
+  onSyncedZoomChange?: (synced: boolean) => void;
+  /** Freeze 2D zoom controls / wheel. */
+  topZoomLocked?: boolean;
+  onTopZoomLockedChange?: (locked: boolean) => void;
+  /** Freeze 3D zoom controls / wheel. */
+  isoZoomLocked?: boolean;
+  onIsoZoomLockedChange?: (locked: boolean) => void;
   /** Hide Peel (e.g. parent hosts it next to Packing). */
   hidePeel?: boolean;
   /** Controlled peel; falls back to internal state when omitted. */
@@ -246,17 +344,29 @@ export type CargoGridSketchProps = {
   ) => void;
   onManualDragEnd?: () => void;
   /**
-   * Manual tray drop onto a 2D cell (payload is JSON ManualBayAddBoxSpec).
-   * Enable with `manualTrayDrop`.
+   * Manual tray drag-and-drop onto a 2D cell.
+   * Enable with `manualTrayDrop`. Parent places on drag end.
    */
   manualTrayDrop?: boolean;
-  onManualTrayDrop?: (coord: CargoGridCoord, payloadJson: string) => void;
+  /** Active Manual tray drag — footprint highlight under cursor. */
+  trayDragSpec?: ManualBayAddBoxSpec | null;
+  /**
+   * Full bay occupancy for tray fit checks (includes stay cargo when Transfer
+   * hides it). Defaults to `placementBoxes`.
+   */
+  trayCollisionBoxes?: PlacedCargoBox[];
+  /** Orientation index for tray place preview (R cycles in parent). */
+  trayOrientationIndex?: number;
+  /** Live pointer while tray-dragging (elementFromPoint hover). */
+  trayPointerClient?: { x: number; y: number } | null;
+  onTrayRotate?: () => void;
+  onTrayPlaceCancel?: () => void;
   /** Double-click a crate in Manual mode to return it to the tray. */
   onManualBoxRemove?: (boxId: string) => void;
-  /** Controlled 2D zoom (Split left). Falls back to internal state. */
+  /** Controlled 2D zoom (and Split). Falls back to internal state. */
   topZoom?: number;
   onTopZoomChange?: (zoom: number) => void;
-  /** Controlled 3D zoom (Split right). Falls back to internal state. */
+  /** Controlled 3D zoom (and Split). Falls back to internal state. */
   isoZoom?: number;
   onIsoZoomChange?: (zoom: number) => void;
 };
@@ -326,6 +436,14 @@ export function CargoGridSketch({
   legendToggleAbove = false,
   sidePanelsOverlay: sidePanelsOverlayProp,
   onSidePanelsOverlayChange,
+  splitOrientation: splitOrientationProp,
+  onSplitOrientationChange,
+  syncedZoom: syncedZoomProp,
+  onSyncedZoomChange,
+  topZoomLocked: topZoomLockedProp,
+  onTopZoomLockedChange,
+  isoZoomLocked: isoZoomLockedProp,
+  onIsoZoomLockedChange,
   hidePeel = false,
   peelStack: peelStackProp,
   onPeelStackChange,
@@ -335,7 +453,12 @@ export function CargoGridSketch({
   onManualDragDelta,
   onManualDragEnd,
   manualTrayDrop = false,
-  onManualTrayDrop,
+  trayDragSpec = null,
+  trayCollisionBoxes,
+  trayOrientationIndex = 0,
+  trayPointerClient = null,
+  onTrayRotate,
+  onTrayPlaceCancel,
   onManualBoxRemove,
   topZoom: topZoomProp,
   onTopZoomChange,
@@ -352,7 +475,7 @@ export function CargoGridSketch({
     lastDx: number;
     lastDy: number;
   } | null>(null);
-  /** Independent zooms so split view can scale 2D and 3D separately. */
+  /** Zooms — independent unless syncedZoom. */
   const [topZoomInternal, setTopZoomInternal] = useState(1);
   const [isoZoomInternal, setIsoZoomInternal] = useState(1);
   const topZoom = topZoomProp ?? topZoomInternal;
@@ -360,6 +483,21 @@ export function CargoGridSketch({
   const [sidePanelsOverlayInternal, setSidePanelsOverlayInternal] =
     useState(true);
   const sidePanelsOverlay = sidePanelsOverlayProp ?? sidePanelsOverlayInternal;
+  const [splitOrientationInternal, setSplitOrientationInternal] = useState<
+    "horizontal" | "vertical"
+  >("horizontal");
+  const splitOrientation =
+    splitOrientationProp ?? splitOrientationInternal;
+  const [syncedZoomInternal, setSyncedZoomInternal] = useState(false);
+  const syncedZoom = syncedZoomProp ?? syncedZoomInternal;
+  const [topZoomLockedInternal, setTopZoomLockedInternal] = useState(false);
+  const topZoomLocked = topZoomLockedProp ?? topZoomLockedInternal;
+  const [isoZoomLockedInternal, setIsoZoomLockedInternal] = useState(false);
+  const isoZoomLocked = isoZoomLockedProp ?? isoZoomLockedInternal;
+  /** Hover cell while dragging a Manual tray chip (placement ghost). */
+  const [trayHoverCoord, setTrayHoverCoord] = useState<CargoGridCoord | null>(
+    null,
+  );
   const setSidePanelsOverlay = useCallback(
     (overlay: boolean) => {
       if (onSidePanelsOverlayChange) onSidePanelsOverlayChange(overlay);
@@ -367,23 +505,88 @@ export function CargoGridSketch({
     },
     [onSidePanelsOverlayChange],
   );
+  const setSplitOrientation = useCallback(
+    (orientation: "horizontal" | "vertical") => {
+      if (onSplitOrientationChange) onSplitOrientationChange(orientation);
+      else setSplitOrientationInternal(orientation);
+    },
+    [onSplitOrientationChange],
+  );
+  const setSyncedZoom = useCallback(
+    (synced: boolean) => {
+      if (onSyncedZoomChange) onSyncedZoomChange(synced);
+      else {
+        setSyncedZoomInternal(synced);
+        if (synced && !isoZoomLocked) {
+          const value = topZoomProp ?? topZoomInternal;
+          setIsoZoomInternal(value);
+        }
+      }
+    },
+    [
+      isoZoomLocked,
+      onSyncedZoomChange,
+      topZoomInternal,
+      topZoomProp,
+    ],
+  );
+  const setTopZoomLocked = useCallback(
+    (locked: boolean) => {
+      if (onTopZoomLockedChange) onTopZoomLockedChange(locked);
+      else setTopZoomLockedInternal(locked);
+    },
+    [onTopZoomLockedChange],
+  );
+  const setIsoZoomLocked = useCallback(
+    (locked: boolean) => {
+      if (onIsoZoomLockedChange) onIsoZoomLockedChange(locked);
+      else setIsoZoomLockedInternal(locked);
+    },
+    [onIsoZoomLockedChange],
+  );
   const setTopZoom = useCallback(
     (next: number | ((value: number) => number)) => {
+      if (topZoomLocked) return;
       const value =
         typeof next === "function" ? next(topZoomProp ?? topZoomInternal) : next;
       if (onTopZoomChange) onTopZoomChange(value);
       else setTopZoomInternal(value);
+      if (syncedZoom && !isoZoomLocked) {
+        if (onIsoZoomChange) onIsoZoomChange(value);
+        else setIsoZoomInternal(value);
+      }
     },
-    [onTopZoomChange, topZoomInternal, topZoomProp],
+    [
+      isoZoomLocked,
+      onIsoZoomChange,
+      onTopZoomChange,
+      syncedZoom,
+      topZoomInternal,
+      topZoomLocked,
+      topZoomProp,
+    ],
   );
   const setIsoZoom = useCallback(
     (next: number | ((value: number) => number)) => {
+      if (isoZoomLocked) return;
       const value =
         typeof next === "function" ? next(isoZoomProp ?? isoZoomInternal) : next;
       if (onIsoZoomChange) onIsoZoomChange(value);
       else setIsoZoomInternal(value);
+      if (syncedZoom && !topZoomLocked) {
+        if (onTopZoomChange) onTopZoomChange(value);
+        else setTopZoomInternal(value);
+      }
     },
-    [isoZoomInternal, isoZoomProp, onIsoZoomChange],
+    [
+      isoZoomInternal,
+      isoZoomLocked,
+      isoZoomProp,
+      onIsoZoomChange,
+      onTopZoomChange,
+      syncedZoom,
+      topZoomLocked,
+    ],
   );
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const topContentRef = useRef<HTMLDivElement | null>(null);
@@ -396,6 +599,11 @@ export function CargoGridSketch({
   const legendHidden = hideLegendProp ?? legendHiddenLocal;
   const isSplit =
     views === "split" || (tabbed && viewTab === "split");
+  const splitVertical = isSplit && splitOrientation === "vertical";
+  /** Vertical split shares panel height; horizontal keeps full height per pane. */
+  const splitPaneHeightPx = splitVertical
+    ? Math.max(160, Math.floor(panelHeightPx / 2))
+    : panelHeightPx;
   const showIso =
     views === "iso" || isSplit || (tabbed && viewTab === "iso");
   const showTop =
@@ -404,7 +612,7 @@ export function CargoGridSketch({
   const [wheelZoom, setWheelZoom] = useState(true);
   useRightClickPan(topScrollRef, showTop);
   useWheelZoom(topScrollRef, topContentRef, topZoom, setTopZoom, {
-    enabled: showTop && wheelZoom,
+    enabled: showTop && wheelZoom && !topZoomLocked,
     min: GRID_ZOOM_MIN,
     max: GRID_ZOOM_MAX,
     step: GRID_WHEEL_ZOOM_STEP,
@@ -436,12 +644,16 @@ export function CargoGridSketch({
   function makeZoomControls(
     zoom: number,
     setZoom: (next: number | ((value: number) => number)) => void,
+    locked: boolean,
+    onLockedChange: (locked: boolean) => void,
     ariaLabel: string,
     fitZoom: () => number,
   ): ReactNode {
     return (
       <CargoGridZoomControls
         zoom={zoom}
+        locked={locked}
+        onLockedChange={onLockedChange}
         onZoomIn={() => setZoom((value) => clampGridZoom(value + GRID_ZOOM_STEP))}
         onZoomOut={() =>
           setZoom((value) => clampGridZoom(value - GRID_ZOOM_STEP))
@@ -456,6 +668,8 @@ export function CargoGridSketch({
   const topZoomControls = makeZoomControls(
     topZoom,
     setTopZoom,
+    topZoomLocked,
+    setTopZoomLocked,
     "2D grid zoom",
     () =>
       fitZoomForViewport(topScrollRef.current, topContentRef.current, topZoom),
@@ -463,6 +677,8 @@ export function CargoGridSketch({
   const isoZoomControls = makeZoomControls(
     isoZoom,
     setIsoZoom,
+    isoZoomLocked,
+    setIsoZoomLocked,
     "3D grid zoom",
     () => isoFitZoomRef.current?.() ?? 1,
   );
@@ -720,12 +936,67 @@ export function CargoGridSketch({
       return `${x},${y}`;
     }),
   );
+
+  useEffect(() => {
+    if (!trayDragSpec) setTrayHoverCoord(null);
+  }, [trayDragSpec]);
+
+  useEffect(() => {
+    if (!trayDragSpec || !trayPointerClient) return;
+    const coord = cargoCellCoordFromPoint(
+      trayPointerClient.x,
+      trayPointerClient.y,
+    );
+    setTrayHoverCoord((prev) => {
+      if (!coord) return prev;
+      if (
+        prev &&
+        prev.x === coord.x &&
+        prev.y === coord.y &&
+        prev.z === coord.z
+      ) {
+        return prev;
+      }
+      return coord;
+    });
+  }, [trayDragSpec, trayPointerClient]);
+
+  const trayFitBoxes = trayCollisionBoxes ?? placementBoxes;
+  const trayDropPreview = useMemo(() => {
+    if (!trayDragSpec || !trayHoverCoord) return null;
+    return previewManualBayPlacement(
+      sketch,
+      trayFitBoxes,
+      trayDragSpec,
+      trayHoverCoord,
+      trayOrientationIndex,
+    );
+  }, [
+    sketch,
+    trayDragSpec,
+    trayFitBoxes,
+    trayHoverCoord,
+    trayOrientationIndex,
+  ]);
+  const trayPreviewKeys = useMemo(() => {
+    if (!trayDropPreview) return null;
+    return {
+      fits: trayDropPreview.fits,
+      keys: new Set(
+        trayDropPreview.cells
+          .filter((cell) => cell.z === activeZ)
+          .map((cell) => cargoGridCoordKey(cell)),
+      ),
+    };
+  }, [activeZ, trayDropPreview]);
   const isPlacementView =
     compact &&
     (highlightedCoords.length > 0 ||
       placementTints.length > 0 ||
-      placementBoxes.length > 0);
-  const useBoxFootprints = placementBoxes.length > 0;
+      placementBoxes.length > 0 ||
+      Boolean(manualTrayDrop || manualEdit));
+  const useBoxFootprints =
+    placementBoxes.length > 0 || Boolean(manualTrayDrop || manualEdit);
   const showScuSizeFilters = useBoxFootprints && (showTop || isSplit);
   const topLegend =
     legendItems && legendItems.length > 0 ? legendItems : null;
@@ -759,6 +1030,68 @@ export function CargoGridSketch({
       });
     });
   }
+
+  /**
+   * Keyboard layer shortcut: set 2D layer and solo that Z in 3D so Split stays
+   * aligned. Tall crates still show if they intersect the visible layer
+   * (iso `layerOff` uses every-hidden, not any-hidden).
+   */
+  const selectBayLayer = useCallback(
+    (layer: number) => {
+      if (layer < 0 || layer >= sketch.heightCells) return;
+      setActiveZ(layer);
+      if (!showIso) return;
+      startTransition(() => {
+        const hidden = new Set<number>();
+        for (let z = 0; z < sketch.heightCells; z += 1) {
+          if (z !== layer) hidden.add(z);
+        }
+        setHiddenIsoLayers(hidden);
+      });
+    },
+    [showIso, sketch.heightCells],
+  );
+
+  useEffect(() => {
+    if (!showTop && !showIso) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
+      if (trayDragSpec && (event.key === "r" || event.key === "R")) {
+        event.preventDefault();
+        onTrayRotate?.();
+        return;
+      }
+      if (trayDragSpec && event.key === "Escape") {
+        event.preventDefault();
+        onTrayPlaceCancel?.();
+        setTrayHoverCoord(null);
+        return;
+      }
+      const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code);
+      if (!match) return;
+      const layer = Number(match[1]) - 1;
+      if (layer >= sketch.heightCells) return;
+      event.preventDefault();
+      selectBayLayer(layer);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    onTrayPlaceCancel,
+    onTrayRotate,
+    selectBayLayer,
+    showIso,
+    showTop,
+    sketch.heightCells,
+    trayDragSpec,
+  ]);
 
   const showTopLegend =
     showTop &&
@@ -1156,6 +1489,20 @@ export function CargoGridSketch({
                 ariaLabel="Overlay Packing and Legend on the grid instead of pushing it"
               />
               <Switch
+                label="Vertical split"
+                checked={splitOrientation === "vertical"}
+                onCheckedChange={(checked) =>
+                  setSplitOrientation(checked ? "vertical" : "horizontal")
+                }
+                ariaLabel="Stack Split view top and bottom instead of left and right"
+              />
+              <Switch
+                label="Synced zoom"
+                checked={syncedZoom}
+                onCheckedChange={setSyncedZoom}
+                ariaLabel="Keep 2D and 3D zoom at the same percentage"
+              />
+              <Switch
                 label="Mouse wheel zoom"
                 checked={wheelZoom}
                 onCheckedChange={setWheelZoom}
@@ -1308,7 +1655,12 @@ export function CargoGridSketch({
           className={[
             "relative min-w-0 flex-1",
             isSplit
-              ? "grid grid-cols-1 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 sm:grid-cols-2"
+              ? [
+                  "grid grid-cols-1 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
+                  splitVertical ? "" : "sm:grid-cols-2",
+                ]
+                  .filter(Boolean)
+                  .join(" ")
               : "flex flex-col gap-4",
             showSplitLegend && !sidePanelsOverlay ? "sm:pr-[17.5rem]" : "",
           ].join(" ")}
@@ -1321,10 +1673,12 @@ export function CargoGridSketch({
                 ? "pt-3 pr-[17.5rem] pl-3"
                 : "p-3",
               isSplit
-                ? "border-b border-rsi-border sm:border-r sm:border-b-0"
+                ? splitVertical
+                  ? "border-b border-rsi-border"
+                  : "border-b border-rsi-border sm:border-r sm:border-b-0"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
             ].join(" ")}
-            style={{ height: panelHeightPx }}
+            style={{ height: isSplit ? splitPaneHeightPx : panelHeightPx }}
           >
             {tabbed || compact ? (
               <span className="sr-only">2D view</span>
@@ -1601,14 +1955,23 @@ export function CargoGridSketch({
                         `${cell.x},${cell.y}`,
                       );
                       const canSelect = Boolean(onSelectCoord);
-                      const canTrayDrop = Boolean(
-                        manualTrayDrop && onManualTrayDrop,
+                      const canTrayPlace = Boolean(
+                        manualTrayDrop && trayDragSpec,
                       );
+                      const isTrayPreview = Boolean(
+                        trayPreviewKeys?.keys.has(coordKey),
+                      );
+                      const trayPreviewFits = trayPreviewKeys?.fits === true;
+                      const cellCoord = { x: cell.x, y: cell.y, z };
                       return (
                         <button
                           key={`${zone.id}-${cell.localIndex}`}
                           type="button"
-                          disabled={!canSelect && !canTrayDrop}
+                          data-cargo-cell="1"
+                          data-cargo-x={cell.x}
+                          data-cargo-y={cell.y}
+                          data-cargo-z={z}
+                          disabled={!canSelect && !canTrayPlace && !manualTrayDrop}
                           title={
                             tint
                               ? `${tint.action === "pickup" ? "Pickup · " : tint.action === "delivery" ? "Delivery · " : ""}${tint.commodityName} · ${formatCargoGridCoord({
@@ -1622,71 +1985,67 @@ export function CargoGridSketch({
                                   z,
                                 })
                           }
-                          onClick={() =>
-                            selectCell({ x: cell.x, y: cell.y, z })
-                          }
-                          onDragOver={
-                            canTrayDrop
-                              ? (event) => {
-                                  event.preventDefault();
-                                  event.dataTransfer.dropEffect = "copy";
-                                }
-                              : undefined
-                          }
-                          onDrop={
-                            canTrayDrop
-                              ? (event) => {
-                                  event.preventDefault();
-                                  const raw =
-                                    event.dataTransfer.getData(
-                                      MANUAL_BAY_TRAY_MIME,
-                                    );
-                                  if (!raw) return;
-                                  onManualTrayDrop?.(
-                                    { x: cell.x, y: cell.y, z },
-                                    raw,
+                          onClick={() => {
+                            selectCell(cellCoord);
+                          }}
+                          onPointerEnter={
+                            manualTrayDrop && trayDragSpec
+                              ? () => {
+                                  setTrayHoverCoord((prev) =>
+                                    prev &&
+                                    prev.x === cellCoord.x &&
+                                    prev.y === cellCoord.y &&
+                                    prev.z === cellCoord.z
+                                      ? prev
+                                      : cellCoord,
                                   );
                                 }
                               : undefined
                           }
                           className={[
                             "relative z-0 box-border border border-rsi-border-strong/70 bg-rsi-surface-sunken/30",
-                            canSelect || canTrayDrop
+                            canSelect || canTrayPlace
                               ? "cursor-pointer hover:bg-rsi-accent/25"
                               : "cursor-default",
-                            isSelected
-                              ? "z-[6] ring-2 ring-inset ring-rsi-accent"
-                              : tint?.action === "pickup" && isHighlightExact
-                                ? "ring-1 ring-inset ring-rsi-accent/50"
-                                : isHighlightExact &&
-                                    !tint?.action &&
-                                    !useBoxFootprints
-                                  ? "ring-1 ring-inset ring-rsi-accent/80"
-                                  : isHighlightColumn
-                                    ? ""
-                                    : isSameColumn
-                                      ? "bg-rsi-accent/20"
-                                      : "",
+                            isTrayPreview
+                              ? trayPreviewFits
+                                ? "z-[7] bg-rsi-accent/45 ring-2 ring-inset ring-rsi-accent"
+                                : "z-[7] bg-rsi-danger/35 ring-2 ring-inset ring-rsi-danger"
+                              : isSelected
+                                ? "z-[6] ring-2 ring-inset ring-rsi-accent"
+                                : tint?.action === "pickup" && isHighlightExact
+                                  ? "ring-1 ring-inset ring-rsi-accent/50"
+                                  : isHighlightExact &&
+                                      !tint?.action &&
+                                      !useBoxFootprints
+                                    ? "ring-1 ring-inset ring-rsi-accent/80"
+                                    : isHighlightColumn
+                                      ? ""
+                                      : isSameColumn
+                                        ? "bg-rsi-accent/20"
+                                        : "",
                           ].join(" ")}
                           style={
-                            tintHex && isHighlightExact
-                              ? {
-                                  backgroundColor: tintHex,
-                                  opacity: 1,
-                                  ...(tint?.action === "delivery"
-                                    ? {
-                                        outline:
-                                          "1.5px dashed color-mix(in srgb, var(--rsi-success) 28%, var(--rsi-border-strong))",
-                                        outlineOffset: "-1px",
-                                      }
-                                    : {}),
-                                }
-                              : tintHex && isHighlightColumn
+                            isTrayPreview
+                              ? undefined
+                              : tintHex && isHighlightExact
                                 ? {
-                                    backgroundColor: `color-mix(in srgb, ${tintHex} 35%, transparent)`,
+                                    backgroundColor: tintHex,
                                     opacity: 1,
+                                    ...(tint?.action === "delivery"
+                                      ? {
+                                          outline:
+                                            "1.5px dashed color-mix(in srgb, var(--rsi-success) 28%, var(--rsi-border-strong))",
+                                          outlineOffset: "-1px",
+                                        }
+                                      : {}),
                                   }
-                                : undefined
+                                : tintHex && isHighlightColumn
+                                  ? {
+                                      backgroundColor: `color-mix(in srgb, ${tintHex} 35%, transparent)`,
+                                      opacity: 1,
+                                    }
+                                  : undefined
                           }
                           aria-label={formatCargoGridCoord({
                             x: cell.x,
@@ -1782,7 +2141,6 @@ export function CargoGridSketch({
                         if (!manualEdit) return;
                         event.preventDefault();
                         event.stopPropagation();
-                        event.currentTarget.setPointerCapture(event.pointerId);
                         manualDragRef.current = {
                           boxId: box.id,
                           pointerId: event.pointerId,
@@ -1791,6 +2149,13 @@ export function CargoGridSketch({
                           lastDx: 0,
                           lastDy: 0,
                         };
+                        try {
+                          event.currentTarget.setPointerCapture(
+                            event.pointerId,
+                          );
+                        } catch {
+                          // Synthetic / already-captured pointers still drag via box events.
+                        }
                         onManualDragStart?.(box.id);
                       };
                       const onManualPointerMove = (
@@ -2005,7 +2370,9 @@ export function CargoGridSketch({
                 cellPx={viewIsoCellPx}
                 zoom={isoZoom}
                 fitZoomGetterRef={isoFitZoomRef}
-                onZoomChange={wheelZoom ? setIsoZoom : undefined}
+                onZoomChange={
+                  wheelZoom && !isoZoomLocked ? setIsoZoom : undefined
+                }
                 selectedCoord={selectedCoord}
                 onSelectCoord={onSelectCoord}
                 highlightedCoords={highlightedCoords}
@@ -2034,13 +2401,13 @@ export function CargoGridSketch({
                 hidePeel={isSplit || hidePeel}
                 peelStack={peelStack}
                 onPeelStackChange={setPeelStack}
-                hiddenLayers={isSplit ? hiddenIsoLayers : undefined}
-                onToggleLayer={isSplit ? toggleIsoLayer : undefined}
+                hiddenLayers={showIso ? hiddenIsoLayers : undefined}
+                onToggleLayer={showIso ? toggleIsoLayer : undefined}
                 showLayerPad={isoLayerPadVisible}
                 onShowLayerPadChange={setIsoLayerPadVisible}
                 debugBoxOutlines={debugBoxOutlines}
                 onDebugBoxOutlinesChange={setDebugBoxOutlines}
-                panelHeightPx={panelHeightPx}
+                panelHeightPx={isSplit ? splitPaneHeightPx : panelHeightPx}
               />
             </div>
           ) : null}

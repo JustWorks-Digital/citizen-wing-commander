@@ -4,15 +4,15 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && Boolean(window.localStorage);
 }
 
-/** Default off — Drop off tab first. */
+/** Default on — Pick up tab left, Drop off right. */
 export function readPrioritizePickup(): boolean {
-  if (!canUseStorage()) return false;
+  if (!canUseStorage()) return true;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw == null) return false;
+    if (raw == null) return true;
     return raw === "1" || raw === "true";
   } catch {
-    return false;
+    return true;
   }
 }
 

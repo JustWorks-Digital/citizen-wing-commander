@@ -76,6 +76,27 @@ export function SpaceshipIcon({ className }: { className?: string }) {
   );
 }
 
+/** Single chevron pointing right — used to fill travel gaps. */
+export function TravelChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 8 16"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M1.5 3.5 L5.5 8 L1.5 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Triple chevron pointing right — QT / Next stop travel indicator. */
 export function TravelChevronsIcon({ className }: { className?: string }) {
   return (

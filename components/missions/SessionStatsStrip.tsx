@@ -276,6 +276,13 @@ export type SessionRouteProgressStatsProps = {
   /** Opens the storage bays (cargo) modal. */
   onCapacityClick?: () => void;
   /**
+   * Focused stop — SCU onto ship (pick up). Shown stacked with
+   * `stopDeliveryScu` to the right of Capacity. Omit both to hide.
+   */
+  stopPickupScu?: number | null;
+  /** Focused stop — SCU off ship (drop off). */
+  stopDeliveryScu?: number | null;
+  /**
    * Physical cargo holds on the selected ship (from the grid sketch).
    * Kept for callers; toolbar label is Bay / Bays.
    */
@@ -347,8 +354,31 @@ export function RouteTripOverflowStats({
   );
 }
 
+/** Tiny flow arrow — up = onto ship, down = off ship. */
+function StopTransferFlowArrow({ inbound }: { inbound: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 12 12"
+      className="size-2.5 shrink-0 sm:size-3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {inbound ? (
+        <path d="M6 9.5 V3.5 M3.5 5.75 L6 3.25 L8.5 5.75" />
+      ) : (
+        <path d="M6 2.5 V8.5 M3.5 6.25 L6 8.75 L8.5 6.25" />
+      )}
+    </svg>
+  );
+}
+
 /**
- * Cargo strip left (Cargo | Aboard | Peak | Capacity); Stats strip right (Stats | Contracts | aUEC | Time).
+ * Cargo strip left (Cargo | Aboard | Peak | Capacity | Stop in/out);
+ * Stats strip right (Stats | Contracts | aUEC | Time).
  * Below `sm`, aUEC moves to the ⋯ menu; Time stays in the strip.
  * Distance lives in the Stops rail; Stops open from that rail / mobile section.
  */
@@ -368,6 +398,8 @@ export function SessionRouteProgressStats({
   onMissionsClick,
   onStopsClick: _onStopsClick,
   onCapacityClick,
+  stopPickupScu = null,
+  stopDeliveryScu = null,
   cargoBayCount: _cargoBayCount = 1,
   elapsed = null,
   isSaving = false,
@@ -378,7 +410,28 @@ export function SessionRouteProgressStats({
   const showAuec = auecProjected > 0 || auecEarned > 0;
   const isPeakOverCapacity =
     totalCapacity > 0 && peakScu > totalCapacity;
-  const bayAria = `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`;
+  const showStopTransfer =
+    stopPickupScu != null || stopDeliveryScu != null;
+  const stopPickup = Math.max(0, Math.floor(stopPickupScu ?? 0));
+  const stopDelivery = Math.max(0, Math.floor(stopDeliveryScu ?? 0));
+  const bayAria = showStopTransfer
+    ? `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU, stop pick up ${stopPickup} SCU, drop off ${stopDelivery} SCU`
+    : `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`;
+  const stopTransferBody = showStopTransfer ? (
+    <div
+      className="flex flex-col justify-center gap-0.5"
+      title={`This stop: ${stopPickup} ${SCU_TITLE} onto ship, ${stopDelivery} ${SCU_TITLE} off ship`}
+    >
+      <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-accent sm:text-[0.7rem]">
+        <StopTransferFlowArrow inbound />
+        <span>{stopPickup}</span>
+      </p>
+      <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-gold sm:text-[0.7rem]">
+        <StopTransferFlowArrow inbound={false} />
+        <span>{stopDelivery}</span>
+      </p>
+    </div>
+  ) : null;
   const scuUnit = (
     <span
       className="ml-1 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
@@ -453,7 +506,7 @@ export function SessionRouteProgressStats({
               "flex-row items-stretch gap-0 !p-0",
             ].join(" ")}
             title="Open bays"
-            aria-label={bayAria}
+            aria-label={`Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`}
           >
             <StripSpine label="Cargo" />
             <span className={`${cellClass} border-0`}>{aboardBody}</span>
@@ -476,6 +529,9 @@ export function SessionRouteProgressStats({
             <div className={cellClass}>{capacityBody}</div>
           </>
         )}
+        {stopTransferBody ? (
+          <div className={[cellClass, "shrink-0"].join(" ")}>{stopTransferBody}</div>
+        ) : null}
       </div>
       <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
         {isSaving ? (
@@ -665,22 +721,41 @@ function ContractSourceButton({
   );
 }
 
-function InventoryLine({
+/** One cell in the cargo-bay current/peak/overflow/free quadrant grid. */
+function InventoryQuadrant({
   value,
   label,
   valueClassName,
+  className,
 }: {
   value: ReactNode;
   label: string;
   valueClassName?: string;
+  className?: string;
 }) {
   return (
-    <p className="font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-text-secondary">
-      <span className={valueClassName}>{value}</span>
-      <span className="ml-1 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted">
+    <div
+      className={[
+        "flex min-w-[4.5rem] flex-col justify-center gap-0.5 px-2 py-1.5 text-left",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
         {label}
-      </span>
-    </p>
+      </p>
+      <p
+        className={[
+          "font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text",
+          valueClassName,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -911,60 +986,60 @@ export function SessionInventoryStat({
         </div>
       </div>
       <div
-        className={[stripClass, "!w-fit max-w-full"].join(" ")}
+        className={[
+          stripClass,
+          "!w-fit max-w-full !overflow-hidden divide-x-0",
+        ].join(" ")}
         role="group"
         aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free${showOverflow ? `, overflow ${overflowScu}` : ""}`}
       >
-        <div className="flex w-fit flex-col justify-center gap-1 px-2 py-1 text-right">
-          <InventoryLine
-            value={
-              <>
-                <Fraction
-                  current={onboardScu}
-                  total={capacityLabel}
-                  currentClassName={
-                    isOverCapacity ? "text-rsi-warn" : undefined
-                  }
-                />
-              </>
-            }
+        <div
+          className={[
+            "grid w-fit grid-cols-2 divide-x divide-y divide-rsi-border",
+            showOverflow ? "" : "[&>*:last-child]:col-span-2",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <InventoryQuadrant
             label="current"
-            valueClassName="text-rsi-text tabular-nums"
+            value={
+              <Fraction
+                current={onboardScu}
+                total={capacityLabel}
+                currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
+              />
+            }
           />
-          <InventoryLine
-            value={peakScu}
+          <InventoryQuadrant
             label="peak"
+            value={peakScu}
             valueClassName={
               isPeakOverCapacity
                 ? "text-rsi-danger"
                 : isPeakUsingOverflow
-                  ? "text-rsi-warn tabular-nums"
-                  : "text-rsi-text tabular-nums"
+                  ? "text-rsi-warn"
+                  : undefined
             }
           />
           {showOverflow ? (
-            <InventoryLine
-              value={
-                <>
-                  <Fraction
-                    current={overflowScu}
-                    total={overflowCapacity}
-                    currentClassName={
-                      overflowScu > 0 ? "text-rsi-warn" : undefined
-                    }
-                  />
-                </>
-              }
+            <InventoryQuadrant
               label="overflow"
-              valueClassName="text-rsi-text tabular-nums"
+              value={
+                <Fraction
+                  current={overflowScu}
+                  total={overflowCapacity}
+                  currentClassName={
+                    overflowScu > 0 ? "text-rsi-warn" : undefined
+                  }
+                />
+              }
             />
           ) : null}
-          <InventoryLine
-            value={availableLabel}
+          <InventoryQuadrant
             label="free"
-            valueClassName={
-              isOverAvailable ? "text-rsi-danger" : "text-rsi-text tabular-nums"
-            }
+            value={availableLabel}
+            valueClassName={isOverAvailable ? "text-rsi-danger" : undefined}
           />
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
   type CargoBayAutoPackMode,
   type CargoBayChromePrefs,
   type CargoBaySortingMode,
+  type CargoBaySplitOrientation,
   type CargoBayViewTab,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 
@@ -23,6 +24,10 @@ export function useSessionCargoBayChrome(
   sortingHidden: boolean;
   sidePanelsOverlay: boolean;
   viewTab: CargoBayViewTab;
+  splitOrientation: CargoBaySplitOrientation;
+  syncedZoom: boolean;
+  topZoomLocked: boolean;
+  isoZoomLocked: boolean;
   sortingMode: CargoBaySortingMode;
   lastAutoPackMode: CargoBayAutoPackMode;
   prioritized: boolean;
@@ -32,6 +37,10 @@ export function useSessionCargoBayChrome(
   setSortingHidden: (hidden: boolean) => void;
   setSidePanelsOverlay: (overlay: boolean) => void;
   setViewTab: (tab: CargoBayViewTab) => void;
+  setSplitOrientation: (orientation: CargoBaySplitOrientation) => void;
+  setSyncedZoom: (synced: boolean) => void;
+  setTopZoomLocked: (locked: boolean) => void;
+  setIsoZoomLocked: (locked: boolean) => void;
   setSortingMode: (mode: CargoBaySortingMode) => void;
   setLastAutoPackMode: (mode: CargoBayAutoPackMode) => void;
   setPrioritized: (prioritized: boolean) => void;
@@ -85,6 +94,45 @@ export function useSessionCargoBayChrome(
     [patchPrefs],
   );
 
+  const setSplitOrientation = useCallback(
+    (orientation: CargoBaySplitOrientation) => {
+      patchPrefs({ splitOrientation: orientation });
+    },
+    [patchPrefs],
+  );
+
+  const setSyncedZoom = useCallback(
+    (synced: boolean) => {
+      setPrefs((prev) => {
+        const next: CargoBayChromePrefs = synced
+          ? {
+              ...prev,
+              syncedZoom: true,
+              // Snap 3D to 2D when enabling so both start aligned.
+              isoZoom: prev.topZoom,
+            }
+          : { ...prev, syncedZoom: false };
+        writeCargoBayChromePrefs(sessionId, next);
+        return next;
+      });
+    },
+    [sessionId],
+  );
+
+  const setTopZoomLocked = useCallback(
+    (locked: boolean) => {
+      patchPrefs({ topZoomLocked: locked });
+    },
+    [patchPrefs],
+  );
+
+  const setIsoZoomLocked = useCallback(
+    (locked: boolean) => {
+      patchPrefs({ isoZoomLocked: locked });
+    },
+    [patchPrefs],
+  );
+
   const setSortingMode = useCallback(
     (mode: CargoBaySortingMode) => {
       patchPrefs({ sortingMode: mode });
@@ -108,16 +156,38 @@ export function useSessionCargoBayChrome(
 
   const setTopZoom = useCallback(
     (zoom: number) => {
-      patchPrefs({ topZoom: zoom });
+      setPrefs((prev) => {
+        if (prev.topZoomLocked) return prev;
+        const next: CargoBayChromePrefs = {
+          ...prev,
+          topZoom: zoom,
+          ...(prev.syncedZoom && !prev.isoZoomLocked
+            ? { isoZoom: zoom }
+            : {}),
+        };
+        writeCargoBayChromePrefs(sessionId, next);
+        return next;
+      });
     },
-    [patchPrefs],
+    [sessionId],
   );
 
   const setIsoZoom = useCallback(
     (zoom: number) => {
-      patchPrefs({ isoZoom: zoom });
+      setPrefs((prev) => {
+        if (prev.isoZoomLocked) return prev;
+        const next: CargoBayChromePrefs = {
+          ...prev,
+          isoZoom: zoom,
+          ...(prev.syncedZoom && !prev.topZoomLocked
+            ? { topZoom: zoom }
+            : {}),
+        };
+        writeCargoBayChromePrefs(sessionId, next);
+        return next;
+      });
     },
-    [patchPrefs],
+    [sessionId],
   );
 
   return {
@@ -125,6 +195,10 @@ export function useSessionCargoBayChrome(
     sortingHidden: prefs.sortingHidden,
     sidePanelsOverlay: prefs.sidePanelsOverlay,
     viewTab: prefs.viewTab,
+    splitOrientation: prefs.splitOrientation,
+    syncedZoom: prefs.syncedZoom,
+    topZoomLocked: prefs.topZoomLocked,
+    isoZoomLocked: prefs.isoZoomLocked,
     sortingMode: prefs.sortingMode,
     lastAutoPackMode: prefs.lastAutoPackMode,
     prioritized: prefs.prioritized,
@@ -134,6 +208,10 @@ export function useSessionCargoBayChrome(
     setSortingHidden,
     setSidePanelsOverlay,
     setViewTab,
+    setSplitOrientation,
+    setSyncedZoom,
+    setTopZoomLocked,
+    setIsoZoomLocked,
     setSortingMode,
     setLastAutoPackMode,
     setPrioritized,

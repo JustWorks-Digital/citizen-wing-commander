@@ -28,6 +28,7 @@ Domain word lists go stale. These habits apply to **any** new feature, vocabular
 
 - With fixed inputs, expect the **concrete value** (id, count, shape), not merely that something is truthy / defined / non-empty.
 - Do not re-implement the system under test in the assertion (e.g. recompute “first max” to “prove” `peakX`). Lock the expected result from the fixture.
+- Bug fixes that came from a real session/UI failure: use that data in the test ([`regression-from-real-data.mdc`](./regression-from-real-data.mdc)).
 - `it()` / `describe()` titles should state the behavior in plain language; avoid punctuation noise and opaque codes.
 - In comments and test titles only: when two actions happen **at the same stop**, join them with a slash (`pickup/transfer`, `pickup/deliver`). Do not put slashes in identifiers (`pickupTransferMix` is fine). Use “then” for sequential stops (`pickup then deliver`).
 

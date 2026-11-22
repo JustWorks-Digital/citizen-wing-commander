@@ -2,9 +2,6 @@
 
 import { Spinner } from "@/components/ui/Spinner";
 
-/** Clear the sticky trip toolbar while the Done control pins in a tall stop card. */
-export const STICKY_DONE_TOP = "sticky top-20 z-[15] sm:top-24";
-
 export function DoneCheckbox({
   location,
   step,

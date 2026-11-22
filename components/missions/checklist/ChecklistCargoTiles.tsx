@@ -837,7 +837,7 @@ export function CargoGroups({
   pendingAddPickupKeys,
   onSetPickupScu,
   pendingSetPickupScuKeys,
-  prioritizePickup = false,
+  prioritizePickup = true,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -881,7 +881,7 @@ export function CargoGroups({
   pendingSetPickupScuKeys?: ReadonlySet<string>;
   /**
    * When true, Pick up is the left tab (and preferred when both are open).
-   * Default: Drop off left, Pick up right.
+   * Default: Pick up left, Drop off right.
    */
   prioritizePickup?: boolean;
 }) {

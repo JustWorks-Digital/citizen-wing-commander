@@ -10,11 +10,7 @@ import {
 import { getLocationShopBySlug } from "@/lib/fixtures/locationShops";
 import { formatDistanceToNext, type HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
-import {
-  DoneCheckbox,
-  DoneStopButton,
-  STICKY_DONE_TOP,
-} from "./ChecklistDoneControls";
+import { DoneCheckbox, DoneStopButton } from "./ChecklistDoneControls";
 import { SpaceshipIcon, TravelChevronsIcon } from "./ChecklistIcons";
 import { LocationHeader } from "./ChecklistLocationHeader";
 import {
@@ -262,6 +258,14 @@ export function QuantumTravelRow({
           shipSlug={shipSlug}
           className="h-12 w-20 sm:h-14 sm:w-24"
         />
+        <DoneCheckbox
+          location={location}
+          step="QT"
+          isCompleted={isCompleted}
+          isActive={isFocused}
+          isPending={isPending || isSavingSection}
+          onToggle={onToggle}
+        />
         <span aria-hidden className="inline-flex text-rsi-text-muted">
           <TravelChevronsIcon className="h-4 w-5 rotate-90 md:h-5 md:w-6 md:rotate-0" />
         </span>
@@ -403,37 +407,24 @@ export function QuantumTravelRow({
           Collapse
         </button>
       ) : null}
-      <div className="flex gap-3">
-        <div className="hidden shrink-0 self-stretch md:block">
-          <div
-            className={`${STICKY_DONE_TOP} flex h-14 items-center`}
-          >
-            <DoneCheckbox
-              location={location}
-              step="QT"
-              isCompleted={isCompleted}
-              isActive={isFocused}
-              isPending={isPending || isSavingSection}
-              onToggle={onToggle}
-            />
+      <div className="flex min-w-0 flex-col gap-1.5">
+        {/* Mobile: current → Done/ship line → destination. Desktop: 50/50 with ship on left col. */}
+        <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 md:items-center md:gap-3">
+          <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
+            <div className="min-w-0 flex-1">{fromBlock}</div>
+            {travelBlock}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1 md:pl-6 lg:pl-8">
+            {toBlock}
+            {reasonLabel ? (
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+                Reason · {reasonLabel}
+              </p>
+            ) : null}
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {/* Mobile: current → ship line → destination. Desktop: 50/50 with ship on left col. */}
-          <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 md:items-center md:gap-3">
-            <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
-              <div className="min-w-0 flex-1">{fromBlock}</div>
-              {travelBlock}
-            </div>
-            <div className="flex min-w-0 flex-col gap-1 md:pl-6 lg:pl-8">
-              {toBlock}
-              {reasonLabel ? (
-                <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                  Reason · {reasonLabel}
-                </p>
-              ) : null}
-            </div>
-          </div>
+        {/* Mobile: Done lives with the ship above; keep a full-width control when travel is hidden (editing). */}
+        {travelBlock == null ? (
           <div className="mt-2 md:hidden">
             <DoneStopButton
               location={location}
@@ -443,7 +434,7 @@ export function QuantumTravelRow({
               onToggle={onToggle}
             />
           </div>
-        </div>
+        ) : null}
       </div>
       {footer}
     </li>

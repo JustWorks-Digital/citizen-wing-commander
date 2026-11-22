@@ -43,7 +43,7 @@ export function RouteChecklistMenu({
   hideCompleted,
   completedCount,
   onToggleHistory,
-  prioritizePickup = false,
+  prioritizePickup = true,
   onPrioritizePickupChange,
   onCopyTrip,
   onRepairTrip,

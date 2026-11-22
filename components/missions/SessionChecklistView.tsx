@@ -147,7 +147,7 @@ export function SessionChecklistView({
   const [crashFinishOpen, setCrashFinishOpen] = useState(false);
   const [crashFinishBusy, setCrashFinishBusy] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [prioritizePickup, setPrioritizePickup] = useState(false);
+  const [prioritizePickup, setPrioritizePickup] = useState(true);
   const [prioritizePickupReady, setPrioritizePickupReady] = useState(false);
   /** After Continue on the finish report, show the last completed stop again. */
   const [summaryDismissed, setSummaryDismissed] = useState(false);
@@ -539,6 +539,19 @@ export function SessionChecklistView({
     }, 0) ?? 0;
   const onboardScu = cargoInventory.fromCompleted(session.rows);
   const peakScu = cargoInventory.peakOnboard(session.rows);
+  const focusedStopTransferScu = useMemo(() => {
+    if (resolvedFocusedStopId === QUANTUM_ORIGIN_ROW_ID) {
+      return { pickup: null, delivery: null };
+    }
+    const ledger = cargoInventory
+      .transferLedgerByStop(session.rows)
+      .get(resolvedFocusedStopId);
+    if (!ledger) return { pickup: 0, delivery: 0 };
+    return {
+      pickup: ledger.pickup === false ? 0 : ledger.pickup.amount,
+      delivery: ledger.delivery === false ? 0 : ledger.delivery.amount,
+    };
+  }, [resolvedFocusedStopId, session.rows]);
   const missionScuBreakdown = cargoInventory.missionBreakdown(
     session.missions,
   );
@@ -817,6 +830,8 @@ export function SessionChecklistView({
         peakScu={peakScu}
         totalCapacity={totalCapacity}
         isOverCapacity={isOverCapacity}
+        stopPickupScu={focusedStopTransferScu.pickup}
+        stopDeliveryScu={focusedStopTransferScu.delivery}
         auecEarned={auecEarned}
         auecProjected={auecProjected}
         onMissionsClick={openMissions}
@@ -835,6 +850,7 @@ export function SessionChecklistView({
       peakScu,
       totalCapacity,
       isOverCapacity,
+      focusedStopTransferScu,
       auecEarned,
       auecProjected,
       openMissions,

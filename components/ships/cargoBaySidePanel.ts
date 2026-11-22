@@ -13,6 +13,11 @@ export type CargoBaySidePanelOpts = {
   toggleAbove?: boolean;
   /** Override absolute top inset (e.g. stacked Packing + Peel toggles). */
   topClassName?: string;
+  /**
+   * When true, height is set by the caller (e.g. match graph `heightPx`) —
+   * skip the default max-height clamp.
+   */
+  matchGraphHeight?: boolean;
   /** Overflow scroll hint classes from `useOverflowScrollY`. */
   scrollClassName?: string;
 };
@@ -23,6 +28,7 @@ export function cargoBaySidePanelClassName({
   side,
   toggleAbove = false,
   topClassName,
+  matchGraphHeight = false,
   scrollClassName = "",
 }: CargoBaySidePanelOpts): string {
   if (overlay) {
@@ -33,7 +39,8 @@ export function cargoBaySidePanelClassName({
     const z = side === "left" ? "z-40" : "z-20";
     return [
       PANEL_SHELL,
-      "absolute max-h-[calc(100%-3.5rem)] overflow-y-auto overscroll-contain",
+      "absolute overflow-y-auto overscroll-contain",
+      matchGraphHeight ? "box-border" : "max-h-[calc(100%-3.5rem)]",
       z,
       inset,
       top,
@@ -44,7 +51,8 @@ export function cargoBaySidePanelClassName({
   }
   return [
     PANEL_SHELL,
-    "relative z-10 max-h-full shrink-0 self-stretch overflow-y-auto overscroll-contain",
+    "relative z-10 shrink-0 self-stretch overflow-y-auto overscroll-contain",
+    matchGraphHeight ? "box-border" : "max-h-full",
     toggleAbove ? "mt-8" : "mt-2",
     "mb-2",
     scrollClassName,

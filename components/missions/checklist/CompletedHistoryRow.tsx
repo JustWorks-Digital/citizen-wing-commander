@@ -21,9 +21,14 @@ import {
   getShipIconSrc,
 } from "@/lib/fixtures";
 import { Badge } from "@/components/ui/Badge";
+import { Spinner } from "@/components/ui/Spinner";
 import { AUEC_TITLE } from "@/lib/ui/abbrevTitles";
 import { DoneCheckbox } from "./ChecklistDoneControls";
-import { SpaceshipIcon, TravelChevronsIcon } from "./ChecklistIcons";
+import {
+  SpaceshipIcon,
+  TravelChevronIcon,
+  TravelChevronsIcon,
+} from "./ChecklistIcons";
 import { CondensedRowTrailing } from "./ChecklistLocationHeader";
 
 export type ChecklistProgressTimelineStop = {
@@ -627,7 +632,6 @@ export function NextStopBridgeBand({
         CHECKLIST_RAIL_NEUTRAL,
       ].join(" ")}
     >
-      {/* Same px-3 as Done strip so ship badge lines up with the checkbox. */}
       <div className="px-3">
         <NextDistanceMeta
           row={row}
@@ -840,8 +844,10 @@ export function NextDistanceMeta({
   shipSlug = null,
   variant = "inline",
   isPending = false,
-  /** When sticky Done sits in a sibling column, skip the inline spacer. */
-  checkboxColumn = "inline",
+  /** Stop label for the Done control before the ship. */
+  locationLabel,
+  step,
+  isActive = false,
   onToggle,
 }: {
   row: HaulingChecklistRow;
@@ -851,8 +857,10 @@ export function NextDistanceMeta({
   /** `bridge` outside the stop panel; `header` beside the stop title (right). */
   variant?: "inline" | "bridge" | "header";
   isPending?: boolean;
-  checkboxColumn?: "inline" | "external";
-  /** Whole row marks the owning stop done (same as the Done checkbox). */
+  locationLabel?: string;
+  step?: number | string;
+  isActive?: boolean;
+  /** Done checkbox before the ship — marks this stop finished. */
   onToggle?: () => void;
 }) {
   const isBridge = variant === "bridge";
@@ -868,77 +876,92 @@ export function NextDistanceMeta({
   const distanceRaw = starmapDistance ?? row.distanceToNext;
   const distance = formatDistanceToNext(distanceRaw);
   const distanceCompact = formatDistanceToNext(distanceRaw, { compact: true });
+  const doneLocation = locationLabel ?? nextLocationName ?? row.locationSlug;
+  const doneStep = step ?? "";
 
   const shellClass = [
-    "flex min-w-0 items-center gap-2.5 text-sm sm:gap-3",
+    "flex min-w-0 items-center gap-2 text-sm sm:gap-2.5",
     isBridge ? "py-3" : isHeader ? "py-0" : "pt-5",
-    isHeader ? "justify-between" : "",
-    onToggle
-      ? [
-          "w-full",
-          "text-left",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-          isPending ? "cursor-wait" : "cursor-pointer",
-        ].join(" ")
-      : "",
   ].join(" ");
 
-  const body = (
-    <>
-      {/* Checkbox column spacer — matches DoneCheckbox when it is not sticky-sibling. */}
-      {checkboxColumn === "inline" && !isHeader ? (
-        <span
-          aria-hidden
-          className="hidden w-8 shrink-0 md:inline-flex"
-        />
-      ) : null}
-      {/* Ship + travel chevrons — compact beside the stop title when header. */}
+  const chevronTone = isPending
+    ? "text-rsi-accent"
+    : row.isCompleted
+      ? "text-rsi-success"
+      : isActive
+        ? "text-rsi-text-secondary opacity-40"
+        : "text-rsi-text-muted/50 opacity-40";
+  // Incomplete DoneCheckbox hover → text-rsi-text + full opacity.
+  const chevronHoverTone =
+    !isPending && !row.isCompleted
+      ? "peer-hover/done:text-rsi-text peer-hover/done:opacity-100"
+      : "";
+
+  return (
+    <div className={shellClass}>
       <span
         className={[
-          "inline-flex shrink-0 items-center",
+          "inline-flex shrink-0 items-center justify-start overflow-hidden",
           isHeader
-            ? "h-14 w-28 justify-between sm:h-16 sm:w-36"
-            : "h-16 w-32 justify-start gap-1.5 sm:h-[4.5rem] sm:w-36",
+            ? "h-12 w-20 sm:h-14 sm:w-24"
+            : "h-14 w-24 sm:h-16 sm:w-28",
           isBridge || isHeader ? "text-rsi-accent" : "text-rsi-text-secondary",
         ].join(" ")}
         title="Next stop"
       >
-        <span
-          className={[
-            "inline-flex items-center justify-start overflow-hidden",
-            isHeader
-              ? "h-12 w-20 sm:h-14 sm:w-24"
-              : "h-14 w-24 sm:h-16 sm:w-28",
-          ].join(" ")}
-        >
-          {shipIconSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- static ship badge
-            <img
-              src={shipIconSrc}
-              alt=""
-              className="block size-full object-contain"
+        {shipIconSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element -- static ship badge
+          <img
+            src={shipIconSrc}
+            alt=""
+            className="block size-full object-contain"
+          />
+        ) : (
+          <SpaceshipIcon className="h-3 w-5" />
+        )}
+      </span>
+      {/* peer/done = checkbox; chevrons follow its hover color. */}
+      <span
+        className={[
+          "flex min-w-0 flex-1 items-center gap-2",
+          isHeader ? "h-14 sm:h-16" : "h-16 sm:h-[4.5rem]",
+        ].join(" ")}
+      >
+        {onToggle ? (
+          <span className="peer/done inline-flex shrink-0">
+            <DoneCheckbox
+              location={doneLocation}
+              step={doneStep}
+              isCompleted={row.isCompleted}
+              isActive={isActive}
+              isPending={isPending}
+              onToggle={onToggle}
             />
-          ) : (
-            <SpaceshipIcon className="h-3 w-5" />
-          )}
-        </span>
+          </span>
+        ) : null}
         <span
           aria-hidden
-          className={[
-            "inline-flex shrink-0 text-rsi-text-muted",
-            isHeader ? "ml-3 sm:ml-4" : "ml-1 sm:ml-1.5",
-          ].join(" ")}
           title="Travel"
+          className={[
+            "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden transition-colors",
+            "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+            "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+            chevronTone,
+            chevronHoverTone,
+          ].join(" ")}
         >
-          <TravelChevronsIcon className="h-4 w-5" />
+          {Array.from({ length: 40 }, (_, index) => (
+            <TravelChevronIcon
+              key={index}
+              className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
+            />
+          ))}
         </span>
       </span>
       <div
         className={[
-          "min-w-0 text-left",
-          isHeader
-            ? "ml-auto max-w-[calc(100%-7.5rem)] pr-3"
-            : "flex-1 pl-4 sm:pl-6",
+          "min-w-0 shrink-0 text-left",
+          isHeader ? "max-w-[min(100%,14rem)] pr-1 sm:max-w-[16rem]" : "max-w-[min(100%,18rem)]",
         ].join(" ")}
       >
         <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
@@ -966,109 +989,126 @@ export function NextDistanceMeta({
           </p>
         ) : null}
       </div>
-    </>
-  );
-
-  if (!onToggle) {
-    return <div className={shellClass}>{body}</div>;
-  }
-
-  return (
-    <button
-      type="button"
-      className={shellClass}
-      disabled={isPending}
-      aria-busy={isPending}
-      aria-label={
-        isPending
-          ? `Updating stop, next: ${nextLocationName}`
-          : `Mark stop done, next: ${nextLocationName}`
-      }
-      title={isPending ? "Updating stop…" : "Mark this stop done"}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (isPending) return;
-        onToggle();
-      }}
-    >
-      {body}
-    </button>
+    </div>
   );
 }
 
-/** Last-stop header control — mirrors Next stop layout (mark + copy). */
+/** Last-stop header — Done-sized finish mark left of Finish trip / View report. */
 export function FinishRunTile({
+  location,
+  step,
   isCompleted,
+  isActive = false,
   isPending = false,
-  onFinish,
+  onToggle,
+  onOpenSummary,
 }: {
+  location: string;
+  step: number | string;
   isCompleted: boolean;
+  isActive?: boolean;
   isPending?: boolean;
-  onFinish: () => void;
+  /** Mark last stop done / undone (same behavior as DoneCheckbox). */
+  onToggle: () => void;
+  /** When the last stop is already done — open the finish report. */
+  onOpenSummary?: () => void;
 }) {
   return (
-    <button
-      type="button"
-      disabled={isPending}
-      aria-busy={isPending}
-      aria-label={
-        isPending
-          ? "Finishing run…"
-          : isCompleted
-            ? "Open finish report"
-            : "Finish run"
-      }
-      title={
-        isPending
-          ? "Finishing…"
-          : isCompleted
-            ? "Open finish report"
-            : "Mark last stop done and finish the run"
-      }
-      onClick={(event) => {
-        event.stopPropagation();
-        if (isPending) return;
-        onFinish();
-      }}
-      className={[
-        "flex min-w-0 items-center justify-end gap-2.5 rounded-rsi py-0.5 pl-1 pr-0.5 text-right sm:gap-3",
-        "transition-colors hover:bg-rsi-success-muted/25",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-        isPending ? "cursor-wait opacity-70" : "cursor-pointer",
-      ].join(" ")}
-    >
-      <span
-        aria-hidden
+    <div className="flex min-w-0 items-center justify-end gap-2.5 rounded-rsi py-0.5 pl-1 pr-0.5 sm:gap-3">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={isCompleted}
+        aria-busy={isPending}
+        disabled={isPending}
+        aria-label={
+          isPending
+            ? `Stop ${step}, updating: ${location}`
+            : `Stop ${step}, mark done: ${location}`
+        }
+        title={isPending ? "Updating stop…" : undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (isPending) return;
+          onToggle();
+        }}
         className={[
-          "relative inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 sm:size-11",
-          isCompleted
-            ? "border-rsi-success bg-rsi-success-muted/50 text-rsi-success"
-            : "border-rsi-success/80 bg-rsi-bg-deep text-rsi-success shadow-[inset_0_0_12px_0_color-mix(in_srgb,var(--rsi-success)_22%,transparent)]",
+          // Larger finish mark, DoneCheckbox tones: unchecked until completed.
+          "group relative inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 sm:size-11",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+          isPending
+            ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/40 text-rsi-accent"
+            : isCompleted
+              ? "border-rsi-success bg-rsi-success-muted/50 text-rsi-success"
+              : isActive
+                ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-text"
+                : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-text",
         ].join(" ")}
       >
-        <svg
-          viewBox="0 0 20 20"
-          className="size-5"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M5 10.5 L8.5 14 L15 6.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <span className="min-w-0 max-w-[9.5rem]">
+        {isPending ? (
+          <Spinner className="size-5" />
+        ) : (
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            className={[
+              "size-5",
+              isCompleted ? "" : "opacity-40 group-hover:opacity-100",
+            ].join(" ")}
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 10.5 L8.5 14 L15 6.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+      </button>
+      <button
+        type="button"
+        disabled={isPending}
+        aria-busy={isPending}
+        aria-label={
+          isPending
+            ? "Finishing run…"
+            : isCompleted
+              ? "Open finish report"
+              : "Finish run"
+        }
+        title={
+          isPending
+            ? "Finishing…"
+            : isCompleted
+              ? "Open finish report"
+              : "Mark last stop done and finish the run"
+        }
+        onClick={(event) => {
+          event.stopPropagation();
+          if (isPending) return;
+          if (isCompleted) {
+            onOpenSummary?.();
+            return;
+          }
+          onToggle();
+        }}
+        className={[
+          "min-w-0 max-w-[9.5rem] rounded-rsi text-right transition-colors",
+          "hover:bg-rsi-success-muted/25",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+          isPending ? "cursor-wait opacity-70" : "cursor-pointer",
+        ].join(" ")}
+      >
         <span className="block text-sm font-medium leading-snug tracking-wide text-rsi-text">
           {isCompleted ? "View report" : "Finish trip"}
         </span>
         <span className="mt-0.5 block font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary">
           {isCompleted ? "Summary ready" : "Last stop"}
         </span>
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }

@@ -12,7 +12,10 @@ import {
 } from "react";
 import { CargoGridSketch } from "@/components/ships/CargoGridSketch";
 import { cargoBaySidePanelClassName } from "@/components/ships/cargoBaySidePanel";
-import { ManualBayBoxTray } from "@/components/missions/ManualBayBoxTray";
+import {
+  ManualBayBoxTray,
+  ManualBayTrayDragGhost,
+} from "@/components/missions/ManualBayBoxTray";
 import { SessionCurrentStopPickupGrid } from "@/components/missions/SessionStatsStrip";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
@@ -49,6 +52,8 @@ import {
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import { manualBayInventory } from "@/lib/ships/manualBayInventory";
 import {
+  cargoCellCoordFromPoint,
+  nextManualBayOrientationIndex,
   tryAddManualBayBox,
   tryMoveManualBayBox,
   tryRemoveManualBayBox,
@@ -111,6 +116,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     sortingHidden,
     sidePanelsOverlay,
     viewTab,
+    splitOrientation,
+    syncedZoom,
+    topZoomLocked,
+    isoZoomLocked,
     sortingMode,
     lastAutoPackMode,
     prioritized,
@@ -120,6 +129,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     setSortingHidden,
     setSidePanelsOverlay,
     setViewTab,
+    setSplitOrientation,
+    setSyncedZoom,
+    setTopZoomLocked,
+    setIsoZoomLocked,
     setSortingMode,
     setLastAutoPackMode,
     setPrioritized,
@@ -134,6 +147,17 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const [manualLiveBoxes, setManualLiveBoxes] = useState<PlacedCargoBox[] | null>(
     null,
   );
+  const [trayPlacement, setTrayPlacement] = useState<{
+    spec: ManualBayAddBoxSpec;
+    lineKey: string;
+    orientationIndex: number;
+  } | null>(null);
+  const [trayPointerClient, setTrayPointerClient] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const trayPlacementRef = useRef(trayPlacement);
+  trayPlacementRef.current = trayPlacement;
   const manualDragBaseRef = useRef<PlacedCargoBox[] | null>(null);
   const { heightPx, setHeightPx, resetHeightPx } =
     useSessionCargoBayLayoutHeight(sessionId);
@@ -321,8 +345,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     });
   }, [plan, rows, activeRow]);
   const showLocationOutlines = packMode === "by-mission-location" && !isManual;
-  const showViewTabs = Boolean(sketch && plan && plan.boxes.length > 0);
-  const showGrid = Boolean(sketch && plan && plan.boxes.length > 0);
+  // Manual must keep the empty bay visible after Clear / remove-all so tray place works.
+  const showGrid = Boolean(
+    sketch && plan && (plan.boxes.length > 0 || isManual),
+  );
+  const showViewTabs = showGrid;
 
   useEffect(() => {
     const reclamp = () => {
@@ -513,21 +540,44 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     );
   }, [isManual, missions, rows, stopId, stopScope, workingBoxes]);
 
-  const onManualTrayDrop = useCallback(
-    (coord: CargoGridCoord, payloadJson: string) => {
-      if (!sketch || !isManual) return;
-      let spec: ManualBayAddBoxSpec;
-      try {
-        spec = JSON.parse(payloadJson) as ManualBayAddBoxSpec;
-      } catch {
-        return;
-      }
-      const next = tryAddManualBayBox(sketch, workingBoxes, spec, coord);
-      if (!next) return;
+  const clearTrayPlacement = useCallback(() => {
+    trayPlacementRef.current = null;
+    setTrayPlacement(null);
+    setTrayPointerClient(null);
+  }, []);
+
+  const placeTrayAtCoord = useCallback(
+    (coord: CargoGridCoord) => {
+      const current = trayPlacementRef.current;
+      if (!sketch || !isManual || !current) return false;
+      const next = tryAddManualBayBox(
+        sketch,
+        workingBoxes,
+        current.spec,
+        coord,
+        current.orientationIndex,
+      );
+      if (!next) return false;
       persistManualBoxes(next);
+      return true;
     },
     [isManual, persistManualBoxes, sketch, workingBoxes],
   );
+
+  const rotateTrayOrientation = useCallback(() => {
+    setTrayPlacement((current) => {
+      if (!current) return current;
+      const next = {
+        ...current,
+        orientationIndex: nextManualBayOrientationIndex(
+          current.spec.size,
+          current.orientationIndex,
+        ),
+      };
+      trayPlacementRef.current = next;
+      return next;
+    });
+  }, []);
 
   const onManualBoxRemove = useCallback(
     (boxId: string) => {
@@ -595,6 +645,19 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     };
   }, [isResizing]);
 
+  const trayDragging = Boolean(trayPlacement);
+  useEffect(() => {
+    if (!trayDragging) return;
+    const previous = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previous;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [trayDragging]);
+
   useEffect(() => {
     if (!packModeOpen) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -628,7 +691,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     {
       id: "manual" as const,
       label: "Manual",
-      summary: "Drag crates on 2D; save presets for this stop.",
+      summary: "Drag crates on 2D.",
     },
   ];
   const activePackModeId: CargoBayPackMode | "manual" = isManual
@@ -676,12 +739,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   /** Pack mode / graph top inset under Packing (+ Peel) toggles. */
   const pushPackTopClass = showPeelToggle ? "top-14 sm:top-8" : "top-8";
-  const pushGraphTopClass =
-    !sidePanelsOverlay && !sortingHidden
-      ? showPeelToggle
-        ? "pt-14 sm:pt-8"
-        : "pt-8"
-      : "";
+  const pushPackOpen = !sidePanelsOverlay && !sortingHidden;
+  const pushGraphTopClass = pushPackOpen
+    ? showPeelToggle
+      ? "pt-14 sm:pt-8"
+      : "pt-8"
+    : "";
+  /** Left gutter matching Pack mode width so graph + footer clear the panel. */
+  const pushPackGutterClass = pushPackOpen ? "pl-[17.5rem]" : "";
 
   return (
     <div
@@ -742,6 +807,15 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           ) : null}
         </div>
       </div>
+
+      {trayPlacement && trayPointerClient ? (
+        <ManualBayTrayDragGhost
+          spec={trayPlacement.spec}
+          orientationIndex={trayPlacement.orientationIndex}
+          clientX={trayPointerClient.x}
+          clientY={trayPointerClient.y}
+        />
+      ) : null}
 
       {!sketch ? (
         <p className="py-6 text-center text-sm text-rsi-text-muted">
@@ -812,9 +886,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                       side: "left",
                       toggleAbove: true,
                       topClassName: pushPackTopClass,
+                      matchGraphHeight: true,
                     }),
-                    "space-y-2",
+                    "flex flex-col space-y-2",
                   ].join(" ")}
+                  style={{ height: heightPx }}
                 >
                   <div ref={packModeMenuRef} className="relative min-w-0">
                     <p className="mb-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
@@ -931,7 +1007,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                     </button>
                   ) : null}
                   {isManual ? (
-                    <div className="space-y-1.5">
+                    <div className="flex min-h-0 flex-1 flex-col space-y-1.5">
                       <div className="flex flex-wrap gap-1">
                         {manualStop.presets.map((preset) => {
                           const selected =
@@ -981,14 +1057,36 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                       >
                         + Preset
                       </button>
-                      <p className="text-[0.6rem] leading-snug text-rsi-text-muted">
-                        Drag on 2D only — 3D follows. Session-local for now.
-                      </p>
                       {manualInventoryGroups.length > 0 ? (
                         <ManualBayBoxTray
                           groups={manualInventoryGroups}
                           onClearBay={clearBayToTray}
-                          className="mt-2"
+                          draggingLineKey={trayPlacement?.lineKey ?? null}
+                          orientationIndex={
+                            trayPlacement?.orientationIndex ?? 0
+                          }
+                          onTrayDragStart={(spec, lineKey) => {
+                            const next = {
+                              spec,
+                              lineKey,
+                              orientationIndex: 0,
+                            };
+                            trayPlacementRef.current = next;
+                            setTrayPlacement(next);
+                          }}
+                          onTrayDragMove={(clientX, clientY) => {
+                            setTrayPointerClient({ x: clientX, y: clientY });
+                          }}
+                          onTrayDragEnd={(clientX, clientY) => {
+                            const coord = cargoCellCoordFromPoint(
+                              clientX,
+                              clientY,
+                            );
+                            if (coord) placeTrayAtCoord(coord);
+                            clearTrayPlacement();
+                          }}
+                          onTrayDragCancel={clearTrayPlacement}
+                          className="mt-2 min-h-0 flex-1"
                         />
                       ) : null}
                     </div>
@@ -999,18 +1097,19 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           ) : null}
           <div
             data-cargo-bay-height-panel
-            className={[
-              // Push mode: reserve left gutter for Pack mode; align graph top
-              // with that panel (below Packing / Peel toggles).
-              !sidePanelsOverlay && !sortingHidden ? "pl-[17.5rem]" : "",
-              pushGraphTopClass,
-            ]
+            className={[pushPackGutterClass, pushGraphTopClass]
               .filter(Boolean)
               .join(" ") || undefined}
           >
             <div className="relative">
               {!sidePanelsOverlay ? (
-                <div className="pointer-events-none absolute top-2 left-2 z-20">
+                <div
+                  className={[
+                    "pointer-events-none absolute left-2 z-20",
+                    // Clear Packing (+ Peel) so the tab strip is not a ghost box under them.
+                    showPeelToggle ? "top-10" : "top-9",
+                  ].join(" ")}
+                >
                   <div className="pointer-events-auto">{viewTabList}</div>
                 </div>
               ) : null}
@@ -1025,6 +1124,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 legendToggleAbove={sidePanelsOverlay}
                 sidePanelsOverlay={sidePanelsOverlay}
                 onSidePanelsOverlayChange={setSidePanelsOverlay}
+                splitOrientation={splitOrientation}
+                onSplitOrientationChange={setSplitOrientation}
+                syncedZoom={syncedZoom}
+                onSyncedZoomChange={setSyncedZoom}
+                topZoomLocked={topZoomLocked}
+                onTopZoomLockedChange={setTopZoomLocked}
+                isoZoomLocked={isoZoomLocked}
+                onIsoZoomLockedChange={setIsoZoomLocked}
                 hidePeel
                 peelStack={peelStack}
                 onPeelStackChange={setPeelStack}
@@ -1041,7 +1148,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 manualTrayDrop={
                   isManual && (viewTab === "top" || viewTab === "split")
                 }
-                onManualTrayDrop={onManualTrayDrop}
+                trayDragSpec={
+                  isManual && (viewTab === "top" || viewTab === "split")
+                    ? (trayPlacement?.spec ?? null)
+                    : null
+                }
+                trayCollisionBoxes={isManual ? workingBoxes : undefined}
+                trayOrientationIndex={trayPlacement?.orientationIndex ?? 0}
+                trayPointerClient={trayPointerClient}
+                onTrayRotate={rotateTrayOrientation}
+                onTrayPlaceCancel={clearTrayPlacement}
                 onManualBoxRemove={onManualBoxRemove}
                 topZoom={topZoom}
                 onTopZoomChange={setTopZoom}
@@ -1055,7 +1171,15 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             right.
           </p>
           {thisStopTransfers.length > 0 ? (
-            <div className="mt-2 border-t border-rsi-border/80 pt-2">
+            <div
+              className={[
+                "mt-2 border-t border-rsi-border/80 pt-2",
+                // Overlay off: sit under the graph, not under the Pack mode column.
+                pushPackGutterClass,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <SessionCurrentStopPickupGrid
                 transfers={thisStopTransfers}
                 stopLabel={thisStopLabel}

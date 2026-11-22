@@ -1,0 +1,31 @@
+---
+description: Bugfix unit tests must use real failing session / fixture inputs
+alwaysApply: true
+---
+
+# Regression tests from real data
+
+When fixing a bug that showed up in a **live session**, screenshot intake, prod copy, or an existing fixture, the proving unit test must use **that real input** (or the smallest faithful extract) — not a made-up toy case that only resembles the bug.
+
+## Do this
+
+1. **Capture the failing facts** from the session/UI/API: SCU totals, box mixes, stop order, slugs, mission ids, pack mode, etc.
+2. **Name the source** in the test (comment or fixture key): session id, commodity, stop, or fixture path — so a stranger can re-open the trip.
+3. **Assert the concrete missing/wrong outcome** the user saw (e.g. mix `5×4 + 1×1` present for 21 SCU), not a vague “has some options”.
+4. Prefer a **committed fixture extract** under `lib/fixtures/` / `tests/**/fixtures/` when the payload is large; otherwise inline the exact numbers from the failure.
+
+## Avoid
+
+- Inventing round numbers (`10 SCU`, `caseA`) that never appeared in the failure.
+- Re-deriving the expected value in the assert (see [`readable-code-and-tests.mdc`](./readable-code-and-tests.mdc)).
+- Dropping the session/fixture reference once the fix ships — keep the citation in the test.
+
+## Example
+
+```ts
+// Session 9a89783f… — Pressurized Ice 21 SCU; UI missing 5×4 + 1×1 among 6-box mixes.
+const options = enumerateBoxBreakdowns(21, 8, BOX_BREAKDOWN_SEARCH_CAP);
+expect(options.some((o) => o.label === "5×4 + 1×1")).toBe(true);
+```
+
+Related: live session packs in [`session-fixtures.mdc`](./session-fixtures.mdc).

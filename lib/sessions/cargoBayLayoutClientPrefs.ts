@@ -24,6 +24,9 @@ export const MAX_CARGO_BAY_LAYOUT_WIDTH_PX = 96 * 16;
 /** 2D / Split / 3D projection for the cargo layout modal. */
 export type CargoBayViewTab = "top" | "iso" | "split";
 
+/** Split pane arrangement: left/right vs top/bottom. */
+export type CargoBaySplitOrientation = "horizontal" | "vertical";
+
 /** Packing preset (or manual) — mirrors CargoBayLayout Sorting controls. */
 export type CargoBaySortingMode =
   | "suggested"
@@ -47,15 +50,23 @@ export type CargoBayChromePrefs = {
   sidePanelsOverlay: boolean;
   /** Cargo layout projection — default Split; survives modal close/reopen. */
   viewTab: CargoBayViewTab;
+  /** Split: side-by-side (`horizontal`) or stacked (`vertical`). */
+  splitOrientation: CargoBaySplitOrientation;
+  /** When true, 2D and 3D zoom stay at the same percentage. */
+  syncedZoom: boolean;
+  /** Freeze 2D zoom controls / wheel. Independent of 3D. */
+  topZoomLocked: boolean;
+  /** Freeze 3D zoom controls / wheel. Independent of 2D. */
+  isoZoomLocked: boolean;
   /** Packing type (Suggested / Cargo type / Contract based / Manual). */
   sortingMode: CargoBaySortingMode;
   /** Last non-manual packing mode (restored when leaving Manual with no presets). */
   lastAutoPackMode: CargoBayAutoPackMode;
   /** Prioritized packing toggle (Cargo type + ships that support it). */
   prioritized: boolean;
-  /** 2D (and Split left) grid zoom — survives modal close/reopen. */
+  /** 2D (and Split) grid zoom — survives modal close/reopen. */
   topZoom: number;
-  /** 3D (and Split right) grid zoom — survives modal close/reopen. */
+  /** 3D (and Split) grid zoom — survives modal close/reopen. */
   isoZoom: number;
 };
 
@@ -64,6 +75,10 @@ export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   sortingHidden: true,
   sidePanelsOverlay: true,
   viewTab: "split",
+  splitOrientation: "horizontal",
+  syncedZoom: false,
+  topZoomLocked: false,
+  isoZoomLocked: false,
   sortingMode: "suggested",
   lastAutoPackMode: "suggested",
   prioritized: false,
@@ -72,7 +87,7 @@ export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
 };
 
 /** Matches CargoGridSketch zoom clamps. */
-export const CARGO_BAY_GRID_ZOOM_MIN = 0.5;
+export const CARGO_BAY_GRID_ZOOM_MIN = 0.25;
 export const CARGO_BAY_GRID_ZOOM_MAX = 2.5;
 
 export function clampCargoBayGridZoom(value: number): number {
@@ -85,6 +100,12 @@ export function clampCargoBayGridZoom(value: number): number {
 
 function isCargoBayViewTab(value: unknown): value is CargoBayViewTab {
   return value === "top" || value === "iso" || value === "split";
+}
+
+function isCargoBaySplitOrientation(
+  value: unknown,
+): value is CargoBaySplitOrientation {
+  return value === "horizontal" || value === "vertical";
 }
 
 function isCargoBaySortingMode(value: unknown): value is CargoBaySortingMode {
@@ -230,6 +251,25 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
     viewTab: isCargoBayViewTab(record.viewTab)
       ? record.viewTab
       : DEFAULT_CARGO_BAY_CHROME_PREFS.viewTab,
+    splitOrientation: isCargoBaySplitOrientation(record.splitOrientation)
+      ? record.splitOrientation
+      : DEFAULT_CARGO_BAY_CHROME_PREFS.splitOrientation,
+    syncedZoom:
+      typeof record.syncedZoom === "boolean"
+        ? record.syncedZoom
+        : DEFAULT_CARGO_BAY_CHROME_PREFS.syncedZoom,
+    topZoomLocked:
+      typeof record.topZoomLocked === "boolean"
+        ? record.topZoomLocked
+        : typeof record.zoomLocked === "boolean"
+          ? record.zoomLocked
+          : DEFAULT_CARGO_BAY_CHROME_PREFS.topZoomLocked,
+    isoZoomLocked:
+      typeof record.isoZoomLocked === "boolean"
+        ? record.isoZoomLocked
+        : typeof record.zoomLocked === "boolean"
+          ? record.zoomLocked
+          : DEFAULT_CARGO_BAY_CHROME_PREFS.isoZoomLocked,
     sortingMode,
     lastAutoPackMode,
     prioritized:

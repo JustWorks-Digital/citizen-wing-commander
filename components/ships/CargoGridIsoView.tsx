@@ -759,7 +759,7 @@ export function CargoGridIsoView({
     onZoomChange ?? (() => undefined),
     {
       enabled: Boolean(onZoomChange),
-      min: 0.5,
+      min: 0.25,
       max: 2.5,
       step: 0.25,
     },
@@ -1125,7 +1125,7 @@ export function CargoGridIsoView({
   useLayoutEffect(() => {
     if (!fitZoomGetterRef) return;
     const FIT_PAD_PX = 8;
-    const ZOOM_MIN = 0.5;
+    const ZOOM_MIN = 0.25;
     const ZOOM_MAX = 2.5;
     fitZoomGetterRef.current = () => {
       const scrollEl = scrollRef.current;
@@ -1588,12 +1588,14 @@ export function CargoGridIsoView({
                 yawCenterY,
                 projectStyle,
               );
+          // Hide only when every Z of the crate is off — tall boxes that still
+          // intersect a visible layer stay (matches 2D slice visibility).
           const layerOff =
             !isFloor &&
             Array.from(
               { length: cube.footprint.dz },
               (_, offset) => cube.hz + offset,
-            ).some((z) => hiddenLayers.has(z));
+            ).every((z) => hiddenLayers.has(z));
           const isSelected =
             cube.kind === "cargo" &&
             !isHologram &&
@@ -1902,7 +1904,7 @@ export function CargoGridIsoView({
               Array.from(
                 { length: cube.footprint.dz },
                 (_, offset) => cube.hz + offset,
-              ).some((z) => hiddenLayers.has(z))
+              ).every((z) => hiddenLayers.has(z))
             ) {
               return null;
             }
