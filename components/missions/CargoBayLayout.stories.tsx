@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total + bay load; footer shows stop transfer SCU by cargo type. Optional All / Transfer scope, 2D/Split/3D tabs, Packing + Peel, Manual presets, height drag handle.",
+          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total + bay load; footer shows stop transfer SCU by cargo type. Optional All / Transfer scope, 2D/Split/3D tabs, Packing tile dropdown + Peel, Legend Settings Overlay (float vs push), Manual presets, height drag handle.",
       },
     },
   },

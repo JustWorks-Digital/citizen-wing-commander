@@ -38,7 +38,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stop cargo tiles: commodity icon top-left, SCU + name centered. Pickup tiles support skip and double-click SCU edit.",
+          "Stop cargo tiles: commodity icon top-left, SCU + name centered. Mission-card tile grids use 3 columns by default, 2 from lg (1024px) through 1149px, then 3 again from 1150px. Pickup tiles support skip and double-click SCU edit.",
       },
     },
   },

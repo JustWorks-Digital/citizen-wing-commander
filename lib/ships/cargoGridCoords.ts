@@ -65,7 +65,7 @@ export function cargoGridBounds(sketch: ShipCargoGridSketch): CargoGridBounds {
 export function cargoGridZoneStorageLocation(
   zone: CargoGridZone,
 ): CargoGridStorageLocation | null {
-  if (zone.kind !== "cargo") return null;
+  if (zone.kind !== "cargo" && zone.kind !== "overflow") return null;
   if (zone.storageLocation) return zone.storageLocation;
   switch (zone.id) {
     case "forward":
@@ -99,15 +99,20 @@ export function cargoGridZoneAtXY(
   x: number,
   y: number,
 ): CargoGridZone | null {
-  // Prefer cargo over empty/gap when rectangles overlap (shouldn’t, but be safe).
+  // Prefer cargo over overflow/empty/gap when rectangles overlap.
   const spans = cargoGridZoneSpans(sketch);
+  let overflow: CargoGridZone | null = null;
   let fallback: CargoGridZone | null = null;
   for (const span of spans) {
     if (!spanContainsXY(span, x, y)) continue;
     if (span.zone.kind === "cargo") return span.zone;
+    if (span.zone.kind === "overflow") {
+      overflow ??= span.zone;
+      continue;
+    }
     fallback ??= span.zone;
   }
-  return fallback;
+  return overflow ?? fallback;
 }
 
 export function isValidCargoGridCoord(
@@ -125,7 +130,9 @@ export function isValidCargoGridCoord(
   const spans = cargoGridZoneSpans(sketch);
   for (const span of spans) {
     if (!spanContainsXY(span, coord.x, coord.y)) continue;
-    if (span.zone.kind !== "cargo") return false;
+    if (span.zone.kind !== "cargo" && span.zone.kind !== "overflow") {
+      return false;
+    }
     return coord.z < span.zEnd;
   }
   return false;
@@ -137,7 +144,7 @@ export function cargoGridCellAt(
 ): CargoGridCell | null {
   if (!isValidCargoGridCoord(sketch, coord)) return null;
   const zone = cargoGridZoneAtXY(sketch, coord.x, coord.y);
-  if (!zone || zone.kind !== "cargo") return null;
+  if (!zone || (zone.kind !== "cargo" && zone.kind !== "overflow")) return null;
   return {
     coord,
     zoneId: zone.id,
@@ -145,13 +152,13 @@ export function cargoGridCellAt(
   };
 }
 
-/** All placeable 1 SCU cells (cargo zones only; gaps excluded). */
+/** All placeable 1 SCU cells (stable cargo + overflow; gaps excluded). */
 export function cargoGridEnumerateCells(
   sketch: ShipCargoGridSketch,
 ): CargoGridCell[] {
   const cells: CargoGridCell[] = [];
   for (const span of cargoGridZoneSpans(sketch)) {
-    if (span.zone.kind !== "cargo") continue;
+    if (span.zone.kind !== "cargo" && span.zone.kind !== "overflow") continue;
     const storageLocation = cargoGridZoneStorageLocation(span.zone);
     for (let x = span.xStart; x < span.xEnd; x += 1) {
       for (let y = span.yStart; y < span.yEnd; y += 1) {

@@ -12,6 +12,7 @@ import {
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { useSessionCargoBayLayoutWidth } from "@/hooks/useSessionCargoBayLayoutWidth";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 import {
   MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
@@ -25,6 +26,8 @@ import {
 export type SessionCargoLayoutModalProps = {
   open: boolean;
   rows: HaulingChecklistRow[];
+  /** Session contracts — Manual tray groups crates by mission. */
+  missions?: SessionMission[];
   shipSlug?: string | null;
   focusedStopId?: string | null;
   sessionId?: string | null;
@@ -41,6 +44,7 @@ export type SessionCargoLayoutModalProps = {
 export function SessionCargoLayoutModal({
   open,
   rows,
+  missions = [],
   shipSlug = null,
   focusedStopId = null,
   sessionId = null,
@@ -221,6 +225,7 @@ export function SessionCargoLayoutModal({
           </button>
           <CargoBayLayout
             rows={rows}
+            missions={missions}
             shipSlug={shipSlug}
             focusedStopId={focusedStopId}
             stopScope={stopScope}

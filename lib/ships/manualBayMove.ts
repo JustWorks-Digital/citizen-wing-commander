@@ -3,10 +3,17 @@
  * Z and footprint stay fixed; 3D reads the same placed boxes.
  */
 
+/** Drag payload MIME for Manual tray → 2D grid drops. */
+export const MANUAL_BAY_TRAY_MIME = "application/x-cwc-manual-bay-box";
+
 import {
   cargoGridZoneAtXY,
   type CargoGridCoord,
 } from "@/lib/ships/cargoGridCoords";
+import {
+  cargoBoxOrientations,
+  type CargoBoxScu,
+} from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
 import { applyManualBayPoses } from "@/lib/sessions/manualBayLayoutPrefs";
@@ -36,7 +43,31 @@ function occupiesCargoCell(
 ): boolean {
   if (coord.z < 0 || coord.z >= sketch.heightCells) return false;
   const zone = cargoGridZoneAtXY(sketch, coord.x, coord.y);
-  return zone != null && zone.kind === "cargo";
+  return (
+    zone != null && (zone.kind === "cargo" || zone.kind === "overflow")
+  );
+}
+
+function cellsClear(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  cells: CargoGridCoord[],
+  ignoreBoxId?: string,
+): boolean {
+  for (const cell of cells) {
+    if (!occupiesCargoCell(sketch, cell)) return false;
+  }
+  const occupied = new Set<string>();
+  for (const box of boxes) {
+    if (ignoreBoxId && box.id === ignoreBoxId) continue;
+    for (const cell of box.cells) {
+      occupied.add(`${cell.x},${cell.y},${cell.z}`);
+    }
+  }
+  for (const cell of cells) {
+    if (occupied.has(`${cell.x},${cell.y},${cell.z}`)) return false;
+  }
+  return true;
 }
 
 /** True when every footprint cell is in a cargo zone and clear of others. */
@@ -49,20 +80,7 @@ export function canPlaceManualBayBox(
   const moving = boxes.find((box) => box.id === boxId);
   if (!moving) return false;
   const nextCells = footprintCells(origin, moving.footprint);
-  for (const cell of nextCells) {
-    if (!occupiesCargoCell(sketch, cell)) return false;
-  }
-  const occupied = new Set<string>();
-  for (const box of boxes) {
-    if (box.id === boxId) continue;
-    for (const cell of box.cells) {
-      occupied.add(`${cell.x},${cell.y},${cell.z}`);
-    }
-  }
-  for (const cell of nextCells) {
-    if (occupied.has(`${cell.x},${cell.y},${cell.z}`)) return false;
-  }
-  return true;
+  return cellsClear(sketch, boxes, nextCells, boxId);
 }
 
 /**
@@ -85,4 +103,60 @@ export function tryMoveManualBayBox(
   };
   if (!canPlaceManualBayBox(sketch, boxes, boxId, origin)) return null;
   return applyManualBayPoses(boxes, [{ boxId, origin }]);
+}
+
+export type ManualBayAddBoxSpec = {
+  size: CargoBoxScu;
+  commoditySlug: string;
+  commodityName: string;
+  color: string | null;
+  color2: string | null;
+  missionId?: string | null;
+  action?: PlacedCargoBox["action"];
+  deliveryLocationSlug?: string;
+  deliveryLocationName?: string;
+};
+
+/** Remove one crate from the bay (returns to Manual tray demand). */
+export function tryRemoveManualBayBox(
+  boxes: PlacedCargoBox[],
+  boxId: string,
+): PlacedCargoBox[] | null {
+  if (!boxes.some((box) => box.id === boxId)) return null;
+  return boxes.filter((box) => box.id !== boxId);
+}
+
+/**
+ * Place a new crate from the Manual tray at `origin` (active Z from UI).
+ * Tries each orientation until one fits.
+ */
+export function tryAddManualBayBox(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  spec: ManualBayAddBoxSpec,
+  origin: CargoGridCoord,
+): PlacedCargoBox[] | null {
+  const orientations = cargoBoxOrientations(spec.size);
+  for (const footprint of orientations) {
+    const cells = footprintCells(origin, footprint);
+    if (!cellsClear(sketch, boxes, cells)) continue;
+    const id = `manual-${spec.commoditySlug}-${spec.size}-${origin.x}-${origin.y}-${origin.z}-${Date.now()}`;
+    const next: PlacedCargoBox = {
+      id,
+      size: spec.size,
+      origin: { ...origin },
+      footprint,
+      commoditySlug: spec.commoditySlug,
+      commodityName: spec.commodityName,
+      color: spec.color,
+      color2: spec.color2,
+      cells,
+      action: spec.action ?? "pickup",
+      missionId: spec.missionId ?? null,
+      deliveryLocationSlug: spec.deliveryLocationSlug,
+      deliveryLocationName: spec.deliveryLocationName,
+    };
+    return [...boxes, next];
+  }
+  return null;
 }

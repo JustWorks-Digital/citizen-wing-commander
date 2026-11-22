@@ -40,6 +40,11 @@ export type CargoBayAutoPackMode = Exclude<CargoBaySortingMode, "manual">;
 export type CargoBayChromePrefs = {
   legendHidden: boolean;
   sortingHidden: boolean;
+  /**
+   * When true, Packing / Legend float over the graph (absolute).
+   * When false, they dock beside it and shrink the grid.
+   */
+  sidePanelsOverlay: boolean;
   /** Cargo layout projection — default Split; survives modal close/reopen. */
   viewTab: CargoBayViewTab;
   /** Packing type (Suggested / Cargo type / Contract based / Manual). */
@@ -57,6 +62,7 @@ export type CargoBayChromePrefs = {
 export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   legendHidden: true,
   sortingHidden: true,
+  sidePanelsOverlay: true,
   viewTab: "split",
   sortingMode: "suggested",
   lastAutoPackMode: "suggested",
@@ -217,6 +223,10 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
       typeof record.sortingHidden === "boolean"
         ? record.sortingHidden
         : DEFAULT_CARGO_BAY_CHROME_PREFS.sortingHidden,
+    sidePanelsOverlay:
+      typeof record.sidePanelsOverlay === "boolean"
+        ? record.sidePanelsOverlay
+        : DEFAULT_CARGO_BAY_CHROME_PREFS.sidePanelsOverlay,
     viewTab: isCargoBayViewTab(record.viewTab)
       ? record.viewTab
       : DEFAULT_CARGO_BAY_CHROME_PREFS.viewTab,

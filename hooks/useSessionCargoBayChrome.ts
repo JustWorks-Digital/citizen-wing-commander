@@ -12,14 +12,16 @@ import {
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 
 /**
- * Per-session Legend / Packing visibility, packing type, 2D/Split/3D view,
- * and grid zooms in `localStorage`. Survives modal close/reopen.
+ * Per-session Legend / Packing visibility, overlay vs push side panels,
+ * packing type, 2D/Split/3D view, and grid zooms in `localStorage`.
+ * Survives modal close/reopen.
  */
 export function useSessionCargoBayChrome(
   sessionId: string | null | undefined,
 ): {
   legendHidden: boolean;
   sortingHidden: boolean;
+  sidePanelsOverlay: boolean;
   viewTab: CargoBayViewTab;
   sortingMode: CargoBaySortingMode;
   lastAutoPackMode: CargoBayAutoPackMode;
@@ -28,6 +30,7 @@ export function useSessionCargoBayChrome(
   isoZoom: number;
   setLegendHidden: (hidden: boolean) => void;
   setSortingHidden: (hidden: boolean) => void;
+  setSidePanelsOverlay: (overlay: boolean) => void;
   setViewTab: (tab: CargoBayViewTab) => void;
   setSortingMode: (mode: CargoBaySortingMode) => void;
   setLastAutoPackMode: (mode: CargoBayAutoPackMode) => void;
@@ -64,6 +67,13 @@ export function useSessionCargoBayChrome(
   const setSortingHidden = useCallback(
     (hidden: boolean) => {
       patchPrefs({ sortingHidden: hidden });
+    },
+    [patchPrefs],
+  );
+
+  const setSidePanelsOverlay = useCallback(
+    (overlay: boolean) => {
+      patchPrefs({ sidePanelsOverlay: overlay });
     },
     [patchPrefs],
   );
@@ -113,6 +123,7 @@ export function useSessionCargoBayChrome(
   return {
     legendHidden: prefs.legendHidden,
     sortingHidden: prefs.sortingHidden,
+    sidePanelsOverlay: prefs.sidePanelsOverlay,
     viewTab: prefs.viewTab,
     sortingMode: prefs.sortingMode,
     lastAutoPackMode: prefs.lastAutoPackMode,
@@ -121,6 +132,7 @@ export function useSessionCargoBayChrome(
     isoZoom: prefs.isoZoom,
     setLegendHidden,
     setSortingHidden,
+    setSidePanelsOverlay,
     setViewTab,
     setSortingMode,
     setLastAutoPackMode,

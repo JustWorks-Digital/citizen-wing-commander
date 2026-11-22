@@ -35,7 +35,10 @@ import {
   getShipBySlug,
   sumShipCargoScu,
 } from "@/lib/fixtures";
-import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
+import {
+  cargoGridOverflowScu,
+  getCargoGridSketchBySlug,
+} from "@/lib/ships/cargoGrids";
 import {
   applySessionCompletionTiming,
   areAllLegsComplete,
@@ -529,6 +532,11 @@ export function SessionChecklistView({
       if (typeof fromCatalog === "number") return total + fromCatalog;
       return total + (getShipBySlug(slug)?.cargoScu ?? 0);
     }, 0) ?? sumShipCargoScu(session.shipSlugs ?? []);
+  const overflowCapacity =
+    session.shipSlugs?.reduce((total, slug) => {
+      const sketch = getCargoGridSketchBySlug(slug);
+      return total + (sketch ? cargoGridOverflowScu(sketch) : 0);
+    }, 0) ?? 0;
   const onboardScu = cargoInventory.fromCompleted(session.rows);
   const peakScu = cargoInventory.peakOnboard(session.rows);
   const missionScuBreakdown = cargoInventory.missionBreakdown(
@@ -538,11 +546,17 @@ export function SessionChecklistView({
     session.missions,
     session.rows,
   );
+  const overflowScu =
+    overflowCapacity > 0 && totalCapacity > 0
+      ? Math.min(Math.max(0, peakScu - totalCapacity), overflowCapacity)
+      : 0;
   const isOverCapacity =
-    totalCapacity > 0 && onboardScu > totalCapacity;
-  /** Remaining bay for more missions vs planned peak load. */
+    totalCapacity > 0 && onboardScu > totalCapacity + overflowCapacity;
+  /** Remaining bay for more missions vs planned peak (stable + overflow). */
   const availableScu =
-    totalCapacity > 0 ? totalCapacity - peakScu : null;
+    totalCapacity > 0
+      ? totalCapacity + overflowCapacity - peakScu
+      : null;
   const totalLegs = session.rows.length;
   const completedLegs = session.rows.filter((row) => row.isCompleted).length;
   const isTripComplete = areAllLegsComplete(session.rows);
@@ -726,6 +740,8 @@ export function SessionChecklistView({
         totalCapacity={totalCapacity}
         availableScu={availableScu}
         isOverCapacity={isOverCapacity}
+        overflowScu={overflowScu}
+        overflowCapacity={overflowCapacity}
       />
     ),
     [
@@ -737,6 +753,8 @@ export function SessionChecklistView({
       totalCapacity,
       availableScu,
       isOverCapacity,
+      overflowScu,
+      overflowCapacity,
     ],
   );
 
@@ -1371,6 +1389,7 @@ export function SessionChecklistView({
       <SessionCargoLayoutModal
         open={cargoLayoutOpen}
         rows={session.rows}
+        missions={session.missions ?? []}
         shipSlug={selectedShipSlug}
         focusedStopId={resolvedFocusedStopId}
         sessionId={session.id}

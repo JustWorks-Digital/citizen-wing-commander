@@ -20,6 +20,7 @@ import {
   cargoGridTotalLength,
   cargoGridTotalScu,
   cargoGridZoneHeight,
+  cargoGridOverflowZoneScu,
   cargoGridZoneScu,
   cargoGridZoneSpans,
   cargoGridZoneWidth,
@@ -43,7 +44,9 @@ import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
+import { MANUAL_BAY_TRAY_MIME } from "@/lib/ships/manualBayMove";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
+import { cargoBaySidePanelClassName } from "./cargoBaySidePanel";
 import { CargoBoxCountIcons } from "./CargoBoxSizeIcon";
 import { CargoLegendSection } from "./CargoLegendSection";
 import {
@@ -212,6 +215,12 @@ export type CargoGridSketchProps = {
   hideLegend?: boolean;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
+  /**
+   * When true (default), Packing / Legend float over the grid.
+   * When false, they dock and shrink it. Controlled with `onSidePanelsOverlayChange`.
+   */
+  sidePanelsOverlay?: boolean;
+  onSidePanelsOverlayChange?: (overlay: boolean) => void;
   /** Hide Peel (e.g. parent hosts it next to Packing). */
   hidePeel?: boolean;
   /** Controlled peel; falls back to internal state when omitted. */
@@ -236,6 +245,14 @@ export type CargoGridSketchProps = {
     deltaCellsY: number,
   ) => void;
   onManualDragEnd?: () => void;
+  /**
+   * Manual tray drop onto a 2D cell (payload is JSON ManualBayAddBoxSpec).
+   * Enable with `manualTrayDrop`.
+   */
+  manualTrayDrop?: boolean;
+  onManualTrayDrop?: (coord: CargoGridCoord, payloadJson: string) => void;
+  /** Double-click a crate in Manual mode to return it to the tray. */
+  onManualBoxRemove?: (boxId: string) => void;
   /** Controlled 2D zoom (Split left). Falls back to internal state. */
   topZoom?: number;
   onTopZoomChange?: (zoom: number) => void;
@@ -256,6 +273,10 @@ function zoneFillClass(zone: CargoGridZone, cargoIndex: number): string {
   }
   if (zone.kind === "empty") {
     return "border-rsi-border/60 bg-rsi-bg-deep/30";
+  }
+  if (zone.kind === "overflow") {
+    // Unstable reserve — distinct from snapped cargo bays.
+    return "border-dashed border-rsi-warn/40 bg-rsi-warn/10";
   }
   return CARGO_ZONE_FILL[cargoIndex % CARGO_ZONE_FILL.length] ?? CARGO_ZONE_FILL[0];
 }
@@ -303,6 +324,8 @@ export function CargoGridSketch({
   isoToolbarBelow = null,
   hideLegend: hideLegendProp,
   legendToggleAbove = false,
+  sidePanelsOverlay: sidePanelsOverlayProp,
+  onSidePanelsOverlayChange,
   hidePeel = false,
   peelStack: peelStackProp,
   onPeelStackChange,
@@ -311,6 +334,9 @@ export function CargoGridSketch({
   onManualDragStart,
   onManualDragDelta,
   onManualDragEnd,
+  manualTrayDrop = false,
+  onManualTrayDrop,
+  onManualBoxRemove,
   topZoom: topZoomProp,
   onTopZoomChange,
   isoZoom: isoZoomProp,
@@ -331,6 +357,16 @@ export function CargoGridSketch({
   const [isoZoomInternal, setIsoZoomInternal] = useState(1);
   const topZoom = topZoomProp ?? topZoomInternal;
   const isoZoom = isoZoomProp ?? isoZoomInternal;
+  const [sidePanelsOverlayInternal, setSidePanelsOverlayInternal] =
+    useState(true);
+  const sidePanelsOverlay = sidePanelsOverlayProp ?? sidePanelsOverlayInternal;
+  const setSidePanelsOverlay = useCallback(
+    (overlay: boolean) => {
+      if (onSidePanelsOverlayChange) onSidePanelsOverlayChange(overlay);
+      else setSidePanelsOverlayInternal(overlay);
+    },
+    [onSidePanelsOverlayChange],
+  );
   const setTopZoom = useCallback(
     (next: number | ((value: number) => number)) => {
       const value =
@@ -599,10 +635,10 @@ export function CargoGridSketch({
       if (hiddenCommodities.has(box.commoditySlug)) return true;
       if (box.action != null && hiddenActions.has(box.action)) return true;
       if (locationLegendItems.length === 0) return false;
-      return (
-        box.deliveryLocationSlug == null ||
-        hiddenLocations.has(box.deliveryLocationSlug)
-      );
+      // Untagged crates stay visible (overflow re-pack must preserve slugs;
+      // null must not wipe the whole bay when a location legend exists).
+      if (box.deliveryLocationSlug == null) return false;
+      return hiddenLocations.has(box.deliveryLocationSlug);
     },
     [
       hiddenCommodities,
@@ -1114,6 +1150,12 @@ export function CargoGridSketch({
                 ariaLabel="Show barely visible ghosts of hidden crates"
               />
               <Switch
+                label="Overlay"
+                checked={sidePanelsOverlay}
+                onCheckedChange={setSidePanelsOverlay}
+                ariaLabel="Overlay Packing and Legend on the grid instead of pushing it"
+              />
+              <Switch
                 label="Mouse wheel zoom"
                 checked={wheelZoom}
                 onCheckedChange={setWheelZoom}
@@ -1268,12 +1310,16 @@ export function CargoGridSketch({
             isSplit
               ? "grid grid-cols-1 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50 sm:grid-cols-2"
               : "flex flex-col gap-4",
+            showSplitLegend && !sidePanelsOverlay ? "sm:pr-[17.5rem]" : "",
           ].join(" ")}
         >
           {showTop ? (
           <div
             className={[
-              "relative flex min-w-0 flex-col overflow-hidden p-3 pb-12 sm:pb-14",
+              "relative flex min-w-0 flex-col overflow-hidden pb-12 sm:pb-14",
+              showTopLegend && !sidePanelsOverlay
+                ? "pt-3 pr-[17.5rem] pl-3"
+                : "p-3",
               isSplit
                 ? "border-b border-rsi-border sm:border-r sm:border-b-0"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
@@ -1333,11 +1379,12 @@ export function CargoGridSketch({
             {showTopLegend ? (
               <div
                 ref={topLegendScrollRef}
-                className={[
-                  "pointer-events-auto absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
-                  topLegendScrollClassName,
-                  legendToggleAbove ? "top-8" : "top-2",
-                ].join(" ")}
+                className={cargoBaySidePanelClassName({
+                  overlay: true,
+                  side: "right",
+                  toggleAbove: legendToggleAbove,
+                  scrollClassName: topLegendScrollClassName,
+                })}
                 aria-label="Cargo color legend"
               >
                 {renderCargoLegendBody({
@@ -1554,11 +1601,14 @@ export function CargoGridSketch({
                         `${cell.x},${cell.y}`,
                       );
                       const canSelect = Boolean(onSelectCoord);
+                      const canTrayDrop = Boolean(
+                        manualTrayDrop && onManualTrayDrop,
+                      );
                       return (
                         <button
                           key={`${zone.id}-${cell.localIndex}`}
                           type="button"
-                          disabled={!canSelect}
+                          disabled={!canSelect && !canTrayDrop}
                           title={
                             tint
                               ? `${tint.action === "pickup" ? "Pickup · " : tint.action === "delivery" ? "Delivery · " : ""}${tint.commodityName} · ${formatCargoGridCoord({
@@ -1575,9 +1625,33 @@ export function CargoGridSketch({
                           onClick={() =>
                             selectCell({ x: cell.x, y: cell.y, z })
                           }
+                          onDragOver={
+                            canTrayDrop
+                              ? (event) => {
+                                  event.preventDefault();
+                                  event.dataTransfer.dropEffect = "copy";
+                                }
+                              : undefined
+                          }
+                          onDrop={
+                            canTrayDrop
+                              ? (event) => {
+                                  event.preventDefault();
+                                  const raw =
+                                    event.dataTransfer.getData(
+                                      MANUAL_BAY_TRAY_MIME,
+                                    );
+                                  if (!raw) return;
+                                  onManualTrayDrop?.(
+                                    { x: cell.x, y: cell.y, z },
+                                    raw,
+                                  );
+                                }
+                              : undefined
+                          }
                           className={[
                             "relative z-0 box-border border border-rsi-border-strong/70 bg-rsi-surface-sunken/30",
-                            canSelect
+                            canSelect || canTrayDrop
                               ? "cursor-pointer hover:bg-rsi-accent/25"
                               : "cursor-default",
                             isSelected
@@ -1801,6 +1875,15 @@ export function CargoGridSketch({
                               ? endManualDrag
                               : undefined
                           }
+                          onDoubleClick={
+                            manualEdit && !isHologram && onManualBoxRemove
+                              ? (event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  onManualBoxRemove(box.id);
+                                }
+                              : undefined
+                          }
                           className={[
                             "absolute box-border flex items-center justify-center overflow-hidden rounded-[2px] px-0.5",
                             isHologram
@@ -1883,7 +1966,7 @@ export function CargoGridSketch({
                 );
 
                 const zoneLabelText =
-                  zone.kind === "empty"
+                  zone.kind === "empty" || zone.kind === "overflow"
                     ? zone.label
                     : zoneOrdinalLabel(bayNumber);
 
@@ -1947,6 +2030,7 @@ export function CargoGridSketch({
                 embedded={isSplit}
                 hideLegend={isSplit || legendHidden}
                 legendToggleAbove={legendToggleAbove}
+                sidePanelsOverlay={sidePanelsOverlay}
                 hidePeel={isSplit || hidePeel}
                 peelStack={peelStack}
                 onPeelStackChange={setPeelStack}
@@ -1964,10 +2048,12 @@ export function CargoGridSketch({
           {showSplitLegend ? (
             <div
               ref={splitLegendScrollRef}
-              className={[
-                "pointer-events-auto absolute top-8 right-2 z-20 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
-                splitLegendScrollClassName,
-              ].join(" ")}
+              className={cargoBaySidePanelClassName({
+                overlay: true,
+                side: "right",
+                toggleAbove: legendToggleAbove,
+                scrollClassName: splitLegendScrollClassName,
+              })}
               style={{ maxHeight: Math.max(120, panelHeightPx - 40) }}
               aria-label="Cargo color legend"
             >
@@ -2004,19 +2090,24 @@ export function CargoGridSketch({
                   const zoneWidth = cargoGridZoneWidth(sketch, zone);
                   const zoneHeight = cargoGridZoneHeight(sketch, zone);
                   const scu = cargoGridZoneScu(sketch, zone);
+                  const overflowScu = cargoGridOverflowZoneScu(sketch, zone);
                   const kindNote =
                     zone.kind === "gap"
                       ? " (gap)"
                       : zone.kind === "empty"
                         ? " (empty)"
-                        : "";
+                        : zone.kind === "overflow"
+                          ? " (overflow)"
+                          : "";
                   return (
                     <li key={zone.id} className="tabular-nums">
                       {zone.label}
                       {kindNote}: {zoneWidth}×{zone.lengthCells}
                       {zone.kind === "cargo"
                         ? `×${zoneHeight} = ${scu} SCU`
-                        : " · 0 SCU"}
+                        : zone.kind === "overflow"
+                          ? `×${zoneHeight} = ${overflowScu} SCU unstable`
+                          : " · 0 SCU"}
                     </li>
                   );
                 })}

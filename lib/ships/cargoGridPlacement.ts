@@ -13,8 +13,8 @@ import {
 } from "@/lib/ships/cargoGridCoords";
 import {
   cargoGridMaxWidth,
+  cargoGridTotalScu,
   cargoGridZoneSpans,
-  cargoGridZoneWidth,
   type CargoGridStorageLocation,
   type ShipCargoGridSketch,
 } from "@/lib/ships/cargoGrids";
@@ -78,17 +78,42 @@ export type PlacedCargoBox = {
   deliveryLocationName?: string;
   /** 1-based delivery-order index for outlines / labels. */
   locationGroupIndex?: number;
+  /**
+   * True when this crate sits in an overflow/unstable zone (not ship SCU).
+   * Manual + packing may place excess here after stable bays fill.
+   */
+  isOverflow?: boolean;
 };
+
+export type CargoGridUnplacedBox = {
+  size: CargoBoxScu;
+  commoditySlug: string;
+  commodityName: string;
+  action?: CargoGridBoxAction;
+  deliveryLocationSlug?: string;
+  deliveryLocationName?: string;
+  locationGroupIndex?: number;
+  missionId?: string | null;
+};
+
+function unplacedFromItem(item: CargoPlacementItem): CargoGridUnplacedBox {
+  return {
+    size: item.size,
+    commoditySlug: item.commoditySlug,
+    commodityName: item.commodityName,
+    action: item.action,
+    deliveryLocationSlug: item.deliveryLocationSlug,
+    deliveryLocationName: item.deliveryLocationName,
+    locationGroupIndex: item.locationGroupIndex,
+    missionId: item.missionId,
+  };
+}
 
 export type CargoGridPlacementPlan = {
   zone: CargoGridStorageLocation;
   boxes: PlacedCargoBox[];
-  /** Cells that could not be placed (overflow). */
-  unplaced: Array<{
-    size: CargoBoxScu;
-    commoditySlug: string;
-    commodityName: string;
-  }>;
+  /** Cells that could not be placed (even after overflow zones). */
+  unplaced: CargoGridUnplacedBox[];
 };
 
 type ZoneBounds = {
@@ -117,59 +142,81 @@ function boundsForZoneEntry(
   return null;
 }
 
+function boundsFromSpan(span: {
+  xStart: number;
+  xEnd: number;
+  yStart: number;
+  yEnd: number;
+  zEnd: number;
+}): ZoneBounds {
+  return {
+    xStart: span.xStart,
+    xEnd: span.xEnd,
+    yStart: span.yStart,
+    yEnd: span.yEnd,
+    zEnd: span.zEnd,
+  };
+}
+
+function cargoZoneBoundsList(sketch: ShipCargoGridSketch): ZoneBounds[] {
+  const list: ZoneBounds[] = [];
+  for (const span of cargoGridZoneSpans(sketch)) {
+    if (span.zone.kind !== "cargo") continue;
+    list.push(boundsFromSpan(span));
+  }
+  return list;
+}
+
+/** Overflow/unstable bays — rear-most first so excess packs toward the ramp. */
+function overflowZoneBoundsList(sketch: ShipCargoGridSketch): ZoneBounds[] {
+  return cargoGridZoneSpans(sketch)
+    .filter((span) => span.zone.kind === "overflow")
+    .sort((a, b) => b.xStart - a.xStart || a.yStart - b.yStart)
+    .map((span) => boundsFromSpan(span));
+}
+
 /**
- * Resolve bay bounds for a coarse storage location.
- * Ships without that bay (e.g. C2 has no `middle`) fall back to another cargo
- * zone so crates still pack instead of all going to "no free space".
+ * Resolve packable bay bound(s) for a coarse storage location.
+ * Matching zones first. When the ship has no zone for that label (e.g. Galaxy /
+ * C2 with no `middle`), use **all** cargo zones so All-tab / peak loads can
+ * consume full bay SCU — not a single largest AABB (Galaxy used to collapse
+ * middle → Lift only = 144 SCU of 720).
  */
-function zoneBoundsForStorage(
+function zoneBoundsListForStorage(
   sketch: ShipCargoGridSketch,
   zone: CargoGridStorageLocation,
-): ZoneBounds | null {
+): ZoneBounds[] {
+  const matching: ZoneBounds[] = [];
   for (const span of cargoGridZoneSpans(sketch)) {
     if (
       span.zone.kind === "cargo" &&
       cargoGridZoneStorageLocation(span.zone) === zone
     ) {
-      return {
-        xStart: span.xStart,
-        xEnd: span.xEnd,
-        yStart: span.yStart,
-        yEnd: span.yEnd,
-        zEnd: span.zEnd,
-      };
+      matching.push(boundsFromSpan(span));
     }
   }
+  if (matching.length > 0) return matching;
 
-  // Fallback order when the requested bay isn't on this ship's grid.
-  const cargoZones = sketch.zones.filter((entry) => entry.kind === "cargo");
-  if (cargoZones.length === 0) return null;
+  // No zone with this storage label — pack across every cargo bay.
+  return cargoZoneBoundsList(sketch);
+}
 
-  const fallbackId = (() => {
-    if (zone === "middle") {
-      // Prefer a dedicated hold, else the largest bay (C2 → rear).
-      const hold = cargoZones.find((entry) => entry.id === "hold");
-      if (hold) return hold.id;
-      return [...cargoZones].sort(
-        (a, b) =>
-          cargoGridZoneWidth(sketch, b) * b.lengthCells -
-          cargoGridZoneWidth(sketch, a) * a.lengthCells,
-      )[0]!.id;
-    }
-    if (zone === "front") {
-      return (
-        cargoZones.find((entry) => entry.id === "forward" || entry.id === "hold")
-          ?.id ?? cargoZones[0]!.id
-      );
-    }
-    // rear
-    return (
-      cargoZones.find((entry) => entry.id === "rear" || entry.id === "hold")
-        ?.id ?? cargoZones[cargoZones.length - 1]!.id
-    );
-  })();
+/** First bay bounds for a storage label (compat / merge keys). */
+function zoneBoundsForStorage(
+  sketch: ShipCargoGridSketch,
+  zone: CargoGridStorageLocation,
+): ZoneBounds | null {
+  return zoneBoundsListForStorage(sketch, zone)[0] ?? null;
+}
 
-  return boundsForZoneEntry(sketch, fallbackId);
+function boundsListKey(boundsList: ZoneBounds[]): string {
+  if (boundsList.length === 0) return "missing";
+  return boundsList
+    .map(
+      (bounds) =>
+        `${bounds.xStart}:${bounds.xEnd}:${bounds.yStart}:${bounds.yEnd}:${bounds.zEnd}`,
+    )
+    .join("|");
 }
 
 function cellsForBox(
@@ -230,8 +277,10 @@ type FindSlotCluster = {
    */
   preferRegionStacking?: boolean;
   /**
-   * When the region already has cargo, only accept slots that touch it
-   * (side-by-side or stacked) so mission groups stay one contiguous blob.
+   * When the region already has cargo *in this bay*, only accept slots that
+   * touch it (side-by-side or stacked) so mission groups stay one contiguous
+   * blob. Disconnected cargo zones (Galaxy front lifts + rear hangars) may
+   * seed a second island of the same region.
    */
   requireRegionContiguity?: boolean;
   /**
@@ -503,6 +552,36 @@ function isOnPreferredBayEnd(
   return fx < bounds.xStart + depth;
 }
 
+/** True when any cell of this delivery region already sits inside `bounds`. */
+function regionOccupiesBounds(
+  bounds: ZoneBounds,
+  regionKey: string | undefined,
+  occupiedRegions: ReadonlyMap<string, string> | undefined,
+): boolean {
+  if (!regionKey || !occupiedRegions) return false;
+  for (const [key, region] of occupiedRegions) {
+    if (region !== regionKey) continue;
+    const [xRaw, yRaw, zRaw] = key.split(",");
+    const x = Number(xRaw);
+    const y = Number(yRaw);
+    const z = Number(zRaw);
+    if (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      Number.isFinite(z) &&
+      x >= bounds.xStart &&
+      x < bounds.xEnd &&
+      y >= bounds.yStart &&
+      y < bounds.yEnd &&
+      z >= 0 &&
+      z < bounds.zEnd
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Strong pull toward a chosen bay end for mission priority piles. */
 function bayEndScore(
   origin: CargoGridCoord,
@@ -754,8 +833,20 @@ function findSlot(
       c.affinity.vertical > 0 ||
       c.sameSupport > 0;
     if (requireRegionContiguity && hasRegion) {
-      pool = candidates.filter(touchesRegionPool);
-      if (pool.length === 0) return null;
+      const touching = candidates.filter(touchesRegionPool);
+      if (touching.length > 0) {
+        pool = touching;
+      } else if (
+        regionOccupiesBounds(
+          bounds,
+          cluster?.regionKey,
+          cluster?.occupiedRegions,
+        )
+      ) {
+        // Region is in this bay but no touching slot — stuck.
+        return null;
+      }
+      // Else: region only exists in another disconnected bay — seed island.
     }
     // New pile: seed on deck when possible (matches require/order z intent).
     if (!hasCluster) {
@@ -841,14 +932,12 @@ function findSlot(
 
   let pool = candidates;
 
-  // Mission groups must stay contiguous: once a location pile exists, every
-  // new crate for that location must touch it (side or stack). With a preferred
-  // bay end, fill that half (deck then stack up) before spilling mid-bay so
-  // later cargo-type packs still have deck room.
+  // Mission groups must stay contiguous *within a bay*: once a location pile
+  // exists here, every new crate for that location must touch it. When the
+  // same region only exists in another disconnected cargo zone (Galaxy multi-
+  // lift / hangar fallback), seed a new island on this bay's deck instead.
   if (requireRegionContiguity && hasRegion) {
     const touching = candidates.filter(touchesRegionPool);
-    if (touching.length === 0) return null;
-
     const preferBayEnd = cluster?.preferBayEnd;
     const onPreferredEnd =
       preferBayEnd != null
@@ -858,36 +947,62 @@ function findSlot(
     const preferred = (list: Candidate[]) =>
       onPreferredEnd != null ? list.filter((c) => onPreferredEnd(c)) : list;
 
-    const deckBeside = touching.filter((c) => besideOwnOnDeck(c));
-    const deckSpaced = deckBeside.filter((c) => spaced(c));
-    const identicalOwn = touching.filter(
-      (c) => c.identicalSizeStack && c.foreignSupport === 0,
-    );
-    const stackOwnCluster = touching.filter(
-      (c) =>
-        (c.identicalSizeStack || c.sameSupport > 0 || c.affinity.vertical > 0) &&
-        c.foreignSupport === 0,
-    );
-    const stackOwnRegion = touching.filter(
-      (c) => c.regionSupport > 0 && c.foreignSupport === 0,
-    );
-    const ownGroup = touching.filter(onOwnGroup);
+    if (touching.length === 0) {
+      if (
+        regionOccupiesBounds(
+          bounds,
+          cluster?.regionKey,
+          cluster?.occupiedRegions,
+        )
+      ) {
+        return null;
+      }
+      const preferredDeck =
+        onPreferredEnd != null
+          ? onDeckCandidates.filter((c) => onPreferredEnd(c))
+          : [];
+      pool = pickPool(
+        preferredDeck.filter((c) => spaced(c)),
+        preferredDeck,
+        onDeckCandidates.filter((c) => spaced(c)),
+        onDeckCandidates,
+        lowestElevated,
+        candidates,
+      );
+    } else {
+      const deckBeside = touching.filter((c) => besideOwnOnDeck(c));
+      const deckSpaced = deckBeside.filter((c) => spaced(c));
+      const identicalOwn = touching.filter(
+        (c) => c.identicalSizeStack && c.foreignSupport === 0,
+      );
+      const stackOwnCluster = touching.filter(
+        (c) =>
+          (c.identicalSizeStack ||
+            c.sameSupport > 0 ||
+            c.affinity.vertical > 0) &&
+          c.foreignSupport === 0,
+      );
+      const stackOwnRegion = touching.filter(
+        (c) => c.regionSupport > 0 && c.foreignSupport === 0,
+      );
+      const ownGroup = touching.filter(onOwnGroup);
 
-    pool = pickPool(
-      preferred(deckBeside),
-      preferred(deckSpaced),
-      preferred(identicalOwn),
-      preferred(stackOwnCluster),
-      preferred(stackOwnRegion),
-      preferred(ownGroup),
-      deckBeside,
-      deckSpaced,
-      identicalOwn,
-      stackOwnCluster,
-      stackOwnRegion,
-      ownGroup,
-      touching,
-    );
+      pool = pickPool(
+        preferred(deckBeside),
+        preferred(deckSpaced),
+        preferred(identicalOwn),
+        preferred(stackOwnCluster),
+        preferred(stackOwnRegion),
+        preferred(ownGroup),
+        deckBeside,
+        deckSpaced,
+        identicalOwn,
+        stackOwnCluster,
+        stackOwnRegion,
+        ownGroup,
+        touching,
+      );
+    }
 
     let bestTouch: Candidate | null = null;
     for (const candidate of pool) {
@@ -1042,6 +1157,8 @@ export type CargoPlacementItem = {
   deliveryLocationName?: string;
   /** 1-based delivery-order index for outlines / labels. */
   locationGroupIndex?: number;
+  /** Session mission this crate belongs to (manual tray grouping). */
+  missionId?: string | null;
 };
 
 /** How `placeCargoItemsInZone` orders clusters when `clusterByKey` is on. */
@@ -1157,7 +1274,7 @@ export function placeCargoItemsInZone(
   items: CargoPlacementItem[],
   options?: PlaceCargoInZoneOptions,
 ): CargoGridPlacementPlan {
-  const bounds = zoneBoundsForStorage(sketch, zone);
+  const boundsList = zoneBoundsListForStorage(sketch, zone);
   const boxes: PlacedCargoBox[] = [];
   const unplaced: CargoGridPlacementPlan["unplaced"] = [];
   const occupied = new Set<string>(
@@ -1173,13 +1290,9 @@ export function placeCargoItemsInZone(
   const occupiedRegions =
     options?.occupiedRegions ?? new Map<string, string>();
 
-  if (!bounds) {
+  if (boundsList.length === 0) {
     for (const item of items) {
-      unplaced.push({
-        size: item.size,
-        commoditySlug: item.commoditySlug,
-        commodityName: item.commodityName,
-      });
+      unplaced.push(unplacedFromItem(item));
     }
     return { zone, boxes, unplaced };
   }
@@ -1344,14 +1457,18 @@ export function placeCargoItemsInZone(
         : null;
     let placed = false;
     for (const footprint of cargoBoxOrientations(item.size)) {
-      const origin = findSlot(
-        bounds,
-        footprint,
-        occupied,
-        occupiedSizes,
-        zone,
-        cluster,
-      );
+      let origin: CargoGridCoord | null = null;
+      for (const bounds of boundsList) {
+        origin = findSlot(
+          bounds,
+          footprint,
+          occupied,
+          occupiedSizes,
+          zone,
+          cluster,
+        );
+        if (origin) break;
+      }
       if (!origin) continue;
       const cells = cellsForBox(origin, footprint);
       for (const cell of cells) {
@@ -1378,21 +1495,216 @@ export function placeCargoItemsInZone(
         deliveryLocationSlug: item.deliveryLocationSlug,
         deliveryLocationName: item.deliveryLocationName,
         locationGroupIndex: item.locationGroupIndex,
+        missionId: item.missionId,
       });
       index += 1;
       placed = true;
       break;
     }
     if (!placed) {
-      unplaced.push({
-        size: item.size,
-        commoditySlug: item.commoditySlug,
-        commodityName: item.commodityName,
-      });
+      unplaced.push(unplacedFromItem(item));
     }
   }
 
   return { zone, boxes, unplaced };
+}
+
+function placeItemsIntoBoundsList(
+  items: CargoPlacementItem[],
+  boundsList: ZoneBounds[],
+  occupiedSet: Set<string>,
+  occupiedSizes: Map<string, number>,
+  options: {
+    idNamespace: string;
+    storage: CargoGridStorageLocation;
+    isOverflow?: boolean;
+  },
+): { boxes: PlacedCargoBox[]; unplaced: CargoGridPlacementPlan["unplaced"] } {
+  const boxes: PlacedCargoBox[] = [];
+  const unplaced: CargoGridPlacementPlan["unplaced"] = [];
+  let index = 0;
+  for (const item of items) {
+    let placed = false;
+    for (const footprint of cargoBoxOrientations(item.size)) {
+      let origin: CargoGridCoord | null = null;
+      for (const bounds of boundsList) {
+        origin = findSlot(
+          bounds,
+          footprint,
+          occupiedSet,
+          occupiedSizes,
+          options.storage,
+          null,
+        );
+        if (origin) break;
+      }
+      if (!origin) continue;
+      const cells = cellsForBox(origin, footprint);
+      for (const cell of cells) {
+        const key = cargoGridCoordKey(cell);
+        occupiedSet.add(key);
+        occupiedSizes.set(key, item.size);
+      }
+      boxes.push({
+        id: `${options.idNamespace}-${index}-${item.size}-${item.commoditySlug}-${origin.x}-${origin.y}-${origin.z}`,
+        size: item.size,
+        origin,
+        footprint,
+        commoditySlug: item.commoditySlug,
+        commodityName: item.commodityName,
+        color: item.color,
+        color2: item.color2,
+        cells,
+        action: item.action ?? "pickup",
+        deliveryLocationSlug: item.deliveryLocationSlug,
+        deliveryLocationName: item.deliveryLocationName,
+        locationGroupIndex: item.locationGroupIndex,
+        missionId: item.missionId,
+        isOverflow: options.isOverflow,
+      });
+      index += 1;
+      placed = true;
+      break;
+    }
+    if (!placed) {
+      unplaced.push(unplacedFromItem(item));
+    }
+  }
+  return { boxes, unplaced };
+}
+
+function itemFromUnplaced(
+  entry: CargoGridUnplacedBox,
+  deliveryHints: readonly PlacedCargoBox[] = [],
+): CargoPlacementItem {
+  const hint =
+    entry.deliveryLocationSlug != null
+      ? null
+      : deliveryHints.find(
+          (box) =>
+            box.commoditySlug === entry.commoditySlug &&
+            box.deliveryLocationSlug != null,
+        );
+  return {
+    size: entry.size,
+    commoditySlug: entry.commoditySlug,
+    commodityName: entry.commodityName,
+    color: getCommodityBySlug(entry.commoditySlug)?.color ?? null,
+    color2: getCommodityBySlug(entry.commoditySlug)?.color2 ?? null,
+    action: entry.action ?? hint?.action,
+    deliveryLocationSlug:
+      entry.deliveryLocationSlug ?? hint?.deliveryLocationSlug,
+    deliveryLocationName:
+      entry.deliveryLocationName ?? hint?.deliveryLocationName,
+    locationGroupIndex:
+      entry.locationGroupIndex ?? hint?.locationGroupIndex,
+    missionId: entry.missionId ?? hint?.missionId,
+  };
+}
+
+function itemFromPlacedBox(box: PlacedCargoBox): CargoPlacementItem {
+  return {
+    size: box.size as CargoBoxScu,
+    commoditySlug: box.commoditySlug,
+    commodityName: box.commodityName,
+    color: box.color,
+    color2: box.color2,
+    action: box.action,
+    // Keep delivery tags through overflow re-pack — bay UI hides crates that
+    // lose their location slug when a location legend is present.
+    deliveryLocationSlug: box.deliveryLocationSlug,
+    deliveryLocationName: box.deliveryLocationName,
+    locationGroupIndex: box.locationGroupIndex,
+    missionId: box.missionId,
+  };
+}
+
+/**
+ * Prefer smallest crates for overflow so official capacity fills with the
+ * larger snapped boxes (e.g. 727 → 720 stable + 7 unstable).
+ */
+function carveOverflowItems(
+  items: CargoPlacementItem[],
+  excessScu: number,
+): { stable: CargoPlacementItem[]; overflow: CargoPlacementItem[] } {
+  if (excessScu <= 0) return { stable: items, overflow: [] };
+  const sorted = [...items].sort(
+    (a, b) =>
+      a.size - b.size || a.commoditySlug.localeCompare(b.commoditySlug),
+  );
+  const overflow: CargoPlacementItem[] = [];
+  const stable: CargoPlacementItem[] = [];
+  let need = excessScu;
+  for (const item of sorted) {
+    if (need > 0 && item.size <= need) {
+      overflow.push(item);
+      need -= item.size;
+    } else {
+      stable.push(item);
+    }
+  }
+  return { stable, overflow };
+}
+
+/**
+ * When the ship has overflow/unstable grids and demand exceeds official SCU,
+ * carve the excess into overflow and re-pack stable bays so snapped capacity
+ * fills first. Ships without overflow zones are unchanged.
+ */
+export function placeUnplacedInOverflow(
+  sketch: ShipCargoGridSketch,
+  plan: CargoGridPlacementPlan,
+): CargoGridPlacementPlan {
+  const overflowBounds = overflowZoneBoundsList(sketch);
+  const cargoBounds = cargoZoneBoundsList(sketch);
+  if (overflowBounds.length === 0) {
+    return plan;
+  }
+
+  const capacity = cargoGridTotalScu(sketch);
+  const allItems: CargoPlacementItem[] = [
+    ...plan.boxes.map(itemFromPlacedBox),
+    ...plan.unplaced.map((entry) => itemFromUnplaced(entry, plan.boxes)),
+  ];
+  const demand = allItems.reduce((sum, item) => sum + item.size, 0);
+  const excess = Math.max(0, demand - capacity);
+  if (excess === 0 && plan.unplaced.length === 0) {
+    return plan;
+  }
+
+  const { stable, overflow } = carveOverflowItems(allItems, excess);
+
+  const occupiedSet = new Set<string>();
+  const occupiedSizes = new Map<string, number>();
+  const stablePlaced = placeItemsIntoBoundsList(
+    // Largest first for dense stable fill.
+    [...stable].sort((a, b) => b.size - a.size),
+    cargoBounds,
+    occupiedSet,
+    occupiedSizes,
+    { idNamespace: "stable", storage: "rear", isOverflow: false },
+  );
+
+  // Anything that did not fit stable joins overflow reserve.
+  const overflowItems = [
+    ...overflow,
+    ...stablePlaced.unplaced.map((entry) =>
+      itemFromUnplaced(entry, plan.boxes),
+    ),
+  ];
+  const overflowPlaced = placeItemsIntoBoundsList(
+    [...overflowItems].sort((a, b) => b.size - a.size),
+    overflowBounds,
+    occupiedSet,
+    occupiedSizes,
+    { idNamespace: "overflow", storage: "rear", isOverflow: true },
+  );
+
+  return {
+    ...plan,
+    boxes: [...stablePlaced.boxes, ...overflowPlaced.boxes],
+    unplaced: overflowPlaced.unplaced,
+  };
 }
 
 /**
@@ -1748,7 +2060,9 @@ export function packSuggestedAtStop(
       occupied: occupiedCoords(),
       idNamespace: `onboard-${pickupSeq++}`,
     });
+    // Stamp mission so Manual tray can group identical cargo across contracts.
     for (const box of plan.boxes) {
+      box.missionId = cargo.missionId ?? null;
       for (const cell of box.cells) occupied.add(cargoGridCoordKey(cell));
     }
     if (plan.boxes.length > 0) {
@@ -1951,10 +2265,11 @@ function mergeItemsByResolvedBay(
   for (const storage of storageBayOrder) {
     const items = itemsByStorage.get(storage);
     if (!items || items.length === 0) continue;
-    const bounds = zoneBoundsForStorage(sketch, storage);
-    const key = bounds
-      ? `${bounds.xStart}:${bounds.xEnd}:${bounds.yStart}:${bounds.yEnd}:${bounds.zEnd}`
-      : `missing:${storage}`;
+    const boundsList = zoneBoundsListForStorage(sketch, storage);
+    const key =
+      boundsList.length > 0
+        ? boundsListKey(boundsList)
+        : `missing:${storage}`;
     const existing = merged.find((entry) => entry.key === key);
     if (existing) {
       existing.items.push(...items);
@@ -2480,7 +2795,7 @@ function consumeSoftOnboardLot(
  * Stay cargo (still aboard) has no `action`; transfer lines are tagged pickup/delivery.
  * Returns null when `rowId` is missing.
  */
-function collectSoftVisibleCargoAtStop(
+export function collectSoftVisibleCargoAtStop(
   rows: HaulingChecklistRow[],
   rowId: string,
   options?: { includeAboardCargo?: boolean },
@@ -2618,6 +2933,7 @@ export function packByCargoTypeAtStop(
           color2: segment.color2,
           action,
           missionRank,
+          missionId: cargo.missionId ?? null,
           ...meta,
         });
       }
@@ -2779,6 +3095,7 @@ export function packDeliveriesFromStop(
           deliveryLocationSlug: resolvedSlug || undefined,
           deliveryLocationName: resolvedSlug ? locationName : undefined,
           locationGroupIndex: locationGroupIndex || undefined,
+          missionId: cargo.missionId ?? null,
         });
       }
     }

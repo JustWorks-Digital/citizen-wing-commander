@@ -38,6 +38,7 @@ import {
   type LocationGroupBoxOutline,
 } from "@/lib/ships/locationGroupOutline";
 import type { CargoBoxFootprint } from "@/lib/ships/cargoBoxSizes";
+import { cargoBaySidePanelClassName } from "@/components/ships/cargoBaySidePanel";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
 import { CargoLegendSection } from "@/components/ships/CargoLegendSection";
 import {
@@ -128,6 +129,11 @@ export type CargoGridIsoViewProps = {
   hideLegend?: boolean;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
+  /**
+   * When true (default), legend floats over the grid.
+   * When false, legend docks beside the grid and shrinks it.
+   */
+  sidePanelsOverlay?: boolean;
   /** Hide Peel (e.g. host Peel on the split top panel). */
   hidePeel?: boolean;
   /** Controlled peel; falls back to internal state when omitted. */
@@ -537,8 +543,12 @@ function buildCubes(
     const zoneHeight = cargoGridZoneHeight(sketch, zone);
 
     if (mode === "placement") {
-      // Gaps stay empty. Cargo + empty hangar get a deck floor.
-      if (zone.kind === "cargo" || zone.kind === "empty") {
+      // Gaps stay empty. Cargo + empty/overflow hangar get a deck floor.
+      if (
+        zone.kind === "cargo" ||
+        zone.kind === "empty" ||
+        zone.kind === "overflow"
+      ) {
         for (let lx = 0; lx < zoneLength; lx += 1) {
           for (let wy = 0; wy < zoneWidth; wy += 1) {
             const coord = {
@@ -559,7 +569,7 @@ function buildCubes(
           }
         }
 
-        if (zone.kind !== "cargo") continue;
+        if (zone.kind !== "cargo" && zone.kind !== "overflow") continue;
 
         // Structured placement list (may be empty after location filters).
         // Do not fall back to highlightKeys — an empty filter must show no crates.
@@ -626,7 +636,11 @@ function buildCubes(
           }
         }
       }
-    } else if (zone.kind === "cargo" || zone.kind === "empty") {
+    } else if (
+      zone.kind === "cargo" ||
+      zone.kind === "empty" ||
+      zone.kind === "overflow"
+    ) {
       for (let lx = 0; lx < zoneLength; lx += 1) {
         for (let wy = 0; wy < zoneWidth; wy += 1) {
           for (let hz = 0; hz < zoneHeight; hz += 1) {
@@ -642,7 +656,10 @@ function buildCubes(
               wy: coord.y,
               hz,
               zoneId: zone.id,
-              kind: zone.kind === "empty" ? "floor" : "cargo",
+              kind:
+                zone.kind === "empty" || zone.kind === "overflow"
+                  ? "floor"
+                  : "cargo",
               footprint: UNIT_FOOTPRINT,
             });
           }
@@ -720,6 +737,7 @@ export function CargoGridIsoView({
   embedded = false,
   hideLegend = false,
   legendToggleAbove = false,
+  sidePanelsOverlay = true,
   hidePeel = false,
   peelStack: peelStackProp,
   onPeelStackChange,
@@ -1183,7 +1201,8 @@ export function CargoGridIsoView({
   return (
     <div
       className={[
-        "relative flex min-w-0 flex-col overflow-hidden px-3 pt-3 pb-12 sm:pb-14",
+        "relative flex min-w-0 flex-col overflow-hidden pt-3 pb-12 sm:pb-14",
+        showLegend && !sidePanelsOverlay ? "pr-[17.5rem] pl-3" : "px-3",
         embedded
           ? "h-full w-full bg-transparent"
           : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
@@ -1243,11 +1262,12 @@ export function CargoGridIsoView({
       {showLegend ? (
         <div
           ref={isoLegendScrollRef}
-          className={[
-            "pointer-events-auto absolute right-2 z-10 max-h-[calc(100%-3.5rem)] w-[16rem] space-y-1.5 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 px-2 py-1.5 shadow-rsi-panel",
-            isoLegendScrollClassName,
-            legendToggleAbove ? "top-8" : "top-2",
-          ].join(" ")}
+          className={cargoBaySidePanelClassName({
+            overlay: true,
+            side: "right",
+            toggleAbove: legendToggleAbove,
+            scrollClassName: isoLegendScrollClassName,
+          })}
           aria-label="Cargo color legend"
         >
           {showLocationKey ? (
@@ -1972,3 +1992,4 @@ export function CargoGridIsoView({
     </div>
   );
 }
+

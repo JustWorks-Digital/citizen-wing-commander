@@ -490,7 +490,7 @@ export function CargoCommodityTiles({
   const handledVerb = isPickup ? "picked up" : "delivered";
 
   return (
-    <div className="@container/cargo grid w-full grid-cols-3 gap-2 md:gap-2.5">
+    <div className="@container/cargo grid w-full grid-cols-3 gap-2 md:gap-2.5 lg:grid-cols-2 min-[1150px]:grid-cols-3">
       {items.map((line, index) => (
         <CargoCommodityTile
           key={`${row.id}-${role ?? "none"}-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`}

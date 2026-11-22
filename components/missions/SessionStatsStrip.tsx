@@ -569,6 +569,13 @@ export type SessionInventoryStatProps = {
    */
   availableScu: number | null;
   isOverCapacity?: boolean;
+  /**
+   * Unstable overflow SCU in use (past snapped ship capacity), when the ship
+   * has overflow grids. Separate from capacity; capacity + overflow = total bay.
+   */
+  overflowScu?: number;
+  /** Geometric overflow reserve capacity (0 when the ship has none). */
+  overflowCapacity?: number;
   className?: string;
 };
 
@@ -850,15 +857,25 @@ export function SessionInventoryStat({
   totalCapacity,
   availableScu,
   isOverCapacity = false,
+  overflowScu = 0,
+  overflowCapacity = 0,
   className,
   /** When false, omit the per-contract grid (render it separately in the footer). */
   showContractBreakdown = false,
 }: SessionInventoryStatProps & { showContractBreakdown?: boolean }) {
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
   const availableLabel = availableScu == null ? "—" : availableScu;
+  const bayWithOverflow =
+    totalCapacity > 0 ? totalCapacity + overflowCapacity : 0;
   const isPeakOverCapacity =
-    totalCapacity > 0 && peakScu > totalCapacity;
+    totalCapacity > 0 && peakScu > bayWithOverflow;
+  const isPeakUsingOverflow =
+    overflowCapacity > 0 &&
+    totalCapacity > 0 &&
+    peakScu > totalCapacity &&
+    peakScu <= bayWithOverflow;
   const isOverAvailable = availableScu != null && availableScu < 0;
+  const showOverflow = overflowCapacity > 0;
 
   return (
     <div
@@ -896,7 +913,7 @@ export function SessionInventoryStat({
       <div
         className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
-        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free`}
+        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free${showOverflow ? `, overflow ${overflowScu}` : ""}`}
       >
         <div className="flex w-fit flex-col justify-center gap-1 px-2 py-1 text-right">
           <InventoryLine
@@ -920,9 +937,28 @@ export function SessionInventoryStat({
             valueClassName={
               isPeakOverCapacity
                 ? "text-rsi-danger"
-                : "text-rsi-text tabular-nums"
+                : isPeakUsingOverflow
+                  ? "text-rsi-warn tabular-nums"
+                  : "text-rsi-text tabular-nums"
             }
           />
+          {showOverflow ? (
+            <InventoryLine
+              value={
+                <>
+                  <Fraction
+                    current={overflowScu}
+                    total={overflowCapacity}
+                    currentClassName={
+                      overflowScu > 0 ? "text-rsi-warn" : undefined
+                    }
+                  />
+                </>
+              }
+              label="overflow"
+              valueClassName="text-rsi-text tabular-nums"
+            />
+          ) : null}
           <InventoryLine
             value={availableLabel}
             label="free"

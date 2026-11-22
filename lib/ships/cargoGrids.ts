@@ -8,7 +8,7 @@
 
 import cargoGridsFixture from "@/lib/fixtures/cargoGrids.json";
 
-export type CargoGridZoneKind = "cargo" | "gap" | "empty";
+export type CargoGridZoneKind = "cargo" | "gap" | "empty" | "overflow";
 
 /** Coarse bay — mirrors checklist `ShipStorageLocation`. */
 export type CargoGridStorageLocation = "front" | "middle" | "rear";
@@ -38,14 +38,16 @@ export type CargoGridZone = {
    */
   yStartCells?: number;
   /**
-   * `cargo` counts toward SCU capacity and is packable.
+   * `cargo` counts toward SCU capacity and is packable (snapped grids).
    * `gap` is walkway / door / structure (not packable).
-   * `empty` draws a floor grid but is not packable and has 0 SCU (e.g. hangar).
+   * `empty` draws a floor grid but is not packable and has 0 SCU.
+   * `overflow` is packable unstable reserve — not counted in ship SCU total
+   * (e.g. Galaxy hangar floor). Crates here are low-risk loose storage.
    */
   kind: CargoGridZoneKind;
   /**
    * Coarse bay zone for checklist / path lines.
-   * Only meaningful when `kind` is `cargo`.
+   * Meaningful for `cargo` and `overflow`.
    */
   storageLocation?: CargoGridStorageLocation;
 };
@@ -113,6 +115,16 @@ export function getCargoGridViewScale(
 
 export function isCargoGridZone(zone: CargoGridZone): boolean {
   return zone.kind === "cargo";
+}
+
+/** Unstable reserve grids — packable but excluded from ship SCU capacity. */
+export function isOverflowGridZone(zone: CargoGridZone): boolean {
+  return zone.kind === "overflow";
+}
+
+/** Cells that can hold crates (stable cargo or overflow). */
+export function isPackableGridZone(zone: CargoGridZone): boolean {
+  return zone.kind === "cargo" || zone.kind === "overflow";
 }
 
 export function cargoGridZoneWidth(
@@ -193,7 +205,21 @@ export function cargoGridZoneScu(
   sketch: ShipCargoGridSketch,
   zone: CargoGridZone,
 ): number {
+  // Overflow is packable but never counted toward official ship capacity.
   if (zone.kind !== "cargo") return 0;
+  return (
+    cargoGridZoneWidth(sketch, zone) *
+    zone.lengthCells *
+    cargoGridZoneHeight(sketch, zone)
+  );
+}
+
+/** Geometric SCU of an overflow zone (unstable reserve; not in total). */
+export function cargoGridOverflowZoneScu(
+  sketch: ShipCargoGridSketch,
+  zone: CargoGridZone,
+): number {
+  if (zone.kind !== "overflow") return 0;
   return (
     cargoGridZoneWidth(sketch, zone) *
     zone.lengthCells *
@@ -204,6 +230,14 @@ export function cargoGridZoneScu(
 export function cargoGridTotalScu(sketch: ShipCargoGridSketch): number {
   return sketch.zones.reduce(
     (sum, zone) => sum + cargoGridZoneScu(sketch, zone),
+    0,
+  );
+}
+
+/** Sum of overflow/unstable reserve SCU (separate from `cargoGridTotalScu`). */
+export function cargoGridOverflowScu(sketch: ShipCargoGridSketch): number {
+  return sketch.zones.reduce(
+    (sum, zone) => sum + cargoGridOverflowZoneScu(sketch, zone),
     0,
   );
 }

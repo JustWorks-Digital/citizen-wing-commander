@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cargoGridOverflowScu,
+  cargoGridOverflowZoneScu,
   cargoGridTotalLength,
   cargoGridTotalScu,
   cargoGridZoneScu,
@@ -26,12 +28,17 @@ describe("RSI Galaxy cargo grid", () => {
     expect(cargoGridZoneScu(sketch!, byId["lift"]!)).toBe(144);
     expect(cargoGridZoneScu(sketch!, byId["hangar-l"]!)).toBe(32);
     expect(cargoGridZoneScu(sketch!, byId["hangar-r"]!)).toBe(32);
+    // Hangar floor is overflow/unstable — not in ship SCU total.
     expect(cargoGridZoneScu(sketch!, byId["hangar-wide"]!)).toBe(0);
     expect(cargoGridZoneScu(sketch!, byId["hangar-narrow"]!)).toBe(0);
+    expect(cargoGridOverflowZoneScu(sketch!, byId["hangar-wide"]!)).toBe(288);
+    expect(cargoGridOverflowZoneScu(sketch!, byId["hangar-narrow"]!)).toBe(144);
+    expect(cargoGridOverflowScu(sketch!)).toBe(432);
 
     const cargoZones = sketch!.zones.filter((zone) => zone.kind === "cargo");
     expect(cargoZones).toHaveLength(5);
     expect(byId["door"]?.kind).toBe("gap");
-    expect(byId["hangar-wide"]?.kind).toBe("empty");
+    expect(byId["hangar-wide"]?.kind).toBe("overflow");
+    expect(byId["hangar-narrow"]?.kind).toBe("overflow");
   });
 });

@@ -124,23 +124,25 @@
         },
         {
           "id": "hangar-narrow",
-          "label": "Hangar",
+          "label": "Hangar overflow",
           "lengthCells": 6,
           "widthCells": 6,
           "heightCells": 4,
           "xStartCells": 19,
           "yStartCells": 6,
-          "kind": "empty"
+          "kind": "overflow",
+          "storageLocation": "rear"
         },
         {
           "id": "hangar-wide",
-          "label": "Hangar",
+          "label": "Hangar overflow",
           "lengthCells": 6,
           "widthCells": 12,
           "heightCells": 4,
           "xStartCells": 25,
           "yStartCells": 3,
-          "kind": "empty"
+          "kind": "overflow",
+          "storageLocation": "rear"
         },
         {
           "id": "hangar-l",
@@ -166,7 +168,7 @@
         }
       ],
       "notes": [
-        "Cargo-module packable 720 SCU: Lift L/R 4×16×4 (256×2), Lift 6×12×2 (144), Hangar L/R 2×4×4 (32×2). Hangar floor is empty (not in 720): length 12 with width 12 on the rear half and 6 on the door half. Sketch height capped at 4 for now (hangar’s real 8-high stack deferred). Layout nose→ramp: Lift cluster (Lift L | 2-gap | Lift | 2-gap | Lift R), Door (3), Hangar."
+        "Cargo-module packable 720 SCU: Lift L/R 4×16×4 (256×2), Lift 6×12×2 (144), Hangar L/R 2×4×4 (32×2). Hangar floor is overflow/unstable (not in 720): length 12 with width 12 on the rear half and 6 on the door half — excess crates pack here after stable bays fill. Sketch height capped at 4 for now (hangar’s real 8-high stack deferred). Layout nose→ramp: Lift cluster (Lift L | 2-gap | Lift | 2-gap | Lift R), Door (3), Hangar."
       ]
     }
   ]

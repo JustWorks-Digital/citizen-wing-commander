@@ -10,6 +10,7 @@ import {
   packByCargoTypeAtStop,
   packDeliveriesFromStop,
   packSuggestedAtStop,
+  placeUnplacedInOverflow,
   type CargoBayPackMode,
   type CargoGridPlacementPlan,
 } from "@/lib/ships/cargoGridPlacement";
@@ -55,30 +56,33 @@ export const cargoBay = {
 
     const includeAboardCargo = options.includeAboardCargo;
 
+    let plan: CargoGridPlacementPlan;
     if (options.packProgram) {
-      return interpretCargoBayPackProgram(
+      plan = interpretCargoBayPackProgram(
         stopId,
         sketch,
         stops,
         options.packProgram,
         { includeAboardCargo },
       );
+    } else {
+      const packMode = options.packMode ?? defaultCargoBayPackMode;
+      const biasXyMode = options.missionPrioritized
+        ? (getShipBayPreferenceFixture(sketch.shipSlug).missionPriorityPacking
+            ?.bias ?? null)
+        : null;
+      const program = compilePackProgramForMode({
+        mode: packMode,
+        bays: packBaysFromSketch(sketch),
+        missionPrioritized: options.missionPrioritized,
+        biasXyMode,
+      });
+      plan = interpretCargoBayPackProgram(stopId, sketch, stops, program, {
+        includeAboardCargo,
+      });
     }
-
-    const packMode = options.packMode ?? defaultCargoBayPackMode;
-    const biasXyMode = options.missionPrioritized
-      ? (getShipBayPreferenceFixture(sketch.shipSlug).missionPriorityPacking
-          ?.bias ?? null)
-      : null;
-    const program = compilePackProgramForMode({
-      mode: packMode,
-      bays: packBaysFromSketch(sketch),
-      missionPrioritized: options.missionPrioritized,
-      biasXyMode,
-    });
-    return interpretCargoBayPackProgram(stopId, sketch, stops, program, {
-      includeAboardCargo,
-    });
+    // Excess beyond snapped ship SCU → overflow/unstable grids when present.
+    return placeUnplacedInOverflow(sketch, plan);
   },
 
   /** Suggested: chronological route-authored placement. */

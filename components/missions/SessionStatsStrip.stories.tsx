@@ -183,6 +183,21 @@ export const InventoryOverCapacity: Story = {
   ),
 };
 
+/** Galaxy-style: peak past snapped capacity, covered by unstable overflow. */
+export const InventoryWithOverflow: Story = {
+  render: () => (
+    <SessionInventoryStat
+      onboardScu={720}
+      peakScu={727}
+      missionsTotalScu={727}
+      totalCapacity={720}
+      availableScu={425}
+      overflowScu={7}
+      overflowCapacity={432}
+    />
+  ),
+};
+
 export const AllPieces: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-4">
