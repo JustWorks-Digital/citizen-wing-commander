@@ -100,7 +100,8 @@ export const ProgressRail: StoryObj<typeof ChecklistProgressRail> = {
         />
       </div>
       <div className="h-[28rem] flex-1 rounded-rsi border border-rsi-border bg-rsi-bg-deep/40 p-4 text-sm text-rsi-text-muted">
-        Checklist height stand-in (rail matches live in the app).
+        Checklist height stand-in (live rail caps to a high-water match so
+        collapsing the open stop does not shrink Stops).
       </div>
     </div>
   ),

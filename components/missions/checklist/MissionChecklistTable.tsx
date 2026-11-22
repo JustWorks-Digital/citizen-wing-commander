@@ -90,8 +90,6 @@ import { AddStopAfterButton, LocationHeader } from "./ChecklistLocationHeader";
 import {
   ChecklistProgressRail,
   ChecklistProgressTimeline,
-  CondensedStopRow,
-  CompletedStopHistoryRow,
   FinishRunTile,
   NextDistanceMeta,
   NextStopBridgeBand,
@@ -102,21 +100,20 @@ import { ChecklistStopsSkeleton } from "./ChecklistStopsSkeleton";
 import { QuantumTravelComposer } from "./QuantumTravelComposer";
 import { QuantumTravelRow } from "./QuantumTravelRow";
 import {
+  prefersReducedMotion,
+  StopBodyReveal,
+  STOP_COMPLETE_SPINNER_MS,
+  STOP_SLIDE_MS,
+  type StopBodyMotion,
+  type StopCompleteHandoff,
+} from "./StopCardTransition";
+import {
   TripCompleteSummaryPanel,
   type TripCompleteSummaryPanelProps,
 } from "@/components/missions/TripCompleteSummaryPanel";
 
 /** Display-only origin row when start ≠ first stop (matches route timeline). */
 export const QUANTUM_ORIGIN_ROW_ID = INSERT_AFTER_SESSION_START;
-
-/** Pinwheel in the Done checkbox before the checkmark commits. */
-const STOP_COMPLETE_SPINNER_MS = 900;
-/** Brief hold on the checkmark before advancing to the next stop. */
-const STOP_COMPLETE_CHECKMARK_HOLD_MS = 350;
-
-type StopCompleteHandoff = {
-  fromStopId: string;
-};
 
 export type MissionChecklistTripSummary = TripCompleteSummaryPanelProps;
 
@@ -387,6 +384,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const pendingScrollToIdRef = useRef<string | null>(null);
   const [completeHandoff, setCompleteHandoff] =
     useState<StopCompleteHandoff | null>(null);
+  /** User collapsed the active accordion tab (focus still tracks the stop). */
+  const [accordionCollapsed, setAccordionCollapsed] = useState(false);
   const handoffTimerRef = useRef<number | null>(null);
   /** Block history-strip Open after Done — click can retarget onto the strip. */
   const suppressHistoryOpenUntilRef = useRef(new Map<string, number>());
@@ -401,17 +400,12 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const completedCount =
     rows.filter((row) => row.isCompleted).length +
     (showQuantumOrigin && quantumCompleted ? 1 : 0);
-  // Keep the stop just completed visible during handoff (even if history is hidden).
-  const visibleRows = hideCompleted
-    ? displayRows.filter(
-        (row) =>
-          !row.isCompleted || row.id === completeHandoff?.fromStopId,
-      )
-    : displayRows;
-  const showQuantumInList =
-    showQuantumOrigin &&
-    (!(hideCompleted && quantumCompleted) ||
-      completeHandoff?.fromStopId === QUANTUM_ORIGIN_ROW_ID);
+  /**
+   * Accordion stack always keeps completed stops as history tabs + the current
+   * incomplete stop. `hideCompleted` only affects the Stops progress band —
+   * not this stack.
+   */
+  const visibleRows = displayRows;
   const canAddStops = Boolean(onInsertQuantumTravel);
 
   /** Keys: `missionId::commoditySlug::locationSlug` that can absorb a skip. */
@@ -535,7 +529,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   );
 
   /**
-   * Done click: pinwheel → checkmark (commit) → brief hold → advance focus.
+   * Done click: brief pinwheel → commit → simultaneous slide-up (leave) /
+   * slide-down (enter) into the next stop.
    */
   const scheduleAdvanceAfterComplete = useCallback(
     (
@@ -543,8 +538,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       nextIncomplete: HaulingChecklistRow | null | undefined,
       commit: () => void | Promise<void>,
     ) => {
+      const toStopId = nextIncomplete?.id ?? null;
       clearCompleteHandoffTimer();
-      setCompleteHandoff({ fromStopId });
+      setAccordionCollapsed(false);
+      setCompleteHandoff({ fromStopId, toStopId, phase: "spinning" });
       setCompleteHandoffPending(fromStopId, true);
       onFocusStop?.(fromStopId);
       handoffTimerRef.current = window.setTimeout(() => {
@@ -552,18 +549,32 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           .catch(() => undefined)
           .finally(() => {
             setCompleteHandoffPending(fromStopId, false);
-            handoffTimerRef.current = window.setTimeout(() => {
+            if (prefersReducedMotion() || !toStopId) {
               handoffTimerRef.current = null;
               setCompleteHandoff(null);
               startTransition(() => {
-                if (nextIncomplete) {
-                  pendingScrollToIdRef.current = nextIncomplete.id;
-                  onFocusStop?.(nextIncomplete.id);
+                if (toStopId) {
+                  pendingScrollToIdRef.current = toStopId;
+                  onFocusStop?.(toStopId);
                 } else {
                   onFocusStop?.(fromStopId);
                 }
               });
-            }, STOP_COMPLETE_CHECKMARK_HOLD_MS);
+              return;
+            }
+            setCompleteHandoff({
+              fromStopId,
+              toStopId,
+              phase: "sliding",
+            });
+            startTransition(() => {
+              pendingScrollToIdRef.current = toStopId;
+              onFocusStop?.(toStopId);
+            });
+            handoffTimerRef.current = window.setTimeout(() => {
+              handoffTimerRef.current = null;
+              setCompleteHandoff(null);
+            }, STOP_SLIDE_MS);
           });
       }, STOP_COMPLETE_SPINNER_MS);
     },
@@ -680,56 +691,152 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         (row) => row.id === openActiveId && row.isCompleted,
       ),
   );
-  const activeListRows = visibleRows.filter((row) => row.id === openActiveId);
+  /**
+   * Slim accordion tabs in delivery order — only which tab is open changes.
+   * During a slide, keep the leaving stop’s body mounted so it can slide up.
+   */
+  const handoffLeavingId =
+    completeHandoff?.phase === "sliding" && completeHandoff.fromStopId
+      ? completeHandoff.fromStopId
+      : null;
+  const handoffEnteringId =
+    completeHandoff?.phase === "sliding"
+      ? completeHandoff.toStopId
+      : null;
+  const openStopId = accordionCollapsed
+    ? null
+    : completeHandoff?.phase === "spinning"
+      ? completeHandoff.fromStopId
+      : completeHandoff?.phase === "sliding" && completeHandoff.toStopId
+        ? completeHandoff.toStopId
+        : openActiveId;
+
+  /** Collapse the open accordion (slide up); tabs stay in place. */
+  const collapseActiveAccordion = useCallback(() => {
+    const fromStopId =
+      (completeHandoff?.phase === "sliding" && completeHandoff.toStopId
+        ? completeHandoff.toStopId
+        : null) ?? openActiveId;
+    if (!fromStopId || accordionCollapsed) return;
+    if (prefersReducedMotion() || completeHandoff) {
+      clearCompleteHandoffTimer();
+      setCompleteHandoff(null);
+      setAccordionCollapsed(true);
+      return;
+    }
+    clearCompleteHandoffTimer();
+    setAccordionCollapsed(true);
+    setCompleteHandoff({
+      fromStopId,
+      toStopId: null,
+      phase: "sliding",
+    });
+    handoffTimerRef.current = window.setTimeout(() => {
+      handoffTimerRef.current = null;
+      setCompleteHandoff(null);
+    }, STOP_SLIDE_MS);
+  }, [
+    accordionCollapsed,
+    clearCompleteHandoffTimer,
+    completeHandoff,
+    openActiveId,
+  ]);
+
+  /** Tab click — same slide-up / slide-down between stops. */
+  const slideFocusToStop = useCallback(
+    (toStopId: string) => {
+      const wasCollapsed = accordionCollapsed;
+      setAccordionCollapsed(false);
+      if (wasCollapsed) {
+        if (prefersReducedMotion() || completeHandoff) {
+          clearCompleteHandoffTimer();
+          setCompleteHandoff(null);
+          onFocusStop?.(toStopId);
+          return;
+        }
+        // Re-open after collapse — slide down only (no leave id).
+        clearCompleteHandoffTimer();
+        setCompleteHandoff({
+          fromStopId: "",
+          toStopId,
+          phase: "sliding",
+        });
+        startTransition(() => {
+          pendingScrollToIdRef.current = toStopId;
+          onFocusStop?.(toStopId);
+        });
+        handoffTimerRef.current = window.setTimeout(() => {
+          handoffTimerRef.current = null;
+          setCompleteHandoff(null);
+        }, STOP_SLIDE_MS);
+        return;
+      }
+      const fromStopId = openActiveId;
+      if (!fromStopId || fromStopId === toStopId) {
+        onFocusStop?.(toStopId);
+        return;
+      }
+      if (prefersReducedMotion() || completeHandoff) {
+        clearCompleteHandoffTimer();
+        setCompleteHandoff(null);
+        onFocusStop?.(toStopId);
+        return;
+      }
+      clearCompleteHandoffTimer();
+      setCompleteHandoff({
+        fromStopId,
+        toStopId,
+        phase: "sliding",
+      });
+      startTransition(() => {
+        pendingScrollToIdRef.current = toStopId;
+        onFocusStop?.(toStopId);
+      });
+      handoffTimerRef.current = window.setTimeout(() => {
+        handoffTimerRef.current = null;
+        setCompleteHandoff(null);
+      }, STOP_SLIDE_MS);
+    },
+    [
+      accordionCollapsed,
+      clearCompleteHandoffTimer,
+      completeHandoff,
+      onFocusStop,
+      openActiveId,
+    ],
+  );
+  const showQuantumInList = showQuantumOrigin;
   type ChecklistListItem =
-    | { kind: "section"; band: "completed" | "active" }
+    | { kind: "progressSection" }
     | { kind: "completedBand" }
+    | { kind: "tripSummary" }
     | { kind: "quantum" }
-    | { kind: "stop"; row: (typeof visibleRows)[number] }
-    | { kind: "tripSummary" };
+    | { kind: "stop"; row: HaulingChecklistRow };
   const checklistListItems: ChecklistListItem[] = [];
-  const pushSection = (band: "completed" | "active") => {
-    checklistListItems.push({ kind: "section", band });
-  };
   const isTripComplete =
     displayRows.length > 0 && displayRows.every((row) => row.isCompleted);
   const showTripSummary = Boolean(isTripComplete && tripSummary);
-  // Keep the Stops rail after the last stop is done (even if history is hidden).
   const showProgressTimeline =
     displayRows.length > 0 && (isTripComplete || !hideCompleted);
 
   if (showProgressTimeline) {
-    pushSection("completed");
+    checklistListItems.push({ kind: "progressSection" });
     checklistListItems.push({ kind: "completedBand" });
   }
   if (showTripSummary) {
-    pushSection("active");
     checklistListItems.push({ kind: "tripSummary" });
-  } else if (
-    (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) ||
-    activeListRows.length > 0
-  ) {
-    pushSection("active");
-    if (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) {
+  } else {
+    if (showQuantumOrigin) {
       checklistListItems.push({ kind: "quantum" });
     }
-    for (const row of activeListRows) {
+    for (const row of displayRows) {
       checklistListItems.push({ kind: "stop", row });
     }
   }
 
-  const activeSectionLocationName = (() => {
-    if (showQuantumInList && openActiveId === QUANTUM_ORIGIN_ROW_ID) {
-      return startSlugTrimmed
-        ? (getLocationBySlug(startSlugTrimmed)?.name ?? startSlugTrimmed)
-        : null;
-    }
-    const openRow = activeListRows[0] ?? null;
-    if (!openRow) return null;
-    return (
-      getLocationBySlug(openRow.locationSlug)?.name ?? openRow.locationSlug
-    );
-  })();
+  const hasRouteContent = checklistListItems.some(
+    (item) => item.kind === "stop" || item.kind === "quantum",
+  );
 
   const completeQuantumOrigin = () => {
     const nextIncomplete =
@@ -983,93 +1090,42 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       ]
     : [];
   const onSelectProgressStop = (stopId: string) => {
-    onFocusStop?.(stopId);
-    pendingScrollToIdRef.current = stopId;
+    setExpandedCompletedRowId(null);
+    slideFocusToStop(stopId);
   };
 
-  const checklistBody = (
-    <ul className="flex flex-col">
-      {checklistListItems.length === 0 ? (
-        <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
-          {emptyMessage}
-        </li>
-      ) : null}
-      {checklistListItems.map((item) => {
-          if (item.kind === "section") {
-            const isProgressSection = item.band === "completed";
+  const monoLabelClass =
+    "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted";
+
+  const renderChecklistItem = (item: ChecklistListItem): ReactNode => {
+          if (item.kind === "progressSection") {
             const distanceCompact =
               distanceTotal || distanceTraveled
                 ? `${formatDistanceToNext(distanceTraveled, { compact: true })}/${formatDistanceToNext(distanceTotal, { compact: true })}`
                 : null;
-            const isLocationSection =
-              !isProgressSection && !showTripSummary;
-            const label = isProgressSection
-              ? null
-              : showTripSummary
-                ? "Summary"
-                : (activeSectionLocationName ?? "Current");
-            const monoLabelClass =
-              "font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted";
             return (
               <li
-                key={`section-${item.band}`}
-                className={[
-                  "border-b border-rsi-divider/60 bg-rsi-bg-deep/40",
-                  isProgressSection ? "lg:hidden" : "",
-                ].join(" ")}
+                key="section-progress"
+                className="border-b border-rsi-divider/60 bg-rsi-bg-deep/40 lg:hidden"
               >
                 <button
                   type="button"
-                  aria-controls={
-                    isProgressSection
-                      ? undefined
-                      : "checklist-current-stop"
-                  }
-                  title={isProgressSection ? "Open stops" : undefined}
-                  onClick={() => {
-                    if (isProgressSection) {
-                      onOpenStops?.();
-                    }
-                    // Location / Summary header is display-only (chevron stays).
-                  }}
+                  title="Open stops"
+                  onClick={() => onOpenStops?.()}
                   className={[
                     "flex w-full items-center gap-1.5 px-3 py-1.5 text-left",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-                    isProgressSection
-                      ? "hover:bg-rsi-surface-raised/30"
-                      : "cursor-default",
+                    "hover:bg-rsi-surface-raised/30",
                   ].join(" ")}
                 >
-                  {isLocationSection ? (
-                    <svg
-                      aria-hidden
-                      viewBox="0 0 20 20"
-                      className="size-3 shrink-0 rotate-90 text-rsi-text-muted"
-                      fill="currentColor"
-                    >
-                      <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
-                    </svg>
-                  ) : null}
-                  {isProgressSection ? (
-                    <span className={`flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 ${monoLabelClass}`}>
-                      <span>
-                        Stops: {progressDone}/{progressTotal}
-                      </span>
-                      {distanceCompact ? (
-                        <span>Distance: {distanceCompact}</span>
-                      ) : null}
+                  <span className={`flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 ${monoLabelClass}`}>
+                    <span>
+                      Stops: {progressDone}/{progressTotal}
                     </span>
-                  ) : (
-                    <span
-                      className={
-                        isLocationSection
-                          ? "truncate text-[0.7rem] font-medium text-rsi-text-secondary"
-                          : monoLabelClass
-                      }
-                    >
-                      {label}
-                    </span>
-                  )}
+                    {distanceCompact ? (
+                      <span>Distance: {distanceCompact}</span>
+                    ) : null}
+                  </span>
                 </button>
               </li>
             );
@@ -1106,10 +1162,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
 
           if (item.kind === "quantum") {
             if (!startSlugTrimmed || !quantumDestinationName) return null;
+            const quantumFocused = openStopId === QUANTUM_ORIGIN_ROW_ID;
             return (
               <Fragment key={QUANTUM_ORIGIN_ROW_ID}>
                 <QuantumTravelRow
-                  id="checklist-current-stop"
+                  id={quantumFocused ? "checklist-current-stop" : undefined}
                   rowId={QUANTUM_ORIGIN_ROW_ID}
                   fromSlug={startSlugTrimmed}
                   destinationSlug={firstStop?.locationSlug ?? null}
@@ -1184,6 +1241,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             );
           }
 
+          if (item.kind !== "stop") return null;
+
           const row = item.row;
           const locationFixture = getLocationBySlug(row.locationSlug);
           const location = locationFixture?.name ?? row.locationSlug;
@@ -1198,10 +1257,30 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             : null;
           const isCopied = copiedRowId === row.id;
           const step = stepById.get(row.id) ?? 0;
-          const isFocused = row.isCompleted
-            ? row.id === focusedStopId ||
-              expandedCompletedRowId === row.id
-            : row.id === openActiveId;
+          const isHandoffLeaving =
+            handoffLeavingId === row.id ||
+            (Boolean(completeHandoff?.fromStopId) &&
+              completeHandoff?.fromStopId === row.id &&
+              completeHandoff.phase === "spinning");
+          const isHandoffEntering = handoffEnteringId === row.id;
+          const isFocused =
+            isHandoffLeaving ||
+            (!accordionCollapsed &&
+              (row.isCompleted
+                ? row.id === focusedStopId ||
+                  expandedCompletedRowId === row.id
+                : row.id === openActiveId));
+          const showStopBody =
+            isFocused || isHandoffLeaving || isHandoffEntering;
+          const bodyMotion: StopBodyMotion = isHandoffLeaving
+            ? completeHandoff?.phase === "sliding"
+              ? "slide-up"
+              : "open"
+            : isHandoffEntering
+              ? "slide-down"
+              : isFocused
+                ? "open"
+                : "closed";
           const isPendingComplete = pendingCompleteRowIds.has(row.id);
           const isQuantumSaving = pendingQuantumRowIds.has(row.id);
           const isRowCargoPending = [...pendingCargoKeys].some((key) =>
@@ -1242,6 +1321,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               suppressHistoryOpenUntilRef.current.get(stopId) ?? 0;
             if (Date.now() < until) return;
             if (pendingCompleteRowIds.has(stopId)) return;
+            setAccordionCollapsed(false);
             setExpandedCompletedRowId(stopId);
             onFocusStop?.(stopId);
           };
@@ -1280,13 +1360,50 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             return hop ? formatDistanceToNext(hop) : null;
           })();
 
-          const focusUpcomingStop = () => {
+          const focusThisStop = () => {
             setExpandedCompletedRowId(null);
-            onFocusStop?.(row.id);
+            slideFocusToStop(row.id);
           };
 
-          // Upcoming stops stay condensed; only the active stop is fully open.
-          if (!row.isCompleted && !isFocused && !isQuantumTravelRow(row)) {
+          const stopAccordionTab = (isOpen: boolean) => (
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (isOpen) {
+                  collapseActiveAccordion();
+                  return;
+                }
+                focusThisStop();
+              }}
+              className={[
+                "flex w-full items-center gap-1.5 border-b border-rsi-divider/60 px-3 py-1.5 text-left",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+                !isOpen && row.isCompleted
+                  ? "bg-rsi-success-muted/45 hover:bg-rsi-success-muted/60"
+                  : "cursor-pointer bg-rsi-bg-deep/40 hover:bg-rsi-surface-raised/30",
+              ].join(" ")}
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 20 20"
+                className={[
+                  "size-3 shrink-0 text-rsi-text-muted transition-transform",
+                  isOpen ? "rotate-90" : "",
+                ].join(" ")}
+                fill="currentColor"
+              >
+                <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
+              </svg>
+              <span className="truncate text-[0.7rem] font-medium text-rsi-text-secondary">
+                {location}
+              </span>
+            </button>
+          );
+
+          // Closed tab — body only mounts while open or mid-slide.
+          if (!showStopBody && !isQuantumTravelRow(row)) {
             return (
               <Fragment key={row.id}>
                 <li
@@ -1294,24 +1411,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                     if (node) rowElsRef.current.set(row.id, node);
                     else rowElsRef.current.delete(row.id);
                   }}
-                  aria-checked={false}
+                  aria-checked={row.isCompleted}
                   aria-busy={isRowSectionBusy}
                   className="scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24"
-                  onClick={focusUpcomingStop}
                 >
-                  <CondensedStopRow
-                    location={location}
-                    step={step}
-                    routeAction={row.routeAction}
-                    scuTotal={sumCargoScu(row.cargoDeliveries)}
-                    hopLabel={condensedHopLabel}
-                    hopTitle={condensedHopTitle}
-                    isCompleted={false}
-                    isFocused={false}
-                    isPending={isPendingComplete}
-                    onToggle={toggleStopDone}
-                    onOpen={focusUpcomingStop}
-                  />
+                  {stopAccordionTab(false)}
                 </li>
                 {draftingAfterRowId === row.id ? draftComposer : null}
               </Fragment>
@@ -1414,88 +1518,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             ? (getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug)
             : null;
 
-          // Completed stops live in the completed chip band unless opened below.
-          if (
-            row.isCompleted &&
-            !isFocused &&
-            !hideCompleted &&
-            expandedCompletedRowId !== row.id
-          ) {
-            return (
-              <Fragment key={row.id}>
-                <li
-                  ref={(node) => {
-                    if (node) rowElsRef.current.set(row.id, node);
-                    else rowElsRef.current.delete(row.id);
-                  }}
-                  aria-checked
-                  aria-busy={isRowSectionBusy}
-                  aria-current={isFocused ? "step" : undefined}
-                  className="scroll-mt-20 border-b border-rsi-divider/80 sm:scroll-mt-24"
-                  onClick={() => onFocusStop?.(row.id)}
-                >
-                  <CompletedStopHistoryRow
-                    location={location}
-                    step={step}
-                    routeAction={row.routeAction}
-                    scuTotal={sumCargoScu(row.cargoDeliveries)}
-                    hopLabel={(() => {
-                      const hop =
-                        (nextLocationSlug
-                          ? distanceBetweenLocationSlugs(
-                              row.locationSlug,
-                              nextLocationSlug,
-                            )
-                          : null) ?? row.distanceToNext;
-                      if (!hop) return null;
-                      return (
-                        <>
-                          <span className="md:hidden">
-                            {formatDistanceToNext(hop, { compact: true })}
-                          </span>
-                          <span className="hidden md:inline">
-                            {formatDistanceToNext(hop)}
-                          </span>
-                        </>
-                      );
-                    })()}
-                    hopTitle={(() => {
-                      const hop =
-                        (nextLocationSlug
-                          ? distanceBetweenLocationSlugs(
-                              row.locationSlug,
-                              nextLocationSlug,
-                            )
-                          : null) ?? row.distanceToNext;
-                      return hop ? formatDistanceToNext(hop) : null;
-                    })()}
-                    isFocused={isFocused}
-                    isPending={isPendingComplete}
-                    onToggle={toggleStopDone}
-                    onOpen={() => openCompletedHistory(row.id)}
-                  />
-                  {bridgeNextDistance && nextRow ? (
-                    <NextStopBridgeBand
-                      row={row}
-                      nextLocationName={nextLocationName}
-                      nextLocationSlug={nextLocationSlug}
-                      shipSlug={shipSlug}
-                      bridgeRef={(node) => {
-                        if (node) bridgeElsRef.current.set(nextRow.id, node);
-                        else bridgeElsRef.current.delete(nextRow.id);
-                      }}
-                    />
-                  ) : null}
-                </li>
-                {draftingAfterRowId === row.id ? draftComposer : null}
-              </Fragment>
-            );
-          }
-
           return (
             <Fragment key={row.id}>
             <li
-              id="checklist-current-stop"
+              id={isFocused ? "checklist-current-stop" : undefined}
               ref={(node) => {
                 if (node) rowElsRef.current.set(row.id, node);
                 else rowElsRef.current.delete(row.id);
@@ -1507,8 +1533,9 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                 "flex scroll-mt-20 flex-col border-b border-rsi-divider/80 sm:scroll-mt-24",
                 checklistRowToneClass(row.isCompleted, isFocused),
               ].join(" ")}
-              onClick={() => onFocusStop?.(row.id)}
+              onClick={() => focusThisStop()}
             >
+              {stopAccordionTab(openStopId === row.id)}
               {historyHiddenBridge && prevRow ? (
                 <NextStopBridgeBand
                   row={prevRow}
@@ -1521,6 +1548,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                   }}
                 />
               ) : null}
+              <StopBodyReveal motion={bodyMotion}>
               <div className="flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1">
                 <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
@@ -1568,210 +1596,223 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                         )}
                       </div>
                     </div>
-                    <div className="mt-5 overflow-x-clip pb-5">
-                      <CargoGroups
-                        row={row}
-                        cargoLines={cargoLines}
-                        missions={missions}
-                        location={location}
-                        shipName={transferShipName}
-                        shipSlug={shipSlug}
-                        sessionId={sessionId}
-                        prioritizePickup={prioritizePickup}
-                        transferLedger={
-                          transferLedgerByStop.get(row.id) ?? null
-                        }
-                        pendingCargoKeys={pendingCargoKeys}
-                        onToggleCargoHandled={
-                          onToggleCargoHandled
-                            ? handleCargoToggle
-                            : undefined
-                        }
-                        onSkipPickup={
-                          onSkipPickupAtStop && !row.isCompleted
-                            ? (missionId, commoditySlug) => {
-                                const key = `${missionId}::${commoditySlug}::${row.locationSlug}`;
-                                if (pendingSkipPickupKeys.has(key)) return;
-                                if (
-                                  skippablePickupKeys &&
-                                  !skippablePickupKeys.has(key)
-                                ) {
-                                  return;
-                                }
-                                setPendingSkipPickupKeys((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(key);
-                                  return next;
-                                });
-                                void Promise.resolve(
-                                  onSkipPickupAtStop({
-                                    missionId,
-                                    commoditySlug,
-                                    locationSlug: row.locationSlug,
-                                  }),
-                                ).finally(() => {
+                      <div className="mt-5 overflow-x-clip pb-5">
+                        <CargoGroups
+                          row={row}
+                          cargoLines={cargoLines}
+                          missions={missions}
+                          location={location}
+                          shipName={transferShipName}
+                          shipSlug={shipSlug}
+                          sessionId={sessionId}
+                          prioritizePickup={prioritizePickup}
+                          transferLedger={
+                            transferLedgerByStop.get(row.id) ?? null
+                          }
+                          pendingCargoKeys={pendingCargoKeys}
+                          onToggleCargoHandled={
+                            onToggleCargoHandled
+                              ? handleCargoToggle
+                              : undefined
+                          }
+                          onSkipPickup={
+                            onSkipPickupAtStop && !row.isCompleted
+                              ? (missionId, commoditySlug) => {
+                                  const key = `${missionId}::${commoditySlug}::${row.locationSlug}`;
+                                  if (pendingSkipPickupKeys.has(key)) return;
+                                  if (
+                                    skippablePickupKeys &&
+                                    !skippablePickupKeys.has(key)
+                                  ) {
+                                    return;
+                                  }
                                   setPendingSkipPickupKeys((prev) => {
                                     const next = new Set(prev);
-                                    next.delete(key);
+                                    next.add(key);
                                     return next;
                                   });
-                                });
+                                  void Promise.resolve(
+                                    onSkipPickupAtStop({
+                                      missionId,
+                                      commoditySlug,
+                                      locationSlug: row.locationSlug,
+                                    }),
+                                  ).finally(() => {
+                                    setPendingSkipPickupKeys((prev) => {
+                                      const next = new Set(prev);
+                                      next.delete(key);
+                                      return next;
+                                    });
+                                  });
+                                }
+                              : undefined
+                          }
+                          canSkipPickup={
+                            onSkipPickupAtStop &&
+                            !row.isCompleted &&
+                            skippablePickupKeys
+                              ? (missionId, commoditySlug) =>
+                                  skippablePickupKeys.has(
+                                    `${missionId}::${commoditySlug}::${row.locationSlug}`,
+                                  )
+                              : undefined
+                          }
+                          pendingSkipPickupKeys={
+                            pendingSkipPickupKeys.size > 0
+                              ? pendingSkipPickupKeys
+                              : undefined
+                          }
+                          onAddPickup={
+                            onSetPickupScuAtStop && !row.isCompleted
+                              ? (missionId, commoditySlug, scu) => {
+                                  queueSetStopScuAtStop(
+                                    "pickup",
+                                    row.locationSlug,
+                                    missionId,
+                                    commoditySlug,
+                                    scu,
+                                  );
+                                }
+                              : undefined
+                          }
+                          pendingAddPickupKeys={
+                            pendingAddPickupKeys.size > 0
+                              ? pendingAddPickupKeys
+                              : undefined
+                          }
+                          onSetPickupScu={
+                            onSetPickupScuAtStop && !row.isCompleted
+                              ? (missionId, commoditySlug, scu) => {
+                                  queueSetStopScuAtStop(
+                                    "pickup",
+                                    row.locationSlug,
+                                    missionId,
+                                    commoditySlug,
+                                    scu,
+                                  );
+                                }
+                              : undefined
+                          }
+                          pendingSetPickupScuKeys={
+                            pendingAddPickupKeys.size > 0
+                              ? pendingAddPickupKeys
+                              : undefined
+                          }
+                          bayAside={(role) => (
+                            <StopDeliveryBayPreview
+                              row={row}
+                              rows={rows}
+                              missions={missions}
+                              role={role}
+                              onSetCargoRoleHandled={
+                                onSetCargoRoleHandled
+                                  ? (cargoRole, handled) => {
+                                      handleSetCargoRoleHandled(
+                                        row.id,
+                                        cargoRole,
+                                        handled,
+                                      );
+                                    }
+                                  : undefined
                               }
-                            : undefined
-                        }
-                        canSkipPickup={
-                          onSkipPickupAtStop &&
-                          !row.isCompleted &&
-                          skippablePickupKeys
-                            ? (missionId, commoditySlug) =>
-                                skippablePickupKeys.has(
-                                  `${missionId}::${commoditySlug}::${row.locationSlug}`,
-                                )
-                            : undefined
-                        }
-                        pendingSkipPickupKeys={
-                          pendingSkipPickupKeys.size > 0
-                            ? pendingSkipPickupKeys
-                            : undefined
-                        }
-                        onAddPickup={
-                          onSetPickupScuAtStop && !row.isCompleted
-                            ? (missionId, commoditySlug, scu) => {
-                                queueSetStopScuAtStop(
-                                  "pickup",
-                                  row.locationSlug,
-                                  missionId,
-                                  commoditySlug,
-                                  scu,
-                                );
-                              }
-                            : undefined
-                        }
-                        pendingAddPickupKeys={
-                          pendingAddPickupKeys.size > 0
-                            ? pendingAddPickupKeys
-                            : undefined
-                        }
-                        onSetPickupScu={
-                          onSetPickupScuAtStop && !row.isCompleted
-                            ? (missionId, commoditySlug, scu) => {
-                                queueSetStopScuAtStop(
-                                  "pickup",
-                                  row.locationSlug,
-                                  missionId,
-                                  commoditySlug,
-                                  scu,
-                                );
-                              }
-                            : undefined
-                        }
-                        pendingSetPickupScuKeys={
-                          pendingAddPickupKeys.size > 0
-                            ? pendingAddPickupKeys
-                            : undefined
-                        }
-                        bayAside={(role) => (
-                          <StopDeliveryBayPreview
-                            row={row}
-                            rows={rows}
-                            missions={missions}
-                            role={role}
-                            onSetCargoRoleHandled={
-                              onSetCargoRoleHandled
-                                ? (cargoRole, handled) => {
-                                    handleSetCargoRoleHandled(
-                                      row.id,
-                                      cargoRole,
-                                      handled,
-                                    );
-                                  }
-                                : undefined
-                            }
-                            pendingCargoRoleKeys={
-                              pendingCargoRoleKeys.size > 0
-                                ? new Set(
-                                    (["pickup", "delivery"] as const).filter(
-                                      (cargoRole) =>
+                              pendingCargoRoleKeys={
+                                pendingCargoRoleKeys.size > 0
+                                  ? new Set(
+                                      (
+                                        ["pickup", "delivery"] as const
+                                      ).filter((cargoRole) =>
                                         pendingCargoRoleKeys.has(
                                           cargoRolePendingKey(
                                             row.id,
                                             cargoRole,
                                           ),
                                         ),
-                                    ),
-                                  )
-                                : undefined
-                            }
-                            onEditMissionBoxes={
-                              onSelectBoxBreakdown
-                                ? (missionId: string) => {
-                                    const mission = missions.find(
-                                      (entry) => entry.id === missionId,
-                                    );
-                                    // Completed missions still open (modal is read-only).
-                                    if (!mission) return;
-                                    setBoxEditMissionId(missionId);
-                                  }
-                                : undefined
-                            }
-                            onSetPickupScu={
-                              onSetPickupScuAtStop && !row.isCompleted
-                                ? (missionId, commoditySlug, scu) => {
-                                    queueSetStopScuAtStop(
-                                      "pickup",
-                                      row.locationSlug,
-                                      missionId,
-                                      commoditySlug,
-                                      scu,
-                                    );
-                                  }
-                                : undefined
-                            }
-                            onSetDeliveryScu={
-                              onSetDeliveryScuAtStop && !row.isCompleted
-                                ? (missionId, commoditySlug, scu) => {
-                                    queueSetStopScuAtStop(
-                                      "delivery",
-                                      row.locationSlug,
-                                      missionId,
-                                      commoditySlug,
-                                      scu,
-                                    );
-                                  }
-                                : undefined
-                            }
-                            pendingSetStopScuKeys={
-                              pendingAddPickupKeys.size > 0
-                                ? pendingAddPickupKeys
-                                : undefined
-                            }
-                          />
-                        )}
-                      />
-                    </div>
-                    {/* Same lg split as transfer + pad so width matches Pick up / Drop off. */}
-                    <div className="mt-2 flex w-full min-w-0 flex-col lg:flex-row lg:gap-4">
-                      <div className="min-w-0 w-full lg:flex-1">
-                        <PayoutExpMeta
-                          row={row}
-                          completionAuec={completionAuec}
-                          approxXp={completionXp}
-                          completingMissionCount={expectedCompletions.length}
+                                      ),
+                                    )
+                                  : undefined
+                              }
+                              onEditMissionBoxes={
+                                onSelectBoxBreakdown
+                                  ? (missionId: string) => {
+                                      const mission = missions.find(
+                                        (entry) => entry.id === missionId,
+                                      );
+                                      // Completed missions still open (modal is read-only).
+                                      if (!mission) return;
+                                      setBoxEditMissionId(missionId);
+                                    }
+                                  : undefined
+                              }
+                              onSetPickupScu={
+                                onSetPickupScuAtStop && !row.isCompleted
+                                  ? (missionId, commoditySlug, scu) => {
+                                      queueSetStopScuAtStop(
+                                        "pickup",
+                                        row.locationSlug,
+                                        missionId,
+                                        commoditySlug,
+                                        scu,
+                                      );
+                                    }
+                                  : undefined
+                              }
+                              onSetDeliveryScu={
+                                onSetDeliveryScuAtStop && !row.isCompleted
+                                  ? (missionId, commoditySlug, scu) => {
+                                      queueSetStopScuAtStop(
+                                        "delivery",
+                                        row.locationSlug,
+                                        missionId,
+                                        commoditySlug,
+                                        scu,
+                                      );
+                                    }
+                                  : undefined
+                              }
+                              pendingSetStopScuKeys={
+                                pendingAddPickupKeys.size > 0
+                                  ? pendingAddPickupKeys
+                                  : undefined
+                              }
+                            />
+                          )}
                         />
                       </div>
-                      <div
-                        className="hidden lg:block lg:w-1/2 lg:shrink-0"
-                        aria-hidden
-                      />
-                    </div>
+                      {/* Same lg split as transfer + pad so width matches Pick up / Drop off. */}
+                      <div className="mt-2 flex w-full min-w-0 flex-col lg:flex-row lg:gap-4">
+                        <div className="min-w-0 w-full lg:flex-1">
+                          <PayoutExpMeta
+                            row={row}
+                            completionAuec={completionAuec}
+                            approxXp={completionXp}
+                            completingMissionCount={
+                              expectedCompletions.length
+                            }
+                          />
+                        </div>
+                        <div
+                          className="hidden lg:block lg:w-1/2 lg:shrink-0"
+                          aria-hidden
+                        />
+                      </div>
                 </div>
                 {addStopFooter(row.id)}
               </div>
+              </StopBodyReveal>
             </li>
             {draftingAfterRowId === row.id ? draftComposer : null}
             </Fragment>
           );
-        })}
+  };
+
+  const checklistBody = (
+    <ul className="flex flex-col">
+      {!hasRouteContent && !showTripSummary && !showProgressTimeline ? (
+        <li className="px-4 py-8 text-center text-sm text-rsi-text-muted">
+          {emptyMessage}
+        </li>
+      ) : null}
+      {checklistListItems.map((item) => renderChecklistItem(item))}
     </ul>
   );
 

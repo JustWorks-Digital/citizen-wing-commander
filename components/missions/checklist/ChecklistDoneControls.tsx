@@ -10,6 +10,7 @@ export function DoneCheckbox({
   isPending = false,
   compact = false,
   onToggle,
+  className,
 }: {
   location: string;
   step: number | string;
@@ -19,6 +20,7 @@ export function DoneCheckbox({
   /** Smaller circle + mark for condensed Done strips. */
   compact?: boolean;
   onToggle: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -47,9 +49,21 @@ export function DoneCheckbox({
           : isCompleted
             ? "border-rsi-success/50 bg-rsi-success-muted text-rsi-success"
             : isActive
-              ? "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-text hover:text-rsi-text"
-              : "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50 hover:border-rsi-border-strong hover:text-rsi-text",
-      ].join(" ")}
+              ? [
+                  "border-rsi-text-secondary/70 bg-rsi-bg-deep/40 text-rsi-text-secondary",
+                  "hover:border-rsi-text hover:text-rsi-text",
+                  // Shared hover with next-stop chevron trail (`group/done`).
+                  "group-hover/done:border-rsi-text group-hover/done:text-rsi-text",
+                ].join(" ")
+              : [
+                  "border-rsi-border bg-rsi-bg-deep/40 text-rsi-text-muted/50",
+                  "hover:border-rsi-border-strong hover:text-rsi-text",
+                  "group-hover/done:border-rsi-border-strong group-hover/done:text-rsi-text",
+                ].join(" "),
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {isPending ? (
         <Spinner className={compact ? "size-2.5" : "size-4"} />
@@ -59,7 +73,9 @@ export function DoneCheckbox({
           className={[
             "leading-none",
             compact ? "text-[0.65rem]" : "text-base",
-            isCompleted ? "" : "opacity-40 group-hover:opacity-100",
+            isCompleted
+              ? ""
+              : "opacity-40 group-hover:opacity-100 group-hover/done:opacity-100",
           ].join(" ")}
         >
           ✓

@@ -236,8 +236,10 @@ function ProgressRailChevron({ direction }: { direction: "up" | "down" }) {
 
 /**
  * Desktop Stops rail: sizes to timeline content, capped at the checklist
- * card height. Header opens the stops modal; when capped content overflows,
- * up/down snap to the next off-screen stop.
+ * card height. Cap only grows (high-water) so collapsing the open stop
+ * accordion does not shrink the rail to the short tab stack. Header opens
+ * the stops modal; when capped content overflows, up/down snap to the next
+ * off-screen stop.
  */
 export function ChecklistProgressRail({
   stops,
@@ -260,24 +262,34 @@ export function ChecklistProgressRail({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [maxRailHeight, setMaxRailHeight] = useState<number | null>(null);
+  const heightHighWaterRef = useRef(0);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const stopsSignature = stops.map((stop) => stop.id).join("\0");
+
+  useEffect(() => {
+    heightHighWaterRef.current = 0;
+    setMaxRailHeight(null);
+  }, [stopsSignature]);
 
   useEffect(() => {
     if (!matchHeightEl) {
+      heightHighWaterRef.current = 0;
       setMaxRailHeight(null);
       return;
     }
     const update = () => {
-      setMaxRailHeight(
-        Math.max(0, matchHeightEl.getBoundingClientRect().height),
-      );
+      const next = Math.max(0, matchHeightEl.getBoundingClientRect().height);
+      // Never shrink with the checklist — only raise the ceiling.
+      if (next <= heightHighWaterRef.current) return;
+      heightHighWaterRef.current = next;
+      setMaxRailHeight(next);
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(matchHeightEl);
     return () => observer.disconnect();
-  }, [matchHeightEl]);
+  }, [matchHeightEl, stopsSignature]);
 
   const refreshScrollState = useCallback(() => {
     const scroller = scrollRef.current;
@@ -891,10 +903,10 @@ export function NextDistanceMeta({
       : isActive
         ? "text-rsi-text-secondary opacity-40"
         : "text-rsi-text-muted/50 opacity-40";
-  // Incomplete DoneCheckbox hover → text-rsi-text + full opacity.
+  // Shared with DoneCheckbox via `group/done`.
   const chevronHoverTone =
     !isPending && !row.isCompleted
-      ? "peer-hover/done:text-rsi-text peer-hover/done:opacity-100"
+      ? "group-hover/done:text-rsi-text group-hover/done:opacity-100"
       : "";
 
   return (
@@ -920,43 +932,74 @@ export function NextDistanceMeta({
           <SpaceshipIcon className="h-3 w-5" />
         )}
       </span>
-      {/* peer/done = checkbox; chevrons follow its hover color. */}
+      {/* Checkbox + chevrons share hover; chevron click marks the stop done. */}
       <span
         className={[
-          "flex min-w-0 flex-1 items-center gap-2",
+          "group/done flex min-w-0 flex-1 items-center gap-2",
           isHeader ? "h-14 sm:h-16" : "h-16 sm:h-[4.5rem]",
         ].join(" ")}
       >
         {onToggle ? (
-          <span className="peer/done inline-flex shrink-0">
-            <DoneCheckbox
-              location={doneLocation}
-              step={doneStep}
-              isCompleted={row.isCompleted}
-              isActive={isActive}
-              isPending={isPending}
-              onToggle={onToggle}
-            />
-          </span>
+          <DoneCheckbox
+            location={doneLocation}
+            step={doneStep}
+            isCompleted={row.isCompleted}
+            isActive={isActive}
+            isPending={isPending}
+            onToggle={onToggle}
+          />
         ) : null}
-        <span
-          aria-hidden
-          title="Travel"
-          className={[
-            "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden transition-colors",
-            "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
-            "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
-            chevronTone,
-            chevronHoverTone,
-          ].join(" ")}
-        >
-          {Array.from({ length: 40 }, (_, index) => (
-            <TravelChevronIcon
-              key={index}
-              className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
-            />
-          ))}
-        </span>
+        {onToggle ? (
+          <button
+            type="button"
+            disabled={isPending}
+            aria-label={
+              isPending
+                ? `Stop ${doneStep}, updating: ${doneLocation}`
+                : `Stop ${doneStep}, mark done: ${doneLocation}`
+            }
+            title={isPending ? "Updating stop…" : "Mark this stop done"}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (isPending) return;
+              onToggle();
+            }}
+            className={[
+              "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden transition-colors",
+              "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+              isPending ? "cursor-wait" : "cursor-pointer",
+              chevronTone,
+              chevronHoverTone,
+            ].join(" ")}
+          >
+            {Array.from({ length: 40 }, (_, index) => (
+              <TravelChevronIcon
+                key={index}
+                className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
+              />
+            ))}
+          </button>
+        ) : (
+          <span
+            aria-hidden
+            title="Travel"
+            className={[
+              "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden",
+              "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              chevronTone,
+            ].join(" ")}
+          >
+            {Array.from({ length: 40 }, (_, index) => (
+              <TravelChevronIcon
+                key={index}
+                className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
+              />
+            ))}
+          </span>
+        )}
       </span>
       <div
         className={[
