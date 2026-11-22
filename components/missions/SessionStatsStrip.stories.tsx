@@ -202,6 +202,22 @@ export const InventoryWithOverflow: Story = {
   ),
 };
 
+/** Cargo bays modal: Current stays mission-progress; On grid is placed bay SCU. */
+export const InventoryWithOnGrid: Story = {
+  render: () => (
+    <SessionInventoryStat
+      onboardScu={0}
+      peakScu={727}
+      missionsTotalScu={727}
+      gridPlacedScu={727}
+      totalCapacity={720}
+      availableScu={425}
+      overflowScu={7}
+      overflowCapacity={432}
+    />
+  ),
+};
+
 export const AllPieces: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-4">

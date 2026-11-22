@@ -12,7 +12,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; left edge resizes width (persisted per trip). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total + bay load; footer shows stop transfer SCU by cargo type.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; left edge resizes width (persisted per trip). X sits in the mask above the panel (Esc / backdrop also dismiss). Header shows Contracts total, On grid (placed / capacity), and bay load; footer shows stop transfer SCU by cargo type.",
       },
     },
   },
@@ -29,11 +29,12 @@ export const Open: Story = {
     sessionId: mockSessionChecklist.id,
     focusedStopId: mockSessionChecklist.rows[0]?.id ?? null,
     onClose: () => {},
-    headerAside: (
+    headerAside: ({ gridPlacedScu }) => (
       <SessionInventoryStat
         onboardScu={24}
         peakScu={72}
         missionsTotalScu={144}
+        gridPlacedScu={gridPlacedScu}
         missionScuBreakdown={[]}
         sessionId={mockSessionChecklist.id}
         totalCapacity={696}

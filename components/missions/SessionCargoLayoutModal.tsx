@@ -31,8 +31,13 @@ export type SessionCargoLayoutModalProps = {
   shipSlug?: string | null;
   focusedStopId?: string | null;
   sessionId?: string | null;
-  /** Inventory / capacity aside shown beside the Cargo bays title. */
-  headerAside?: ReactNode;
+  /**
+   * Inventory / capacity aside beside the Cargo bays title.
+   * Render fn receives All-tab grid placed SCU for the On grid readout.
+   */
+  headerAside?:
+    | ReactNode
+    | ((ctx: { gridPlacedScu: number }) => ReactNode);
   onClose: () => void;
 };
 

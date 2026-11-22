@@ -787,12 +787,13 @@ export function SessionChecklistView({
   const openCargoLayout = useCallback(() => setCargoLayoutOpen(true), []);
   const closeCargoLayout = useCallback(() => setCargoLayoutOpen(false), []);
 
-  const inventoryAside = useMemo(
-    () => (
+  const inventoryAside = useCallback(
+    ({ gridPlacedScu }: { gridPlacedScu: number }) => (
       <SessionInventoryStat
         onboardScu={onboardScu}
         peakScu={peakScu}
         missionsTotalScu={missionsTotalScu}
+        gridPlacedScu={gridPlacedScu}
         missionScuBreakdown={missionScuBreakdown}
         sessionId={session.id}
         totalCapacity={totalCapacity}

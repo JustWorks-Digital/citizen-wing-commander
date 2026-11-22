@@ -97,8 +97,13 @@ export type CargoBayLayoutProps = {
   onStopScopeChange?: (scope: CargoBayStopScope) => void;
   /** Session UUID — scopes browser-local layout height prefs. */
   sessionId?: string | null;
-  /** Optional session stats — right of the Cargo bays title. */
-  headerAside?: ReactNode;
+  /**
+   * Optional session stats — right of the Cargo bays title.
+   * Pass a render fn to receive All-tab grid placed SCU (packing / Manual).
+   */
+  headerAside?:
+    | ReactNode
+    | ((ctx: { gridPlacedScu: number }) => ReactNode);
   className?: string;
 };
 
@@ -398,6 +403,19 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     }
     return workingBoxes;
   }, [stopScope, workingBoxes]);
+
+  /** All-tab bay contents (not Transfer-filtered) — header “On grid” SCU. */
+  const gridPlacedScu = useMemo(
+    () => workingBoxes.reduce((sum, box) => sum + box.size, 0),
+    [workingBoxes],
+  );
+
+  const headerAsideNode = useMemo(() => {
+    if (typeof headerAside === "function") {
+      return headerAside({ gridPlacedScu });
+    }
+    return headerAside;
+  }, [gridPlacedScu, headerAside]);
 
   const plan = useMemo(() => {
     if (!basePlan) return null;
@@ -990,8 +1008,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               </div>
             ) : null}
           </div>
-          {headerAside ? (
-            <div className="ml-auto min-w-0 shrink">{headerAside}</div>
+          {headerAsideNode ? (
+            <div className="ml-auto min-w-0 shrink">{headerAsideNode}</div>
           ) : null}
         </div>
       </div>

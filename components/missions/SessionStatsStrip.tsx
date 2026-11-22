@@ -614,6 +614,11 @@ export type SessionInventoryStatProps = {
   peakScu: number;
   /** Sum of cargo SCU across agreed contracts. */
   missionsTotalScu: number;
+  /**
+   * SCU actually placed on the All-tab bay grid (packing / Manual).
+   * Shown under Contracts total as placed / ship capacity. Omit to hide.
+   */
+  gridPlacedScu?: number | null;
   /** Per-mission SCU rows — optional beside Contracts total when showContractBreakdown. */
   missionScuBreakdown?: MissionScuBreakdownItem[];
   /** Session UUID — resolves contract screenshot URLs for the source icon. */
@@ -926,6 +931,7 @@ export function SessionInventoryStat({
   onboardScu,
   peakScu,
   missionsTotalScu,
+  gridPlacedScu = null,
   missionScuBreakdown = [],
   sessionId = null,
   totalCapacity,
@@ -949,6 +955,12 @@ export function SessionInventoryStat({
     peakScu > totalCapacity &&
     peakScu <= bayWithOverflow;
   const isOverAvailable = availableScu != null && availableScu < 0;
+  const showGridPlaced = gridPlacedScu != null;
+  const isGridOverCapacity =
+    showGridPlaced && totalCapacity > 0 && gridPlacedScu > totalCapacity;
+  const contractsAria = showGridPlaced
+    ? `Contracts total ${missionsTotalScu} SCU, on grid ${gridPlacedScu} of ${capacityLabel} SCU`
+    : `Contracts total ${missionsTotalScu} SCU`;
 
   return (
     <div
@@ -966,7 +978,7 @@ export function SessionInventoryStat({
       <div
         className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
-        aria-label={`Contracts total ${missionsTotalScu} SCU`}
+        aria-label={contractsAria}
       >
         <div className="flex w-fit flex-col items-end justify-center gap-0.5 px-2 py-1 text-right">
           <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
@@ -981,6 +993,32 @@ export function SessionInventoryStat({
               SCU
             </span>
           </p>
+          {showGridPlaced ? (
+            <>
+              <div
+                aria-hidden
+                className="my-1 w-full border-t border-rsi-border"
+              />
+              <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+                On grid
+              </p>
+              <p className="font-mono text-xs leading-none tabular-nums tracking-wide text-rsi-text">
+                <Fraction
+                  current={gridPlacedScu}
+                  total={capacityLabel}
+                  currentClassName={
+                    isGridOverCapacity ? "text-rsi-warn" : undefined
+                  }
+                />
+                <span
+                  className="ml-1.5 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+                  title={SCU_TITLE}
+                >
+                  SCU
+                </span>
+              </p>
+            </>
+          ) : null}
         </div>
       </div>
       <div
