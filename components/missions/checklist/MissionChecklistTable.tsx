@@ -374,6 +374,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       ? null
       : (missions.find((mission) => mission.id === boxEditMissionId) ?? null);
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
+  /** Slim accordion tab — scroll target after Done / focus. */
+  const accordionTabElsRef = useRef(new Map<string, HTMLElement>());
   /** Next stop transition band — keyed by destination stop id. */
   const bridgeElsRef = useRef(new Map<string, HTMLElement>());
   const stickyToolbarRef = useRef<HTMLDivElement | null>(null);
@@ -465,15 +467,50 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     const targetId = pendingScrollToIdRef.current;
     if (!targetId) return;
     pendingScrollToIdRef.current = null;
-    // Progress timeline selection only — land the opened stop under the sticky toolbar.
-    const el =
-      bridgeElsRef.current.get(targetId) ?? rowElsRef.current.get(targetId);
-    const sticky = stickyToolbarRef.current;
-    if (!el) return;
-    const stickyBottom = sticky?.getBoundingClientRect().bottom ?? 0;
-    const delta = el.getBoundingClientRect().top - stickyBottom;
-    if (Math.abs(delta) < 1) return;
-    window.scrollBy({ top: delta, behavior: "smooth" });
+    /** Gap under sticky toolbar so the accordion tab isn’t tucked under it. */
+    const STICKY_SCROLL_GAP_PX = 10;
+    // Wait for leave collapse — scrolling mid-slide aims at a lower tab and overshoots.
+    const waitForSlide =
+      completeHandoff?.phase === "sliding" ||
+      completeHandoff?.phase === "spinning";
+
+    const scrollToAccordionHeader = () => {
+      const el =
+        accordionTabElsRef.current.get(targetId) ??
+        rowElsRef.current.get(targetId);
+      const sticky = stickyToolbarRef.current;
+      if (!el) return;
+      const stickyBottom = sticky?.getBoundingClientRect().bottom ?? 0;
+      const top =
+        window.scrollY +
+        el.getBoundingClientRect().top -
+        stickyBottom -
+        STICKY_SCROLL_GAP_PX;
+      if (Math.abs(top - window.scrollY) < 1) return;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    };
+
+    let raf2 = 0;
+    let settleTimer = 0;
+    if (waitForSlide) {
+      settleTimer = window.setTimeout(
+        scrollToAccordionHeader,
+        STOP_SLIDE_MS + 32,
+      );
+    } else {
+      const raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(scrollToAccordionHeader);
+      });
+      return () => {
+        window.cancelAnimationFrame(raf1);
+        window.cancelAnimationFrame(raf2);
+      };
+    }
+    return () => {
+      window.clearTimeout(settleTimer);
+    };
+    // Intentionally omit completeHandoff — clearing handoff must not cancel the settle scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [rows, visibleRows, focusedStopId]);
 
   async function copyStarmapName(rowId: string, name: string) {
@@ -1369,6 +1406,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             <button
               type="button"
               aria-expanded={isOpen}
+              ref={(node) => {
+                if (node) accordionTabElsRef.current.set(row.id, node);
+                else accordionTabElsRef.current.delete(row.id);
+              }}
               onClick={(event) => {
                 event.stopPropagation();
                 if (isOpen) {
