@@ -89,6 +89,9 @@
 
   --radius-rsi: 0.125rem;
   --shadow-rsi-panel: 0 0 0 1px var(--rsi-border), 0 12px 40px rgba(0, 0, 0, 0.35);
+
+  /* Done checkbox travel chevrons — repeating L→R wave while hovered. */
+  --animate-rsi-done-chevron-wave: rsi-done-chevron-wave 2s linear infinite;
 }
 
 html {
@@ -108,6 +111,19 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--rsi-accent) 40%, transparent);
   color: var(--rsi-text);
+}
+
+@keyframes rsi-done-chevron-wave {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+  6% {
+    opacity: 1;
+  }
+  16% {
+    opacity: 0.32;
+  }
 }
 
 @keyframes sponsor-rise {

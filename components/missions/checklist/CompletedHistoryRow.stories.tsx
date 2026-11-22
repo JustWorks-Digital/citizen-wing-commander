@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import {
   ChecklistProgressRail,
   ChecklistProgressTimeline,
   CompletedStopHistoryRow,
   FinishRunTile,
+  NextDistanceMeta,
 } from "./CompletedHistoryRow";
 
 const meta = {
@@ -13,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline, and last-stop finish tile.",
+          "Completed history strip, progress timeline, last-stop finish tile, and next-stop Done trail (hover waves chevrons L→R while held).",
       },
     },
   },
@@ -201,5 +203,33 @@ export const FinishRunCompleted: StoryObj<typeof FinishRunTile> = {
     isPending: false,
     onToggle: () => {},
     onOpenSummary: () => {},
+  },
+};
+
+const nextStopRow = {
+  id: "leg-1",
+  locationSlug: "everus-harbor",
+  isCompleted: false,
+  distanceToNext: null,
+} as HaulingChecklistRow;
+
+/** Hover the Done checkbox — chevrons pulse left→right in a loop. */
+export const DoneChevronWave: StoryObj<typeof NextDistanceMeta> = {
+  render: (args) => (
+    <div className="rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 py-2">
+      <NextDistanceMeta {...args} />
+    </div>
+  ),
+  args: {
+    row: nextStopRow,
+    nextLocationName: "Covalex Distribution Centre S1DC06",
+    nextLocationSlug: "covalex-distribution-centre-s1dc06",
+    shipSlug: "galaxy",
+    variant: "header",
+    locationLabel: "Everus Harbor",
+    step: 1,
+    isActive: true,
+    isPending: false,
+    onToggle: () => {},
   },
 };

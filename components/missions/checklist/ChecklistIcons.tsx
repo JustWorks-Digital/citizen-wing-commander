@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export function CopyIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -77,13 +79,20 @@ export function SpaceshipIcon({ className }: { className?: string }) {
 }
 
 /** Single chevron pointing right — used to fill travel gaps. */
-export function TravelChevronIcon({ className }: { className?: string }) {
+export function TravelChevronIcon({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
     <svg
       aria-hidden
       viewBox="0 0 8 16"
       fill="none"
       className={className}
+      style={style}
       xmlns="http://www.w3.org/2000/svg"
     >
       <path

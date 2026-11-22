@@ -901,13 +901,10 @@ export function NextDistanceMeta({
     : row.isCompleted
       ? "text-rsi-success"
       : isActive
-        ? "text-rsi-text-secondary opacity-40"
-        : "text-rsi-text-muted/50 opacity-40";
-  // Shared with DoneCheckbox via `group/done`.
-  const chevronHoverTone =
-    !isPending && !row.isCompleted
-      ? "group-hover/done:text-rsi-text group-hover/done:opacity-100"
-      : "";
+        ? "text-rsi-text-secondary"
+        : "text-rsi-text-muted/50";
+  /** Stagger inactive→active on Done hover (left→right travel wave). */
+  const chevronWave = !isPending && !row.isCompleted;
 
   return (
     <div className={shellClass}>
@@ -965,19 +962,28 @@ export function NextDistanceMeta({
               onToggle();
             }}
             className={[
-              "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden transition-colors",
+              "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden",
               "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
               "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
               isPending ? "cursor-wait" : "cursor-pointer",
               chevronTone,
-              chevronHoverTone,
             ].join(" ")}
           >
             {Array.from({ length: 40 }, (_, index) => (
               <TravelChevronIcon
                 key={index}
-                className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
+                className={[
+                  "h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5",
+                  chevronWave
+                    ? "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                    : "",
+                ].join(" ")}
+                style={
+                  chevronWave
+                    ? { animationDelay: `${index * 50}ms` }
+                    : undefined
+                }
               />
             ))}
           </button>
@@ -995,7 +1001,17 @@ export function NextDistanceMeta({
             {Array.from({ length: 40 }, (_, index) => (
               <TravelChevronIcon
                 key={index}
-                className="h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5"
+                className={[
+                  "h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5",
+                  chevronWave
+                    ? "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                    : "",
+                ].join(" ")}
+                style={
+                  chevronWave
+                    ? { animationDelay: `${index * 50}ms` }
+                    : undefined
+                }
               />
             ))}
           </span>
