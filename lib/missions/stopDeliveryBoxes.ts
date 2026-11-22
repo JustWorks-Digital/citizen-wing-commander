@@ -69,6 +69,12 @@ function matchesCargoRole(
   return row.routeAction === "delivery" || row.routeAction === "pickup_delivery";
 }
 
+function cargoLineScu(
+  cargo: HaulingChecklistRow["cargoDeliveries"][number],
+): number {
+  return Math.max(0, Math.floor(Number(cargo.scu) || 0));
+}
+
 /** Pickup / delivery lines on a stop (same rules as pad stacking). */
 export const stopCargoRole = {
   lines(
@@ -79,8 +85,25 @@ export const stopCargoRole = {
       matchesCargoRole(row, role, cargo.role),
     );
   },
+  /**
+   * Cargo types the player can mark on tiles / collapsed checkboxes
+   * (skips 0 SCU leftover lines that aren’t shown).
+   */
+  activeLines(
+    row: HaulingChecklistRow,
+    role: "pickup" | "delivery",
+  ): HaulingChecklistRow["cargoDeliveries"] {
+    return stopCargoRole
+      .lines(row, role)
+      .filter((cargo) => cargoLineScu(cargo) > 0);
+  },
+  /**
+   * Picked up / Dropped off — true once every active (SCU > 0) cargo
+   * type for the role is handled. Checking the last tile/checkbox lights
+   * the role mark without requiring a separate header click.
+   */
   isHandled(row: HaulingChecklistRow, role: "pickup" | "delivery"): boolean {
-    const lines = stopCargoRole.lines(row, role);
+    const lines = stopCargoRole.activeLines(row, role);
     return lines.length > 0 && lines.every((cargo) => cargo.isHandled === true);
   },
   withHandled(
@@ -102,8 +125,8 @@ export const stopCargoRole = {
    * Pickup-only / delivery-only → that one role; both → pickup and delivery.
    */
   arePresentRolesHandled(row: HaulingChecklistRow): boolean {
-    const hasPickup = stopCargoRole.lines(row, "pickup").length > 0;
-    const hasDelivery = stopCargoRole.lines(row, "delivery").length > 0;
+    const hasPickup = stopCargoRole.activeLines(row, "pickup").length > 0;
+    const hasDelivery = stopCargoRole.activeLines(row, "delivery").length > 0;
     if (!hasPickup && !hasDelivery) return false;
     if (hasPickup && !stopCargoRole.isHandled(row, "pickup")) return false;
     if (hasDelivery && !stopCargoRole.isHandled(row, "delivery")) return false;

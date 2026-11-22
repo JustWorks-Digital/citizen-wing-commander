@@ -1072,21 +1072,13 @@ export function CargoGroups({
 
   const [activeRole, setActiveRole] = useState<"pickup" | "delivery">(roleDefault);
 
+  // Only coerce the tab when a role section disappears — finishing Pickup /
+  // Drop off (last cargo checkbox or graph mark) must not jump tabs.
   useEffect(() => {
     if (!showRoleTabs) {
       setActiveRole(hasPickupSection ? "pickup" : "delivery");
-      return;
     }
-    if (deliveryHandled && !pickupHandled) setActiveRole("pickup");
-    else if (pickupHandled && !deliveryHandled) setActiveRole("delivery");
-    else setActiveRole(preferredRole);
-  }, [
-    showRoleTabs,
-    hasPickupSection,
-    deliveryHandled,
-    pickupHandled,
-    preferredRole,
-  ]);
+  }, [showRoleTabs, hasPickupSection]);
 
   const cargoPanelsRef = useRef<HTMLDivElement | null>(null);
   const [graphMinHeightPx, setGraphMinHeightPx] = useState<number | null>(null);

@@ -53,3 +53,64 @@ describe("stopCargoRole.arePresentRolesHandled", () => {
     expect(stopCargoRole.arePresentRolesHandled(both)).toBe(true);
   });
 });
+
+describe("stopCargoRole.isHandled", () => {
+  it("treats Dropped off as done when every active cargo type is handled", () => {
+    // 0 SCU skip line must not block the Dropped off mark.
+    const row: HaulingChecklistRow = {
+      id: "leg-drop",
+      routeAction: "delivery",
+      locationSlug: "baijini-point",
+      cargoDeliveries: [
+        {
+          commoditySlug: "scrap",
+          scu: 24,
+          role: "delivery",
+          isHandled: true,
+        },
+        {
+          commoditySlug: "stims",
+          scu: 9,
+          role: "delivery",
+          isHandled: true,
+        },
+        {
+          commoditySlug: "waste",
+          scu: 0,
+          role: "delivery",
+          isHandled: false,
+        },
+      ],
+      shipStorageLocation: "middle",
+      distanceToNext: null,
+      isCompleted: false,
+    };
+    expect(stopCargoRole.isHandled(row, "delivery")).toBe(true);
+  });
+
+  it("stays open while any active cargo type is unchecked", () => {
+    const row: HaulingChecklistRow = {
+      id: "leg-drop-open",
+      routeAction: "delivery",
+      locationSlug: "baijini-point",
+      cargoDeliveries: [
+        {
+          commoditySlug: "scrap",
+          scu: 24,
+          role: "delivery",
+          isHandled: true,
+        },
+        {
+          commoditySlug: "stims",
+          scu: 9,
+          role: "delivery",
+          isHandled: false,
+        },
+      ],
+      shipStorageLocation: "middle",
+      distanceToNext: null,
+      isCompleted: false,
+    };
+    expect(stopCargoRole.isHandled(row, "delivery")).toBe(false);
+  });
+});

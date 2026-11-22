@@ -17,7 +17,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Stop cargo sections. When both Drop off and Pick up exist, they render as tabs (one role at a time; Prioritize pickup flips tab order). The active tab also selects which pad graph shows.",
+          "Stop cargo sections. When both Drop off and Pick up exist, they render as tabs (one role at a time; Prioritize pickup flips tab order). The active tab also selects which pad graph shows. Finishing a role (last cargo checkbox or Picked up / Dropped off mark) keeps the current tab — it does not jump back to the preferred first tab.",
       },
     },
   },

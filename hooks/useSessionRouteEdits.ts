@@ -50,25 +50,50 @@ export function useSessionRouteEdits(input: {
   } = input;
 
   const onToggleCargoHandled = useCallback(
-    (rowId: string, cargoIndex: number) =>
-      persistSession(
+    (rowId: string, cargoIndex: number) => {
+      const current = sessionRef.current;
+      const target = current.rows.find((row) => row.id === rowId);
+      if (!target) return Promise.resolve();
+
+      const toggled = target.cargoDeliveries[cargoIndex];
+      if (!toggled) return Promise.resolve();
+
+      let nextRow: typeof target = {
+        ...target,
+        cargoDeliveries: target.cargoDeliveries.map((cargo, index) =>
+          index === cargoIndex
+            ? { ...cargo, isHandled: !cargo.isHandled }
+            : cargo,
+        ),
+      };
+
+      // Last active cargo type checked → stamp whole role (Picked up / Dropped off).
+      const role: "pickup" | "delivery" | null =
+        toggled.role === "pickup" || toggled.role === "delivery"
+          ? toggled.role
+          : target.routeAction === "pickup"
+            ? "pickup"
+            : target.routeAction === "delivery" ||
+                target.routeAction === "pickup_delivery"
+              ? "delivery"
+              : null;
+      if (
+        role &&
+        nextRow.cargoDeliveries[cargoIndex]?.isHandled === true &&
+        stopCargoRole.isHandled(nextRow, role)
+      ) {
+        nextRow = stopCargoRole.withHandled(nextRow, role, true);
+      }
+
+      return persistSession(
         applySessionCompletionTiming({
-          ...sessionRef.current,
-          shipSlugs: sessionRef.current.shipSlugs ?? [],
-          startLocationSlug: sessionRef.current.startLocationSlug ?? null,
-          rows: sessionRef.current.rows.map((row) => {
-            if (row.id !== rowId) return row;
-            return {
-              ...row,
-              cargoDeliveries: row.cargoDeliveries.map((cargo, index) =>
-                index === cargoIndex
-                  ? { ...cargo, isHandled: !cargo.isHandled }
-                  : cargo,
-              ),
-            };
-          }),
+          ...current,
+          shipSlugs: current.shipSlugs ?? [],
+          startLocationSlug: current.startLocationSlug ?? null,
+          rows: current.rows.map((row) => (row.id === rowId ? nextRow : row)),
         }),
-      ),
+      );
+    },
     [persistSession, sessionRef],
   );
 
