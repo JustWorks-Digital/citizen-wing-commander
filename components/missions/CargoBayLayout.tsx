@@ -315,7 +315,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   ]);
 
   /** Nearest earlier Manual snapshot (route order), if any. */
-  const earlierManualLayout = useMemo(() => {
+  const earlierManualSnapshot = useMemo(() => {
     if (!stopId) return null;
     return latestManualBoxesBeforeStop(
       manualSession,
@@ -324,33 +324,61 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     );
   }, [manualSession, rows, stopId]);
 
+  const earlierManualLayout = earlierManualSnapshot?.boxes ?? null;
+
   /**
-   * Earlier Manual poses with this stop’s delivery/stay actions applied.
-   * Prefer this over a per-stop preset that may have been seeded from auto-pack.
+   * Earlier Manual poses with prior-stop deliveries stripped and this stop’s
+   * delivery tags applied. Prefer over a per-stop preset seeded from auto-pack.
    */
+  const deliveryRetagOptions = useMemo(
+    () => ({
+      ...(sketch?.widthCells
+        ? { deckWidthCells: sketch.widthCells }
+        : {}),
+      rows,
+      earlierStopId: earlierManualSnapshot?.stopId ?? null,
+      currentStopId: stopId,
+    }),
+    [earlierManualSnapshot?.stopId, rows, sketch?.widthCells, stopId],
+  );
+
   const manualBaseBoxes = useMemo(() => {
     if (!basePlan || !stopId) return [];
-    return earlierManualLayout
-      ? manualBayCarryover.boxesAtStop(basePlan.boxes, earlierManualLayout)
+    return earlierManualLayout && earlierManualLayout.length > 0
+      ? manualBayCarryover.boxesAtStop(
+          basePlan.boxes,
+          earlierManualLayout,
+          deliveryRetagOptions,
+        )
       : basePlan.boxes;
-  }, [basePlan, earlierManualLayout, stopId]);
+  }, [basePlan, deliveryRetagOptions, earlierManualLayout, stopId]);
 
   /** Full bay contents (before All/Transfer filter) — Manual edits this list. */
   const workingBoxes = useMemo(() => {
     if (!basePlan) return [];
-    if (!isManual) return basePlan.boxes;
-    // Live edits on this stop win.
-    if (manualLiveBoxes) return manualLiveBoxes;
-    // Advancing stops: always derive from earlier Manual layout when present.
-    // Do not use this stop’s saved preset snapshot — it may be a stale auto-pack
-    // seed and would replace the player’s Everus (etc.) arrangement.
-    if (earlierManualLayout && earlierManualLayout.length > 0) {
-      return manualBaseBoxes;
+    let boxes: PlacedCargoBox[];
+    if (!isManual) {
+      boxes = basePlan.boxes;
+    } else if (manualLiveBoxes) {
+      // Live edits on this stop win.
+      boxes = manualLiveBoxes;
+    } else if (earlierManualLayout && earlierManualLayout.length > 0) {
+      // Advancing stops: always derive from earlier Manual layout when present.
+      // Do not use this stop’s saved preset snapshot — it may be a stale auto-pack
+      // seed and would replace the player’s Everus (etc.) arrangement.
+      boxes = manualBaseBoxes;
+    } else {
+      boxes = boxesFromManualPreset(activeManualPreset, manualBaseBoxes);
     }
-    return boxesFromManualPreset(activeManualPreset, manualBaseBoxes);
+    // Transfer: doorward / aisle first; clear a stack top→bottom before another.
+    return manualBayCarryover.retagDeliveryPreferringTop(
+      boxes,
+      deliveryRetagOptions,
+    );
   }, [
     activeManualPreset,
     basePlan,
+    deliveryRetagOptions,
     earlierManualLayout,
     isManual,
     manualBaseBoxes,

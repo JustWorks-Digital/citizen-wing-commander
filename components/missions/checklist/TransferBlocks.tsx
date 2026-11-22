@@ -57,9 +57,8 @@ export function TransferColumnLabel({ children }: { children: ReactNode }) {
 }
 
 /**
- * Station / ship thumb + endpoint name.
- * Name stacks under the thumb when the transfer column is narrow;
- * sits beside the thumb once the column has room.
+ * Station / ship thumb with the same quiet caption under both — one visual
+ * unit. Ship stays a cutout (no plate); station keeps its photo frame only.
  */
 export function TransferEndpointName({
   kind,
@@ -77,8 +76,8 @@ export function TransferEndpointName({
   strike: string;
 }) {
   return (
-    <div className="@container/endpoint w-full min-w-0 self-stretch">
-      <div className="flex min-w-0 flex-col items-start gap-1.5 @[11rem]/endpoint:flex-row @[11rem]/endpoint:items-center @[11rem]/endpoint:gap-2">
+    <div className="flex w-full min-w-0 flex-col items-start self-stretch">
+      <div className="flex w-fit max-w-full flex-col items-center gap-1">
         <span
           aria-hidden
           className={[
@@ -107,8 +106,8 @@ export function TransferEndpointName({
         </span>
         <p
           className={[
-            "min-w-0 w-full break-words [overflow-wrap:anywhere] text-left text-sm font-medium leading-5 @[11rem]/endpoint:flex-1",
-            isDone ? mute : "text-rsi-text-muted",
+            "max-w-[5.5rem] text-center font-mono text-[0.55rem] uppercase leading-tight tracking-[0.12em]",
+            isDone ? mute : "text-rsi-text-secondary",
             strike,
           ].join(" ")}
           title={name}
@@ -320,7 +319,8 @@ export function PickupTransferBlock({
         mute={mute}
         strike={strike}
       />
-      <div className="flex items-center justify-center self-center">
+      {/* Match thumb height so chevrons center on the images, not captions. */}
+      <div className="flex h-10 items-center justify-center self-start">
         <TransferArrow />
       </div>
       <TransferEndpointName
@@ -442,7 +442,8 @@ export function DeliveryTransferBlock({
         mute={mute}
         strike={strike}
       />
-      <div className="flex items-center justify-center self-center">
+      {/* Match thumb height so chevrons center on the images, not captions. */}
+      <div className="flex h-10 items-center justify-center self-start">
         <TransferArrow />
       </div>
       <TransferEndpointName

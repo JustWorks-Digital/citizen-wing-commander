@@ -15,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline, last-stop finish tile, and next-stop Done trail (hover waves chevrons L→R while held).",
+          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves chevrons L→R while held).",
       },
     },
   },
@@ -76,6 +76,19 @@ export const ProgressTimeline: TimelineStory = {
       },
     ],
   },
+};
+
+export const ProgressTimelineVertical: TimelineStory = {
+  ...ProgressTimeline,
+  args: {
+    ...ProgressTimeline.args,
+    orientation: "vertical",
+  },
+  render: (args) => (
+    <div className="w-36 rounded-rsi border border-rsi-border bg-rsi-bg-deep/35">
+      <ChecklistProgressTimeline {...args} />
+    </div>
+  ),
 };
 
 export const CompletedStrip: StoryObj<typeof CompletedStopHistoryRow> = {

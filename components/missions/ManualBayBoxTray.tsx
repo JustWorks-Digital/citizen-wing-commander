@@ -518,7 +518,7 @@ export function ManualBayBoxTray({
                           pendingRef.current = null;
                         }}
                         className={[
-                          "flex min-w-0 flex-1 touch-none items-center gap-0.5 px-1 py-1 text-left transition-colors",
+                          "flex min-w-0 flex-1 touch-none items-center gap-1.5 px-1 py-1 text-left transition-colors",
                           !canFill
                             ? "cursor-default text-rsi-text-muted"
                             : bulkDragging

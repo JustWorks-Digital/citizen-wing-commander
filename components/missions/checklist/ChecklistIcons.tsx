@@ -106,6 +106,34 @@ export function TravelChevronIcon({
   );
 }
 
+/** Double chevron pointing right — progress timeline connectors. */
+export function TravelDoubleChevronsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 14 16"
+      fill="none"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2 3.5 L6 8 L2 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.5 3.5 L11.5 8 L7.5 12.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Triple chevron pointing right — QT / Next stop travel indicator. */
 export function TravelChevronsIcon({ className }: { className?: string }) {
   return (

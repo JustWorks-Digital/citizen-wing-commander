@@ -85,6 +85,185 @@ describe("manualBayCarryover.boxesAtStop", () => {
     }
   });
 
+  // Session 9a89783f… Transfer at S1DC06 — HF stack: bottom tagged delivery,
+  // top stay; Transfer should prefer the top crate (one move vs two).
+  it("tags delivery on the top of a same-commodity stack, not the buried crate", () => {
+    const bottom: PlacedCargoBox = {
+      id: "hf-bottom",
+      size: 1,
+      origin: { x: 4, y: 2, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 4, y: 2, z: 0 }],
+      action: "delivery",
+      missionId: "seniorfu",
+      deliveryLocationSlug: "covalex-distribution-centre-s1dc06",
+      deliveryLocationName: "S1DC06",
+    };
+    const top: PlacedCargoBox = {
+      id: "hf-top",
+      size: 1,
+      origin: { x: 4, y: 2, z: 1 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 4, y: 2, z: 1 }],
+      action: undefined,
+      missionId: "seniorfu",
+    };
+    const retagged = manualBayCarryover.retagDeliveryPreferringTop([
+      bottom,
+      top,
+    ]);
+    expect(retagged.find((box) => box.id === "hf-top")?.action).toBe(
+      "delivery",
+    );
+    expect(retagged.find((box) => box.id === "hf-bottom")?.action).toBe(
+      undefined,
+    );
+  });
+
+  // Same doorward X + equal aisle distance — clear the taller column before
+  // skimming a top from the neighbor column.
+  it("clears one stack column top-to-bottom before another column top", () => {
+    const stackABottom: PlacedCargoBox = {
+      id: "a-bottom",
+      size: 1,
+      origin: { x: 10, y: 7, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 10, y: 7, z: 0 }],
+      action: "delivery",
+      missionId: "seniorfu",
+      deliveryLocationSlug: "covalex-distribution-centre-s1dc06",
+    };
+    const stackATop: PlacedCargoBox = {
+      id: "a-top",
+      size: 1,
+      origin: { x: 10, y: 7, z: 1 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 10, y: 7, z: 1 }],
+      action: "delivery",
+      missionId: "seniorfu",
+      deliveryLocationSlug: "covalex-distribution-centre-s1dc06",
+    };
+    const stackBTop: PlacedCargoBox = {
+      id: "b-top",
+      size: 1,
+      origin: { x: 10, y: 10, z: 1 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 10, y: 10, z: 1 }],
+      action: undefined,
+      missionId: "seniorfu",
+    };
+    // y=7 and y=10 are equally far from deck center 8.5 on an 18-wide Galaxy.
+    const retagged = manualBayCarryover.retagDeliveryPreferringTop(
+      [stackABottom, stackBTop, stackATop],
+      { deckWidthCells: 18 },
+    );
+    expect(retagged.find((box) => box.id === "a-top")?.action).toBe("delivery");
+    expect(retagged.find((box) => box.id === "a-bottom")?.action).toBe(
+      "delivery",
+    );
+    expect(retagged.find((box) => box.id === "b-top")?.action).toBe(undefined);
+  });
+
+  // Galaxy door is high X — prefer front/doorward pile over back-of-bay.
+  it("prefers doorward (high X) crates over back-of-bay for delivery", () => {
+    const back: PlacedCargoBox = {
+      id: "hf-back",
+      size: 1,
+      origin: { x: 2, y: 8, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 2, y: 8, z: 0 }],
+      action: "delivery",
+      missionId: "seniorfu",
+    };
+    const front: PlacedCargoBox = {
+      id: "hf-front",
+      size: 1,
+      origin: { x: 14, y: 8, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 14, y: 8, z: 0 }],
+      action: undefined,
+      missionId: "seniorfu",
+    };
+    const retagged = manualBayCarryover.retagDeliveryPreferringTop(
+      [back, front],
+      { deckWidthCells: 18 },
+    );
+    expect(retagged.find((box) => box.id === "hf-front")?.action).toBe(
+      "delivery",
+    );
+    expect(retagged.find((box) => box.id === "hf-back")?.action).toBe(
+      undefined,
+    );
+  });
+
+  // Galaxy Lift walls at Y edges — prefer aisle/inside over wall.
+  it("prefers aisle (center Y) crates over wall-edge for delivery", () => {
+    const wall: PlacedCargoBox = {
+      id: "hf-wall",
+      size: 1,
+      origin: { x: 10, y: 0, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 10, y: 0, z: 0 }],
+      action: "delivery",
+      missionId: "seniorfu",
+    };
+    const aisle: PlacedCargoBox = {
+      id: "hf-aisle",
+      size: 1,
+      origin: { x: 10, y: 3, z: 0 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+      commoditySlug: "hydrogen-fuel",
+      commodityName: "Hydrogen Fuel",
+      color: null,
+      color2: null,
+      cells: [{ x: 10, y: 3, z: 0 }],
+      action: undefined,
+      missionId: "seniorfu",
+    };
+    const retagged = manualBayCarryover.retagDeliveryPreferringTop(
+      [wall, aisle],
+      { deckWidthCells: 18 },
+    );
+    expect(retagged.find((box) => box.id === "hf-aisle")?.action).toBe(
+      "delivery",
+    );
+    expect(retagged.find((box) => box.id === "hf-wall")?.action).toBe(
+      undefined,
+    );
+  });
+
   it("keeps earlier box sizes when the delivery stop re-splits SCU", () => {
     // Auto at delivery invents a 4scu that was never on the Manual pickup layout.
     const earlier: PlacedCargoBox[] = [

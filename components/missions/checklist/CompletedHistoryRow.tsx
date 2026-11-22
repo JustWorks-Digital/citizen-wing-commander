@@ -28,6 +28,7 @@ import {
   SpaceshipIcon,
   TravelChevronIcon,
   TravelChevronsIcon,
+  TravelDoubleChevronsIcon,
 } from "./ChecklistIcons";
 import { CondensedRowTrailing } from "./ChecklistLocationHeader";
 
@@ -62,6 +63,10 @@ export function ChecklistProgressTimeline({
           (stop, index) => index > currentIndex && !stop.isCompleted,
         )
       : stops.findIndex((stop) => !stop.isCompleted);
+  let lastCompletedIndex = -1;
+  for (let i = 0; i < stops.length; i += 1) {
+    if (stops[i]!.isCompleted) lastCompletedIndex = i;
+  }
   return (
     <ol
       className={
@@ -79,7 +84,11 @@ export function ChecklistProgressTimeline({
           : index === nextIndex
             ? "Next"
             : null;
-        const connectorDone = stop.isCompleted;
+        // Green between completed stops; muted after the latest completed (and open legs).
+        const connectorClass =
+          stop.isCompleted && index < lastCompletedIndex
+            ? "text-rsi-success/80"
+            : "text-rsi-text-muted";
         const title = statusLabel
           ? `${shortName} · ${statusLabel}`
           : shortName;
@@ -179,26 +188,28 @@ export function ChecklistProgressTimeline({
                 <span
                   aria-hidden
                   className={[
-                    "my-0.5 h-3 w-0.5 shrink-0",
-                    connectorDone ? "bg-rsi-success/70" : "bg-rsi-border",
+                    "my-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center",
+                    connectorClass,
                   ].join(" ")}
-                />
+                >
+                  {/* Right-pointing pair → rotate so they stack pointing down. */}
+                  <TravelDoubleChevronsIcon className="h-3.5 w-4 rotate-90" />
+                </span>
               ) : (
                 <div
                   aria-hidden
                   className="flex shrink-0 flex-col gap-1.5 py-1"
                 >
-                  {/* Match step label height so the line centers on the thumb. */}
+                  {/* Match step label height so chevrons center on the thumb. */}
                   <span className="font-mono text-[0.55rem] tabular-nums tracking-wide opacity-0">
                     0
                   </span>
-                  <span className="flex h-9 items-center sm:h-10">
-                    <span
-                      className={[
-                        "h-0.5 w-3.5 sm:w-5",
-                        connectorDone ? "bg-rsi-success/70" : "bg-rsi-border",
-                      ].join(" ")}
-                    />
+                  <span
+                    className={["flex h-9 items-center sm:h-10", connectorClass].join(
+                      " ",
+                    )}
+                  >
+                    <TravelDoubleChevronsIcon className="h-4 w-3.5 sm:h-[1.125rem] sm:w-4" />
                   </span>
                 </div>
               )
