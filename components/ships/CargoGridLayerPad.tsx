@@ -3,8 +3,9 @@
 import { Switch } from "@/components/ui/Switch";
 
 /**
- * Top-center Z-layer controls for 2D (single active layer) and 3D
- * (multi-layer visibility toggles). Facing pad sits bottom-left; zoom bottom-right.
+ * Centered Z-layer controls for 2D (single active layer) and 3D
+ * (multi-layer visibility toggles). Split view uses top; solo 2D/3D use
+ * bottom (facing pad bottom-left; zoom bottom-right).
  */
 
 export type CargoGridLayerPadProps = {
@@ -25,6 +26,8 @@ export type CargoGridLayerPadProps = {
    * still listed so empty Z slots stay visible in the pad.
    */
   emptyLayers?: ReadonlySet<number>;
+  /** Split → top; solo 2D / 3D → bottom. */
+  placement?: "top" | "bottom";
   ariaLabel?: string;
   className?: string;
 };
@@ -46,6 +49,7 @@ export function CargoGridLayerPad({
   hiddenLayers,
   onToggleLayer,
   emptyLayers,
+  placement = "top",
   ariaLabel = "Z layers",
   className,
 }: CargoGridLayerPadProps) {
@@ -56,7 +60,8 @@ export function CargoGridLayerPad({
       role={mode === "select" ? "radiogroup" : "group"}
       aria-label={ariaLabel}
       className={[
-        "pointer-events-auto absolute top-2 left-1/2 z-20 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-nowrap items-center justify-center gap-1 overflow-x-auto sm:max-w-[calc(100%-8.5rem)]",
+        "pointer-events-auto absolute left-1/2 z-20 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-nowrap items-center justify-center gap-1 overflow-x-auto sm:max-w-[calc(100%-8.5rem)]",
+        placement === "bottom" ? "bottom-2" : "top-2",
         className,
       ]
         .filter(Boolean)

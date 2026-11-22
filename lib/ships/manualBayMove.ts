@@ -7,6 +7,7 @@
 export const MANUAL_BAY_TRAY_MIME = "application/x-cwc-manual-bay-box";
 
 import {
+  cargoGridCoordKey,
   cargoGridZoneAtXY,
   cargoGridZoneStorageLocation,
   type CargoGridCoord,
@@ -303,6 +304,16 @@ export type ManualBayBulkFillSpec = {
   crates: Array<{ size: CargoBoxScu; count: number }>;
 };
 
+/**
+ * Drag a whole mission onto a bay section — packs every remaining cargo type
+ * as one logical block (types by total SCU desc; crates largest first).
+ */
+export type ManualBayMissionFillSpec = {
+  missionId: string | null;
+  missionTitle: string;
+  commodities: ManualBayBulkFillSpec[];
+};
+
 export type ManualBayBulkFillResult = {
   boxes: PlacedCargoBox[];
   /** Crates added into the target section. */
@@ -311,6 +322,61 @@ export type ManualBayBulkFillResult = {
   unplacedCount: number;
   zoneId: string;
 };
+
+function crateLineScu(
+  crates: Array<{ size: CargoBoxScu; count: number }>,
+): number {
+  return crates.reduce((sum, line) => sum + line.size * line.count, 0);
+}
+
+/** Flatten Fill crates into placement items (largest sizes first within type). */
+function itemsFromFillCrates(
+  fill: Pick<
+    ManualBayBulkFillSpec,
+    | "missionId"
+    | "commoditySlug"
+    | "commodityName"
+    | "color"
+    | "color2"
+    | "crates"
+  >,
+  options?: { regionKey?: string },
+): CargoPlacementItem[] {
+  const crates = [...fill.crates]
+    .filter((line) => line.count > 0)
+    .sort((a, b) => b.size - a.size);
+  const items: CargoPlacementItem[] = [];
+  for (const line of crates) {
+    for (let i = 0; i < line.count; i += 1) {
+      items.push({
+        size: line.size,
+        commoditySlug: fill.commoditySlug,
+        commodityName: fill.commodityName,
+        color: fill.color,
+        color2: fill.color2,
+        missionId: fill.missionId,
+        action: "pickup",
+        regionKey: options?.regionKey,
+      });
+    }
+  }
+  return items;
+}
+
+function occupiedMapsFromBoxes(boxes: PlacedCargoBox[]): {
+  occupied: CargoGridCoord[];
+  occupiedClusters: Map<string, string>;
+} {
+  const occupied: CargoGridCoord[] = [];
+  const occupiedClusters = new Map<string, string>();
+  for (const box of boxes) {
+    occupied.push(...box.cells);
+    for (const cell of box.cells) {
+      occupiedClusters.set(cargoGridCoordKey(cell), box.commoditySlug);
+    }
+  }
+  return { occupied, occupiedClusters };
+}
 
 /**
  * Deck footprint (cells) needed to hold `crates` when stacked up to
@@ -393,6 +459,47 @@ export function layoutManualBayBulkFillPreview(
   };
 }
 
+function previewFromFillResult(
+  dry: ManualBayBulkFillResult | null,
+  occupiedBoxes: PlacedCargoBox[],
+): {
+  zoneId: string;
+  cells: CargoGridCoord[];
+  fits: boolean;
+  footprint: { dx: number; dy: number; origin: CargoGridCoord };
+} | null {
+  if (!dry || dry.placedCount === 0) return null;
+  const existingIds = new Set(occupiedBoxes.map((box) => box.id));
+  const placed = dry.boxes.filter((box) => !existingIds.has(box.id));
+  const cells: CargoGridCoord[] = [];
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  let minZ = Number.POSITIVE_INFINITY;
+  for (const box of placed) {
+    for (const cell of box.cells) {
+      cells.push(cell);
+      minX = Math.min(minX, cell.x);
+      maxX = Math.max(maxX, cell.x);
+      minY = Math.min(minY, cell.y);
+      maxY = Math.max(maxY, cell.y);
+      minZ = Math.min(minZ, cell.z);
+    }
+  }
+  if (cells.length === 0) return null;
+  return {
+    zoneId: dry.zoneId,
+    cells,
+    fits: dry.unplacedCount === 0,
+    footprint: {
+      dx: maxX - minX + 1,
+      dy: maxY - minY + 1,
+      origin: { x: minX, y: minY, z: minZ },
+    },
+  };
+}
+
 /**
  * Highlight for Fill drag: dry-run the same zone packer as drop (incl. Z
  * stacking) so width/length match what lands, not a flat deck estimate.
@@ -421,37 +528,67 @@ export function previewManualBayZoneFill(
       crates: fill?.crates ?? [{ size: 8, count: 1 }],
     },
   );
-  if (!dry || dry.placedCount === 0) return null;
+  return previewFromFillResult(dry, occupiedBoxes);
+}
 
-  const existingIds = new Set(occupiedBoxes.map((box) => box.id));
-  const placed = dry.boxes.filter((box) => !existingIds.has(box.id));
-  const cells: CargoGridCoord[] = [];
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  let minZ = Number.POSITIVE_INFINITY;
-  for (const box of placed) {
-    for (const cell of box.cells) {
-      cells.push(cell);
-      minX = Math.min(minX, cell.x);
-      maxX = Math.max(maxX, cell.x);
-      minY = Math.min(minY, cell.y);
-      maxY = Math.max(maxY, cell.y);
-      minZ = Math.min(minZ, cell.z);
-    }
+/** Highlight for mission-parent Fill drag (same packer as drop). */
+export function previewManualBayZoneMissionFill(
+  sketch: ShipCargoGridSketch,
+  dropCell: CargoGridCoord,
+  fill: ManualBayMissionFillSpec,
+  occupiedBoxes: PlacedCargoBox[] = [],
+): {
+  zoneId: string;
+  cells: CargoGridCoord[];
+  fits: boolean;
+  footprint: { dx: number; dy: number; origin: CargoGridCoord };
+} | null {
+  return previewFromFillResult(
+    tryFillManualBayZoneWithMission(sketch, occupiedBoxes, dropCell, fill),
+    occupiedBoxes,
+  );
+}
+
+function placeFillItemsInZone(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  dropCell: CargoGridCoord,
+  items: CargoPlacementItem[],
+  idNamespace: string,
+  options?: {
+    preferRegionStacking?: boolean;
+  },
+): ManualBayBulkFillResult | null {
+  if (items.length === 0) return null;
+  const zone = cargoGridZoneAtXY(sketch, dropCell.x, dropCell.y);
+  if (!zone || (zone.kind !== "cargo" && zone.kind !== "overflow")) {
+    return null;
   }
-  if (cells.length === 0) return null;
-
+  const { occupied, occupiedClusters } = occupiedMapsFromBoxes(boxes);
+  const storage = cargoGridZoneStorageLocation(zone) ?? "front";
+  // Cargo-type slot policy + clustering so Galaxy Lift L/R pack outer-wall
+  // first and leave open cells toward the aisle (middle), not the wall.
+  // preferNearCoord: Hercules-sized zones seed the pile at the drop cell.
+  const program = compileCargoTypePackProgram({
+    bays: packBaysFromSketch(sketch),
+  });
+  const packSlotPolicy = derivePackSlotPolicy(program);
+  const plan = placeCargoItemsInZone(sketch, storage, items, {
+    occupied,
+    occupiedClusters,
+    restrictZoneIds: [zone.id],
+    preferNearCoord: dropCell,
+    itemsPreordered: true,
+    clusterByKey: true,
+    preferRegionStacking: options?.preferRegionStacking,
+    packSlotPolicy,
+    idNamespace: `${idNamespace}-${zone.id}`,
+  });
   return {
-    zoneId: dry.zoneId,
-    cells,
-    fits: dry.unplacedCount === 0,
-    footprint: {
-      dx: maxX - minX + 1,
-      dy: maxY - minY + 1,
-      origin: { x: minX, y: minY, z: minZ },
-    },
+    boxes: [...boxes, ...plan.boxes],
+    placedCount: plan.boxes.length,
+    unplacedCount: plan.unplaced.length,
+    zoneId: zone.id,
   };
 }
 
@@ -465,55 +602,45 @@ export function tryFillManualBayZoneWithCargoType(
   dropCell: CargoGridCoord,
   fill: ManualBayBulkFillSpec,
 ): ManualBayBulkFillResult | null {
-  const zone = cargoGridZoneAtXY(sketch, dropCell.x, dropCell.y);
-  if (!zone || (zone.kind !== "cargo" && zone.kind !== "overflow")) {
-    return null;
-  }
-  const crates = [...fill.crates]
-    .filter((line) => line.count > 0)
-    .sort((a, b) => b.size - a.size);
-  if (crates.length === 0) return null;
+  return placeFillItemsInZone(
+    sketch,
+    boxes,
+    dropCell,
+    itemsFromFillCrates(fill),
+    `manual-fill-${fill.commoditySlug}`,
+  );
+}
 
+/**
+ * Pack all remaining cargo for one mission into the section under `dropCell`.
+ * Cargo types by total SCU (desc); within each type, largest crates first.
+ * Types share a mission region so they land as one logical block.
+ */
+export function tryFillManualBayZoneWithMission(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  dropCell: CargoGridCoord,
+  fill: ManualBayMissionFillSpec,
+): ManualBayBulkFillResult | null {
+  const regionKey = `mission:${fill.missionId ?? "_"}`;
+  const sorted = [...fill.commodities]
+    .filter((commodity) => crateLineScu(commodity.crates) > 0)
+    .sort((a, b) => {
+      const scu = crateLineScu(b.crates) - crateLineScu(a.crates);
+      if (scu !== 0) return scu;
+      return a.commodityName.localeCompare(b.commodityName);
+    });
+  if (sorted.length === 0) return null;
   const items: CargoPlacementItem[] = [];
-  for (const line of crates) {
-    for (let i = 0; i < line.count; i += 1) {
-      items.push({
-        size: line.size,
-        commoditySlug: fill.commoditySlug,
-        commodityName: fill.commodityName,
-        color: fill.color,
-        color2: fill.color2,
-        missionId: fill.missionId,
-        action: "pickup",
-      });
-    }
+  for (const commodity of sorted) {
+    items.push(...itemsFromFillCrates(commodity, { regionKey }));
   }
-
-  const occupied: CargoGridCoord[] = [];
-  for (const box of boxes) {
-    occupied.push(...box.cells);
-  }
-
-  const storage = cargoGridZoneStorageLocation(zone) ?? "front";
-  // Cargo-type slot policy + clustering so Galaxy Lift L/R pack outer-wall
-  // first and leave open cells toward the aisle (middle), not the wall.
-  const program = compileCargoTypePackProgram({
-    bays: packBaysFromSketch(sketch),
-  });
-  const packSlotPolicy = derivePackSlotPolicy(program);
-  const plan = placeCargoItemsInZone(sketch, storage, items, {
-    occupied,
-    restrictZoneIds: [zone.id],
-    itemsPreordered: true,
-    clusterByKey: true,
-    packSlotPolicy,
-    idNamespace: `manual-fill-${zone.id}-${fill.commoditySlug}`,
-  });
-
-  return {
-    boxes: [...boxes, ...plan.boxes],
-    placedCount: plan.boxes.length,
-    unplacedCount: plan.unplaced.length,
-    zoneId: zone.id,
-  };
+  return placeFillItemsInZone(
+    sketch,
+    boxes,
+    dropCell,
+    items,
+    `manual-fill-mission-${fill.missionId ?? "none"}`,
+    { preferRegionStacking: true },
+  );
 }

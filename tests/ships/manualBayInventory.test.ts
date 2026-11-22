@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   commodityGroupsFromMission,
   removeCommodityFromManualBay,
+  removeMissionFromManualBay,
   type ManualBayInventoryMissionGroup,
 } from "@/lib/ships/manualBayInventory";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
@@ -78,5 +79,51 @@ describe("removeCommodityFromManualBay", () => {
 
     const next = removeCommodityFromManualBay(boxes, "m1", "processed-food");
     expect(next.map((box) => box.id)).toEqual(["b", "c"]);
+  });
+});
+
+describe("removeMissionFromManualBay", () => {
+  it("pulls every crate for that mission off the bay", () => {
+    const boxes = [
+      {
+        id: "a",
+        size: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        footprint: { dx: 1, dy: 1, dz: 1 },
+        commoditySlug: "hydrogen-fuel",
+        commodityName: "Hydrogen Fuel",
+        color: null,
+        color2: null,
+        cells: [],
+        missionId: "m1",
+      },
+      {
+        id: "b",
+        size: 1,
+        origin: { x: 1, y: 0, z: 0 },
+        footprint: { dx: 1, dy: 1, dz: 1 },
+        commoditySlug: "ship-ammunition",
+        commodityName: "Ship Ammunition",
+        color: null,
+        color2: null,
+        cells: [],
+        missionId: "m1",
+      },
+      {
+        id: "c",
+        size: 1,
+        origin: { x: 2, y: 0, z: 0 },
+        footprint: { dx: 1, dy: 1, dz: 1 },
+        commoditySlug: "stims",
+        commodityName: "Stims",
+        color: null,
+        color2: null,
+        cells: [],
+        missionId: "m2",
+      },
+    ] as PlacedCargoBox[];
+
+    const next = removeMissionFromManualBay(boxes, "m1");
+    expect(next.map((box) => box.id)).toEqual(["c"]);
   });
 });

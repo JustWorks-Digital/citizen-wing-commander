@@ -270,7 +270,8 @@ export function CargoCommodityTile({
 
   const tileClassName = [
     // Commodity icon sits top-left; SCU + name stay centered. Density follows cargo @container.
-    "relative flex aspect-square w-full flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 pb-1 pt-2 font-mono font-medium tabular-nums",
+    // Cap size so wide mission cards don’t grow huge squares; keep 1:1 via aspect + max-w.
+    "relative mx-auto flex aspect-square w-full max-w-28 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-rsi border px-1 pb-1 pt-2 font-mono font-medium tabular-nums",
     "md:gap-0.5 md:px-1 md:pb-1 md:pt-2.5",
     "md:@[13rem]/cargo:gap-0.5 md:@[13rem]/cargo:px-1 md:@[13rem]/cargo:pb-1.5 md:@[13rem]/cargo:pt-3",
     "md:@[17rem]/cargo:gap-1 md:@[17rem]/cargo:px-1.5 md:@[17rem]/cargo:pb-2 md:@[17rem]/cargo:pt-3",

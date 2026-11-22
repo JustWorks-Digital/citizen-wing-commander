@@ -4,6 +4,7 @@ import {
   ManualBayPlacedBoxDragGhost,
   ManualBayTrayBulkDragGhost,
   ManualBayTrayDragGhost,
+  ManualBayTrayMissionDragGhost,
 } from "./ManualBayBoxTray";
 import type { ManualBayInventoryMissionGroup } from "@/lib/ships/manualBayInventory";
 
@@ -81,7 +82,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Manual Cargo panel: Fill rows stay after placing; Reset pulls that cargo type off the bay. Chevron expands size chips. R rotates; Esc cancels.",
+          "Manual Cargo panel: drag a mission header to pack all remaining types together; mission Reset pulls that mission’s cargo off the bay; Fill rows stay after placing with per-type Reset. Chevron expands size chips. R rotates; Esc cancels.",
       },
     },
   },
@@ -95,6 +96,7 @@ export const TwoMissions: Story = {
     groups,
     onClearBay: () => undefined,
     onResetCommodity: () => undefined,
+    onResetMission: () => undefined,
   },
 };
 
@@ -138,6 +140,63 @@ export const FillWithReset: Story = {
     ],
     onClearBay: () => undefined,
     onResetCommodity: () => undefined,
+    onResetMission: () => undefined,
+  },
+};
+
+/** Mission header Reset when any of that mission’s cargo is on the bay. */
+export const MissionWithReset: Story = {
+  args: {
+    groups: [
+      {
+        missionId: "mission-a",
+        missionTitle: "Small Cargo Haul",
+        lines: [
+          {
+            key: "mission-a:hydrogen-fuel:1",
+            missionId: "mission-a",
+            missionTitle: "Small Cargo Haul",
+            commoditySlug: "hydrogen-fuel",
+            commodityName: "Hydrogen Fuel",
+            size: 1,
+            color: "white",
+            color2: null,
+            demanded: 7,
+            placed: 7,
+            remaining: 0,
+          },
+          {
+            key: "mission-a:quantum-fuel:1",
+            missionId: "mission-a",
+            missionTitle: "Small Cargo Haul",
+            commoditySlug: "quantum-fuel",
+            commodityName: "Quantum Fuel",
+            size: 1,
+            color: "white",
+            color2: null,
+            demanded: 7,
+            placed: 7,
+            remaining: 0,
+          },
+          {
+            key: "mission-a:ship-ammunition:1",
+            missionId: "mission-a",
+            missionTitle: "Small Cargo Haul",
+            commoditySlug: "ship-ammunition",
+            commodityName: "Ship Ammunition",
+            size: 1,
+            color: "orange",
+            color2: null,
+            demanded: 4,
+            placed: 4,
+            remaining: 0,
+          },
+        ],
+      },
+    ],
+    onClearBay: () => undefined,
+    onResetCommodity: () => undefined,
+    onResetMission: () => undefined,
   },
 };
 
@@ -167,6 +226,49 @@ export const Dragging: Story = {
         orientationIndex={0}
         clientX={220}
         clientY={120}
+      />
+    </div>
+  ),
+};
+
+export const MissionFillDragging: Story = {
+  args: {
+    groups,
+    onClearBay: () => undefined,
+    draggingLineKey: "mission-a:mission",
+  },
+  render: (args) => (
+    <div className="relative min-h-[16rem]">
+      <p className="mb-2 text-[0.65rem] text-rsi-text-muted">
+        Drag the mission header to pack all remaining cargo types together.
+      </p>
+      <ManualBayBoxTray {...args} />
+      <ManualBayTrayMissionDragGhost
+        fill={{
+          missionId: "mission-a",
+          missionTitle: "Senior Medium Cargo Haul A",
+          commodities: [
+            {
+              missionId: "mission-a",
+              commoditySlug: "processed-food",
+              commodityName: "Processed Food",
+              color: "red",
+              color2: null,
+              crates: [{ size: 8, count: 2 }],
+            },
+            {
+              missionId: "mission-a",
+              commoditySlug: "hydrogen-fuel",
+              commodityName: "Hydrogen Fuel",
+              color: "white",
+              color2: null,
+              crates: [{ size: 8, count: 2 }],
+            },
+          ],
+        }}
+        remainingScu={32}
+        clientX={220}
+        clientY={100}
       />
     </div>
   ),

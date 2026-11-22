@@ -17,6 +17,7 @@ import {
   ManualBayPlacedBoxDragGhost,
   ManualBayTrayBulkDragGhost,
   ManualBayTrayDragGhost,
+  ManualBayTrayMissionDragGhost,
 } from "@/components/missions/ManualBayBoxTray";
 import { SessionCurrentStopPickupGrid } from "@/components/missions/SessionStatsStrip";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
@@ -61,9 +62,11 @@ import {
   tryAddManualBayBox,
   tryDropManualBayBox,
   tryFillManualBayZoneWithCargoType,
+  tryFillManualBayZoneWithMission,
   tryRemoveManualBayBox,
   type ManualBayAddBoxSpec,
   type ManualBayBulkFillSpec,
+  type ManualBayMissionFillSpec,
 } from "@/lib/ships/manualBayMove";
 import { cargoBay } from "@/lib/ships/cargoBay";
 import { manualBayCarryover } from "@/lib/ships/manualBayCarryover";
@@ -155,9 +158,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     null,
   );
   const [trayPlacement, setTrayPlacement] = useState<{
-    mode: "single" | "bulk";
+    mode: "single" | "bulk" | "mission";
     spec: ManualBayAddBoxSpec;
     bulk?: ManualBayBulkFillSpec;
+    mission?: ManualBayMissionFillSpec;
     bulkRemainingScu?: number;
     lineKey: string;
     orientationIndex: number;
@@ -687,6 +691,17 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     (coord: CargoGridCoord) => {
       const current = trayPlacementRef.current;
       if (!sketch || !isManual || !current) return false;
+      if (current.mode === "mission" && current.mission) {
+        const result = tryFillManualBayZoneWithMission(
+          sketch,
+          workingBoxes,
+          coord,
+          current.mission,
+        );
+        if (!result || result.placedCount === 0) return false;
+        persistManualBoxes(result.boxes);
+        return true;
+      }
       if (current.mode === "bulk" && current.bulk) {
         const result = tryFillManualBayZoneWithCargoType(
           sketch,
@@ -751,6 +766,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           missionId,
           commoditySlug,
         ),
+      );
+    },
+    [isManual, persistManualBoxes, workingBoxes],
+  );
+
+  const resetMissionToTray = useCallback(
+    (missionId: string | null) => {
+      if (!isManual) return;
+      persistManualBoxes(
+        manualBayInventory.removeMissionFromBay(workingBoxes, missionId),
       );
     },
     [isManual, persistManualBoxes, workingBoxes],
@@ -972,7 +997,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       </div>
 
       {trayPlacement && trayPointerClient ? (
-        trayPlacement.mode === "bulk" && trayPlacement.bulk ? (
+        trayPlacement.mode === "mission" && trayPlacement.mission ? (
+          <ManualBayTrayMissionDragGhost
+            fill={trayPlacement.mission}
+            remainingScu={trayPlacement.bulkRemainingScu ?? 0}
+            clientX={trayPointerClient.x}
+            clientY={trayPointerClient.y}
+          />
+        ) : trayPlacement.mode === "bulk" && trayPlacement.bulk ? (
           <ManualBayTrayBulkDragGhost
             fill={trayPlacement.bulk}
             remainingScu={trayPlacement.bulkRemainingScu ?? 0}
@@ -1262,6 +1294,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                           groups={manualInventoryGroups}
                           onClearBay={clearBayToTray}
                           onResetCommodity={resetCommodityToTray}
+                          onResetMission={resetMissionToTray}
                           draggingLineKey={trayPlacement?.lineKey ?? null}
                           orientationIndex={
                             trayPlacement?.orientationIndex ?? 0
@@ -1293,6 +1326,39 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                 action: "pickup" as const,
                               },
                               bulk: fill,
+                              bulkRemainingScu: remainingScu,
+                              lineKey,
+                              orientationIndex: 0,
+                            };
+                            trayPlacementRef.current = next;
+                            setTrayPlacement(next);
+                          }}
+                          onTrayMissionDragStart={(fill, lineKey) => {
+                            const remainingScu = fill.commodities.reduce(
+                              (sum, commodity) =>
+                                sum +
+                                commodity.crates.reduce(
+                                  (lineSum, line) =>
+                                    lineSum + line.size * line.count,
+                                  0,
+                                ),
+                              0,
+                            );
+                            const head = fill.commodities[0];
+                            const next = {
+                              mode: "mission" as const,
+                              spec: {
+                                size: head?.crates[0]?.size ?? 8,
+                                commoditySlug:
+                                  head?.commoditySlug ?? "mission",
+                                commodityName:
+                                  head?.commodityName ?? fill.missionTitle,
+                                color: head?.color ?? null,
+                                color2: head?.color2 ?? null,
+                                missionId: fill.missionId,
+                                action: "pickup" as const,
+                              },
+                              mission: fill,
                               bulkRemainingScu: remainingScu,
                               lineKey,
                               orientationIndex: 0,
@@ -1403,6 +1469,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   (viewTab === "top" || viewTab === "split") &&
                   trayPlacement?.mode === "bulk"
                     ? (trayPlacement.bulk ?? null)
+                    : null
+                }
+                trayMissionFill={
+                  isManual &&
+                  (viewTab === "top" || viewTab === "split") &&
+                  trayPlacement?.mode === "mission"
+                    ? (trayPlacement.mission ?? null)
                     : null
                 }
                 trayCollisionBoxes={isManual ? workingBoxes : undefined}

@@ -31,7 +31,7 @@
         }
       ],
       "notes": [
-        "Player-measured: front 6×7×4 = 168 SCU, rear 8×15×4 = 480 SCU (648 grid total). Height: two 8 SCU crates stacked (4 cells). UEX ship cargoScu remains 696."
+        "Player-measured: front 6×7×4 = 168 SCU, rear 8×15×4 = 480 SCU (648 grid total). Mid gap is 8 wide (matches rear / Zone 1 height, top-aligned). Front is centered in Y. Height: two 8 SCU crates stacked (4 cells). UEX ship cargoScu remains 696."
       ]
     },
     {

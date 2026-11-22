@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Exo_2, JetBrains_Mono } from "next/font/google";
+import { AppVersionMark } from "@/components/AppVersionMark";
 import { SessionRecorderHost } from "@/components/dev/SessionRecorderHost";
 import { PerfCaptureProvider } from "@/components/perf/PerfCaptureProvider";
 import "./globals.css";
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <SessionRecorderHost enabled={isSessionRecorderEnabled()} />
         </Suspense>
+        <AppVersionMark />
       </body>
     </html>
   );

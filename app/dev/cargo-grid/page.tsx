@@ -147,6 +147,7 @@ export default function CargoGridDevPage() {
       },
     ];
     if (gap > 0) {
+      // Match the wider bay (C2 rear / Zone 1) so the gap top-aligns with it.
       zones.push({
         id: "mid-gap",
         label: "Gap",

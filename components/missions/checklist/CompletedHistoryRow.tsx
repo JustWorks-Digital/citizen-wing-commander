@@ -914,8 +914,13 @@ export function NextDistanceMeta({
       : isActive
         ? "text-rsi-text-secondary"
         : "text-rsi-text-muted/50";
-  /** Stagger inactive→active on Done hover (left→right travel wave). */
-  const chevronWave = !isPending && !row.isCompleted;
+  /**
+   * L→R travel wave: hover while open; always while Done is pending/blue
+   * (optimistic complete can flip `isCompleted` before pending clears — still
+   * wave in accent). Settled complete = static green.
+   */
+  const chevronWave = isPending || !row.isCompleted;
+  const chevronWaveAlways = isPending;
 
   return (
     <div className={shellClass}>
@@ -987,7 +992,9 @@ export function NextDistanceMeta({
                 className={[
                   "h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5",
                   chevronWave
-                    ? "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                    ? chevronWaveAlways
+                      ? "opacity-40 animate-rsi-done-chevron-wave"
+                      : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
                     : "",
                 ].join(" ")}
                 style={
@@ -1015,7 +1022,9 @@ export function NextDistanceMeta({
                 className={[
                   "h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5",
                   chevronWave
-                    ? "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                    ? chevronWaveAlways
+                      ? "opacity-40 animate-rsi-done-chevron-wave"
+                      : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
                     : "",
                 ].join(" ")}
                 style={

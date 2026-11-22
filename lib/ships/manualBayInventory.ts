@@ -15,6 +15,10 @@ import {
   collectSoftVisibleCargoAtStop,
   type PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
+import type {
+  ManualBayBulkFillSpec,
+  ManualBayMissionFillSpec,
+} from "@/lib/ships/manualBayMove";
 
 export type ManualBayInventoryLine = {
   key: string;
@@ -222,10 +226,76 @@ export function removeCommodityFromManualBay(
   );
 }
 
+/** Pull every crate for one mission off the bay into Cargo. */
+export function removeMissionFromManualBay(
+  boxes: readonly PlacedCargoBox[],
+  missionId: string | null,
+): PlacedCargoBox[] {
+  return boxes.filter((box) => (box.missionId ?? null) !== missionId);
+}
+
+/** Bulk Fill spec for one commodity row (remaining crates only). */
+export function bulkFillSpecFromCommodity(
+  commodity: ManualBayInventoryCommodityGroup,
+): ManualBayBulkFillSpec {
+  return {
+    missionId: commodity.missionId,
+    commoditySlug: commodity.commoditySlug,
+    commodityName: commodity.commodityName,
+    color: commodity.color,
+    color2: commodity.color2,
+    crates: commodity.lines.map((line) => ({
+      size: line.size,
+      count: line.remaining,
+    })),
+  };
+}
+
+/**
+ * Mission-parent Fill: every commodity still in Cargo, ready to pack as one
+ * block sorted by cargo type.
+ */
+export function missionFillSpecFromGroup(
+  group: ManualBayInventoryMissionGroup,
+): ManualBayMissionFillSpec | null {
+  const commodities = commodityGroupsFromMission(group)
+    .filter((commodity) => commodity.remainingScu > 0)
+    .map(bulkFillSpecFromCommodity);
+  if (commodities.length === 0) return null;
+  return {
+    missionId: group.missionId,
+    missionTitle: group.missionTitle,
+    commodities,
+  };
+}
+
+export function missionRemainingScu(
+  group: ManualBayInventoryMissionGroup,
+): number {
+  return commodityGroupsFromMission(group).reduce(
+    (sum, commodity) => sum + commodity.remainingScu,
+    0,
+  );
+}
+
+export function missionPlacedScu(
+  group: ManualBayInventoryMissionGroup,
+): number {
+  return commodityGroupsFromMission(group).reduce(
+    (sum, commodity) => sum + commodity.placedScu,
+    0,
+  );
+}
+
 export const manualBayInventory = {
   demandLines: demandManualBayInventoryLines,
   commodityGroupsFromMission,
+  bulkFillSpecFromCommodity,
+  missionFillSpecFromGroup,
+  missionRemainingScu,
+  missionPlacedScu,
   removeCommodityFromBay: removeCommodityFromManualBay,
+  removeMissionFromBay: removeMissionFromManualBay,
 
   /** Demand minus crates already on the grid, grouped by mission. */
   remainingByMission(

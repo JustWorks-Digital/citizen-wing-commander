@@ -143,9 +143,11 @@ export type CargoGridIsoViewProps = {
   /** Controlled 3D layer visibility; falls back to internal state when omitted. */
   hiddenLayers?: ReadonlySet<number>;
   onToggleLayer?: (z: number) => void;
-  /** Show top-center Z-layer pad on the grid (default on). */
+  /** Show Z-layer pad on the grid (default on). */
   showLayerPad?: boolean;
   onShowLayerPadChange?: (value: boolean) => void;
+  /** Split → top; solo 3D → bottom. */
+  layerPadPlacement?: "top" | "bottom";
   /**
    * Debug: bright crate silhouettes so footprints / Z height are obvious.
    * Controlled when `onDebugBoxOutlinesChange` is set.
@@ -742,6 +744,7 @@ export function CargoGridIsoView({
   onToggleLayer,
   showLayerPad: showLayerPadProp,
   onShowLayerPadChange,
+  layerPadPlacement = "top",
   debugBoxOutlines: debugBoxOutlinesProp,
   onDebugBoxOutlinesChange,
   panelHeightPx = 26 * 16,
@@ -1253,6 +1256,7 @@ export function CargoGridIsoView({
           layers={layerOptions}
           hiddenLayers={hiddenLayers}
           onToggleLayer={toggleLayer}
+          placement={layerPadPlacement}
           ariaLabel="3D Z layers"
         />
       ) : null}

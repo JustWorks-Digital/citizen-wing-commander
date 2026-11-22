@@ -15,7 +15,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves chevrons L→R while held).",
+          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green).",
       },
     },
   },
@@ -244,5 +244,34 @@ export const DoneChevronWave: StoryObj<typeof NextDistanceMeta> = {
     isActive: true,
     isPending: false,
     onToggle: () => {},
+  },
+};
+
+/** Pending (blue) Done — same L→R wave, accent color, no hover required. */
+export const DoneChevronWavePending: StoryObj<typeof NextDistanceMeta> = {
+  ...DoneChevronWave,
+  args: {
+    ...DoneChevronWave.args,
+    isPending: true,
+  },
+};
+
+/** Optimistic complete still pending — keep blue wave until save settles. */
+export const DoneChevronWavePendingOptimistic: StoryObj<typeof NextDistanceMeta> = {
+  ...DoneChevronWave,
+  args: {
+    ...DoneChevronWave.args,
+    row: { ...nextStopRow, isCompleted: true },
+    isPending: true,
+  },
+};
+
+/** Complete — green trail stays static (no wave). */
+export const DoneChevronCompleteStatic: StoryObj<typeof NextDistanceMeta> = {
+  ...DoneChevronWave,
+  args: {
+    ...DoneChevronWave.args,
+    row: { ...nextStopRow, isCompleted: true },
+    isPending: false,
   },
 };

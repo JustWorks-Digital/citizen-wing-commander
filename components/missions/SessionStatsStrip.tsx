@@ -949,7 +949,6 @@ export function SessionInventoryStat({
     peakScu > totalCapacity &&
     peakScu <= bayWithOverflow;
   const isOverAvailable = availableScu != null && availableScu < 0;
-  const showOverflow = overflowCapacity > 0;
 
   return (
     <div
@@ -990,16 +989,9 @@ export function SessionInventoryStat({
           "!w-fit max-w-full !overflow-hidden divide-x-0",
         ].join(" ")}
         role="group"
-        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free${showOverflow ? `, overflow ${overflowScu}` : ""}`}
+        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free, overflow ${overflowScu}`}
       >
-        <div
-          className={[
-            "grid w-fit grid-cols-2 divide-x divide-y divide-rsi-border",
-            showOverflow ? "" : "[&>*:last-child]:col-span-2",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+        <div className="grid w-fit grid-cols-2 divide-x divide-y divide-rsi-border">
           <InventoryQuadrant
             label="current"
             value={
@@ -1021,20 +1013,16 @@ export function SessionInventoryStat({
                   : undefined
             }
           />
-          {showOverflow ? (
-            <InventoryQuadrant
-              label="overflow"
-              value={
-                <Fraction
-                  current={overflowScu}
-                  total={overflowCapacity}
-                  currentClassName={
-                    overflowScu > 0 ? "text-rsi-warn" : undefined
-                  }
-                />
-              }
-            />
-          ) : null}
+          <InventoryQuadrant
+            label="overflow"
+            value={
+              <Fraction
+                current={overflowScu}
+                total={overflowCapacity}
+                currentClassName={overflowScu > 0 ? "text-rsi-warn" : undefined}
+              />
+            }
+          />
           <InventoryQuadrant
             label="free"
             value={availableLabel}

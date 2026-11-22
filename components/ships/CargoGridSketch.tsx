@@ -49,8 +49,10 @@ import {
   previewManualBayDrop,
   previewManualBayPlacement,
   previewManualBayZoneFill,
+  previewManualBayZoneMissionFill,
   type ManualBayAddBoxSpec,
   type ManualBayBulkFillSpec,
+  type ManualBayMissionFillSpec,
 } from "@/lib/ships/manualBayMove";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { cargoBaySidePanelClassName } from "./cargoBaySidePanel";
@@ -374,6 +376,8 @@ export type CargoGridSketchProps = {
   trayBulkFill?: boolean;
   /** Crates for bulk-fill footprint estimate (with `trayBulkFill`). */
   trayBulkFillSpec?: Pick<ManualBayBulkFillSpec, "crates"> | null;
+  /** Mission-parent fill — packs all remaining types as one block. */
+  trayMissionFill?: ManualBayMissionFillSpec | null;
   /**
    * Full bay occupancy for tray fit checks (includes stay cargo when Transfer
    * hides it). Defaults to `placementBoxes`.
@@ -481,6 +485,7 @@ export function CargoGridSketch({
   trayDragSpec = null,
   trayBulkFill = false,
   trayBulkFillSpec = null,
+  trayMissionFill = null,
   trayCollisionBoxes,
   trayOrientationIndex = 0,
   trayPointerClient = null,
@@ -1172,6 +1177,14 @@ export function CargoGridSketch({
   const trayFitBoxes = trayCollisionBoxes ?? placementBoxes;
   const trayDropPreview = useMemo(() => {
     if (!trayDragSpec || !trayHoverCoord || manualCrateDrag) return null;
+    if (trayMissionFill) {
+      return previewManualBayZoneMissionFill(
+        sketch,
+        trayHoverCoord,
+        trayMissionFill,
+        trayFitBoxes,
+      );
+    }
     if (trayBulkFill) {
       return previewManualBayZoneFill(
         sketch,
@@ -1195,10 +1208,11 @@ export function CargoGridSketch({
     trayDragSpec,
     trayFitBoxes,
     trayHoverCoord,
+    trayMissionFill,
     trayOrientationIndex,
   ]);
   const bulkFillFootprint =
-    trayBulkFill &&
+    (trayBulkFill || trayMissionFill) &&
     trayDropPreview &&
     "footprint" in trayDropPreview &&
     trayDropPreview.footprint
@@ -1964,6 +1978,7 @@ export function CargoGridSketch({
                 activeLayer={z}
                 onSelectLayer={setActiveZ}
                 emptyLayers={emptyTopLayers}
+                placement={isSplit ? "top" : "bottom"}
                 ariaLabel="2D Z layers"
               />
             ) : null}
@@ -2011,14 +2026,18 @@ export function CargoGridSketch({
                 squareDegrees={topFacingDegrees}
               >
               <div
-                className={useAbsoluteFloor ? "relative" : "flex items-center"}
+                className={useAbsoluteFloor ? "relative" : "flex items-start"}
                 style={
                   useAbsoluteFloor
                     ? {
                         width: totalLength * viewCellPx,
                         height: maxWidth * viewCellPx,
                       }
-                    : undefined
+                    : {
+                        // Sequential bays: reserve full deck height so Y offsets
+                        // stay cell-stable across zoom (not flex items-center).
+                        minHeight: maxWidth * viewCellPx,
+                      }
                 }
               >
               {(() => {
@@ -2035,13 +2054,17 @@ export function CargoGridSketch({
                 );
                 if (zone.kind === "cargo") displayBayNumber += 1;
                 const bayNumber = displayBayNumber;
+                // Absolute floor uses left/top; sequential uses paddingTop from
+                // span.yStart so gap/rear stay locked and front stays centered.
                 const absoluteStyle = useAbsoluteFloor
                   ? ({
                       position: "absolute" as const,
                       left: (totalLength - zoneX0 - zone.lengthCells) * viewCellPx,
                       top: yOffset * viewCellPx,
                     } as const)
-                  : undefined;
+                  : ({
+                      paddingTop: yOffset * viewCellPx,
+                    } as const);
                 const cells: { x: number; y: number; localIndex: number }[] =
                   [];
                 // Columns run ramp→nose so the front bay faces the opposite side.
@@ -2074,23 +2097,31 @@ export function CargoGridSketch({
                     )
                   : [];
 
-                const bayLabel = (text: string, invisible: boolean) => (
+                const bayLabel = (text: string) => (
                   <span
-                    className={[
-                      "pointer-events-none shrink-0 select-none font-mono text-[0.55rem] uppercase tracking-[0.14em]",
-                      invisible
-                        ? "invisible"
-                        : "text-rsi-text-muted",
-                    ].join(" ")}
+                    className="pointer-events-none shrink-0 select-none whitespace-nowrap font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted"
                     style={
                       bayLabelChrome.labelTransform
                         ? { transform: bayLabelChrome.labelTransform }
                         : undefined
                     }
-                    title={invisible ? undefined : zone.label}
-                    aria-hidden={invisible || undefined}
+                    title={zone.label}
                   >
                     {text}
+                  </span>
+                );
+                /**
+                 * Height-only stand-in for Zone N above a gap. Zero width so a
+                 * narrow gap column does not grow; nowrap so the sample line
+                 * never wraps (wrapped “Zone 0” used to push the gap down ~1
+                 * cell and drift with zoom).
+                 */
+                const bayLabelHeightSpacer = (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none block w-0 shrink-0 overflow-hidden whitespace-nowrap font-mono text-[0.55rem] uppercase tracking-[0.14em]"
+                  >
+                    Zone 1
                   </span>
                 );
 
@@ -2141,13 +2172,12 @@ export function CargoGridSketch({
                       }
                       style={absoluteStyle}
                     >
-                      {/* Match Zone N chrome so the gap sits with cargo grids. */}
                       {!useAbsoluteFloor && bayLabelChrome.labelBeforeGrid
-                        ? bayLabel("Zone 0", true)
+                        ? bayLabelHeightSpacer
                         : null}
                       {gapGrid}
                       {!useAbsoluteFloor && !bayLabelChrome.labelBeforeGrid
-                        ? bayLabel("Zone 0", true)
+                        ? bayLabelHeightSpacer
                         : null}
                     </div>
                   );
@@ -2404,8 +2434,9 @@ export function CargoGridSketch({
                         draggingManualBoxId === box.id;
                       const cratePointerClass = isHologram
                         ? "pointer-events-none z-[4]"
-                        : draggingManualBoxId != null
-                          ? // While dragging, crates must not steal hits over empty cells.
+                        : draggingManualBoxId != null || trayDragSpec
+                          ? // While dragging a crate or Fill tray chip, crates
+                            // must not steal hits over empty cells.
                             "pointer-events-none z-[5]"
                           : manualEdit
                             ? "pointer-events-auto z-[5] cursor-grab touch-none active:cursor-grabbing"
@@ -2545,11 +2576,11 @@ export function CargoGridSketch({
                     style={absoluteStyle}
                   >
                     {!useAbsoluteFloor && bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(zoneLabelText, false)
+                      ? bayLabel(zoneLabelText)
                       : null}
                     {cargoGrid}
                     {!useAbsoluteFloor && !bayLabelChrome.labelBeforeGrid
-                      ? bayLabel(zoneLabelText, false)
+                      ? bayLabel(zoneLabelText)
                       : null}
                   </div>
                 );
@@ -2622,6 +2653,7 @@ export function CargoGridSketch({
                 onToggleLayer={showIso ? toggleIsoLayer : undefined}
                 showLayerPad={isoLayerPadVisible}
                 onShowLayerPadChange={setIsoLayerPadVisible}
+                layerPadPlacement={isSplit ? "top" : "bottom"}
                 debugBoxOutlines={debugBoxOutlines}
                 onDebugBoxOutlinesChange={setDebugBoxOutlines}
                 panelHeightPx={isSplit ? splitPaneHeightPx : panelHeightPx}

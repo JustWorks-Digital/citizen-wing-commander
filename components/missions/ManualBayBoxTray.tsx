@@ -10,13 +10,17 @@ import {
 } from "@/lib/ships/cargoBoxSizes";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import {
+  bulkFillSpecFromCommodity,
   commodityGroupsFromMission,
-  type ManualBayInventoryCommodityGroup,
+  missionFillSpecFromGroup,
+  missionPlacedScu,
+  missionRemainingScu,
   type ManualBayInventoryMissionGroup,
 } from "@/lib/ships/manualBayInventory";
 import type {
   ManualBayAddBoxSpec,
   ManualBayBulkFillSpec,
+  ManualBayMissionFillSpec,
 } from "@/lib/ships/manualBayMove";
 
 export type ManualBayBoxTrayProps = {
@@ -27,6 +31,8 @@ export type ManualBayBoxTrayProps = {
     missionId: string | null,
     commoditySlug: string,
   ) => void;
+  /** Pull every cargo type for one mission off the bay into Cargo. */
+  onResetMission?: (missionId: string | null) => void;
   /** Line currently pointer-dragged (source chip dims; ghost follows cursor). */
   draggingLineKey?: string | null;
   /** Orientation index for the dragging crate (R cycles). */
@@ -41,6 +47,11 @@ export type ManualBayBoxTrayProps = {
   /** Bulk: drag full remaining cargo type onto a bay section. */
   onTrayBulkDragStart?: (
     fill: ManualBayBulkFillSpec,
+    lineKey: string,
+  ) => void;
+  /** Mission parent: drag all remaining cargo types as one block. */
+  onTrayMissionDragStart?: (
+    fill: ManualBayMissionFillSpec,
     lineKey: string,
   ) => void;
   /** Cancel an in-progress drag (e.g. Esc). */
@@ -108,22 +119,6 @@ function specFromLine(line: {
   };
 }
 
-function bulkSpecFromCommodity(
-  commodity: ManualBayInventoryCommodityGroup,
-): ManualBayBulkFillSpec {
-  return {
-    missionId: commodity.missionId,
-    commoditySlug: commodity.commoditySlug,
-    commodityName: commodity.commodityName,
-    color: commodity.color,
-    color2: commodity.color2,
-    crates: commodity.lines.map((line) => ({
-      size: line.size,
-      count: line.remaining,
-    })),
-  };
-}
-
 type PendingPointer =
   | {
       kind: "single";
@@ -142,7 +137,20 @@ type PendingPointer =
       lineKey: string;
       fill: ManualBayBulkFillSpec;
       dragging: boolean;
+    }
+  | {
+      kind: "mission";
+      pointerId: number;
+      startX: number;
+      startY: number;
+      lineKey: string;
+      fill: ManualBayMissionFillSpec;
+      dragging: boolean;
     };
+
+function missionLineKey(missionId: string | null): string {
+  return `${missionId ?? "_"}:mission`;
+}
 
 export type ManualBayTrayDragGhostProps = {
   spec: ManualBayAddBoxSpec;
@@ -243,6 +251,44 @@ export function ManualBayTrayBulkDragGhost({
   );
 }
 
+export type ManualBayTrayMissionDragGhostProps = {
+  fill: ManualBayMissionFillSpec;
+  remainingScu: number;
+  clientX: number;
+  clientY: number;
+};
+
+/** Ghost while dragging a whole mission onto a bay section. */
+export function ManualBayTrayMissionDragGhost({
+  fill,
+  remainingScu,
+  clientX,
+  clientY,
+}: ManualBayTrayMissionDragGhostProps) {
+  return (
+    <div
+      role="presentation"
+      aria-hidden
+      className="pointer-events-none fixed z-[200] box-border flex min-w-[6.5rem] max-w-[10rem] -translate-x-1/2 -translate-y-[110%] flex-col items-center justify-center gap-0.5 rounded-[2px] border-2 border-rsi-accent bg-rsi-accent-muted/90 px-1.5 py-1 font-mono text-[0.5rem] leading-none text-rsi-text shadow-rsi-panel tabular-nums"
+      style={{
+        left: clientX,
+        top: clientY,
+        opacity: 0.95,
+      }}
+    >
+      <span className="max-w-full truncate font-semibold uppercase tracking-[0.08em]">
+        {fill.missionTitle}
+      </span>
+      <span className="uppercase tracking-[0.08em] text-rsi-text-secondary">
+        Mission · {remainingScu}
+        <span className="normal-case tracking-normal" title={SCU_TITLE}>
+          scu
+        </span>
+      </span>
+    </div>
+  );
+}
+
 export type ManualBayPlacedBoxDragGhostProps = {
   box: PlacedCargoBox;
   clientX: number;
@@ -297,20 +343,22 @@ export function ManualBayPlacedBoxDragGhost({
 
 /**
  * Manual Cargo panel: remaining crates by mission × commodity × SCU size.
- * Drag Fill onto a section to pack all remaining of that type (largest first).
- * Size chips under each Fill are collapsed by default — expand for one-at-a-time.
+ * Drag a mission header to pack all remaining types as one block; drag Fill
+ * for one cargo type. Size chips under each Fill are collapsed by default.
  * R rotates single-crate drag; Esc cancels.
  */
 export function ManualBayBoxTray({
   groups,
   onClearBay,
   onResetCommodity,
+  onResetMission,
   draggingLineKey = null,
   orientationIndex = 0,
   onTrayDragStart,
   onTrayDragMove,
   onTrayDragEnd,
   onTrayBulkDragStart,
+  onTrayMissionDragStart,
   onTrayDragCancel,
   className,
 }: ManualBayBoxTrayProps) {
@@ -363,8 +411,8 @@ export function ManualBayBoxTray({
     >
       <div className="mb-1 flex min-w-0 items-center gap-1">
         <p
-          className="shrink-0 pr-0.5 font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-accent"
-          title="Drag Fill onto a bay section to pack that cargo type. Expand Sizes for one-crate chips. R rotates. Esc cancels."
+          className="shrink-0 pr-0.5 font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text"
+          title="Drag a mission header to pack all its cargo together (by type). Drag Fill for one cargo type. Expand Sizes for one-crate chips. R rotates. Esc cancels."
         >
           Cargo:
         </p>
@@ -388,18 +436,118 @@ export function ManualBayBoxTray({
         {groups.map((group) => {
           const idShort = shortMissionId(group.missionId);
           const commodities = commodityGroupsFromMission(group);
+          const missionKey = missionLineKey(group.missionId);
+          const missionFill = missionFillSpecFromGroup(group);
+          const missionScu = missionRemainingScu(group);
+          const missionOnBayScu = missionPlacedScu(group);
+          const canMissionFill = Boolean(missionFill) && missionScu > 0;
+          const canMissionReset =
+            Boolean(onResetMission) && missionOnBayScu > 0;
+          const missionDragging = draggingLineKey === missionKey;
           return (
             <div
               key={group.missionId ?? "_"}
-              className="rounded-[2px] border border-rsi-border/60 bg-rsi-bg-deep/40 px-1 py-1"
+              className={[
+                "rounded-[2px] border bg-rsi-bg-deep/40 px-1 py-1",
+                missionDragging
+                  ? "border-dashed border-rsi-accent/60 opacity-50"
+                  : "border-rsi-border/60",
+              ].join(" ")}
             >
-              <p
-                className="mb-0.5 flex min-w-0 items-baseline gap-1 font-mono text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted"
+              <div className="mb-0.5 flex min-w-0 items-stretch overflow-hidden rounded-[2px]">
+              <button
+                type="button"
+                disabled={!canMissionFill}
                 title={
-                  idShort
-                    ? `${group.missionTitle} · ${group.missionId}`
+                  canMissionFill
+                    ? `Drag onto a bay section to pack all remaining cargo for ${group.missionTitle} (by cargo type)`
                     : group.missionTitle
                 }
+                aria-label={
+                  canMissionFill
+                    ? `Fill mission ${group.missionTitle}, ${missionScu}scu`
+                    : group.missionTitle
+                }
+                onPointerDown={(event) => {
+                  if (!canMissionFill || !missionFill || event.button !== 0) {
+                    return;
+                  }
+                  pendingRef.current = {
+                    kind: "mission",
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    lineKey: missionKey,
+                    fill: missionFill,
+                    dragging: false,
+                  };
+                  try {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  } catch {
+                    // Synthetic / already-captured pointers still drag.
+                  }
+                }}
+                onPointerMove={(event) => {
+                  const pending = pendingRef.current;
+                  if (
+                    !pending ||
+                    pending.kind !== "mission" ||
+                    pending.pointerId !== event.pointerId
+                  ) {
+                    return;
+                  }
+                  const dx = event.clientX - pending.startX;
+                  const dy = event.clientY - pending.startY;
+                  if (
+                    !pending.dragging &&
+                    Math.hypot(dx, dy) >= TRAY_DRAG_THRESHOLD_PX
+                  ) {
+                    pending.dragging = true;
+                    onTrayMissionDragStart?.(pending.fill, pending.lineKey);
+                  }
+                  if (pending.dragging) {
+                    onTrayDragMove?.(event.clientX, event.clientY);
+                  }
+                }}
+                onPointerUp={(event) => {
+                  const pending = pendingRef.current;
+                  if (
+                    !pending ||
+                    pending.kind !== "mission" ||
+                    pending.pointerId !== event.pointerId
+                  ) {
+                    return;
+                  }
+                  pendingRef.current = null;
+                  try {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                  } catch {
+                    // Already released.
+                  }
+                  if (pending.dragging) {
+                    onTrayDragEnd?.(event.clientX, event.clientY);
+                  }
+                }}
+                onPointerCancel={(event) => {
+                  const pending = pendingRef.current;
+                  if (
+                    !pending ||
+                    pending.kind !== "mission" ||
+                    pending.pointerId !== event.pointerId
+                  ) {
+                    return;
+                  }
+                  pendingRef.current = null;
+                  if (pending.dragging) {
+                    onTrayDragCancel?.();
+                  }
+                }}
+                className={[
+                  "flex min-w-0 flex-1 items-baseline gap-1 rounded-[2px] px-0.5 py-px text-left font-mono text-[0.45rem] uppercase tracking-[0.1em] transition-colors",
+                  canMissionFill
+                    ? "cursor-grab text-rsi-text-secondary hover:bg-rsi-accent-muted/20 hover:text-rsi-accent active:cursor-grabbing"
+                    : "cursor-default text-rsi-text-muted",
+                ].join(" ")}
               >
                 <span className="min-w-0 truncate">{group.missionTitle}</span>
                 {idShort ? (
@@ -407,7 +555,37 @@ export function ManualBayBoxTray({
                     · {idShort}
                   </span>
                 ) : null}
-              </p>
+                {canMissionFill ? (
+                  <span className="ml-auto shrink-0 tabular-nums text-rsi-accent/80">
+                    {missionScu}
+                    <span title={SCU_TITLE}>scu</span>
+                  </span>
+                ) : null}
+              </button>
+              {canMissionReset ? (
+                <button
+                  type="button"
+                  title={`Reset · pull all ${group.missionTitle} cargo off the bay into Cargo`}
+                  aria-label={`Reset mission ${group.missionTitle}`}
+                  onClick={() => onResetMission?.(group.missionId)}
+                  className="inline-flex w-5 shrink-0 items-center justify-center text-rsi-text-muted transition-colors hover:bg-rsi-accent-muted/30 hover:text-rsi-text-secondary"
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 12 12"
+                    className="size-2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3.5 4.5H8a2 2 0 0 1 0 4H5.5" />
+                    <path d="M5 2.5 3 4.5 5 6.5" />
+                  </svg>
+                </button>
+              ) : null}
+              </div>
               <div className="space-y-0.5">
                 {commodities.map((commodity) => {
                   const bulkDragging = draggingLineKey === commodity.key;
@@ -446,7 +624,7 @@ export function ManualBayBoxTray({
                             startX: event.clientX,
                             startY: event.clientY,
                             lineKey: commodity.key,
-                            fill: bulkSpecFromCommodity(commodity),
+                            fill: bulkFillSpecFromCommodity(commodity),
                             dragging: false,
                           };
                           try {

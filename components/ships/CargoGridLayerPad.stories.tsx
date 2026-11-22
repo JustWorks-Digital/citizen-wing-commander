@@ -5,7 +5,11 @@ import {
   CargoGridLayerPadToggle,
 } from "./CargoGridLayerPad";
 
-function SelectDemo() {
+function SelectDemo({
+  placement = "bottom",
+}: {
+  placement?: "top" | "bottom";
+}) {
   const [active, setActive] = useState(0);
   const [onGrid, setOnGrid] = useState(true);
   const emptyLayers = new Set([1, 3]);
@@ -22,6 +26,7 @@ function SelectDemo() {
           activeLayer={active}
           onSelectLayer={setActive}
           emptyLayers={emptyLayers}
+          placement={placement}
           ariaLabel="2D layers"
         />
       ) : null}
@@ -29,7 +34,11 @@ function SelectDemo() {
   );
 }
 
-function ToggleDemo() {
+function ToggleDemo({
+  placement = "bottom",
+}: {
+  placement?: "top" | "bottom";
+}) {
   const [hidden, setHidden] = useState<ReadonlySet<number>>(() => new Set());
   const [onGrid, setOnGrid] = useState(true);
   return (
@@ -51,6 +60,7 @@ function ToggleDemo() {
               return next;
             });
           }}
+          placement={placement}
           ariaLabel="3D layers"
         />
       ) : null}
@@ -66,7 +76,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Top-center Z-layer pad for 2D (select) and 3D (toggle). Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
+          "Centered Z-layer pad for 2D (select) and 3D (toggle). Solo views place it at the bottom; Split keeps it at the top. Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
       },
     },
   },
@@ -80,14 +90,26 @@ export const Select2D: Story = {
     mode: "select",
     layers: [0, 1, 2, 3],
     activeLayer: 0,
+    placement: "bottom",
   },
-  render: () => <SelectDemo />,
+  render: () => <SelectDemo placement="bottom" />,
 };
 
 export const Toggle3D: Story = {
   args: {
     mode: "toggle",
     layers: [0, 1, 2, 3],
+    placement: "bottom",
   },
-  render: () => <ToggleDemo />,
+  render: () => <ToggleDemo placement="bottom" />,
+};
+
+export const SplitTop: Story = {
+  args: {
+    mode: "select",
+    layers: [0, 1, 2, 3],
+    activeLayer: 0,
+    placement: "top",
+  },
+  render: () => <SelectDemo placement="top" />,
 };

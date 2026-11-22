@@ -13,6 +13,7 @@ import {
   previewManualBayZoneFill,
   tryDropManualBayBox,
   tryFillManualBayZoneWithCargoType,
+  tryFillManualBayZoneWithMission,
   tryMoveManualBayBox,
 } from "@/lib/ships/manualBayMove";
 
@@ -274,6 +275,131 @@ describe("tryFillManualBayZoneWithCargoType", () => {
     expect(sizes.filter((size) => size === 8).length).toBeGreaterThan(0);
   });
 
+  it("mission Fill packs all cargo types together sorted by type SCU", () => {
+    const sketch = toySketch();
+    const result = tryFillManualBayZoneWithMission(
+      sketch,
+      [],
+      { x: 0, y: 0, z: 0 },
+      {
+        missionId: "m1",
+        missionTitle: "Ice and Food",
+        commodities: [
+          {
+            missionId: "m1",
+            commoditySlug: "pressurized-ice",
+            commodityName: "Pressurized Ice",
+            color: null,
+            color2: null,
+            crates: [{ size: 4, count: 2 }],
+          },
+          {
+            missionId: "m1",
+            commoditySlug: "processed-food",
+            commodityName: "Processed Food",
+            color: null,
+            color2: null,
+            crates: [{ size: 8, count: 3 }],
+          },
+        ],
+      },
+    );
+    expect(result).not.toBeNull();
+    expect(result!.placedCount).toBe(5);
+    expect(result!.unplacedCount).toBe(0);
+    // Largest cargo type (PF 24 SCU) places before minority ice (8 SCU).
+    const first = result!.boxes[0]!;
+    expect(first.commoditySlug).toBe("processed-food");
+    const types = [...new Set(result!.boxes.map((box) => box.commoditySlug))];
+    expect(types).toEqual(["processed-food", "pressurized-ice"]);
+  });
+
+  // C2 Hercules rear is one large zone — Fill must seed near the drop cell so
+  // players can pack different blocks (ramp-side vs nose-side) of the same bay.
+  it("Hercules rear Fill seeds near the drop cell not only one bay corner", () => {
+    const sketch = getCargoGridSketchBySlug("c2-hercules-starlifter");
+    if (!sketch) throw new Error("Missing C2 Hercules cargo-grid fixture");
+    const rear = cargoGridZoneSpans(sketch).find(
+      (entry) => entry.zone.id === "rear",
+    );
+    if (!rear) throw new Error("Missing Hercules rear zone");
+
+    const rampDrop = {
+      x: rear.xEnd - 2,
+      y: rear.yStart + 1,
+      z: 0,
+    };
+    const noseDrop = {
+      x: rear.xStart + 1,
+      y: rear.yEnd - 2,
+      z: 0,
+    };
+
+    const rampFill = tryFillManualBayZoneWithCargoType(
+      sketch,
+      [],
+      rampDrop,
+      {
+        missionId: "m1",
+        commoditySlug: "processed-food",
+        commodityName: "Processed Food",
+        color: null,
+        color2: null,
+        crates: [{ size: 8, count: 4 }],
+      },
+    );
+    expect(rampFill).not.toBeNull();
+    expect(rampFill!.placedCount).toBe(4);
+    const rampMeanX =
+      rampFill!.boxes.reduce((sum, box) => sum + box.origin.x, 0) /
+      rampFill!.boxes.length;
+
+    const noseFill = tryFillManualBayZoneWithCargoType(
+      sketch,
+      [],
+      noseDrop,
+      {
+        missionId: "m1",
+        commoditySlug: "processed-food",
+        commodityName: "Processed Food",
+        color: null,
+        color2: null,
+        crates: [{ size: 8, count: 4 }],
+      },
+    );
+    expect(noseFill).not.toBeNull();
+    expect(noseFill!.placedCount).toBe(4);
+    const noseMeanX =
+      noseFill!.boxes.reduce((sum, box) => sum + box.origin.x, 0) /
+      noseFill!.boxes.length;
+
+    // Ramp-side drop (high X) packs farther aft than nose-side drop (low X).
+    expect(rampMeanX).toBeGreaterThan(noseMeanX + 2);
+
+    // Second Fill into the same rear on the opposite corner starts a second block.
+    const second = tryFillManualBayZoneWithCargoType(
+      sketch,
+      rampFill!.boxes,
+      noseDrop,
+      {
+        missionId: "m1",
+        commoditySlug: "ship-ammunition",
+        commodityName: "Ship Ammunition",
+        color: null,
+        color2: null,
+        crates: [{ size: 8, count: 4 }],
+      },
+    );
+    expect(second).not.toBeNull();
+    expect(second!.placedCount).toBe(4);
+    const saBoxes = second!.boxes.filter(
+      (box) => box.commoditySlug === "ship-ammunition",
+    );
+    const saMeanX =
+      saBoxes.reduce((sum, box) => sum + box.origin.x, 0) / saBoxes.length;
+    expect(saMeanX).toBeLessThan(rampMeanX - 2);
+  });
+
   it("Galaxy Lift L/R leave open deck cells toward the aisle not the outer wall", () => {
     // Manual Fill screenshot: PF (Lift L) open toward gap = right; SA (Lift R)
     // must also open toward the gap — outer wall flips by side.
@@ -286,11 +412,14 @@ describe("tryFillManualBayZoneWithCargoType", () => {
         (entry) => entry.zone.id === zoneId,
       );
       if (!span) throw new Error(`Missing ${zoneId}`);
+      // Drop on the outer wall so Fill seeds wall→aisle (Lift L low-Y, Lift R high-Y).
+      const wallY =
+        zoneId === "lift-l" ? span.yStart : span.yEnd - 1;
       // Partial fill — enough to leave open deck cells.
       const result = tryFillManualBayZoneWithCargoType(
         sketch,
         [],
-        { x: span.xStart, y: span.yStart, z: 0 },
+        { x: span.xStart, y: wallY, z: 0 },
         {
           missionId: "m1",
           commoditySlug: "ship-ammunition",

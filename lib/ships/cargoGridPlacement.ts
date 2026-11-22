@@ -310,7 +310,41 @@ type FindSlotCluster = {
    * (outer wall → middle for exclusive piles; mixes prefer aisle).
    */
   shipWidthCells?: number;
+  /**
+   * Manual Fill drop cell — seed new piles nearest this floor cell so large
+   * single-zone bays (C2 Hercules rear) can start a block where the user drops.
+   */
+  preferNearCoord?: CargoGridCoord;
 };
+
+/** Deck distance from footprint origin to a preferred Manual Fill drop cell. */
+function footprintNearDistance(
+  origin: CargoGridCoord,
+  footprint: CargoBoxFootprint,
+  near: CargoGridCoord,
+): number {
+  const cx = origin.x + (footprint.dx - 1) / 2;
+  const cy = origin.y + (footprint.dy - 1) / 2;
+  return Math.abs(cx - near.x) + Math.abs(cy - near.y);
+}
+
+/** True when `coord` is within `maxDist` (Manhattan XY) of any same-cluster cell. */
+function clusterNearCoord(
+  clusterKey: string,
+  occupiedClusters: ReadonlyMap<string, string>,
+  coord: CargoGridCoord,
+  maxDist: number,
+): boolean {
+  for (const [cellKey, owner] of occupiedClusters) {
+    if (owner !== clusterKey) continue;
+    const [xs, ys] = cellKey.split(",");
+    const x = Number(xs);
+    const y = Number(ys);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (Math.abs(x - coord.x) + Math.abs(y - coord.y) <= maxDist) return true;
+  }
+  return false;
+}
 
 /** Neighbor cells (face-adjacent) — used to keep same-commodity crates clustered. */
 function neighborCoords(coord: CargoGridCoord): CargoGridCoord[] {
@@ -1166,7 +1200,26 @@ function findSlot(
       const onDeck = pool.filter((c) => c.onDeck);
       if (onDeck.length > 0) pool = onDeck;
     }
-    if (cluster?.preferBayEnd) {
+    // Manual Fill drop: prefer seeding nearest the pointer (large Hercules bays).
+    // Skip bay-end bias when anchoring to a drop so the pile starts where dropped.
+    const preferNear = cluster?.preferNearCoord;
+    if (preferNear && !hasCluster) {
+      let minDist = Number.POSITIVE_INFINITY;
+      for (const candidate of pool) {
+        minDist = Math.min(
+          minDist,
+          footprintNearDistance(candidate.origin, footprint, preferNear),
+        );
+      }
+      if (Number.isFinite(minDist)) {
+        const nearPool = pool.filter(
+          (c) =>
+            footprintNearDistance(c.origin, footprint, preferNear) <=
+            minDist + 1,
+        );
+        if (nearPool.length > 0) pool = nearPool;
+      }
+    } else if (cluster?.preferBayEnd) {
       const onEnd = pool.filter((c) =>
         isOnPreferredBayEnd(c.origin, footprint, bounds, cluster.preferBayEnd!),
       );
@@ -1184,11 +1237,18 @@ function findSlot(
         : -1;
       if (!best || cmp < 0) {
         best = candidate;
-      } else if (
-        cmp === 0 &&
-        candidate.packMetrics.bayEndToward > best.packMetrics.bayEndToward
-      ) {
-        best = candidate;
+      } else if (cmp === 0) {
+        if (
+          preferNear &&
+          footprintNearDistance(candidate.origin, footprint, preferNear) <
+            footprintNearDistance(best.origin, footprint, preferNear)
+        ) {
+          best = candidate;
+        } else if (
+          candidate.packMetrics.bayEndToward > best.packMetrics.bayEndToward
+        ) {
+          best = candidate;
+        }
       }
     }
     return best?.origin ?? null;
@@ -1551,6 +1611,10 @@ export type PlaceCargoInZoneOptions = {
    * Galaxy lift). When set, bounds outside the set are ignored.
    */
   restrictZoneIds?: readonly string[];
+  /**
+   * Manual Fill: seed / grow toward this drop cell inside the restricted zone.
+   */
+  preferNearCoord?: CargoGridCoord;
 };
 
 function sizesForSegment(segment: CargoPlacementSegment): CargoBoxScu[] {
@@ -1626,6 +1690,7 @@ export function placeCargoItemsInZone(
     options?.occupiedClusters ?? new Map<string, string>();
   const occupiedRegions =
     options?.occupiedRegions ?? new Map<string, string>();
+  const preferNearCoord = options?.preferNearCoord ?? null;
 
   if (boundsList.length === 0) {
     for (const item of items) {
@@ -1836,6 +1901,7 @@ export function placeCargoItemsInZone(
                 // fill into a single side lift). Other ships keep legacy XY.
                 shipWidthCells:
                   sketch.shipSlug === "galaxy" ? sketch.widthCells : undefined,
+                preferNearCoord: preferNearCoord ?? undefined,
               }
             : null;
         for (const bounds of boundsOrder) {
@@ -1879,7 +1945,22 @@ export function placeCargoItemsInZone(
         }
         return null;
       };
-      if (preferClusterContiguity && hasExistingCluster) {
+      // Manual Fill onto a far empty patch of a large zone: seed a second
+      // island near the drop instead of forcing growth of a distant pile.
+      const dropNearExisting =
+        preferNearCoord != null &&
+        hasExistingCluster &&
+        clusterNearCoord(
+          clusterKey,
+          occupiedClusters,
+          preferNearCoord,
+          4,
+        );
+      if (
+        preferClusterContiguity &&
+        hasExistingCluster &&
+        (preferNearCoord == null || dropNearExisting)
+      ) {
         origin = tryBounds(orderedBounds, true);
       }
       if (!origin) {
