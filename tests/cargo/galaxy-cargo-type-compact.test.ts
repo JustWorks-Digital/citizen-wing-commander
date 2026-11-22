@@ -18,6 +18,7 @@ import {
   orderPackItemsByProgram,
 } from "@/lib/ships/packItemOrder";
 import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
+import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 
 function galaxySketch() {
@@ -322,6 +323,7 @@ describe("Galaxy by-cargo-type compact clusters", () => {
 
   it("does not bury minority cargo under or behind majority in a shared lift", () => {
     const { sketch, plan } = packEverusSizedGalaxy();
+    expect(validateCargoTypePackClusters(plan.boxes).ok).toBe(true);
     // Outer-wall burial only applies to Galaxy Lift L/R (walled sides).
     const sideZones = new Set(["lift-l", "lift-r"]);
     for (const zoneId of ["lift-l", "lift", "lift-r"]) {

@@ -16,6 +16,8 @@ import {
 } from "@/lib/ships/cargoGridPlacement";
 import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
 import { packBaysFromSketch } from "@/lib/ships/packBaysFromSketch";
+import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
+import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
 export type CargoBayPackAtStopOptions = {
@@ -56,33 +58,37 @@ export const cargoBay = {
 
     const includeAboardCargo = options.includeAboardCargo;
 
-    let plan: CargoGridPlacementPlan;
-    if (options.packProgram) {
-      plan = interpretCargoBayPackProgram(
-        stopId,
-        sketch,
-        stops,
-        options.packProgram,
-        { includeAboardCargo },
-      );
-    } else {
-      const packMode = options.packMode ?? defaultCargoBayPackMode;
-      const biasXyMode = options.missionPrioritized
-        ? (getShipBayPreferenceFixture(sketch.shipSlug).missionPriorityPacking
-            ?.bias ?? null)
-        : null;
-      const program = compilePackProgramForMode({
+    const packMode = options.packMode ?? defaultCargoBayPackMode;
+    const biasXyMode = options.missionPrioritized
+      ? (getShipBayPreferenceFixture(sketch.shipSlug).missionPriorityPacking
+          ?.bias ?? null)
+      : null;
+    const program =
+      options.packProgram ??
+      compilePackProgramForMode({
         mode: packMode,
         bays: packBaysFromSketch(sketch),
         missionPrioritized: options.missionPrioritized,
         biasXyMode,
       });
-      plan = interpretCargoBayPackProgram(stopId, sketch, stops, program, {
-        includeAboardCargo,
-      });
-    }
+    const plan = interpretCargoBayPackProgram(stopId, sketch, stops, program, {
+      includeAboardCargo,
+    });
+    const packSlotPolicy = derivePackSlotPolicy(program);
     // Excess beyond snapped ship SCU → overflow/unstable grids when present.
-    return placeUnplacedInOverflow(sketch, plan);
+    // Pass cluster policy so overflow re-pack does not bury cargo types
+    // (session 6ff09a56 Everus Harbor Galaxy Cargo Type mix).
+    const packed = placeUnplacedInOverflow(sketch, plan, {
+      packSlotPolicy,
+      // Only cargo-type preserves clusters through overflow; mission-location
+      // still dense-repacks so official capacity snaps to 720+excess.
+      clusterByKey: packMode === "by-cargo-type",
+    });
+    if (packMode !== "by-cargo-type") return packed;
+    return {
+      ...packed,
+      cargoTypeClusters: validateCargoTypePackClusters(packed.boxes),
+    };
   },
 
   /** Suggested: chronological route-authored placement. */

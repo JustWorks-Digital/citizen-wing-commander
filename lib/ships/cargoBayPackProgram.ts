@@ -226,6 +226,8 @@ export function compileCargoTypePackProgram(
       priority: 40,
       prefer: "same-cargo-type",
       over: "different-cargo-type",
+      // Hard: never bury one commodity under another (Galaxy Everus mix).
+      forbidForeignSupport: true,
     },
     {
       call: "stack",

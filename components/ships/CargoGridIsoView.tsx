@@ -736,7 +736,7 @@ export function CargoGridIsoView({
   embedded = false,
   hideLegend = false,
   legendToggleAbove = false,
-  sidePanelsOverlay = true,
+  sidePanelsOverlay = false,
   hidePeel = false,
   peelStack: peelStackProp,
   onPeelStackChange,

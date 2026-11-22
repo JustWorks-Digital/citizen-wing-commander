@@ -48,6 +48,7 @@ export function resetTripProgress(
     missionsCompleted: 0,
     finishStatus: null,
     finishFeedback: null,
+    quantumOriginDeparted: false,
   });
   const rebuilt = rebuildRowsFromMissions(cleared, missions);
   if (!rebuilt.ok) return cleared;

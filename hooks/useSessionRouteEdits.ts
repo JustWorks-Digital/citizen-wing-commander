@@ -35,7 +35,6 @@ export function useSessionRouteEdits(input: {
   sessionRef: { current: SessionChecklist };
   persistSession: PersistSession;
   setLoadError: Dispatch<SetStateAction<string | null>>;
-  setQuantumOriginDeparted: Dispatch<SetStateAction<boolean>>;
   syncCatalogBoxSplits: (
     missionId: string,
     nextSession: SessionChecklist,
@@ -45,7 +44,6 @@ export function useSessionRouteEdits(input: {
     sessionRef,
     persistSession,
     setLoadError,
-    setQuantumOriginDeparted,
     syncCatalogBoxSplits,
   } = input;
 
@@ -341,9 +339,8 @@ export function useSessionRouteEdits(input: {
   );
 
   const onResetTrip = useCallback(() => {
-    setQuantumOriginDeparted(false);
     void persistSession(resetTripProgress(sessionRef.current));
-  }, [persistSession, sessionRef, setQuantumOriginDeparted]);
+  }, [persistSession, sessionRef]);
 
   return {
     onToggleCargoHandled,

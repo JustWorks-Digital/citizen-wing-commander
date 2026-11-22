@@ -169,8 +169,6 @@ export function SessionChecklistView({
   const [tripNavPrefsReady, setTripNavPrefsReady] = useState(false);
   const [pendingScreenshotCount, setPendingScreenshotCount] = useState(0);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
-  /** Synthetic start → first-stop quantum marked done (feeds Distance traveled). */
-  const [quantumOriginDeparted, setQuantumOriginDeparted] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tripRepairBusy, setTripRepairBusy] = useState(false);
   const [tripRepairError, setTripRepairError] = useState<string | null>(null);
@@ -481,16 +479,7 @@ export function SessionChecklistView({
 
   useEffect(() => {
     setFocusedStopId(null);
-    setQuantumOriginDeparted(false);
   }, [session.id]);
-
-  useEffect(() => {
-    setQuantumOriginDeparted(false);
-  }, [
-    session.startLocationSlug,
-    session.rows[0]?.id,
-    session.rows[0]?.locationSlug,
-  ]);
 
   const resolvedFocusedStopId = useMemo(() => {
     const canFocusQuantum =
@@ -712,6 +701,46 @@ export function SessionChecklistView({
       });
   }, [initial]);
 
+  const quantumOriginDeparted = Boolean(session.quantumOriginDeparted);
+
+  const setQuantumOriginDeparted = useCallback(
+    (departed: boolean) => {
+      const current = sessionRef.current;
+      if (Boolean(current.quantumOriginDeparted) === departed) return;
+      void persistSession({
+        ...current,
+        quantumOriginDeparted: departed,
+      });
+    },
+    [persistSession],
+  );
+
+  const originHopKey = [
+    session.startLocationSlug ?? "",
+    session.rows[0]?.id ?? "",
+    session.rows[0]?.locationSlug ?? "",
+  ].join("::");
+  const originHopKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    originHopKeyRef.current = null;
+  }, [session.id]);
+
+  // Clear persisted QT-origin done when the start → first-stop hop changes.
+  useEffect(() => {
+    if (!initial && !hydratedFromServerRef.current) return;
+    const prev = originHopKeyRef.current;
+    if (prev === originHopKey) return;
+    const hadPrev = prev != null;
+    originHopKeyRef.current = originHopKey;
+    if (!hadPrev) return;
+    if (!sessionRef.current.quantumOriginDeparted) return;
+    void persistSession({
+      ...sessionRef.current,
+      quantumOriginDeparted: false,
+    });
+  }, [originHopKey, persistSession, initial]);
+
   const openMissions = useCallback((missionId?: string) => {
     setMissionsFocusId(typeof missionId === "string" ? missionId : null);
     setMissionsOpen(true);
@@ -751,7 +780,6 @@ export function SessionChecklistView({
     sessionRef,
     persistSession,
     setLoadError,
-    setQuantumOriginDeparted,
     syncCatalogBoxSplits,
   });
   const openStops = useCallback(() => setStopsOpen(true), []);

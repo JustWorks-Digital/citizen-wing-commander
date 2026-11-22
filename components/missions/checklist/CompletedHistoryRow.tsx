@@ -819,20 +819,23 @@ export function CondensedQuantumRow({
           : undefined
       }
       className={[
-        "flex items-center gap-2.5 px-3 py-2 sm:gap-3",
+        // Match CondensedStopRow chrome; completed QT omits the Done mark.
+        "flex min-w-0 items-center gap-2.5 px-3 py-2 sm:gap-3",
         onOpen && !isPending ? "cursor-pointer" : "",
         checklistRowToneClass(isCompleted, isFocused),
       ].join(" ")}
     >
-      <DoneCheckbox
-        location={routeTitle}
-        step="QT"
-        isCompleted={isCompleted}
-        isActive={isFocused}
-        isPending={isPending}
-        compact
-        onToggle={onToggle}
-      />
+      {!isCompleted ? (
+        <DoneCheckbox
+          location={routeTitle}
+          step="QT"
+          isCompleted={false}
+          isActive={isFocused}
+          isPending={isPending}
+          compact
+          onToggle={onToggle}
+        />
+      ) : null}
       <span
         className={[
           "flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide",

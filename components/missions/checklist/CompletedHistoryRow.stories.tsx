@@ -3,6 +3,7 @@ import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import {
   ChecklistProgressRail,
   ChecklistProgressTimeline,
+  CompletedQuantumHistoryRow,
   CompletedStopHistoryRow,
   FinishRunTile,
   NextDistanceMeta,
@@ -15,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green).",
+          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green). Completed quantum strips keep from→to text and omit the Done checkmark so they match completed-stop chrome.",
       },
     },
   },
@@ -104,6 +105,21 @@ export const CompletedStrip: StoryObj<typeof CompletedStopHistoryRow> = {
     onOpen: () => {},
   },
 };
+
+export const CompletedQuantumStrip: StoryObj<typeof CompletedQuantumHistoryRow> =
+  {
+    render: (args) => <CompletedQuantumHistoryRow {...args} />,
+    args: {
+      fromLabel: "Everus Harbor",
+      toLabel: "Baijini Point",
+      hopLabel: "12.4 Mm",
+      hopTitle: "12.4 Mm",
+      isFocused: false,
+      isPending: false,
+      onToggle: () => {},
+      onOpen: () => {},
+    },
+  };
 
 export const ProgressRail: StoryObj<typeof ChecklistProgressRail> = {
   render: (args) => (

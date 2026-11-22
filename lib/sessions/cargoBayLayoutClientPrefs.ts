@@ -73,7 +73,7 @@ export type CargoBayChromePrefs = {
 export const DEFAULT_CARGO_BAY_CHROME_PREFS: CargoBayChromePrefs = {
   legendHidden: true,
   sortingHidden: true,
-  sidePanelsOverlay: true,
+  sidePanelsOverlay: false,
   viewTab: "split",
   splitOrientation: "horizontal",
   syncedZoom: false,

@@ -158,6 +158,11 @@ export type SessionChecklist = {
    * Slug from `lib/fixtures/locations.json`, or null if unset.
    */
   startLocationSlug: string | null;
+  /**
+   * Synthetic start → first-stop quantum hop marked done.
+   * Not a checklist row — persisted so refresh keeps QT complete.
+   */
+  quantumOriginDeparted?: boolean;
   /** Accepted / planned hauling missions in this session (contracts). */
   missionCount: number;
   /** Missions marked done (not the same as route-leg completion). */
@@ -418,6 +423,7 @@ export function emptySessionChecklist(
     sessionName: "New trip",
     shipSlugs: [],
     startLocationSlug: null,
+    quantumOriginDeparted: false,
     missionCount: 0,
     missionsCompleted: 0,
     missions: [],
@@ -468,6 +474,7 @@ export function normalizeSessionChecklist(
         typeof raw.startLocationSlug === "string" && raw.startLocationSlug.trim()
           ? raw.startLocationSlug.trim()
           : null,
+      quantumOriginDeparted: Boolean(raw.quantumOriginDeparted),
       missionCount: Math.max(
         0,
         Math.trunc(

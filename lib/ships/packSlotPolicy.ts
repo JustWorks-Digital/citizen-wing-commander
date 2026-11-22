@@ -203,6 +203,11 @@ export function comparePackSlotCandidates(
         continue;
       }
       if (call.forbidForeignSupport) {
+        // Cargo-type: foreign = other commodity under footprint.
+        // Mission-location: also soft-rank foreign region support.
+        if (a.otherClusterSupport !== b.otherClusterSupport) {
+          return a.otherClusterSupport - b.otherClusterSupport;
+        }
         if (a.foreignSupport !== b.foreignSupport) {
           return a.foreignSupport - b.foreignSupport;
         }

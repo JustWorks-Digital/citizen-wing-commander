@@ -40,6 +40,7 @@ import {
   partitionStayUnderTransfer,
 } from "@/lib/ships/packItemOrder";
 import type { CargoBayPackProgram } from "@/lib/ships/cargoBayPackProgram";
+import type { CargoTypePackValidation } from "@/lib/ships/cargoTypePackValidate";
 import { partitionBoxSizesAcrossScuAmounts } from "@/lib/missions/boxBreakdownOptions";
 import type { CargoDelivery, HaulingChecklistRow, RouteAction, ShipStorageLocation } from "@/lib/missions/sessionChecklist";
 
@@ -114,6 +115,11 @@ export type CargoGridPlacementPlan = {
   boxes: PlacedCargoBox[];
   /** Cells that could not be placed (even after overflow zones). */
   unplaced: CargoGridUnplacedBox[];
+  /**
+   * Cargo-type packs only: XY columns must not mix commodities.
+   * Present when `packMode === "by-cargo-type"` (see `cargoBay.packAtStop`).
+   */
+  cargoTypeClusters?: CargoTypePackValidation;
 };
 
 type ZoneBounds = {
@@ -1057,6 +1063,13 @@ function findSlot(
       cluster?.occupiedRegions,
     );
     if (forbidForeignRegionSupport && foreign.support > 0) return;
+    // Cargo-type only (not mission-location, which also sets preferSameCargoType):
+    // never stack on a different commodity — soft prefer was not enough
+    // (session 6ff09a56 Everus Harbor mixed HF/PI/PF in the same XY columns).
+    const forbidOtherClusterSupport =
+      Boolean(packSlotPolicy?.preferSameCargoType) &&
+      !Boolean(packSlotPolicy?.preferSameDeliveryLocation);
+    if (forbidOtherClusterSupport && supportCounts.other > 0) return;
     const identicalSizeStack =
       cluster != null &&
       isIdenticalSizeStack(
@@ -1151,9 +1164,24 @@ function findSlot(
   /** Pack-program path: hard filters + tiered pack-call compare. */
   if (packSlotPolicy) {
     let pool = candidates;
-    const hasCluster =
+    if (
+      packSlotPolicy.preferSameCargoType &&
+      !packSlotPolicy.preferSameDeliveryLocation
+    ) {
+      const noForeignCluster = pool.filter((c) => c.otherSupport === 0);
+      if (noForeignCluster.length === 0) return null;
+      pool = noForeignCluster;
+    }
+    const hasClusterAnywhere =
       cluster != null &&
       [...cluster.occupiedClusters.values()].includes(cluster.clusterKey);
+    const hasClusterInBounds =
+      hasClusterAnywhere &&
+      clusterOccupiesBounds(
+        bounds,
+        cluster?.clusterKey,
+        cluster?.occupiedClusters,
+      );
     const hasRegion =
       cluster?.regionKey != null &&
       cluster.occupiedRegions != null &&
@@ -1181,7 +1209,7 @@ function findSlot(
       }
       // Else: region only exists in another disconnected bay — seed island.
     }
-    if (requireClusterContiguity && hasCluster) {
+    if (requireClusterContiguity && hasClusterAnywhere) {
       const touchingCluster = candidates.filter(
         (c) =>
           c.affinity.horizontal > 0 ||
@@ -1190,20 +1218,21 @@ function findSlot(
       );
       if (touchingCluster.length > 0) {
         pool = touchingCluster;
-      } else {
-        // Do not open a second island in this bay while contiguity is required.
+      } else if (hasClusterInBounds) {
+        // Cluster is in this bay but no touching slot — stuck.
         return null;
       }
+      // Else: cluster only in cargo/another bay — seed island in overflow etc.
     }
-    // New pile: seed on deck when possible (matches require/order z intent).
-    if (!hasCluster) {
+    // New pile (or first footprint of this type in this bay): prefer deck.
+    if (!hasClusterInBounds) {
       const onDeck = pool.filter((c) => c.onDeck);
       if (onDeck.length > 0) pool = onDeck;
     }
     // Manual Fill drop: prefer seeding nearest the pointer (large Hercules bays).
     // Skip bay-end bias when anchoring to a drop so the pile starts where dropped.
     const preferNear = cluster?.preferNearCoord;
-    if (preferNear && !hasCluster) {
+    if (preferNear && !hasClusterInBounds) {
       let minDist = Number.POSITIVE_INFINITY;
       for (const candidate of pool) {
         minDist = Math.min(
@@ -1219,7 +1248,7 @@ function findSlot(
         );
         if (nearPool.length > 0) pool = nearPool;
       }
-    } else if (cluster?.preferBayEnd) {
+    } else if (cluster?.preferBayEnd && !hasClusterInBounds) {
       const onEnd = pool.filter((c) =>
         isOnPreferredBayEnd(c.origin, footprint, bounds, cluster.preferBayEnd!),
       );
@@ -2033,15 +2062,57 @@ function placeItemsIntoBoundsList(
     idNamespace: string;
     storage: CargoGridStorageLocation;
     isOverflow?: boolean;
+    /** Keep cargo-type / mission clusters when overflow re-packs the bay. */
+    packSlotPolicy?: PackSlotPolicy | null;
+    clusterByKey?: boolean;
+    shipWidthCells?: number;
+    /**
+     * Cluster/region keys for cells already in `occupiedSet` (e.g. primary
+     * boxes kept while filling holes). Without this, foreign support looks
+     * anonymous and cargo-type hard-reject never fires.
+     */
+    occupiedClusters?: Map<string, string>;
+    occupiedRegions?: Map<string, string>;
   },
 ): { boxes: PlacedCargoBox[]; unplaced: CargoGridPlacementPlan["unplaced"] } {
   const boxes: PlacedCargoBox[] = [];
   const unplaced: CargoGridPlacementPlan["unplaced"] = [];
+  const occupiedClusters = options.occupiedClusters ?? new Map<string, string>();
+  const occupiedRegions = options.occupiedRegions ?? new Map<string, string>();
+  const packSlotPolicy = options.packSlotPolicy ?? null;
+  // Only cluster when the caller asks — do not infer from packSlotPolicy or
+  // suggested dense overflow re-packs lose capacity.
+  const clusterByKey = Boolean(options.clusterByKey);
   let index = 0;
   for (const item of items) {
     let placed = false;
+    const clusterKey = item.clusterKey ?? item.commoditySlug;
     for (const footprint of cargoBoxOrientations(item.size)) {
       let origin: CargoGridCoord | null = null;
+      const cluster: FindSlotCluster | null = clusterByKey
+        ? {
+            clusterKey,
+            occupiedClusters,
+            regionKey: item.regionKey,
+            occupiedRegions,
+            preferRegionStacking: Boolean(
+              packSlotPolicy?.preferSameDeliveryLocation,
+            ),
+            requireRegionContiguity: Boolean(
+              packSlotPolicy?.requireRegionContiguity,
+            ),
+            requireClusterContiguity: Boolean(
+              packSlotPolicy?.preferSameCargoType &&
+                !packSlotPolicy.preferSameDeliveryLocation,
+            ),
+            forbidForeignRegionSupport: Boolean(
+              packSlotPolicy?.forbidForeignSupport &&
+                packSlotPolicy.preferSameDeliveryLocation,
+            ),
+            packSlotPolicy,
+            shipWidthCells: options.shipWidthCells,
+          }
+        : null;
       for (const bounds of boundsList) {
         origin = findSlot(
           bounds,
@@ -2049,7 +2120,7 @@ function placeItemsIntoBoundsList(
           occupiedSet,
           occupiedSizes,
           options.storage,
-          null,
+          cluster,
         );
         if (origin) break;
       }
@@ -2059,6 +2130,8 @@ function placeItemsIntoBoundsList(
         const key = cargoGridCoordKey(cell);
         occupiedSet.add(key);
         occupiedSizes.set(key, item.size);
+        occupiedClusters.set(key, clusterKey);
+        if (item.regionKey) occupiedRegions.set(key, item.regionKey);
       }
       boxes.push({
         id: `${options.idNamespace}-${index}-${item.size}-${item.commoditySlug}-${origin.x}-${origin.y}-${origin.z}`,
@@ -2169,6 +2242,11 @@ function carveOverflowItems(
 export function placeUnplacedInOverflow(
   sketch: ShipCargoGridSketch,
   plan: CargoGridPlacementPlan,
+  options?: {
+    /** Preserve cargo-type / mission clusters when re-packing for overflow. */
+    packSlotPolicy?: PackSlotPolicy | null;
+    clusterByKey?: boolean;
+  },
 ): CargoGridPlacementPlan {
   const overflowBounds = overflowZoneBoundsList(sketch);
   const cargoBounds = cargoZoneBoundsList(sketch);
@@ -2187,12 +2265,129 @@ export function placeUnplacedInOverflow(
     return plan;
   }
 
+  const packSlotPolicy = options?.packSlotPolicy ?? null;
+  // Only when the caller opts in (cargo-type). Do not infer from
+  // packSlotPolicy — mission-location also sets preferSameCargoType but
+  // still needs dense re-pack to snap official capacity.
+  const preserveClusters = Boolean(options?.clusterByKey);
+
+  // Cargo-type packs: keep clustered boxes in place; fill cargo holes; carve
+  // excess into overflow. Dense re-pack buried commodities
+  // (session 6ff09a56 Everus Harbor).
+  if (preserveClusters && plan.boxes.length > 0) {
+    const shipWidthCells =
+      sketch.shipSlug === "galaxy" ? sketch.widthCells : undefined;
+    const placeOpts = {
+      packSlotPolicy,
+      clusterByKey: true,
+      shipWidthCells,
+    };
+
+    const occupiedSet = new Set<string>();
+    const occupiedSizes = new Map<string, number>();
+    const occupiedClusters = new Map<string, string>();
+    const occupiedRegions = new Map<string, string>();
+    for (const box of plan.boxes) {
+      const clusterKey = box.commoditySlug?.trim() || "?";
+      const regionKey = box.deliveryLocationSlug?.trim() || undefined;
+      for (const cell of box.cells) {
+        const key = cargoGridCoordKey(cell);
+        occupiedSet.add(key);
+        occupiedSizes.set(key, box.size);
+        occupiedClusters.set(key, clusterKey);
+        if (regionKey) occupiedRegions.set(key, regionKey);
+      }
+    }
+
+    // Fill residual cargo cells with prior unplaced (still clustered).
+    const cargoFill = placeItemsIntoBoundsList(
+      plan.unplaced.map((entry) => itemFromUnplaced(entry, plan.boxes)),
+      cargoBounds,
+      occupiedSet,
+      occupiedSizes,
+      {
+        idNamespace: "stable-fill",
+        storage: "rear",
+        isOverflow: false,
+        occupiedClusters,
+        occupiedRegions,
+        ...placeOpts,
+      },
+    );
+
+    const cargoBoxes: PlacedCargoBox[] = [
+      ...plan.boxes.map((box) => ({ ...box, isOverflow: false })),
+      ...cargoFill.boxes,
+    ];
+
+    const sortedBoxes = [...cargoBoxes].sort(
+      (a, b) =>
+        a.size - b.size || a.commoditySlug.localeCompare(b.commoditySlug),
+    );
+    const moved: PlacedCargoBox[] = [];
+    const kept: PlacedCargoBox[] = [];
+    let need = excess;
+    for (const box of sortedBoxes) {
+      if (need > 0 && box.size <= need) {
+        moved.push(box);
+        need -= box.size;
+      } else {
+        kept.push(box);
+      }
+    }
+
+    const keptOccupied = new Set<string>();
+    const keptSizes = new Map<string, number>();
+    const keptClusters = new Map<string, string>();
+    const keptRegions = new Map<string, string>();
+    for (const box of kept) {
+      const clusterKey = box.commoditySlug?.trim() || "?";
+      const regionKey = box.deliveryLocationSlug?.trim() || undefined;
+      for (const cell of box.cells) {
+        const key = cargoGridCoordKey(cell);
+        keptOccupied.add(key);
+        keptSizes.set(key, box.size);
+        keptClusters.set(key, clusterKey);
+        if (regionKey) keptRegions.set(key, regionKey);
+      }
+    }
+
+    const overflowItems: CargoPlacementItem[] = [
+      ...moved.map(itemFromPlacedBox),
+      ...cargoFill.unplaced.map((entry) =>
+        itemFromUnplaced(entry, plan.boxes),
+      ),
+    ];
+    const overflowPlaced = placeItemsIntoBoundsList(
+      overflowItems,
+      overflowBounds,
+      keptOccupied,
+      keptSizes,
+      {
+        idNamespace: "overflow",
+        storage: "rear",
+        isOverflow: true,
+        occupiedClusters: keptClusters,
+        occupiedRegions: keptRegions,
+        ...placeOpts,
+      },
+    );
+
+    return {
+      ...plan,
+      boxes: [
+        ...kept.map((box) => ({ ...box, isOverflow: false })),
+        ...overflowPlaced.boxes,
+      ],
+      unplaced: overflowPlaced.unplaced,
+    };
+  }
+
   const { stable, overflow } = carveOverflowItems(allItems, excess);
 
   const occupiedSet = new Set<string>();
   const occupiedSizes = new Map<string, number>();
   const stablePlaced = placeItemsIntoBoundsList(
-    // Largest first for dense stable fill.
     [...stable].sort((a, b) => b.size - a.size),
     cargoBounds,
     occupiedSet,

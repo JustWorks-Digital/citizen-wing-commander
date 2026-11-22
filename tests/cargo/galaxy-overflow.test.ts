@@ -9,6 +9,7 @@ import {
   placementPlanLocationLegend,
   upcomingDeliveryLocationSlugs,
 } from "@/lib/ships/cargoGridPlacement";
+import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
 import {
   cargo,
   makeStop,
@@ -108,9 +109,18 @@ describe("Galaxy hangar overflow (unstable SCU)", () => {
 
       expect(demand, `${packMode} demand`).toBe(demandTotal);
       expect(totalScu(plan), `${packMode} placed`).toBe(demandTotal);
-      expect(stableScu, `${packMode} stable`).toBe(720);
-      expect(overflowScu, `${packMode} overflow`).toBe(7);
       expect(plan.unplaced, `${packMode} unplaced`).toEqual([]);
+      expect(stableScu, `${packMode} stable`).toBeLessThanOrEqual(720);
+      expect(overflowScu, `${packMode} overflow`).toBeGreaterThanOrEqual(7);
+      expect(stableScu + overflowScu, `${packMode} split`).toBe(demandTotal);
+      // Suggested / mission-location snap exact 720+7. Cargo-type may send more
+      // to overflow rather than bury one commodity under another.
+      if (packMode === "by-cargo-type") {
+        expect(validateCargoTypePackClusters(plan.boxes).ok).toBe(true);
+      } else {
+        expect(stableScu, `${packMode} stable exact`).toBe(720);
+        expect(overflowScu, `${packMode} overflow exact`).toBe(7);
+      }
       expect(
         plan.boxes.some((box) => box.isOverflow && box.origin.x >= 25),
         `${packMode} overflow toward rear hangar`,

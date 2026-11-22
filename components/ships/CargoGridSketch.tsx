@@ -691,7 +691,7 @@ export function CargoGridSketch({
   const topZoom = topZoomProp ?? topZoomInternal;
   const isoZoom = isoZoomProp ?? isoZoomInternal;
   const [sidePanelsOverlayInternal, setSidePanelsOverlayInternal] =
-    useState(true);
+    useState(false);
   const sidePanelsOverlay = sidePanelsOverlayProp ?? sidePanelsOverlayInternal;
   const [splitOrientationInternal, setSplitOrientationInternal] = useState<
     "horizontal" | "vertical"

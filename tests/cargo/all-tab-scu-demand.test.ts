@@ -157,7 +157,13 @@ describe("All-tab bay SCU demand (middle-tagged cargo)", () => {
       const overflowScu = plan.boxes
         .filter((box) => box.isOverflow)
         .reduce((sum, box) => sum + box.size, 0);
-      expect(overflowScu, `${packMode} overflow`).toBe(7);
+      // Cargo-type may send more than 7 to overflow rather than bury types.
+      if (packMode === "by-cargo-type") {
+        expect(overflowScu, `${packMode} overflow`).toBeGreaterThanOrEqual(7);
+        expect(plan.cargoTypeClusters?.ok, `${packMode} clusters`).toBe(true);
+      } else {
+        expect(overflowScu, `${packMode} overflow`).toBe(7);
+      }
     }
   });
 
