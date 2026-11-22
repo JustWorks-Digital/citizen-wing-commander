@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard | Peak | Capacity | stop ↓pickup / ↑drop-off), Stats right (Stats | Contracts | aUEC | Time); Contracts shows “N / M complete”. Saving… sits left of Stats; below sm, aUEC moves to ⋯ and Time stays in the strip. Distance lives in the Stops rail / mobile Stops section.",
+          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard | Peak | Capacity | focused-stop ↑pickup / ↓drop-off), Stats right (Stats | Contracts | aUEC | Time); Contracts shows “N / M complete”. Saving… sits left of Stats; below sm, aUEC moves to ⋯ and Time stays in the strip. Distance lives in the Stops rail / mobile Stops section.",
       },
     },
   },

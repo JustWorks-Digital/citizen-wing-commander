@@ -540,7 +540,10 @@ export function SessionChecklistView({
   const onboardScu = cargoInventory.fromCompleted(session.rows);
   const peakScu = cargoInventory.peakOnboard(session.rows);
   const focusedStopTransferScu = useMemo(() => {
-    if (resolvedFocusedStopId === QUANTUM_ORIGIN_ROW_ID) {
+    if (
+      resolvedFocusedStopId == null ||
+      resolvedFocusedStopId === QUANTUM_ORIGIN_ROW_ID
+    ) {
       return { pickup: null, delivery: null };
     }
     const ledger = cargoInventory
