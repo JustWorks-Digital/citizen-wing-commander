@@ -81,7 +81,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Manual packing tray: compact Fill rows (drag to pack a cargo type). Chevron expands size chips for one-at-a-time place. R rotates; Esc cancels.",
+          "Manual Cargo panel: compact Fill rows (drag to pack a cargo type). Chevron expands size chips for one-at-a-time place. R rotates; Esc cancels.",
       },
     },
   },
@@ -93,6 +93,35 @@ type Story = StoryObj<typeof meta>;
 export const TwoMissions: Story = {
   args: {
     groups,
+    onClearBay: () => undefined,
+  },
+};
+
+/** Empty mission keeps a “0 left” placeholder so sections stay separated. */
+export const EmptiedMissionPlaceholder: Story = {
+  args: {
+    groups: [
+      {
+        missionId: "mission-a",
+        missionTitle: "Senior Medium Cargo Haul A",
+        lines: [
+          {
+            key: "mission-a:processed-food:8",
+            missionId: "mission-a",
+            missionTitle: "Senior Medium Cargo Haul A",
+            commoditySlug: "processed-food",
+            commodityName: "Processed Food",
+            size: 8,
+            color: "red",
+            color2: null,
+            demanded: 4,
+            placed: 4,
+            remaining: 0,
+          },
+        ],
+      },
+      groups[1]!,
+    ],
     onClearBay: () => undefined,
   },
 };

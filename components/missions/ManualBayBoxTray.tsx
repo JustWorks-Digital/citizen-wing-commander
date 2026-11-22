@@ -229,8 +229,10 @@ export function ManualBayTrayBulkDragGhost({
         </span>
       </span>
       <span className="uppercase tracking-[0.08em]">
-        Fill · {remainingScu}{" "}
-        <span title={SCU_TITLE}>SCU</span>
+        Fill · {remainingScu}
+        <span className="normal-case tracking-normal" title={SCU_TITLE}>
+          scu
+        </span>
       </span>
     </div>
   );
@@ -289,7 +291,7 @@ export function ManualBayPlacedBoxDragGhost({
 }
 
 /**
- * Manual packing tray: remaining crates by mission × commodity × SCU size.
+ * Manual Cargo panel: remaining crates by mission × commodity × SCU size.
  * Drag Fill onto a section to pack all remaining of that type (largest first).
  * Size chips under each Fill are collapsed by default — expand for one-at-a-time.
  * R rotates single-crate drag; Esc cancels.
@@ -321,14 +323,22 @@ export function ManualBayBoxTray({
     });
   };
 
-  const totalRemaining = groups.reduce(
+  const totalRemainingScu = groups.reduce(
     (sum, group) =>
-      sum + group.lines.reduce((lineSum, line) => lineSum + line.remaining, 0),
+      sum +
+      group.lines.reduce(
+        (lineSum, line) => lineSum + line.remaining * line.size,
+        0,
+      ),
     0,
   );
-  const totalDemanded = groups.reduce(
+  const totalDemandedScu = groups.reduce(
     (sum, group) =>
-      sum + group.lines.reduce((lineSum, line) => lineSum + line.demanded, 0),
+      sum +
+      group.lines.reduce(
+        (lineSum, line) => lineSum + line.demanded * line.size,
+        0,
+      ),
     0,
   );
 
@@ -347,18 +357,19 @@ export function ManualBayBoxTray({
     >
       <div className="mb-1 flex min-w-0 items-center gap-1">
         <p
-          className="shrink-0 font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-accent"
+          className="shrink-0 pr-0.5 font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-accent"
           title="Drag Fill onto a bay section to pack that cargo type. Expand Sizes for one-crate chips. R rotates. Esc cancels."
         >
-          Tray
+          Cargo:
         </p>
         <p className="min-w-0 flex-1 truncate font-mono text-[0.5rem] tabular-nums tracking-wide text-rsi-text-muted">
-          {totalRemaining}/{totalDemanded}
+          {totalRemainingScu}/{totalDemandedScu}
+          <span title={SCU_TITLE}>scu</span>
         </p>
         {onClearBay ? (
           <button
             type="button"
-            title="Remove all crates from the bay so you can place from the tray"
+            title="Remove all crates from the bay so you can place from Cargo"
             aria-label="Clear bay"
             onClick={onClearBay}
             className="shrink-0 rounded border border-rsi-border/70 px-1 py-px font-mono text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
@@ -367,12 +378,15 @@ export function ManualBayBoxTray({
           </button>
         ) : null}
       </div>
-      <div className="min-h-0 flex-1 basis-0 space-y-1 overflow-y-auto [scrollbar-width:thin]">
+      <div className="min-h-0 flex-1 basis-0 space-y-2 overflow-y-auto [scrollbar-width:thin]">
         {groups.map((group) => {
           const idShort = shortMissionId(group.missionId);
           const commodities = commodityGroupsFromMission(group);
           return (
-            <div key={group.missionId ?? "_"}>
+            <div
+              key={group.missionId ?? "_"}
+              className="rounded-[2px] border border-rsi-border/60 bg-rsi-bg-deep/40 px-1 py-1"
+            >
               <p
                 className="mb-0.5 flex min-w-0 items-baseline gap-1 font-mono text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted"
                 title={
@@ -389,6 +403,15 @@ export function ManualBayBoxTray({
                 ) : null}
               </p>
               <div className="space-y-0.5">
+                {commodities.length === 0 ? (
+                  <p
+                    className="flex min-h-[1.5rem] items-center gap-1 rounded-[2px] border border-dashed border-rsi-border/50 bg-rsi-bg-deep/30 px-1 py-1 font-mono text-[0.5rem] leading-none text-rsi-text-muted"
+                    aria-label={`${group.missionTitle} 0 left`}
+                  >
+                    <span>0</span>
+                    <span>left</span>
+                  </p>
+                ) : null}
                 {commodities.map((commodity) => {
                   const bulkDragging = draggingLineKey === commodity.key;
                   const sizesExpanded = expandedSizeKeys.has(commodity.key);
@@ -407,7 +430,7 @@ export function ManualBayBoxTray({
                       <button
                         type="button"
                         title={`Fill · drag onto a bay section to pack all remaining ${commodity.commodityName} (largest first)`}
-                        aria-label={`Fill ${commodity.commodityName}, ${commodity.remainingScu} SCU`}
+                        aria-label={`Fill ${commodity.commodityName}, ${commodity.remainingScu}scu`}
                         onPointerDown={(event) => {
                           if (event.button !== 0) return;
                           pendingRef.current = {
@@ -507,9 +530,7 @@ export function ManualBayBoxTray({
                         </span>
                         <span className="shrink-0 text-rsi-text-muted">
                           {commodity.remainingScu}
-                          <span className="ml-px" title={SCU_TITLE}>
-                            SCU
-                          </span>
+                          <span title={SCU_TITLE}>scu</span>
                         </span>
                       </button>
                       <button

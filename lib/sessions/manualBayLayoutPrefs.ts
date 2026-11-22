@@ -332,6 +332,29 @@ export function boxesFromManualPreset(
   return applyManualBayPoses(autoBoxes, preset.poses);
 }
 
+/**
+ * Saved Manual layout from the nearest earlier stop (route order) that has an
+ * active preset with a box snapshot; `null` when none.
+ */
+export function latestManualBoxesBeforeStop(
+  session: ManualBayLayoutSessionState,
+  stopIdsInRouteOrder: readonly string[],
+  stopId: string,
+): PlacedCargoBox[] | null {
+  const stopIndex = stopIdsInRouteOrder.indexOf(stopId);
+  for (let index = stopIndex - 1; index >= 0; index -= 1) {
+    const earlier = getManualBayLayoutStopState(
+      session,
+      stopIdsInRouteOrder[index],
+    );
+    const preset = earlier.presets.find(
+      (entry) => entry.id === earlier.activePresetId,
+    );
+    if (preset?.boxes) return placedBoxesFromStored(preset.boxes);
+  }
+  return null;
+}
+
 export function newManualBayPresetId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();

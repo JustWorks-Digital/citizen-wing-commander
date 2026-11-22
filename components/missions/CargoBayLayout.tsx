@@ -34,6 +34,7 @@ import {
 import {
   boxesFromManualPreset,
   getManualBayLayoutStopState,
+  latestManualBoxesBeforeStop,
   newManualBayPresetId,
   nextManualPresetName,
   posesFromBoxes,
@@ -65,6 +66,7 @@ import {
   type ManualBayBulkFillSpec,
 } from "@/lib/ships/manualBayMove";
 import { cargoBay } from "@/lib/ships/cargoBay";
+import { manualBayCarryover } from "@/lib/ships/manualBayCarryover";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 import type { CargoGridCoord } from "@/lib/ships/cargoGridCoords";
 
@@ -312,16 +314,48 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     supportsPrioritized,
   ]);
 
+  /** Nearest earlier Manual snapshot (route order), if any. */
+  const earlierManualLayout = useMemo(() => {
+    if (!stopId) return null;
+    return latestManualBoxesBeforeStop(
+      manualSession,
+      rows.map((row) => row.id),
+      stopId,
+    );
+  }, [manualSession, rows, stopId]);
+
+  /**
+   * Earlier Manual poses with this stop’s delivery/stay actions applied.
+   * Prefer this over a per-stop preset that may have been seeded from auto-pack.
+   */
+  const manualBaseBoxes = useMemo(() => {
+    if (!basePlan || !stopId) return [];
+    return earlierManualLayout
+      ? manualBayCarryover.boxesAtStop(basePlan.boxes, earlierManualLayout)
+      : basePlan.boxes;
+  }, [basePlan, earlierManualLayout, stopId]);
+
   /** Full bay contents (before All/Transfer filter) — Manual edits this list. */
   const workingBoxes = useMemo(() => {
     if (!basePlan) return [];
-    if (isManual) {
-      return manualLiveBoxes
-        ? manualLiveBoxes
-        : boxesFromManualPreset(activeManualPreset, basePlan.boxes);
+    if (!isManual) return basePlan.boxes;
+    // Live edits on this stop win.
+    if (manualLiveBoxes) return manualLiveBoxes;
+    // Advancing stops: always derive from earlier Manual layout when present.
+    // Do not use this stop’s saved preset snapshot — it may be a stale auto-pack
+    // seed and would replace the player’s Everus (etc.) arrangement.
+    if (earlierManualLayout && earlierManualLayout.length > 0) {
+      return manualBaseBoxes;
     }
-    return basePlan.boxes;
-  }, [activeManualPreset, basePlan, isManual, manualLiveBoxes]);
+    return boxesFromManualPreset(activeManualPreset, manualBaseBoxes);
+  }, [
+    activeManualPreset,
+    basePlan,
+    earlierManualLayout,
+    isManual,
+    manualBaseBoxes,
+    manualLiveBoxes,
+  ]);
 
   const displayBoxes = useMemo(() => {
     // Transfer: show only pickup / delivery; stay stays packed underneath.
@@ -343,6 +377,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     [basePlan],
   );
 
+  // Drop live overrides when the stop or auto-pack inventory changes so
+  // Manual falls back to this stop’s preset or earlier-stop carryover.
   useEffect(() => {
     setManualLiveBoxes(null);
     manualDragBaseRef.current = null;
@@ -407,23 +443,33 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const patchActivePresetBoxes = useCallback(
     (boxes: PlacedCargoBox[]) => {
-      const presetId = manualStop.activePresetId;
-      if (!presetId || !stopId) return;
-      updateStopManual((current) => ({
-        ...current,
-        presets: current.presets.map((preset) =>
-          preset.id === presetId
-            ? {
-                ...preset,
-                poses: posesFromBoxes(boxes),
-                boxes: storedBoxesFromPlaced(boxes),
-                updatedAt: new Date().toISOString(),
-              }
-            : preset,
-        ),
-      }));
+      if (!stopId) return;
+      updateStopManual((current) => {
+        // Manual is session-wide: a stop with no preset yet saves its first edit as one.
+        if (!current.activePresetId) {
+          const preset = createManualPresetFromBoxes(boxes);
+          if (!preset) return current;
+          return {
+            activePresetId: preset.id,
+            presets: [...current.presets, preset],
+          };
+        }
+        return {
+          ...current,
+          presets: current.presets.map((preset) =>
+            preset.id === current.activePresetId
+              ? {
+                  ...preset,
+                  poses: posesFromBoxes(boxes),
+                  boxes: storedBoxesFromPlaced(boxes),
+                  updatedAt: new Date().toISOString(),
+                }
+              : preset,
+          ),
+        };
+      });
     },
-    [manualStop.activePresetId, stopId, updateStopManual],
+    [createManualPresetFromBoxes, stopId, updateStopManual],
   );
 
   const selectAutoMode = useCallback(
@@ -448,8 +494,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           isManual && manualLiveBoxes
             ? manualLiveBoxes
             : isManual
-              ? boxesFromManualPreset(activeManualPreset, basePlan.boxes)
-              : basePlan.boxes;
+              ? boxesFromManualPreset(activeManualPreset, manualBaseBoxes)
+              : manualBaseBoxes;
         const preset = createManualPresetFromBoxes(sourceBoxes);
         if (!preset) return;
         updateStopManual((current) => ({
@@ -469,7 +515,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           }));
         }
         // Restore snapshot — pose-only presets cannot rematch after Clear/Fill.
-        setManualLiveBoxes(boxesFromManualPreset(preset, basePlan.boxes));
+        setManualLiveBoxes(boxesFromManualPreset(preset, manualBaseBoxes));
       }
       setSortingMode("manual");
     },
@@ -478,6 +524,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       basePlan,
       createManualPresetFromBoxes,
       isManual,
+      manualBaseBoxes,
       manualLiveBoxes,
       manualStop.activePresetId,
       manualStop.presets,
@@ -550,7 +597,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       const drag = crateDragRef.current;
       setCrateDrag(null);
       manualDragBaseRef.current = null;
-      const presetId = manualStop.activePresetId;
 
       const revert = () => {
         if (base) setManualLiveBoxes(base);
@@ -577,10 +623,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       }
 
       setManualLiveBoxes(next);
-      if (!presetId || !stopId) return;
       patchActivePresetBoxes(next);
     },
-    [manualStop.activePresetId, patchActivePresetBoxes, sketch, stopId],
+    [patchActivePresetBoxes, sketch],
   );
 
   const persistManualBoxes = useCallback(
@@ -1135,7 +1180,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                     setManualLiveBoxes(
                                       boxesFromManualPreset(
                                         preset,
-                                        basePlan?.boxes ?? [],
+                                        manualBaseBoxes,
                                       ),
                                     );
                                   }}
