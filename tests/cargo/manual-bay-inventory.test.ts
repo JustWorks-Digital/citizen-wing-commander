@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SessionMission } from "@/lib/missions/sessionMissions";
 import { manualBayInventory } from "@/lib/ships/manualBayInventory";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import { cargo, makeStop } from "./fixtures";
@@ -16,6 +17,32 @@ function placedBox(
     cells: [{ x: 0, y: 0, z: 0 }],
     action: "pickup",
     ...partial,
+  };
+}
+
+function missionStub(
+  id: string,
+  title: string,
+): SessionMission {
+  return {
+    id,
+    title,
+    contractor: "Outdr",
+    rewardAuec: 0,
+    from: [],
+    to: [],
+    cargo: [],
+    isCompleted: false,
+    screenshots: [],
+    mobiglas: {
+      tab: "Accepted",
+      category: "Hauling - Local",
+      title,
+      contractor: "Outdr",
+      rewardAuec: 0,
+      details: "",
+      objectives: [],
+    },
   };
 }
 
@@ -44,24 +71,8 @@ describe("manualBayInventory", () => {
       [],
       {
         missions: [
-          {
-            id: "mission-a",
-            title: "Contract A",
-            contractor: "Outdr",
-            rewardAuec: 0,
-            from: [],
-            to: [],
-            cargo: [],
-          },
-          {
-            id: "mission-b",
-            title: "Contract B",
-            contractor: "Outdr",
-            rewardAuec: 0,
-            from: [],
-            to: [],
-            cargo: [],
-          },
+          missionStub("mission-a", "Contract A"),
+          missionStub("mission-b", "Contract B"),
         ],
       },
     );
@@ -111,24 +122,8 @@ describe("manualBayInventory", () => {
       placed,
       {
         missions: [
-          {
-            id: "mission-a",
-            title: "A",
-            contractor: "Outdr",
-            rewardAuec: 0,
-            from: [],
-            to: [],
-            cargo: [],
-          },
-          {
-            id: "mission-b",
-            title: "B",
-            contractor: "Outdr",
-            rewardAuec: 0,
-            from: [],
-            to: [],
-            cargo: [],
-          },
+          missionStub("mission-a", "A"),
+          missionStub("mission-b", "B"),
         ],
       },
     );

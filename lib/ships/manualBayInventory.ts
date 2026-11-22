@@ -92,7 +92,7 @@ export function demandManualBayInventoryLines(
     /** Match All vs Transfer bay scope. Default true (All). */
     includeAboardCargo?: boolean;
   },
-): ManualBayInventoryLine[] {
+): Omit<ManualBayInventoryLine, "placed" | "remaining">[] {
   const visible = collectSoftVisibleCargoAtStop(stops, stopId, {
     includeAboardCargo: options?.includeAboardCargo,
   });
