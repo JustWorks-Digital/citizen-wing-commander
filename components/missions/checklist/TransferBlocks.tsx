@@ -77,7 +77,7 @@ export function TransferEndpointName({
   strike: string;
 }) {
   return (
-    <div className="@container/endpoint mb-2.5 w-full min-w-0 self-stretch">
+    <div className="@container/endpoint w-full min-w-0 self-stretch">
       <div className="flex min-w-0 flex-col items-start gap-1.5 @[11rem]/endpoint:flex-row @[11rem]/endpoint:items-center @[11rem]/endpoint:gap-2">
         <span
           aria-hidden
@@ -320,7 +320,7 @@ export function PickupTransferBlock({
         mute={mute}
         strike={strike}
       />
-      <div className="mb-2.5 flex items-center justify-center self-center">
+      <div className="flex items-center justify-center self-center">
         <TransferArrow />
       </div>
       <TransferEndpointName
@@ -331,6 +331,16 @@ export function PickupTransferBlock({
         mute={mute}
         strike={strike}
       />
+
+      <div className="col-span-3 py-5">
+        <div
+          aria-hidden
+          className={[
+            "border-t",
+            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
+          ].join(" ")}
+        />
+      </div>
 
       <span aria-hidden className="col-start-1" />
       <div className="col-start-3 min-w-0">
@@ -432,7 +442,7 @@ export function DeliveryTransferBlock({
         mute={mute}
         strike={strike}
       />
-      <div className="mb-2.5 flex items-center justify-center self-center">
+      <div className="flex items-center justify-center self-center">
         <TransferArrow />
       </div>
       <TransferEndpointName
@@ -443,6 +453,16 @@ export function DeliveryTransferBlock({
         mute={mute}
         strike={strike}
       />
+
+      <div className="col-span-3 py-5">
+        <div
+          aria-hidden
+          className={[
+            "border-t",
+            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
+          ].join(" ")}
+        />
+      </div>
 
       <div className="col-start-1 min-w-0">
         <TransferScuLine

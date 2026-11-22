@@ -36,7 +36,7 @@ export type ManualBayInventoryMissionGroup = {
   lines: ManualBayInventoryLine[];
 };
 
-/** Remaining crates for one commodity within a mission (all SCU sizes). */
+/** One commodity within a mission (Fill row — stays visible after placing). */
 export type ManualBayInventoryCommodityGroup = {
   key: string;
   missionId: string | null;
@@ -47,9 +47,11 @@ export type ManualBayInventoryCommodityGroup = {
   color2: string | null;
   /** Remaining crate count (all sizes). */
   remainingCrates: number;
-  /** Remaining SCU. */
+  /** Remaining SCU still in Cargo. */
   remainingScu: number;
-  /** Size lines with remaining > 0, largest first. */
+  /** SCU already on the bay for this commodity. */
+  placedScu: number;
+  /** Size lines with remaining > 0, largest first (Fill / chips). */
   lines: ManualBayInventoryLine[];
 };
 
@@ -160,7 +162,8 @@ export function demandManualBayInventoryLines(
 
 /**
  * Collapse mission inventory lines into per-commodity groups (largest sizes
- * first) for Manual bulk fill-onto-section drag.
+ * first) for Manual Fill rows. Keeps rows after everything is placed so Reset
+ * can pull that commodity back off the bay.
  */
 export function commodityGroupsFromMission(
   group: ManualBayInventoryMissionGroup,
@@ -173,16 +176,19 @@ export function commodityGroupsFromMission(
   }
   const out: ManualBayInventoryCommodityGroup[] = [];
   for (const [commoditySlug, lines] of bySlug) {
-    const withRemaining = lines
-      .filter((line) => line.remaining > 0)
+    const demanded = lines
+      .filter((line) => line.demanded > 0)
       .sort((a, b) => b.size - a.size);
-    if (withRemaining.length === 0) continue;
-    const head = withRemaining[0]!;
+    if (demanded.length === 0) continue;
+    const withRemaining = demanded.filter((line) => line.remaining > 0);
+    const head = demanded[0]!;
     let remainingCrates = 0;
     let remainingScu = 0;
-    for (const line of withRemaining) {
+    let placedScu = 0;
+    for (const line of demanded) {
       remainingCrates += line.remaining;
       remainingScu += line.remaining * line.size;
+      placedScu += line.placed * line.size;
     }
     out.push({
       key: `${group.missionId ?? "_"}:${commoditySlug}:bulk`,
@@ -194,15 +200,32 @@ export function commodityGroupsFromMission(
       color2: head.color2,
       remainingCrates,
       remainingScu,
+      placedScu,
       lines: withRemaining,
     });
   }
   return out.sort((a, b) => a.commodityName.localeCompare(b.commodityName));
 }
 
+/** Remove one mission’s commodity crates from the bay (Reset Fill). */
+export function removeCommodityFromManualBay(
+  boxes: readonly PlacedCargoBox[],
+  missionId: string | null,
+  commoditySlug: string,
+): PlacedCargoBox[] {
+  return boxes.filter(
+    (box) =>
+      !(
+        (box.missionId ?? null) === missionId &&
+        box.commoditySlug === commoditySlug
+      ),
+  );
+}
+
 export const manualBayInventory = {
   demandLines: demandManualBayInventoryLines,
   commodityGroupsFromMission,
+  removeCommodityFromBay: removeCommodityFromManualBay,
 
   /** Demand minus crates already on the grid, grouped by mission. */
   remainingByMission(

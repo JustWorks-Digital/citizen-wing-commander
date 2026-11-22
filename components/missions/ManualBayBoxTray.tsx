@@ -22,6 +22,11 @@ import type {
 export type ManualBayBoxTrayProps = {
   groups: ManualBayInventoryMissionGroup[];
   onClearBay?: () => void;
+  /** Pull one cargo type off the bay back into Cargo (Reset Fill). */
+  onResetCommodity?: (
+    missionId: string | null,
+    commoditySlug: string,
+  ) => void;
   /** Line currently pointer-dragged (source chip dims; ghost follows cursor). */
   draggingLineKey?: string | null;
   /** Orientation index for the dragging crate (R cycles). */
@@ -299,6 +304,7 @@ export function ManualBayPlacedBoxDragGhost({
 export function ManualBayBoxTray({
   groups,
   onClearBay,
+  onResetCommodity,
   draggingLineKey = null,
   orientationIndex = 0,
   onTrayDragStart,
@@ -403,20 +409,14 @@ export function ManualBayBoxTray({
                 ) : null}
               </p>
               <div className="space-y-0.5">
-                {commodities.length === 0 ? (
-                  <p
-                    className="flex min-h-[1.5rem] items-center gap-1 rounded-[2px] border border-dashed border-rsi-border/50 bg-rsi-bg-deep/30 px-1 py-1 font-mono text-[0.5rem] leading-none text-rsi-text-muted"
-                    aria-label={`${group.missionTitle} 0 left`}
-                  >
-                    <span>0</span>
-                    <span>left</span>
-                  </p>
-                ) : null}
                 {commodities.map((commodity) => {
                   const bulkDragging = draggingLineKey === commodity.key;
                   const sizesExpanded = expandedSizeKeys.has(commodity.key);
                   const sizeChipCount = commodity.lines.length;
                   const sizesId = `tray-sizes-${commodity.key.replace(/:/g, "-")}`;
+                  const canFill = commodity.remainingScu > 0;
+                  const canReset =
+                    Boolean(onResetCommodity) && commodity.placedScu > 0;
                   return (
                     <div key={commodity.key} className="space-y-0.5">
                       <div
@@ -424,15 +424,22 @@ export function ManualBayBoxTray({
                           "flex min-w-0 overflow-hidden rounded-[2px] border font-mono text-[0.5rem] leading-none tabular-nums",
                           bulkDragging
                             ? "border-dashed border-rsi-accent/60 bg-rsi-bg-deep/30 opacity-40"
-                            : "border-rsi-accent/40 bg-rsi-accent-muted/15",
+                            : canFill
+                              ? "border-rsi-accent/40 bg-rsi-accent-muted/15"
+                              : "border-rsi-border/60 bg-rsi-bg-deep/40",
                         ].join(" ")}
                       >
                       <button
                         type="button"
-                        title={`Fill · drag onto a bay section to pack all remaining ${commodity.commodityName} (largest first)`}
+                        disabled={!canFill}
+                        title={
+                          canFill
+                            ? `Fill · drag onto a bay section to pack all remaining ${commodity.commodityName} (largest first)`
+                            : `${commodity.commodityName} is on the bay — Reset to pull it back`
+                        }
                         aria-label={`Fill ${commodity.commodityName}, ${commodity.remainingScu}scu`}
                         onPointerDown={(event) => {
-                          if (event.button !== 0) return;
+                          if (!canFill || event.button !== 0) return;
                           pendingRef.current = {
                             kind: "bulk",
                             pointerId: event.pointerId,
@@ -512,9 +519,11 @@ export function ManualBayBoxTray({
                         }}
                         className={[
                           "flex min-w-0 flex-1 touch-none items-center gap-0.5 px-1 py-1 text-left transition-colors",
-                          bulkDragging
-                            ? "cursor-grabbing text-rsi-text-muted"
-                            : "cursor-grab text-rsi-text hover:bg-rsi-accent-muted/25",
+                          !canFill
+                            ? "cursor-default text-rsi-text-muted"
+                            : bulkDragging
+                              ? "cursor-grabbing text-rsi-text-muted"
+                              : "cursor-grab text-rsi-text hover:bg-rsi-accent-muted/25",
                         ].join(" ")}
                       >
                         <CommodityIcon
@@ -533,6 +542,35 @@ export function ManualBayBoxTray({
                           <span title={SCU_TITLE}>scu</span>
                         </span>
                       </button>
+                      {canReset ? (
+                        <button
+                          type="button"
+                          title={`Reset · pull ${commodity.commodityName} off the bay into Cargo`}
+                          aria-label={`Reset ${commodity.commodityName}`}
+                          onClick={() =>
+                            onResetCommodity?.(
+                              commodity.missionId,
+                              commodity.commoditySlug,
+                            )
+                          }
+                          className="inline-flex w-5 shrink-0 items-center justify-center border-l border-rsi-accent/30 text-rsi-text-muted transition-colors hover:bg-rsi-accent-muted/30 hover:text-rsi-text-secondary"
+                        >
+                          <svg
+                            aria-hidden
+                            viewBox="0 0 12 12"
+                            className="size-2.5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3.5 4.5H8a2 2 0 0 1 0 4H5.5" />
+                            <path d="M5 2.5 3 4.5 5 6.5" />
+                          </svg>
+                        </button>
+                      ) : null}
+                      {sizeChipCount > 0 ? (
                       <button
                         type="button"
                         aria-expanded={sizesExpanded}
@@ -569,6 +607,7 @@ export function ManualBayBoxTray({
                           <polyline points="2 4 6 8 10 4" />
                         </svg>
                       </button>
+                      ) : null}
                       </div>
                       {sizesExpanded ? (
                       <ul

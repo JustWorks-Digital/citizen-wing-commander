@@ -714,6 +714,20 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     persistManualBoxes([]);
   }, [isManual, persistManualBoxes]);
 
+  const resetCommodityToTray = useCallback(
+    (missionId: string | null, commoditySlug: string) => {
+      if (!isManual) return;
+      persistManualBoxes(
+        manualBayInventory.removeCommodityFromBay(
+          workingBoxes,
+          missionId,
+          commoditySlug,
+        ),
+      );
+    },
+    [isManual, persistManualBoxes, workingBoxes],
+  );
+
   const onResizePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -1219,6 +1233,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                         <ManualBayBoxTray
                           groups={manualInventoryGroups}
                           onClearBay={clearBayToTray}
+                          onResetCommodity={resetCommodityToTray}
                           draggingLineKey={trayPlacement?.lineKey ?? null}
                           orientationIndex={
                             trayPlacement?.orientationIndex ?? 0

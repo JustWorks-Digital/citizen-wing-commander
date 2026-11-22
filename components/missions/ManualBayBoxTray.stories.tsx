@@ -81,7 +81,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Manual Cargo panel: compact Fill rows (drag to pack a cargo type). Chevron expands size chips for one-at-a-time place. R rotates; Esc cancels.",
+          "Manual Cargo panel: Fill rows stay after placing; Reset pulls that cargo type off the bay. Chevron expands size chips. R rotates; Esc cancels.",
       },
     },
   },
@@ -94,11 +94,12 @@ export const TwoMissions: Story = {
   args: {
     groups,
     onClearBay: () => undefined,
+    onResetCommodity: () => undefined,
   },
 };
 
-/** Empty mission keeps a “0 left” placeholder so sections stay separated. */
-export const EmptiedMissionPlaceholder: Story = {
+/** Placed Fill row keeps its block with Reset (no more “0 left” placeholder). */
+export const FillWithReset: Story = {
   args: {
     groups: [
       {
@@ -118,11 +119,25 @@ export const EmptiedMissionPlaceholder: Story = {
             placed: 4,
             remaining: 0,
           },
+          {
+            key: "mission-a:hydrogen-fuel:8",
+            missionId: "mission-a",
+            missionTitle: "Senior Medium Cargo Haul A",
+            commoditySlug: "hydrogen-fuel",
+            commodityName: "Hydrogen Fuel",
+            size: 8,
+            color: "white",
+            color2: null,
+            demanded: 2,
+            placed: 0,
+            remaining: 2,
+          },
         ],
       },
       groups[1]!,
     ],
     onClearBay: () => undefined,
+    onResetCommodity: () => undefined,
   },
 };
 
