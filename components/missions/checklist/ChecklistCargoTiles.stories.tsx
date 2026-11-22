@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { describeCargoDeliveries } from "@/lib/fixtures";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
-import { CargoCommodityTile } from "./ChecklistCargoTiles";
+import {
+  CargoCommodityTile,
+  CollapsedMissionCargoLines,
+} from "./ChecklistCargoTiles";
 
 const pickupRow: HaulingChecklistRow = {
   id: "stop-pickup",
@@ -100,6 +103,26 @@ export const TileRow: Story = {
           onToggleCargoHandled={() => undefined}
         />
       ))}
+    </div>
+  ),
+};
+
+export const CollapsedCargoLines: Story = {
+  args: {
+    row: pickupRow,
+    line: lines[0]!,
+    isPickup: true,
+    handledVerb: "picked up",
+    doneClass: "opacity-50",
+  },
+  render: () => (
+    <div className="w-56 rounded-rsi border border-rsi-border bg-rsi-bg-deep/35 px-2.5 py-1.5">
+      <CollapsedMissionCargoLines
+        row={pickupRow}
+        items={lines}
+        role="pickup"
+        onToggleCargoHandled={() => undefined}
+      />
     </div>
   ),
 };

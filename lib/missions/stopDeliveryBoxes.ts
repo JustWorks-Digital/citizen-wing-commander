@@ -317,18 +317,30 @@ export function stopCargoBoxGroups(
     );
   }
 
-  return [...map.values()].map((entry) => ({
-    id: entry.id,
-    missionId: entry.missionId,
-    commoditySlug: entry.commoditySlug,
-    commodityName: entry.commodityName,
-    color: entry.color,
-    color2: entry.color2,
-    scu: entry.scu,
-    sizes: entry.sizes,
-    boxCounts: tallyBoxSizes(entry.sizes),
-    isSplitMission: (commodityHits.get(entry.commoditySlug) ?? 0) > 1,
-  }));
+  // Highest SCU leftmost on Dropped off / Picked up pads.
+  return [...map.values()]
+    .map((entry) => ({
+      id: entry.id,
+      missionId: entry.missionId,
+      commoditySlug: entry.commoditySlug,
+      commodityName: entry.commodityName,
+      color: entry.color,
+      color2: entry.color2,
+      scu: entry.scu,
+      sizes: entry.sizes,
+      boxCounts: tallyBoxSizes(entry.sizes),
+      isSplitMission: (commodityHits.get(entry.commoditySlug) ?? 0) > 1,
+    }))
+    .sort(compareCargoScuDesc);
+}
+
+/** Left → right: highest SCU first; slug tie-break for stable pads. */
+function compareCargoScuDesc(
+  a: { scu: number; commoditySlug: string },
+  b: { scu: number; commoditySlug: string },
+): number {
+  if (b.scu !== a.scu) return b.scu - a.scu;
+  return a.commoditySlug.localeCompare(b.commoditySlug);
 }
 
 export type StopCargoStackLabel = {
@@ -536,10 +548,18 @@ export function planPickupHangarStacks(
   let maxZ = 1;
   let boxIndex = 0;
 
-  const locationOrder = [...byLocation.keys()];
+  // Highest-SCU delivery piles left; within a pile, highest commodity left.
+  const locationOrder = [...byLocation.keys()].sort((a, b) => {
+    const scuA = byLocation.get(a)!.reduce((sum, seg) => sum + seg.scu, 0);
+    const scuB = byLocation.get(b)!.reduce((sum, seg) => sum + seg.scu, 0);
+    if (scuB !== scuA) return scuB - scuA;
+    return a.localeCompare(b);
+  });
   for (let pileIndex = 0; pileIndex < locationOrder.length; pileIndex += 1) {
     const locationSlug = locationOrder[pileIndex]!;
-    const pileSegments = byLocation.get(locationSlug)!;
+    const pileSegments = [...byLocation.get(locationSlug)!].sort(
+      compareCargoScuDesc,
+    );
     const pileStartX = cursorX;
     let pileScu = 0;
     const first = pileSegments[0]!;

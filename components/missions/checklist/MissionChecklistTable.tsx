@@ -144,6 +144,8 @@ export type MissionChecklistTableProps = {
   onHideCompletedChange?: (hidden: boolean) => void;
   /** Prefer Pick up as the left cargo tab (⋯ Prioritize pickup). */
   prioritizePickup?: boolean;
+  /** Compact mission cards on the current stop (⋯ Collapse missions). */
+  collapseMissionCards?: boolean;
   /** Session ship display name for pickup transfer labels. */
   shipName?: string | null;
   /** Primary session ship slug (Next stop badge icon). */
@@ -294,6 +296,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   hideCompleted: hideCompletedProp,
   onHideCompletedChange,
   prioritizePickup = true,
+  collapseMissionCards = false,
   shipName = null,
   shipSlug = null,
   missions = [],
@@ -1647,6 +1650,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
                           shipSlug={shipSlug}
                           sessionId={sessionId}
                           prioritizePickup={prioritizePickup}
+                          collapseMissionCards={collapseMissionCards}
                           transferLedger={
                             transferLedgerByStop.get(row.id) ?? null
                           }

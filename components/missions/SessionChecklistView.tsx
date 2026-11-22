@@ -90,6 +90,10 @@ import {
   readPrioritizePickup,
   writePrioritizePickup,
 } from "@/lib/sessions/prioritizePickupPrefs";
+import {
+  readCollapseMissionCards,
+  writeCollapseMissionCards,
+} from "@/lib/sessions/collapseMissionCardsPrefs";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
@@ -149,6 +153,9 @@ export function SessionChecklistView({
   const [hideCompleted, setHideCompleted] = useState(false);
   const [prioritizePickup, setPrioritizePickup] = useState(true);
   const [prioritizePickupReady, setPrioritizePickupReady] = useState(false);
+  const [collapseMissionCards, setCollapseMissionCards] = useState(false);
+  const [collapseMissionCardsReady, setCollapseMissionCardsReady] =
+    useState(false);
   /** After Continue on the finish report, show the last completed stop again. */
   const [summaryDismissed, setSummaryDismissed] = useState(false);
   const [missionsOpen, setMissionsOpen] = useState(false);
@@ -582,6 +589,8 @@ export function SessionChecklistView({
     setTripNavPrefsReady(true);
     setPrioritizePickup(readPrioritizePickup());
     setPrioritizePickupReady(true);
+    setCollapseMissionCards(readCollapseMissionCards());
+    setCollapseMissionCardsReady(true);
   }, []);
 
   useEffect(() => {
@@ -593,6 +602,11 @@ export function SessionChecklistView({
     if (!prioritizePickupReady) return;
     writePrioritizePickup(prioritizePickup);
   }, [prioritizePickup, prioritizePickupReady]);
+
+  useEffect(() => {
+    if (!collapseMissionCardsReady) return;
+    writeCollapseMissionCards(collapseMissionCards);
+  }, [collapseMissionCards, collapseMissionCardsReady]);
 
   // After the user finishes name / start / ship, collapse to the Setup button
   // (do not leave the setup panel open as a modal).
@@ -1219,6 +1233,7 @@ export function SessionChecklistView({
         hideCompleted={hideCompleted}
         onHideCompletedChange={setHideCompleted}
         prioritizePickup={prioritizePickup}
+        collapseMissionCards={collapseMissionCards}
         onOpenSummary={isTripComplete ? openTripSummary : undefined}
         tripSummary={
           isTripComplete && !summaryDismissed
@@ -1310,6 +1325,8 @@ export function SessionChecklistView({
                   }
                   prioritizePickup={prioritizePickup}
                   onPrioritizePickupChange={setPrioritizePickup}
+                  collapseMissionCards={collapseMissionCards}
+                  onCollapseMissionCardsChange={setCollapseMissionCards}
                   onCopyTrip={initial ? undefined : copyTrip}
                     onRepairTrip={
                       !tripCargoValidation.ok && tripInvalidDismissed

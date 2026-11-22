@@ -12,6 +12,9 @@ export type RouteChecklistMenuProps = {
   /** Put Pick up as the left tab (default off = Drop off left). */
   prioritizePickup?: boolean;
   onPrioritizePickupChange?: (prioritize: boolean) => void;
+  /** Compact current-stop mission cards (plain-text cargo lines). */
+  collapseMissionCards?: boolean;
+  onCollapseMissionCardsChange?: (collapse: boolean) => void;
   /** Duplicate this trip into a new session tab (progress reset). */
   onCopyTrip?: () => void | Promise<void>;
   /**
@@ -35,9 +38,9 @@ export type RouteChecklistMenuProps = {
 
 /**
  * Trip-header ⋯ (beside Find a Contract).
- * Holds aUEC on small phones, Prioritize pickup, Copy trip, Hide / Show history,
- * Repair route (when the invalid banner is dismissed), Summary (when the trip
- * is complete), Controls, and Crash out.
+ * Holds aUEC on small phones, Prioritize pickup, Collapse missions, Copy trip,
+ * Hide / Show history, Repair route (when the invalid banner is dismissed),
+ * Summary (when the trip is complete), Controls, and Crash out.
  */
 export function RouteChecklistMenu({
   hideCompleted,
@@ -45,6 +48,8 @@ export function RouteChecklistMenu({
   onToggleHistory,
   prioritizePickup = true,
   onPrioritizePickupChange,
+  collapseMissionCards = false,
+  onCollapseMissionCardsChange,
   onCopyTrip,
   onRepairTrip,
   isRepairingTrip = false,
@@ -175,19 +180,29 @@ export function RouteChecklistMenu({
             >
               {historyLabel}
             </button>
-            {onPrioritizePickupChange ? (
+            {onPrioritizePickupChange || onCollapseMissionCardsChange ? (
               <div
                 role="menuitem"
                 className="mt-1 space-y-1.5 border-t border-rsi-divider px-1.5 pt-1.5"
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
               >
-                <Switch
-                  label="Prioritize pickup"
-                  ariaLabel="Prioritize pickup — show Pick up as the left tab"
-                  checked={prioritizePickup}
-                  onCheckedChange={onPrioritizePickupChange}
-                />
+                {onPrioritizePickupChange ? (
+                  <Switch
+                    label="Prioritize pickup"
+                    ariaLabel="Prioritize pickup — show Pick up as the left tab"
+                    checked={prioritizePickup}
+                    onCheckedChange={onPrioritizePickupChange}
+                  />
+                ) : null}
+                {onCollapseMissionCardsChange ? (
+                  <Switch
+                    label="Collapse missions"
+                    ariaLabel="Collapse missions — show cargo as plain text on the current stop"
+                    checked={collapseMissionCards}
+                    onCheckedChange={onCollapseMissionCardsChange}
+                  />
+                ) : null}
               </div>
             ) : null}
             {onRepairTrip ? (

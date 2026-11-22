@@ -97,6 +97,13 @@ export function cargoPendingKey(rowId: string, cargoIndex: number): string {
   return `${rowId}:${cargoIndex}`;
 }
 
+function missionBucketScu(items: CargoLine[]): number {
+  return items.reduce(
+    (sum, line) => sum + Math.max(0, Math.floor(Number(line.scu) || 0)),
+    0,
+  );
+}
+
 function partitionCargoByMission(
   items: CargoLine[],
   row: HaulingChecklistRow,
@@ -125,10 +132,17 @@ function partitionCargoByMission(
     }
     buckets.get(key)!.push(line);
   }
-  return order.map((missionId) => ({
+  const partitioned = order.map((missionId) => ({
     missionId,
     items: buckets.get(missionId)!,
   }));
+  // Drop off: largest mission total SCU first (matches pad stack order).
+  if (groupRole !== "delivery") return partitioned;
+  return [...partitioned].sort((a, b) => {
+    const scuDiff = missionBucketScu(b.items) - missionBucketScu(a.items);
+    if (scuDiff !== 0) return scuDiff;
+    return (a.missionId ?? "").localeCompare(b.missionId ?? "");
+  });
 }
 
 export function CargoCommodityTile({
@@ -452,6 +466,132 @@ export function CargoCommodityTile({
   );
 }
 
+/** Compact cargo lines for collapsed mission cards (⋯ Collapse missions). */
+export function CollapsedMissionCargoLines({
+  row,
+  items,
+  role,
+  pendingCargoKeys,
+  onToggleCargoHandled,
+}: {
+  row: HaulingChecklistRow;
+  items: CargoLine[];
+  role: "pickup" | "delivery" | null;
+  pendingCargoKeys?: ReadonlySet<string>;
+  onToggleCargoHandled?: (
+    rowId: string,
+    cargoIndex: number,
+  ) => void | Promise<void>;
+}) {
+  const doneClass = row.isCompleted ? "opacity-70" : "";
+  const isPickup = role === "pickup";
+  const handledVerb = isPickup ? "picked up" : "delivered";
+
+  return (
+    <ul
+      className={["flex w-full min-w-0 flex-col gap-1", doneClass]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={
+        role === "pickup"
+          ? "Pick up cargo"
+          : role === "delivery"
+            ? "Drop off cargo"
+            : "Cargo"
+      }
+    >
+      {items.map((line, index) => {
+        const name = line.commodityName?.trim() || line.commoditySlug || "Cargo";
+        const scu = Math.max(0, Math.floor(Number(line.scu) || 0));
+        const cargoHex = resolveCommodityColorHex(
+          line.color,
+          line.color2,
+          line.commoditySlug,
+        );
+        const cleared = Boolean(line.isHandled);
+        const isCargoPending =
+          line.sourceIndex != null &&
+          Boolean(
+            pendingCargoKeys?.has(cargoPendingKey(row.id, line.sourceIndex)),
+          );
+        const canToggle =
+          Boolean(onToggleCargoHandled) &&
+          line.sourceIndex != null &&
+          !isCargoPending &&
+          !row.isCompleted;
+        return (
+          <li
+            key={`${row.id}-${role ?? "none"}-collapsed-${line.commoditySlug}-${line.scu}-${line.sourceIndex ?? index}`}
+            className={[
+              "flex min-w-0 items-center gap-1.5 font-mono text-[0.65rem] leading-snug tracking-wide",
+              cargoHex ? "" : "text-rsi-text-secondary",
+              cleared && !isCargoPending ? "opacity-50" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={cargoHex ? { color: cargoHex } : undefined}
+            title={`${scu} SCU ${name}`}
+          >
+            <span className="min-w-0 flex-1 truncate">
+              <span className="tabular-nums font-semibold">{scu}</span>
+              <span className="ml-1.5">{name}</span>
+            </span>
+            {onToggleCargoHandled && line.sourceIndex != null ? (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={cleared}
+                aria-busy={isCargoPending || undefined}
+                disabled={!canToggle}
+                aria-label={
+                  isCargoPending
+                    ? `Updating ${name}`
+                    : cleared
+                      ? `Mark ${name} not ${handledVerb}`
+                      : `Mark ${name} ${handledVerb}`
+                }
+                title={
+                  isCargoPending
+                    ? "Updating…"
+                    : cleared
+                      ? `Marked ${handledVerb}`
+                      : `Mark ${handledVerb}`
+                }
+                onClick={() => {
+                  if (!canToggle || line.sourceIndex == null) return;
+                  void onToggleCargoHandled(row.id, line.sourceIndex);
+                }}
+                className={[
+                  "ml-auto inline-flex size-3.5 shrink-0 items-center justify-center rounded-[2px] border transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                  isCargoPending
+                    ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
+                    : cleared
+                      ? "border-rsi-success/60 bg-rsi-success-muted text-rsi-success"
+                      : "border-rsi-border bg-rsi-bg-deep/50 text-transparent hover:border-rsi-border-strong",
+                  !canToggle && !isCargoPending
+                    ? "cursor-not-allowed opacity-50"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {isCargoPending ? (
+                  <Spinner className="size-2.5" />
+                ) : (
+                  <span aria-hidden className="text-[0.55rem] leading-none">
+                    ✓
+                  </span>
+                )}
+              </button>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function CargoCommodityTiles({
   row,
   items,
@@ -671,6 +811,7 @@ function MissionStopCargoCard({
   addOptions,
   onAddPickup,
   pendingAddPickupKeys,
+  isCollapsed = false,
 }: {
   row: HaulingChecklistRow;
   mission: SessionMission;
@@ -684,6 +825,7 @@ function MissionStopCargoCard({
     scu: number,
   ) => void;
   pendingAddPickupKeys?: ReadonlySet<string>;
+  isCollapsed?: boolean;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const showAddControl =
@@ -800,7 +942,12 @@ function MissionStopCargoCard({
           </p>
         ) : null}
       </div>
-      <div className="mt-auto shrink-0 bg-rsi-bg-deep/35 p-2.5">
+      <div
+        className={[
+          "mt-auto shrink-0 bg-rsi-bg-deep/35",
+          isCollapsed ? "px-2.5 py-1.5" : "p-2.5",
+        ].join(" ")}
+      >
         {tiles}
         {canAdd && addOpen && onAddPickup ? (
           <AddPickupCargoForm
@@ -839,6 +986,7 @@ export function CargoGroups({
   onSetPickupScu,
   pendingSetPickupScuKeys,
   prioritizePickup = true,
+  collapseMissionCards = false,
 }: {
   row: HaulingChecklistRow;
   cargoLines: CargoLine[];
@@ -885,6 +1033,8 @@ export function CargoGroups({
    * Default: Pick up left, Drop off right.
    */
   prioritizePickup?: boolean;
+  /** When true, mission cards show plain-text cargo lines instead of tiles. */
+  collapseMissionCards?: boolean;
 }) {
   const deliveryHandled =
     stopCargoRole.isHandled(row, "delivery") || row.isCompleted;
@@ -1060,7 +1210,10 @@ export function CargoGroups({
         {missionBuckets.length > 0 ? (
           <div
             data-cargo-cards
-            className="grid grid-cols-1 items-start gap-2 min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2"
+            className={[
+              "grid grid-cols-1 items-start min-[450px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-2",
+              collapseMissionCards ? "gap-1.5" : "gap-2",
+            ].join(" ")}
           >
             {missionBuckets.map((bucket) => {
               const activeItems = bucket.items.filter(
@@ -1100,28 +1253,40 @@ export function CargoGroups({
 
               const tiles =
                 activeItems.length > 0 ? (
-                  <CargoCommodityTiles
-                    row={row}
-                    items={activeItems}
-                    role={role}
-                    pendingCargoKeys={pendingCargoKeys}
-                    onToggleCargoHandled={onToggleCargoHandled}
-                    missionId={bucket.missionId}
-                    onSkipPickup={role === "pickup" ? onSkipPickup : undefined}
-                    canSkipPickup={
-                      role === "pickup" ? canSkipPickup : undefined
-                    }
-                    pendingSkipPickupKeys={
-                      role === "pickup" ? pendingSkipPickupKeys : undefined
-                    }
-                    onSetPickupScu={
-                      role === "pickup" ? onSetPickupScu : undefined
-                    }
-                    pendingSetPickupScuKeys={
-                      role === "pickup" ? pendingSetPickupScuKeys : undefined
-                    }
-                    maxPickupScuBySlug={maxPickupScuBySlug}
-                  />
+                  collapseMissionCards ? (
+                    <CollapsedMissionCargoLines
+                      row={row}
+                      items={activeItems}
+                      role={role}
+                      pendingCargoKeys={pendingCargoKeys}
+                      onToggleCargoHandled={onToggleCargoHandled}
+                    />
+                  ) : (
+                    <CargoCommodityTiles
+                      row={row}
+                      items={activeItems}
+                      role={role}
+                      pendingCargoKeys={pendingCargoKeys}
+                      onToggleCargoHandled={onToggleCargoHandled}
+                      missionId={bucket.missionId}
+                      onSkipPickup={
+                        role === "pickup" ? onSkipPickup : undefined
+                      }
+                      canSkipPickup={
+                        role === "pickup" ? canSkipPickup : undefined
+                      }
+                      pendingSkipPickupKeys={
+                        role === "pickup" ? pendingSkipPickupKeys : undefined
+                      }
+                      onSetPickupScu={
+                        role === "pickup" ? onSetPickupScu : undefined
+                      }
+                      pendingSetPickupScuKeys={
+                        role === "pickup" ? pendingSetPickupScuKeys : undefined
+                      }
+                      maxPickupScuBySlug={maxPickupScuBySlug}
+                    />
+                  )
                 ) : null;
 
               if (!mission) {
@@ -1146,6 +1311,7 @@ export function CargoGroups({
                   addOptions={addOptions}
                   onAddPickup={onAddPickup}
                   pendingAddPickupKeys={pendingAddPickupKeys}
+                  isCollapsed={collapseMissionCards}
                 />
               );
             })}
@@ -1222,7 +1388,7 @@ export function CargoGroups({
             tabIndex={isActive ? 0 : -1}
             onClick={() => setActiveRole(role)}
             className={[
-              "relative -mb-px inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+              "relative -mb-px inline-flex min-w-0 flex-1 items-center justify-start gap-1.5 px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
               isActive
                 ? role === "pickup"
