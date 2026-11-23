@@ -68,7 +68,7 @@ function ignoreIdSet(
 
 function cellsClear(
   sketch: ShipCargoGridSketch,
-  boxes: PlacedCargoBox[],
+  boxes: readonly PlacedCargoBox[],
   cells: CargoGridCoord[],
   ignoreBoxIds?: string | ReadonlySet<string>,
 ): boolean {
