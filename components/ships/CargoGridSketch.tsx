@@ -1510,6 +1510,34 @@ export function CargoGridSketch({
         }
         return;
       }
+      // Z — fit zoom (same as clicking the zoom % control).
+      if (event.key === "z" || event.key === "Z") {
+        event.preventDefault();
+        if (showTop && showIso) {
+          const topFit = fitZoomForViewport(
+            topScrollRef.current,
+            topContentRef.current,
+            topZoom,
+          );
+          if (syncedZoom) {
+            setTopZoom(topFit);
+          } else {
+            setTopZoom(topFit);
+            setIsoZoom(isoFitZoomRef.current?.() ?? 1);
+          }
+        } else if (showTop) {
+          setTopZoom(
+            fitZoomForViewport(
+              topScrollRef.current,
+              topContentRef.current,
+              topZoom,
+            ),
+          );
+        } else if (showIso) {
+          setIsoZoom(isoFitZoomRef.current?.() ?? 1);
+        }
+        return;
+      }
       const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code);
       if (!match) return;
       const layer = Number(match[1]) - 1;
@@ -1526,11 +1554,15 @@ export function CargoGridSketch({
     onTrayPlaceCancel,
     onTrayRotate,
     selectBayLayer,
+    setIsoZoom,
     setIsoZoomLocked,
+    setTopZoom,
     setTopZoomLocked,
     showIso,
     showTop,
     sketch.heightCells,
+    syncedZoom,
+    topZoom,
     topZoomLocked,
     trayDragSpec,
   ]);

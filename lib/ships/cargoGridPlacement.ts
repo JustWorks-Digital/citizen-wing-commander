@@ -2930,21 +2930,21 @@ export function packSuggestedAtStop(
 /** How to organize crates in the session cargo-layout 3D/top view. */
 export const cargoBayPackModes = [
   {
-    id: "suggested",
-    label: "Suggested",
-    summary:
-      "Use the AI / route-authored bay layout (chronological pickup and delivery placement).",
-  },
-  {
     id: "by-cargo-type",
-    label: "Cargo type",
+    label: "By cargo type",
     summary: "Group crates by commodity, then pack into the ship bay.",
   },
   {
     id: "by-mission-location",
-    label: "Contract based",
+    label: "By contract",
     summary:
       "First two delivery locations as exclusive piles (nothing stacked on them); remaining crates grouped by cargo type.",
+  },
+  {
+    id: "suggested",
+    label: "External",
+    summary:
+      "Use the AI / route-authored bay layout (chronological pickup and delivery placement).",
   },
 ] as const;
 

@@ -33,16 +33,17 @@ import {
   MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import {
-  boxesFromManualPreset,
+  boxesFromManualTemplate,
   getManualBayLayoutStopState,
   latestManualBoxesBeforeStop,
-  newManualBayPresetId,
-  nextManualPresetName,
+  newManualBayTemplateId,
+  renameManualBayTemplate,
+  uniqueManualTemplateName,
   posesFromBoxes,
   readManualBayLayoutSession,
   storedBoxesFromPlaced,
   writeManualBayLayoutSession,
-  type ManualBayLayoutPreset,
+  type ManualBayLayoutTemplate,
   type ManualBayLayoutSessionState,
 } from "@/lib/sessions/manualBayLayoutPrefs";
 import {
@@ -162,8 +163,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     setIsoZoom,
   } = useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
-  const [packModeOpen, setPackModeOpen] = useState(false);
-  const packModeMenuRef = useRef<HTMLDivElement>(null);
+  /** Manual Path: preview Blank / Automatic seeds until Save. */
+  const [manualSeedPicker, setManualSeedPicker] = useState(false);
+  const [manualSeedPreview, setManualSeedPreview] = useState<
+    "blank" | CargoBayPackMode | null
+  >(null);
+  const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const [manualSession, setManualSession] =
     useState<ManualBayLayoutSessionState>({ byStop: {} });
   const [manualLiveBoxes, setManualLiveBoxes] = useState<PlacedCargoBox[] | null>(
@@ -268,7 +274,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   useEffect(() => {
     setManualSession(readManualBayLayoutSession(sessionId));
     setManualLiveBoxes(null);
+    setManualSeedPicker(false);
+    setManualSeedPreview(null);
   }, [sessionId]);
+
   const shipBayPrefs = useMemo(
     () => getShipBayPreferenceFixture(shipSlug),
     [shipSlug],
@@ -306,11 +315,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     () => getManualBayLayoutStopState(manualSession, stopId),
     [manualSession, stopId],
   );
-  const activeManualPreset = useMemo(() => {
-    if (!manualStop.activePresetId) return null;
+  const activeManualTemplate = useMemo(() => {
+    if (!manualStop.activeTemplateId) return null;
     return (
-      manualStop.presets.find(
-        (preset) => preset.id === manualStop.activePresetId,
+      manualStop.templates.find(
+        (template) => template.id === manualStop.activeTemplateId,
       ) ?? null
     );
   }, [manualStop]);
@@ -375,7 +384,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   /**
    * Earlier Manual poses with prior-stop deliveries stripped and this stop’s
-   * delivery tags applied. Prefer over a per-stop preset seeded from auto-pack.
+   * delivery tags applied. Prefer over a per-stop template seeded from auto-pack.
    */
   const deliveryRetagOptions = useMemo(
     () => ({
@@ -411,11 +420,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       boxes = manualLiveBoxes;
     } else if (earlierManualLayout && earlierManualLayout.length > 0) {
       // Advancing stops: always derive from earlier Manual layout when present.
-      // Do not use this stop’s saved preset snapshot — it may be a stale auto-pack
+      // Do not use this stop’s saved template snapshot — it may be a stale auto-pack
       // seed and would replace the player’s Everus (etc.) arrangement.
       boxes = manualBaseBoxes;
     } else {
-      boxes = boxesFromManualPreset(activeManualPreset, manualBaseBoxes);
+      boxes = boxesFromManualTemplate(activeManualTemplate, manualBaseBoxes);
     }
     // Transfer: doorward / aisle first; clear a stack top→bottom before another.
     return manualBayCarryover.retagDeliveryPreferringTop(
@@ -423,7 +432,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       deliveryRetagOptions,
     );
   }, [
-    activeManualPreset,
+    activeManualTemplate,
     basePlan,
     deliveryRetagOptions,
     earlierManualLayout,
@@ -465,12 +474,24 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     [basePlan],
   );
 
-  // Drop live overrides when the stop or auto-pack inventory changes so
-  // Manual falls back to this stop’s preset or earlier-stop carryover.
+  const manualSeedPickerRef = useRef(manualSeedPicker);
+  manualSeedPickerRef.current = manualSeedPicker;
+
   useEffect(() => {
+    setManualSeedPicker(false);
+    setManualSeedPreview(null);
     setManualLiveBoxes(null);
     manualDragBaseRef.current = null;
-  }, [stopId, baseBoxIdsKey]);
+  }, [stopId]);
+
+  // Drop live overrides when auto-pack inventory changes so Manual falls back
+  // to this stop’s template or earlier-stop carryover. Skip while Start-from is
+  // open so previews are not wiped.
+  useEffect(() => {
+    if (manualSeedPickerRef.current) return;
+    setManualLiveBoxes(null);
+    manualDragBaseRef.current = null;
+  }, [baseBoxIdsKey]);
 
   const placementTints = useMemo(
     () => (plan ? placementPlanTints(plan) : []),
@@ -539,51 +560,87 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const showPeelToggle =
     canPeel && (viewTab === "iso" || viewTab === "split");
 
-  const createManualPresetFromBoxes = useCallback(
-    (boxes: PlacedCargoBox[]): ManualBayLayoutPreset | null => {
+  const createManualTemplateFromBoxes = useCallback(
+    (
+      boxes: PlacedCargoBox[],
+      options?: { name?: string },
+    ): ManualBayLayoutTemplate | null => {
       if (!stopId) return null;
-      const presets = manualStop.presets;
+      const templates = manualStop.templates;
       return {
-        id: newManualBayPresetId(),
-        name: nextManualPresetName(presets),
+        id: newManualBayTemplateId(),
+        name: uniqueManualTemplateName(
+          options?.name?.trim() || "Manual",
+          templates,
+        ),
         stopId,
         poses: posesFromBoxes(boxes),
         boxes: storedBoxesFromPlaced(boxes),
         updatedAt: new Date().toISOString(),
       };
     },
-    [manualStop.presets, stopId],
+    [manualStop.templates, stopId],
   );
 
-  const patchActivePresetBoxes = useCallback(
+  type ManualSeed = "blank" | CargoBayPackMode;
+
+  /** Fresh Automatic pack for a mode — same boxes Automatic Path would show. */
+  const packBoxesForMode = useCallback(
+    (mode: CargoBayPackMode): PlacedCargoBox[] => {
+      if (!sketch || !activeRow || !stopId) return [];
+      return cargoBay.packAtStop(activeRow.id, sketch, rows, {
+        packMode: mode,
+        missionPrioritized:
+          mode === "by-cargo-type" && supportsPrioritized && prioritized,
+        includeAboardCargo: true,
+      }).boxes;
+    },
+    [
+      activeRow,
+      prioritized,
+      rows,
+      sketch,
+      stopId,
+      supportsPrioritized,
+    ],
+  );
+
+  const patchActiveTemplateBoxes = useCallback(
     (boxes: PlacedCargoBox[]) => {
       if (!stopId) return;
       updateStopManual((current) => {
-        // Manual is session-wide: a stop with no preset yet saves its first edit as one.
-        if (!current.activePresetId) {
-          const preset = createManualPresetFromBoxes(boxes);
-          if (!preset) return current;
+        // Draft seed preview — keep edits live until Save.
+        if (manualSeedPicker) return current;
+        // Manual is session-wide: a stop with no template yet saves its first edit as one.
+        if (!current.activeTemplateId) {
+          const template = createManualTemplateFromBoxes(boxes);
+          if (!template) return current;
           return {
-            activePresetId: preset.id,
-            presets: [...current.presets, preset],
+            activeTemplateId: template.id,
+            templates: [...current.templates, template],
           };
         }
         return {
           ...current,
-          presets: current.presets.map((preset) =>
-            preset.id === current.activePresetId
+          templates: current.templates.map((template) =>
+            template.id === current.activeTemplateId
               ? {
-                  ...preset,
+                  ...template,
                   poses: posesFromBoxes(boxes),
                   boxes: storedBoxesFromPlaced(boxes),
                   updatedAt: new Date().toISOString(),
                 }
-              : preset,
+              : template,
           ),
         };
       });
     },
-    [createManualPresetFromBoxes, stopId, updateStopManual],
+    [
+      createManualTemplateFromBoxes,
+      manualSeedPicker,
+      stopId,
+      updateStopManual,
+    ],
   );
 
   const selectAutoMode = useCallback(
@@ -592,83 +649,155 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       setSortingMode(mode);
       setManualLiveBoxes(null);
       manualDragBaseRef.current = null;
+      setManualSeedPicker(false);
+      setManualSeedPreview(null);
+      setRenamingTemplateId(null);
     },
     [setLastAutoPackMode, setSortingMode],
   );
 
-  const enterManualMode = useCallback(
-    (options?: { addPreset?: boolean }) => {
-      if (!basePlan || !stopId) return;
-      setViewTab("top");
-      setSortingHidden(false);
+  /** Switch Path → Manual: restore templates, or open the seed picker. */
+  const enterManualPath = useCallback(() => {
+    if (!stopId) return;
+    setSortingHidden(false);
+    setSortingMode("manual");
+    setRenamingTemplateId(null);
+    if (manualStop.templates.length === 0) {
+      setManualSeedPicker(true);
+      setManualSeedPreview(null);
+      setManualLiveBoxes(null);
+      return;
+    }
+    setManualSeedPicker(false);
+    setManualSeedPreview(null);
+    const template =
+      manualStop.templates.find(
+        (entry) => entry.id === manualStop.activeTemplateId,
+      ) ?? manualStop.templates[0]!;
+    if (!manualStop.activeTemplateId || template.id !== manualStop.activeTemplateId) {
+      updateStopManual((current) => ({
+        ...current,
+        activeTemplateId: template.id,
+      }));
+    }
+    setManualLiveBoxes(boxesFromManualTemplate(template, manualBaseBoxes));
+  }, [
+    manualBaseBoxes,
+    manualStop.activeTemplateId,
+    manualStop.templates,
+    setSortingHidden,
+    setSortingMode,
+    stopId,
+    updateStopManual,
+  ]);
 
-      const addPreset = options?.addPreset === true;
-      if (manualStop.presets.length === 0 || addPreset) {
-        const sourceBoxes =
-          isManual && manualLiveBoxes
-            ? manualLiveBoxes
-            : isManual
-              ? boxesFromManualPreset(activeManualPreset, manualBaseBoxes)
-              : manualBaseBoxes;
-        const preset = createManualPresetFromBoxes(sourceBoxes);
-        if (!preset) return;
-        updateStopManual((current) => ({
-          activePresetId: preset.id,
-          presets: [...current.presets, preset],
-        }));
-        setManualLiveBoxes(sourceBoxes);
-      } else {
-        const preset =
-          manualStop.presets.find(
-            (entry) => entry.id === manualStop.activePresetId,
-          ) ?? manualStop.presets[0]!;
-        if (!manualStop.activePresetId || preset.id !== manualStop.activePresetId) {
-          updateStopManual((current) => ({
-            ...current,
-            activePresetId: preset.id,
-          }));
-        }
-        // Restore snapshot — pose-only presets cannot rematch after Clear/Fill.
-        setManualLiveBoxes(boxesFromManualPreset(preset, manualBaseBoxes));
-      }
+  /** Preview a seed on the bay; Start from stays open until Select. */
+  const previewManualSeed = useCallback(
+    (seed: ManualSeed) => {
+      if (!stopId) return;
+      const sourceBoxes = seed === "blank" ? [] : packBoxesForMode(seed);
+      setManualSeedPreview(seed);
+      setManualLiveBoxes(sourceBoxes);
       setSortingMode("manual");
+      setSortingHidden(false);
     },
-    [
-      activeManualPreset,
-      basePlan,
-      createManualPresetFromBoxes,
-      isManual,
-      manualBaseBoxes,
-      manualLiveBoxes,
-      manualStop.activePresetId,
-      manualStop.presets,
-      setSortingHidden,
-      stopId,
-      updateStopManual,
-    ],
+    [packBoxesForMode, setSortingHidden, setSortingMode, stopId],
   );
 
-  const deleteManualPreset = useCallback(
-    (presetId: string) => {
-      const remaining = manualStop.presets.filter(
-        (preset) => preset.id !== presetId,
+  const saveManualSeedAsTemplate = useCallback(() => {
+    if (!stopId || manualSeedPreview == null) return;
+    const sourceBoxes =
+      manualLiveBoxes ??
+      (manualSeedPreview === "blank"
+        ? []
+        : packBoxesForMode(manualSeedPreview));
+    const seedLabel =
+      manualSeedPreview === "blank"
+        ? "Blank"
+        : (cargoBayPackModes.find((mode) => mode.id === manualSeedPreview)
+            ?.label ?? "Manual");
+    const template = createManualTemplateFromBoxes(sourceBoxes, {
+      name: seedLabel,
+    });
+    if (!template) return;
+    updateStopManual((current) => ({
+      activeTemplateId: template.id,
+      templates: [...current.templates, template],
+    }));
+    setManualLiveBoxes(sourceBoxes);
+    setManualSeedPicker(false);
+    setManualSeedPreview(null);
+  }, [
+    createManualTemplateFromBoxes,
+    manualLiveBoxes,
+    manualSeedPreview,
+    packBoxesForMode,
+    stopId,
+    updateStopManual,
+  ]);
+
+  const cancelManualSeedPicker = useCallback(() => {
+    setManualSeedPicker(false);
+    setManualSeedPreview(null);
+    if (manualStop.templates.length === 0) return;
+    const template =
+      manualStop.templates.find(
+        (entry) => entry.id === manualStop.activeTemplateId,
+      ) ?? manualStop.templates[0]!;
+    setManualLiveBoxes(boxesFromManualTemplate(template, manualBaseBoxes));
+  }, [
+    manualBaseBoxes,
+    manualStop.activeTemplateId,
+    manualStop.templates,
+  ]);
+
+  const commitTemplateRename = useCallback(
+    (templateId: string, nextName: string) => {
+      updateStopManual((current) => ({
+        ...current,
+        templates: renameManualBayTemplate(current.templates, templateId, nextName),
+      }));
+      setRenamingTemplateId(null);
+      setRenameDraft("");
+    },
+    [updateStopManual],
+  );
+
+  const deleteManualTemplate = useCallback(
+    (templateId: string) => {
+      const remaining = manualStop.templates.filter(
+        (template) => template.id !== templateId,
       );
       updateStopManual((current) => {
-        const presets = current.presets.filter(
-          (preset) => preset.id !== presetId,
+        const templates = current.templates.filter(
+          (template) => template.id !== templateId,
         );
-        const activePresetId =
-          current.activePresetId === presetId
-            ? (presets[0]?.id ?? null)
-            : current.activePresetId;
-        return { presets, activePresetId };
+        const activeTemplateId =
+          current.activeTemplateId === templateId
+            ? (templates[0]?.id ?? null)
+            : current.activeTemplateId;
+        return { templates, activeTemplateId };
       });
       setManualLiveBoxes(null);
+      setRenamingTemplateId(null);
+      setManualSeedPreview(null);
       if (remaining.length === 0) {
-        setSortingMode(lastAutoPackMode);
+        setManualSeedPicker(true);
+        setSortingMode("manual");
+      } else {
+        const next =
+          remaining.find((template) => template.id === manualStop.activeTemplateId) ??
+          remaining[0]!;
+        setManualLiveBoxes(boxesFromManualTemplate(next, manualBaseBoxes));
       }
     },
-    [lastAutoPackMode, manualStop.presets, updateStopManual],
+    [
+      manualBaseBoxes,
+      manualStop.activeTemplateId,
+      manualStop.templates,
+      setSortingMode,
+      updateStopManual,
+    ],
   );
 
   const onManualDragStart = useCallback(
@@ -746,17 +875,17 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       }
 
       setManualLiveBoxes(next);
-      patchActivePresetBoxes(next);
+      patchActiveTemplateBoxes(next);
     },
-    [patchActivePresetBoxes, sketch],
+    [patchActiveTemplateBoxes, sketch],
   );
 
   const persistManualBoxes = useCallback(
     (boxes: PlacedCargoBox[]) => {
       setManualLiveBoxes(boxes);
-      patchActivePresetBoxes(boxes);
+      patchActiveTemplateBoxes(boxes);
     },
-    [patchActivePresetBoxes],
+    [patchActiveTemplateBoxes],
   );
 
   const manualInventoryGroups = useMemo(() => {
@@ -947,47 +1076,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   }, [trayDragging]);
 
   useEffect(() => {
-    if (!packModeOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!packModeMenuRef.current?.contains(event.target as Node)) {
-        setPackModeOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPackModeOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [packModeOpen]);
-
-  useEffect(() => {
-    if (sortingHidden) setPackModeOpen(false);
+    if (sortingHidden) {
+      setManualSeedPicker(false);
+      setRenamingTemplateId(null);
+    }
   }, [sortingHidden]);
 
   const panelHeightMax = maxPanelHeightPx();
-
-  const packModeChoices = [
-    ...cargoBayPackModes.map((mode) => ({
-      id: mode.id as CargoBayPackMode | "manual",
-      label: mode.label,
-      summary: mode.summary,
-    })),
-    {
-      id: "manual" as const,
-      label: "Manual",
-      summary: "Drag crates on 2D.",
-    },
-  ];
-  const activePackModeId: CargoBayPackMode | "manual" = isManual
-    ? "manual"
-    : sortingMode;
-  const activePackMode =
-    packModeChoices.find((mode) => mode.id === activePackModeId) ??
-    packModeChoices[0]!;
 
   const viewTabList = (
     <div
@@ -1235,183 +1330,316 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                   ].join(" ")}
                   style={{ height: panelHeightPx }}
                 >
-                  <div ref={packModeMenuRef} className="relative min-w-0">
-                    <p className="mb-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                      Pack mode
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                      Type
                     </p>
-                    <button
-                      type="button"
-                      aria-haspopup="listbox"
-                      aria-expanded={packModeOpen}
-                      aria-label="Cargo packing mode"
-                      title={activePackMode.summary}
-                      onClick={() => setPackModeOpen((open) => !open)}
-                      className={[
-                        "flex w-full items-start gap-1.5 rounded-rsi border px-2 py-1.5 text-left transition-colors",
-                        "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent",
-                        packModeOpen ? "ring-1 ring-rsi-accent/40" : "",
-                      ].join(" ")}
+                    <div
+                      role="group"
+                      aria-label="Packing type"
+                      className="grid grid-cols-2 gap-1"
                     >
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-mono text-[0.55rem] uppercase tracking-[0.14em]">
-                          {activePackMode.label}
-                        </span>
-                        <span className="mt-0.5 block text-[0.65rem] leading-snug text-rsi-text-muted">
-                          {activePackMode.summary}
-                        </span>
-                      </span>
-                      <svg
-                        aria-hidden
-                        viewBox="0 0 24 24"
-                        className={[
-                          "mt-0.5 h-3 w-3 shrink-0 text-rsi-text-muted transition-transform",
-                          packModeOpen ? "rotate-180" : "",
-                        ].join(" ")}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      {(
+                        [
+                          { id: "automatic" as const, label: "Automatic" },
+                          { id: "manual" as const, label: "Manual" },
+                        ] as const
+                      ).map((path) => {
+                        const selected =
+                          path.id === "manual" ? isManual : !isManual;
+                        return (
+                          <button
+                            key={path.id}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => {
+                              if (path.id === "manual") enterManualPath();
+                              else selectAutoMode(lastAutoPackMode);
+                            }}
+                            className={[
+                              "rounded-rsi border px-2 py-1.5 font-mono text-[0.55rem] uppercase tracking-[0.12em] transition-colors",
+                              selected
+                                ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                                : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
+                            ].join(" ")}
+                          >
+                            {path.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {!isManual ? (
+                    <div className="min-w-0 space-y-1">
+                      <div
+                        role="group"
+                        aria-label="Automatic pack mode"
+                        className="flex flex-col gap-1"
                       >
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </button>
-                    {packModeOpen ? (
-                      <ul
-                        role="listbox"
-                        aria-label="Cargo packing modes"
-                        className="absolute top-full left-0 z-50 mt-1 w-full space-y-1 rounded-rsi border border-rsi-border/80 bg-rsi-bg-deep/95 p-1 shadow-rsi-panel"
-                      >
-                        {packModeChoices.map((mode) => {
-                          const selected = mode.id === activePackModeId;
+                        {cargoBayPackModes.map((mode) => {
+                          const selected = sortingMode === mode.id;
                           return (
-                            <li key={mode.id} role="presentation">
-                              <button
-                                type="button"
-                                role="option"
-                                aria-selected={selected}
-                                title={mode.summary}
-                                onClick={() => {
-                                  if (mode.id === "manual") {
-                                    enterManualMode();
-                                  } else {
-                                    selectAutoMode(mode.id);
-                                  }
-                                  setPackModeOpen(false);
-                                }}
-                                className={[
-                                  "flex w-full flex-col items-start gap-0.5 rounded-rsi border px-2 py-1.5 text-left transition-colors",
-                                  selected
-                                    ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
-                                    : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                                ].join(" ")}
-                              >
-                                <span className="font-mono text-[0.55rem] uppercase tracking-[0.14em]">
-                                  {mode.label}
-                                </span>
-                                <span className="text-[0.65rem] leading-snug text-rsi-text-muted">
-                                  {mode.summary}
-                                </span>
-                              </button>
-                            </li>
+                            <button
+                              key={mode.id}
+                              type="button"
+                              title={mode.summary}
+                              aria-pressed={selected}
+                              onClick={() => selectAutoMode(mode.id)}
+                              className={[
+                                "flex w-full flex-col items-start gap-0.5 rounded-rsi border px-2 py-1.5 text-left transition-colors",
+                                selected
+                                  ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
+                                  : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                              ].join(" ")}
+                            >
+                              <span className="font-mono text-[0.55rem] uppercase tracking-[0.14em]">
+                                {mode.label}
+                              </span>
+                              <span className="text-[0.65rem] leading-snug text-rsi-text-muted">
+                                {mode.summary}
+                              </span>
+                            </button>
                           );
                         })}
-                      </ul>
-                    ) : null}
-                  </div>
-                  {supportsPrioritized &&
-                  !isManual &&
-                  sortingMode === "by-cargo-type" ? (
-                    <button
-                      type="button"
-                      aria-pressed={showPrioritizedToggle && prioritized}
-                      title={
-                        shipBayPrefs.missionPriorityPacking?.bias ===
-                        "edges-first"
-                          ? "Early deliveries toward bay edges; later deliveries toward the center."
-                          : "Order cargo by upcoming delivery stops."
-                      }
-                      onClick={() => {
-                        selectAutoMode("by-cargo-type");
-                        setPrioritized(
-                          sortingMode === "by-cargo-type"
-                            ? !prioritized
-                            : true,
-                        );
-                      }}
-                      className={[
-                        "w-full rounded-rsi border px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-                        showPrioritizedToggle && prioritized
-                          ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                          : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
-                      ].join(" ")}
-                    >
-                      Prioritized
-                    </button>
-                  ) : null}
-                  {isManual ? (
-                    <div className="flex min-h-0 flex-1 flex-col gap-1">
-                      <div className="flex min-w-0 items-center gap-1">
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
-                          {manualStop.presets.map((preset) => {
-                            const selected =
-                              preset.id === manualStop.activePresetId;
-                            return (
-                              <span
-                                key={preset.id}
-                                className={[
-                                  "inline-flex max-w-full items-center rounded border px-1 py-px font-mono text-[0.45rem] uppercase tracking-[0.08em]",
-                                  selected
-                                    ? "border-rsi-border-strong bg-rsi-surface text-rsi-text"
-                                    : "border-rsi-border/70 bg-rsi-bg-deep/50 text-rsi-text-muted",
-                                ].join(" ")}
-                              >
-                                <button
-                                  type="button"
-                                  title={`Use ${preset.name}`}
-                                  onClick={() => {
-                                    updateStopManual((current) => ({
-                                      ...current,
-                                      activePresetId: preset.id,
-                                    }));
-                                    setManualLiveBoxes(
-                                      boxesFromManualPreset(
-                                        preset,
-                                        manualBaseBoxes,
-                                      ),
-                                    );
-                                  }}
-                                  className="truncate hover:text-rsi-text"
-                                >
-                                  {preset.name}
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Delete ${preset.name}`}
-                                  title="Delete preset"
-                                  onClick={() =>
-                                    deleteManualPreset(preset.id)
-                                  }
-                                  className="ml-0.5 shrink-0 leading-none text-rsi-text-muted hover:text-rsi-danger"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            );
-                          })}
-                        </div>
+                      </div>
+                      {supportsPrioritized &&
+                      sortingMode === "by-cargo-type" ? (
                         <button
                           type="button"
-                          title="Snapshot the current layout as a new preset"
-                          aria-label="Add preset"
-                          onClick={() =>
-                            enterManualMode({ addPreset: true })
+                          aria-pressed={showPrioritizedToggle && prioritized}
+                          title={
+                            shipBayPrefs.missionPriorityPacking?.bias ===
+                            "edges-first"
+                              ? "Early deliveries toward bay edges; later deliveries toward the center."
+                              : "Order cargo by upcoming delivery stops."
                           }
-                          className="inline-flex size-5 shrink-0 items-center justify-center rounded border border-dashed border-rsi-border/80 font-mono text-[0.7rem] leading-none text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
+                          onClick={() => {
+                            selectAutoMode("by-cargo-type");
+                            setPrioritized(
+                              sortingMode === "by-cargo-type"
+                                ? !prioritized
+                                : true,
+                            );
+                          }}
+                          className={[
+                            "w-full rounded-rsi border px-2 py-1 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                            showPrioritizedToggle && prioritized
+                              ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                              : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
+                          ].join(" ")}
                         >
-                          +
+                          Prioritized
                         </button>
-                      </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {isManual ? (
+                    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                      {manualSeedPicker ? (
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                              Base template
+                            </p>
+                            {manualStop.templates.length > 0 ? (
+                              <button
+                                type="button"
+                                aria-label="Cancel"
+                                title="Cancel"
+                                onClick={cancelManualSeedPicker}
+                                className="inline-flex size-6 shrink-0 items-center justify-center rounded text-[0.85rem] leading-none text-rsi-text-muted transition-colors hover:text-rsi-text-secondary"
+                              >
+                                ×
+                              </button>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex flex-nowrap gap-1">
+                              {(
+                                [
+                                  {
+                                    id: "blank" as const,
+                                    label: "Blank",
+                                  },
+                                  ...cargoBayPackModes
+                                    .filter((mode) => mode.id !== "suggested")
+                                    .map((mode) => ({
+                                      id: mode.id,
+                                      label: mode.label,
+                                    })),
+                                ] as const
+                              ).map((option) => {
+                                const selected =
+                                  manualSeedPreview === option.id;
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() =>
+                                      previewManualSeed(option.id)
+                                    }
+                                    className={[
+                                      "min-w-0 shrink rounded-rsi border px-1.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.1em] transition-colors",
+                                      selected
+                                        ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
+                                        : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                                    ].join(" ")}
+                                  >
+                                    {option.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {cargoBayPackModes
+                              .filter((mode) => mode.id === "suggested")
+                              .map((mode) => {
+                                const selected =
+                                  manualSeedPreview === mode.id;
+                                return (
+                                  <button
+                                    key={mode.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() => previewManualSeed(mode.id)}
+                                    className={[
+                                      "w-fit rounded-rsi border px-1.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.1em] transition-colors",
+                                      selected
+                                        ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
+                                        : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                                    ].join(" ")}
+                                  >
+                                    {mode.label}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={manualSeedPreview == null}
+                            onClick={saveManualSeedAsTemplate}
+                            className={[
+                              "w-full rounded-rsi border px-1.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.1em] transition-colors",
+                              manualSeedPreview == null
+                                ? "cursor-not-allowed border-rsi-border/50 bg-rsi-bg-deep/30 text-rsi-text-muted/60"
+                                : "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent hover:bg-rsi-accent-muted/55",
+                            ].join(" ")}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                              Templates
+                            </p>
+                            <button
+                              type="button"
+                              title="Add a template from Blank or Automatic"
+                              aria-label="Add template"
+                              onClick={() => {
+                                setManualSeedPicker(true);
+                                setManualSeedPreview(null);
+                              }}
+                              className="inline-flex size-6 shrink-0 items-center justify-center rounded border border-dashed border-rsi-border/80 font-mono text-[0.75rem] leading-none text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto pr-0.5">
+                            {manualStop.templates.map((template) => {
+                              const selected =
+                                template.id === manualStop.activeTemplateId;
+                              const renaming = renamingTemplateId === template.id;
+                              return (
+                                <div
+                                  key={template.id}
+                                  className={[
+                                    "flex min-w-0 items-stretch gap-1 rounded-rsi border px-2 py-2",
+                                    selected
+                                      ? "border-rsi-accent/50 bg-rsi-accent-muted/25"
+                                      : "border-rsi-border/70 bg-rsi-bg-deep/40",
+                                  ].join(" ")}
+                                >
+                                  {renaming ? (
+                                    <input
+                                      autoFocus
+                                      value={renameDraft}
+                                      aria-label={`Rename ${template.name}`}
+                                      onChange={(event) =>
+                                        setRenameDraft(event.target.value)
+                                      }
+                                      onBlur={() =>
+                                        commitTemplateRename(
+                                          template.id,
+                                          renameDraft,
+                                        )
+                                      }
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                          event.preventDefault();
+                                          commitTemplateRename(
+                                            template.id,
+                                            renameDraft,
+                                          );
+                                        } else if (event.key === "Escape") {
+                                          event.preventDefault();
+                                          setRenamingTemplateId(null);
+                                          setRenameDraft("");
+                                        }
+                                      }}
+                                      className="min-w-0 flex-1 rounded border border-rsi-accent/40 bg-rsi-bg-deep px-1.5 py-1 font-mono text-[0.7rem] text-rsi-text outline-none"
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      title={`${template.name} — click to use, double-click to rename`}
+                                      onClick={() => {
+                                        updateStopManual((current) => ({
+                                          ...current,
+                                          activeTemplateId: template.id,
+                                        }));
+                                        setManualLiveBoxes(
+                                          boxesFromManualTemplate(
+                                            template,
+                                            manualBaseBoxes,
+                                          ),
+                                        );
+                                      }}
+                                      onDoubleClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        setRenamingTemplateId(template.id);
+                                        setRenameDraft(template.name);
+                                      }}
+                                      className={[
+                                        "min-w-0 flex-1 truncate text-left font-mono text-[0.7rem] tracking-wide",
+                                        selected
+                                          ? "text-rsi-accent"
+                                          : "text-rsi-text-secondary hover:text-rsi-text",
+                                      ].join(" ")}
+                                    >
+                                      {template.name}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    aria-label={`Delete ${template.name}`}
+                                    title="Delete template"
+                                    onClick={() =>
+                                      deleteManualTemplate(template.id)
+                                    }
+                                    className="shrink-0 px-1 text-[0.85rem] leading-none text-rsi-text-muted hover:text-rsi-danger"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       {manualInventoryGroups.length > 0 ? (
                         <ManualBayBoxTray
                           groups={manualInventoryGroups}

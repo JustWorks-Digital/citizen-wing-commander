@@ -61,9 +61,9 @@ export type CargoBayChromePrefs = {
   topZoomLocked: boolean;
   /** Disable 3D trackpad/wheel zoom only (+/- still work). Independent of 2D. */
   isoZoomLocked: boolean;
-  /** Packing type (Suggested / Cargo type / Contract based / Manual). */
+  /** Packing type: Automatic variants or Manual. */
   sortingMode: CargoBaySortingMode;
-  /** Last non-manual packing mode (restored when leaving Manual with no presets). */
+  /** Last Automatic pack mode (restored when leaving Manual with no templates). */
   lastAutoPackMode: CargoBayAutoPackMode;
   /** Prioritized packing toggle (Cargo type + ships that support it). */
   prioritized: boolean;

@@ -1,5 +1,5 @@
 /**
- * Session-scoped Manual bay layout presets (browser localStorage).
+ * Session-scoped Manual bay layout templates (browser localStorage).
  * Full box snapshots are the source of truth — poses alone cannot restore
  * Clear/Fill layouts after auto-pack regenerates crate ids.
  */
@@ -34,23 +34,23 @@ export type ManualBayStoredBox = {
   isOverflow?: boolean;
 };
 
-export type ManualBayLayoutPreset = {
+export type ManualBayLayoutTemplate = {
   id: string;
   name: string;
   stopId: string;
   /**
    * @deprecated Pose overrides matched by auto-pack box id. Kept for older
-   * presets; prefer `boxes` when present.
+   * templates; prefer `boxes` when present.
    */
   poses: ManualBayBoxPose[];
-  /** Full bay layout when the preset was saved (Manual source of truth). */
+  /** Full bay layout when the template was saved (Manual source of truth). */
   boxes?: ManualBayStoredBox[];
   updatedAt: string;
 };
 
 export type ManualBayLayoutStopState = {
-  activePresetId: string | null;
-  presets: ManualBayLayoutPreset[];
+  activeTemplateId: string | null;
+  templates: ManualBayLayoutTemplate[];
 };
 
 export type ManualBayLayoutSessionState = {
@@ -65,7 +65,7 @@ function storageKey(sessionId: string): string {
 }
 
 function emptyStopState(): ManualBayLayoutStopState {
-  return { activePresetId: null, presets: [] };
+  return { activeTemplateId: null, templates: [] };
 }
 
 function cellsForOrigin(
@@ -214,7 +214,7 @@ export function placedBoxesFromStored(
   }));
 }
 
-function normalizePreset(raw: unknown): ManualBayLayoutPreset | null {
+function normalizeTemplate(raw: unknown): ManualBayLayoutTemplate | null {
   if (!raw || typeof raw !== "object") return null;
   const record = raw as Record<string, unknown>;
   const id = typeof record.id === "string" ? record.id.trim() : "";
@@ -255,19 +255,30 @@ function normalizeSessionState(raw: unknown): ManualBayLayoutSessionState {
   for (const [stopId, value] of Object.entries(byStopRaw)) {
     if (!value || typeof value !== "object") continue;
     const stop = value as Record<string, unknown>;
-    const presets = Array.isArray(stop.presets)
-      ? stop.presets
-          .map(normalizePreset)
-          .filter((preset): preset is ManualBayLayoutPreset => preset != null)
-      : [];
-    const activePresetId =
-      typeof stop.activePresetId === "string" ? stop.activePresetId : null;
+    // Legacy localStorage used `presets` / `activePresetId`.
+    const templatesRaw = Array.isArray(stop.templates)
+      ? stop.templates
+      : Array.isArray(stop.presets)
+        ? stop.presets
+        : [];
+    const templates = templatesRaw
+      .map(normalizeTemplate)
+      .filter(
+        (template): template is ManualBayLayoutTemplate => template != null,
+      );
+    const activeTemplateIdRaw =
+      typeof stop.activeTemplateId === "string"
+        ? stop.activeTemplateId
+        : typeof stop.activePresetId === "string"
+          ? stop.activePresetId
+          : null;
     byStop[stopId] = {
-      presets,
-      activePresetId:
-        activePresetId && presets.some((preset) => preset.id === activePresetId)
-          ? activePresetId
-          : (presets[0]?.id ?? null),
+      templates,
+      activeTemplateId:
+        activeTemplateIdRaw &&
+        templates.some((template) => template.id === activeTemplateIdRaw)
+          ? activeTemplateIdRaw
+          : (templates[0]?.id ?? null),
     };
   }
   return { byStop };
@@ -317,19 +328,19 @@ export function posesFromBoxes(boxes: PlacedCargoBox[]): ManualBayBoxPose[] {
 }
 
 /**
- * Restore a Manual preset onto the live bay.
+ * Restore a Manual template onto the live bay.
  * Prefers the saved box snapshot; falls back to pose overlays on auto-pack.
  */
-export function boxesFromManualPreset(
-  preset: ManualBayLayoutPreset | null | undefined,
+export function boxesFromManualTemplate(
+  template: ManualBayLayoutTemplate | null | undefined,
   autoBoxes: readonly PlacedCargoBox[],
 ): PlacedCargoBox[] {
-  if (!preset) return [...autoBoxes];
+  if (!template) return [...autoBoxes];
   // Empty array is a valid Clear snapshot — only fall back when missing.
-  if (preset.boxes != null) {
-    return placedBoxesFromStored(preset.boxes);
+  if (template.boxes != null) {
+    return placedBoxesFromStored(template.boxes);
   }
-  return applyManualBayPoses(autoBoxes, preset.poses);
+  return applyManualBayPoses(autoBoxes, template.poses);
 }
 
 export type ManualBoxesBeforeStop = {
@@ -340,7 +351,7 @@ export type ManualBoxesBeforeStop = {
 
 /**
  * Saved Manual layout from the nearest earlier stop (route order) that has an
- * active preset with a box snapshot; `null` when none.
+ * active template with a box snapshot; `null` when none.
  */
 export function latestManualBoxesBeforeStop(
   session: ManualBayLayoutSessionState,
@@ -351,12 +362,12 @@ export function latestManualBoxesBeforeStop(
   for (let index = stopIndex - 1; index >= 0; index -= 1) {
     const earlierStopId = stopIdsInRouteOrder[index]!;
     const earlier = getManualBayLayoutStopState(session, earlierStopId);
-    const preset = earlier.presets.find(
-      (entry) => entry.id === earlier.activePresetId,
+    const template = earlier.templates.find(
+      (entry) => entry.id === earlier.activeTemplateId,
     );
-    if (preset?.boxes) {
+    if (template?.boxes) {
       return {
-        boxes: placedBoxesFromStored(preset.boxes),
+        boxes: placedBoxesFromStored(template.boxes),
         stopId: earlierStopId,
       };
     }
@@ -364,20 +375,57 @@ export function latestManualBoxesBeforeStop(
   return null;
 }
 
-export function newManualBayPresetId(): string {
+export function newManualBayTemplateId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   return `manual-${Date.now().toString(36)}`;
 }
 
-export function nextManualPresetName(existing: ManualBayLayoutPreset[]): string {
+export function nextManualTemplateName(
+  existing: ManualBayLayoutTemplate[],
+): string {
   let max = 0;
-  for (const preset of existing) {
-    const match = /^Manual\s+(\d+)$/i.exec(preset.name.trim());
+  for (const template of existing) {
+    const match = /^Manual\s+(\d+)$/i.exec(template.name.trim());
     if (match?.[1]) max = Math.max(max, Number(match[1]) || 0);
   }
   return `Manual ${max + 1}`;
+}
+
+/** Unique display name for a new Manual template (appends ` 2`, ` 3`, … on clash). */
+export function uniqueManualTemplateName(
+  baseName: string,
+  existing: ManualBayLayoutTemplate[],
+): string {
+  const trimmed = baseName.trim() || "Manual";
+  const used = new Set(
+    existing.map((template) => template.name.trim().toLowerCase()),
+  );
+  if (!used.has(trimmed.toLowerCase())) return trimmed;
+  for (let n = 2; n < 1000; n += 1) {
+    const candidate = `${trimmed} ${n}`;
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+  return `${trimmed} ${Date.now().toString(36)}`;
+}
+
+/** Rename a template; empty/whitespace keeps the previous name. */
+export function renameManualBayTemplate(
+  templates: ManualBayLayoutTemplate[],
+  templateId: string,
+  nextName: string,
+): ManualBayLayoutTemplate[] {
+  const trimmed = nextName.trim();
+  return templates.map((template) =>
+    template.id === templateId
+      ? {
+          ...template,
+          name: trimmed || template.name,
+          updatedAt: new Date().toISOString(),
+        }
+      : template,
+  );
 }
 
 /** Apply saved poses onto auto-planned boxes (matched by id). */
