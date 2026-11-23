@@ -16,11 +16,14 @@ import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
 import {
+  MAX_CARGO_BAY_LAYOUT_HEIGHT_PX,
   MAX_CARGO_BAY_LAYOUT_WIDTH_PX,
+  MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
   MIN_CARGO_BAY_LAYOUT_WIDTH_PX,
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import {
   CargoBayLayout,
+  type CargoBayLayoutResizeApi,
   type CargoBayStopScope,
 } from "./CargoBayLayout";
 
@@ -44,7 +47,7 @@ export type SessionCargoLayoutModalProps = {
 
 /**
  * Centered cargo bays modal — CargoBayLayout panel opened from the sticky
- * Cargo bay control. Height follows content; left edge resizes width.
+ * Cargo bay control. Bottom-right corner resizes width and height together.
  * Fullscreen fills the browser; close X / expand sit above the panel (or inset
  * when fullscreen).
  */
@@ -65,13 +68,18 @@ export function SessionCargoLayoutModal({
     useSessionCargoBayLayoutFullscreen(sessionId);
   const [stopScope, setStopScope] = useState<CargoBayStopScope>("transfer");
   const [isResizing, setIsResizing] = useState(false);
+  const layoutResizeRef = useRef<CargoBayLayoutResizeApi | null>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
+    startY: number;
     startWidth: number;
+    startHeight: number;
   } | null>(null);
   const isFullscreenRef = useRef(isFullscreen);
   isFullscreenRef.current = isFullscreen;
+  const widthPxRef = useRef(widthPx);
+  widthPxRef.current = widthPx;
 
   useEffect(() => {
     if (!open) return;
@@ -132,7 +140,7 @@ export function SessionCargoLayoutModal({
     if (!isResizing) return;
     const previous = document.body.style.cursor;
     const previousUserSelect = document.body.style.userSelect;
-    document.body.style.cursor = "ew-resize";
+    document.body.style.cursor = "nwse-resize";
     document.body.style.userSelect = "none";
     return () => {
       document.body.style.cursor = previous;
@@ -140,48 +148,73 @@ export function SessionCargoLayoutModal({
     };
   }, [isResizing]);
 
+  const applyCornerSize = useCallback(
+    (width: number, height: number, options?: { persist?: boolean }) => {
+      setWidthPx(width, options);
+      layoutResizeRef.current?.setHeightPx(height, options);
+    },
+    [setWidthPx],
+  );
+
+  const resetCornerSize = useCallback(() => {
+    resetWidthPx();
+    layoutResizeRef.current?.resetHeightPx();
+  }, [resetWidthPx]);
+
   const onResizePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
+      const api = layoutResizeRef.current;
+      if (!api) return;
       dragRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
-        startWidth: widthPx,
+        startY: event.clientY,
+        startWidth: widthPxRef.current,
+        startHeight: api.getHeightPx(),
       };
       setIsResizing(true);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [widthPx],
+    [],
   );
 
   const onResizePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== event.pointerId) return;
-      // Dragging the left edge leftward grows the panel.
-      const delta = drag.startX - event.clientX;
-      setWidthPx(drag.startWidth + delta, { persist: false });
+      const deltaX = event.clientX - drag.startX;
+      const deltaY = event.clientY - drag.startY;
+      applyCornerSize(drag.startWidth + deltaX, drag.startHeight + deltaY, {
+        persist: false,
+      });
     },
-    [setWidthPx],
+    [applyCornerSize],
   );
 
   const endResize = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== event.pointerId) return;
-      const delta = drag.startX - event.clientX;
+      const deltaX = event.clientX - drag.startX;
+      const deltaY = event.clientY - drag.startY;
       dragRef.current = null;
       setIsResizing(false);
-      setWidthPx(drag.startWidth + delta);
+      applyCornerSize(drag.startWidth + deltaX, drag.startHeight + deltaY);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
     },
-    [setWidthPx],
+    [applyCornerSize],
   );
 
   if (!open) return null;
+
+  const heightNow =
+    layoutResizeRef.current?.getHeightPx() ?? MIN_CARGO_BAY_LAYOUT_HEIGHT_PX;
+  const heightMax =
+    layoutResizeRef.current?.getMaxHeightPx() ?? MAX_CARGO_BAY_LAYOUT_HEIGHT_PX;
 
   const chromeButtons = (
     <>
@@ -277,52 +310,15 @@ export function SessionCargoLayoutModal({
           Cargo bays
         </h2>
         <div
+          data-cargo-bay-modal-shell
           className={[
             "relative min-w-0",
             isFullscreen
               ? "h-full overflow-hidden"
-              : "max-h-[min(85vh,52rem)] overflow-y-auto overscroll-contain",
+              : // Grow with the graph; clamp height so we never scroll the shell.
+                "max-h-[min(85vh,52rem)] overflow-hidden",
           ].join(" ")}
         >
-          {!isFullscreen ? (
-            <button
-              type="button"
-              role="slider"
-              aria-label="Cargo bays width"
-              aria-orientation="horizontal"
-              aria-valuemin={MIN_CARGO_BAY_LAYOUT_WIDTH_PX}
-              aria-valuemax={MAX_CARGO_BAY_LAYOUT_WIDTH_PX}
-              aria-valuenow={widthPx}
-              title="Drag to resize · double-click to reset"
-              onPointerDown={onResizePointerDown}
-              onPointerMove={onResizePointerMove}
-              onPointerUp={endResize}
-              onPointerCancel={endResize}
-              onDoubleClick={resetWidthPx}
-              onKeyDown={(event) => {
-                const step = event.shiftKey ? 48 : 16;
-                if (event.key === "ArrowLeft") {
-                  event.preventDefault();
-                  setWidthPx(widthPx + step);
-                } else if (event.key === "ArrowRight") {
-                  event.preventDefault();
-                  setWidthPx(widthPx - step);
-                } else if (event.key === "Home") {
-                  event.preventDefault();
-                  setWidthPx(MAX_CARGO_BAY_LAYOUT_WIDTH_PX);
-                } else if (event.key === "End") {
-                  event.preventDefault();
-                  setWidthPx(MIN_CARGO_BAY_LAYOUT_WIDTH_PX);
-                }
-              }}
-              className="group absolute top-0 bottom-0 left-0 z-20 flex w-3 -translate-x-1/2 cursor-ew-resize items-center justify-center"
-            >
-              <span
-                aria-hidden
-                className="h-10 w-0.5 rounded-full bg-rsi-border-strong/80 group-hover:bg-rsi-accent"
-              />
-            </button>
-          ) : null}
           <CargoBayLayout
             rows={rows}
             missions={missions}
@@ -333,8 +329,60 @@ export function SessionCargoLayoutModal({
             sessionId={sessionId}
             headerAside={headerAside}
             isFullscreen={isFullscreen}
+            layoutResizeRef={layoutResizeRef}
             className={isFullscreen ? "h-full rounded-none border-0" : undefined}
           />
+          {!isFullscreen ? (
+            <button
+              type="button"
+              role="slider"
+              aria-label="Cargo bays size"
+              aria-valuemin={MIN_CARGO_BAY_LAYOUT_WIDTH_PX}
+              aria-valuemax={MAX_CARGO_BAY_LAYOUT_WIDTH_PX}
+              aria-valuenow={widthPx}
+              aria-orientation="horizontal"
+              title="Drag corner to resize width and height · double-click to reset"
+              onPointerDown={onResizePointerDown}
+              onPointerMove={onResizePointerMove}
+              onPointerUp={endResize}
+              onPointerCancel={endResize}
+              onDoubleClick={resetCornerSize}
+              onKeyDown={(event) => {
+                const step = event.shiftKey ? 48 : 16;
+                const api = layoutResizeRef.current;
+                const height = api?.getHeightPx() ?? heightNow;
+                const maxH = api?.getMaxHeightPx() ?? heightMax;
+                if (event.key === "ArrowRight") {
+                  event.preventDefault();
+                  setWidthPx(widthPx + step);
+                } else if (event.key === "ArrowLeft") {
+                  event.preventDefault();
+                  setWidthPx(widthPx - step);
+                } else if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  api?.setHeightPx(height + step);
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  api?.setHeightPx(height - step);
+                } else if (event.key === "Home") {
+                  event.preventDefault();
+                  applyCornerSize(MAX_CARGO_BAY_LAYOUT_WIDTH_PX, maxH);
+                } else if (event.key === "End") {
+                  event.preventDefault();
+                  applyCornerSize(
+                    MIN_CARGO_BAY_LAYOUT_WIDTH_PX,
+                    MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
+                  );
+                }
+              }}
+              className="group absolute right-0 bottom-0 z-20 flex size-5 cursor-nwse-resize items-end justify-end p-1"
+            >
+              <span
+                aria-hidden
+                className="block size-2.5 border-r-2 border-b-2 border-rsi-border-strong/80 group-hover:border-rsi-accent"
+              />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

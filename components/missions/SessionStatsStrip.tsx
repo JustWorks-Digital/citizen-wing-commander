@@ -91,10 +91,18 @@ const interactiveCellClass = [
 ].join(" ");
 
 /** Vertical section label — absolutely positioned so it does not inflate strip height. */
-function StripSpine({ label }: { label: string }) {
+function StripSpine({
+  label,
+  title,
+}: {
+  label: string;
+  /** Full phrase when `label` is abbreviated. */
+  title?: string;
+}) {
   return (
     <span
       className="relative w-5 shrink-0 self-stretch border-r border-rsi-border bg-rsi-bg-deep/55 sm:w-6"
+      title={title}
       aria-hidden
     >
       <span className="absolute inset-0 flex items-center justify-center font-mono text-[0.5rem] uppercase leading-none tracking-[0.18em] text-rsi-text-muted [writing-mode:vertical-rl] rotate-180">
@@ -378,7 +386,7 @@ function StopTransferFlowArrow({ inbound }: { inbound: boolean }) {
 
 /**
  * Cargo strip left (Cargo | Aboard/capacity | Peak | Stop in/out);
- * Stats strip right (Stats | Contracts as completed + aUEC | Time).
+ * Progress strip right (Prog | Contracts as completed + aUEC | Time).
  * Time stays in the strip. Distance lives in the Stops rail.
  */
 export function SessionRouteProgressStats({
@@ -568,7 +576,7 @@ export function SessionRouteProgressStats({
         <div
           className={[stripClass, "!w-fit max-w-full"].join(" ")}
           role="group"
-          aria-label="Stats — contracts, payout and time"
+          aria-label="Progress — contracts, payout and time"
         >
           <button
             type="button"
@@ -580,7 +588,7 @@ export function SessionRouteProgressStats({
             title={contractsAuecTitle}
             aria-label={contractsAuecAria}
           >
-            <StripSpine label="Stats" />
+            <StripSpine label="Prog" title="Progress" />
             <span className={`${cellClass} border-0`}>
               {contractsAuecBody}
             </span>

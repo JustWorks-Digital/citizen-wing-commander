@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total, On grid (All-tab placed / capacity), and bay load; footer shows stop transfer SCU by cargo type. Optional All / Transfer scope, 2D/Split/3D tabs, Packing Type (Automatic By cargo type / By contract / External, or Manual with Blank/auto seed + renameable templates) + Peel, Legend Settings Overlay (float vs push), height drag handle.",
+          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show Contracts total, On grid (All-tab placed / capacity), and bay load; footer shows stop transfer SCU by cargo type. Optional All / Transfer scope, 2D/Split/3D tabs, Packing Type (Automatic By cargo type / By contract / External, or Manual with Blank/auto seed; custom templates also appear as Base template options on their own line after External) + Peel, Legend Settings Overlay (float vs push). Standalone Storybook keeps a bottom height handle; the trip modal uses a corner resize for width+height.",
       },
     },
   },

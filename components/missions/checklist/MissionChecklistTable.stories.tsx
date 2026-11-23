@@ -184,7 +184,7 @@ export const Loading: Story = {
     docs: {
       description: {
         story:
-          "Uses ChecklistStopsSkeleton: Stops rail, sticky Cargo/Stats toolbar, and stop cards with Drop off / Pick up tabs, transfer + mission cards, and pad graph.",
+          "Uses ChecklistStopsSkeleton: Stops rail, sticky Cargo/Prog toolbar, and stop cards with Drop off / Pick up tabs, transfer + mission cards, and pad graph.",
       },
     },
   },

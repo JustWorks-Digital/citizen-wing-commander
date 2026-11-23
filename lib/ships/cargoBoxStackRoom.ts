@@ -50,7 +50,7 @@ export function freeStackLayersAbove(
   return free;
 }
 
-export type CargoBoxStackRoomRole = "solid" | "underlay";
+export type CargoBoxStackRoomRole = "solid" | "underlay" | "overlay";
 
 /** Opaque fill when the stack is full (no free layers). */
 export const STACK_ROOM_OPACITY_SOLID_FULL = 0.95;
@@ -60,6 +60,56 @@ export const STACK_ROOM_OPACITY_SOLID_OPEN = 0.48;
 export const STACK_ROOM_OPACITY_UNDERLAY_FULL = 0.78;
 /** Faintest underlay ghost when many layers remain open. */
 export const STACK_ROOM_OPACITY_UNDERLAY_OPEN = 0.14;
+/**
+ * Bleed patch on a support crate (upper footprint tint). Strong enough to
+ * read through the base color; hatch handles same-commodity stacks.
+ */
+export const STACK_ROOM_OPACITY_OVERLAY_FULL = 0.72;
+/** Fainter bleed when the upper crate still has free room above it. */
+export const STACK_ROOM_OPACITY_OVERLAY_OPEN = 0.42;
+
+/**
+ * How a crate paints as a 2D layer host (solids + underlays only).
+ * Crates above the active Z are not hosts — they bleed into supports via
+ * `cargoBoxesStackedAbove`.
+ */
+export function cargoBox2dLayerRole(
+  box: CargoBoxStackRoomFootprint,
+  activeLayer: number,
+): "solid" | "underlay" | null {
+  if (!Number.isFinite(activeLayer)) return null;
+  const z = Math.floor(activeLayer);
+  const topZ = box.origin.z + box.footprint.dz - 1;
+  if (box.origin.z <= z && z <= topZ) return "solid";
+  if (topZ < z) return "underlay";
+  return null;
+}
+
+/**
+ * Crates above `support` that overlap its XY (for 2D bleed tint on the
+ * active-layer base). Ordered bottom → top.
+ */
+export function cargoBoxesStackedAbove(
+  support: CargoBoxStackRoomFootprint,
+  boxes: readonly CargoBoxStackRoomFootprint[],
+): CargoBoxStackRoomFootprint[] {
+  const supportTop = support.origin.z + support.footprint.dz - 1;
+  return boxes
+    .filter((other) => {
+      if (support.id != null && other.id != null && other.id === support.id) {
+        return false;
+      }
+      if (other === support) return false;
+      if (other.origin.z <= supportTop) return false;
+      return footprintsOverlapXY(support, other);
+    })
+    .slice()
+    .sort(
+      (a, b) =>
+        a.origin.z - b.origin.z ||
+        (a.id ?? "").localeCompare(b.id ?? ""),
+    );
+}
 
 /**
  * Map free stack layers → 2D crate opacity.
@@ -80,10 +130,14 @@ export function cargoBoxStackRoomOpacity(
   const full =
     role === "underlay"
       ? STACK_ROOM_OPACITY_UNDERLAY_FULL
-      : STACK_ROOM_OPACITY_SOLID_FULL;
+      : role === "overlay"
+        ? STACK_ROOM_OPACITY_OVERLAY_FULL
+        : STACK_ROOM_OPACITY_SOLID_FULL;
   const open =
     role === "underlay"
       ? STACK_ROOM_OPACITY_UNDERLAY_OPEN
-      : STACK_ROOM_OPACITY_SOLID_OPEN;
+      : role === "overlay"
+        ? STACK_ROOM_OPACITY_OVERLAY_OPEN
+        : STACK_ROOM_OPACITY_SOLID_OPEN;
   return full + (open - full) * t;
 }

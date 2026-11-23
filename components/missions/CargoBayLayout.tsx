@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -85,6 +86,14 @@ import type { CargoGridCoord } from "@/lib/ships/cargoGridCoords";
  */
 export type CargoBayStopScope = "all" | "transfer";
 
+/** Imperative height API for the cargo-bays modal corner resize. */
+export type CargoBayLayoutResizeApi = {
+  getHeightPx: () => number;
+  setHeightPx: (next: number, options?: { persist?: boolean }) => void;
+  resetHeightPx: () => void;
+  getMaxHeightPx: () => number;
+};
+
 export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
   /** Session contracts — Manual tray groups identical crates by mission. */
@@ -111,6 +120,11 @@ export type CargoBayLayoutProps = {
     | ((ctx: { gridPlacedScu: number }) => ReactNode);
   /** When true, graph height fills the modal shell (no height drag). */
   isFullscreen?: boolean;
+  /**
+   * When set, exposes height controls to the parent (modal corner resize) and
+   * hides the bottom height-only handle.
+   */
+  layoutResizeRef?: MutableRefObject<CargoBayLayoutResizeApi | null>;
   className?: string;
 };
 
@@ -128,6 +142,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   sessionId = null,
   headerAside = null,
   isFullscreen = false,
+  layoutResizeRef,
   className,
 }: CargoBayLayoutProps) {
   const sketch = useMemo(
@@ -165,9 +180,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const [peelStack, setPeelStack] = useState(false);
   /** Manual Path: preview Blank / Automatic seeds until Save. */
   const [manualSeedPicker, setManualSeedPicker] = useState(false);
-  const [manualSeedPreview, setManualSeedPreview] = useState<
-    "blank" | CargoBayPackMode | null
-  >(null);
+  /** Blank / Automatic mode id / existing custom template id. */
+  const [manualSeedPreview, setManualSeedPreview] = useState<string | null>(
+    null,
+  );
   const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [manualSession, setManualSession] =
@@ -216,12 +232,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     startHeight: number;
   } | null>(null);
 
-  /** Cap panel height so the modal shell never overflows into a scroll area. */
+  /**
+   * Cap graph height so the modal shell never needs a scrollbar.
+   * Chrome = everything in the layout root except the sized graph panel
+   * (header, tabs, transfer footer, padding).
+   */
   const maxPanelHeightPx = useCallback((): number => {
     const shellMax = cargoBayModalShellMaxHeightPx({ fullscreen: isFullscreen });
     const root = rootRef.current;
-    const panel = root?.querySelector("[data-cargo-bay-height-panel]");
-    if (!root || !(panel instanceof HTMLElement)) {
+    const graph = root?.querySelector("[data-cargo-bay-height-panel]");
+    if (!root || !(graph instanceof HTMLElement)) {
       return isFullscreen
         ? shellMax
         : Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax);
@@ -229,16 +249,18 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     if (isFullscreen) {
       // Root is already viewport-tall; do not treat leftover flex gap as chrome.
       const rootRect = root.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
+      const graphRect = graph.getBoundingClientRect();
+      // Footers sit beside the graph column (not inside the sized graph node).
       let siblingBelow = 0;
-      let sib: Element | null = panel.nextElementSibling;
+      let sib: Element | null = graph.parentElement?.nextElementSibling ?? null;
       while (sib) {
         if (sib instanceof HTMLElement) {
           siblingBelow += sib.getBoundingClientRect().height;
         }
         sib = sib.nextElementSibling;
       }
-      const above = Math.max(0, panelRect.top - rootRect.top);
+      // `above` already includes header + tabs above the graph.
+      const above = Math.max(0, graphRect.top - rootRect.top);
       const padBottom =
         Number.parseFloat(getComputedStyle(root).paddingBottom) || 0;
       return Math.max(
@@ -246,15 +268,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         Math.floor(rootRect.height - above - siblingBelow - padBottom),
       );
     }
-    const rootHeight = root.getBoundingClientRect().height;
-    const panelHeight = panel.getBoundingClientRect().height;
-    const chrome = Math.max(0, rootHeight - panelHeight);
-    // Modal padding around the panel (`p-3` / `sm:p-6`).
-    const modalPad =
-      typeof window !== "undefined" && window.innerWidth >= 640 ? 48 : 24;
+    // Use the CSS shell max (not shrink-wrapped clientHeight) so the graph can
+    // still grow until the modal would otherwise need a scrollbar.
+    const rootHeight = root.offsetHeight;
+    const graphHeight = Math.max(1, graph.offsetHeight);
+    const chrome = Math.max(0, rootHeight - graphHeight);
     return Math.max(
       MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
-      Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax - chrome - modalPad),
+      Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax - chrome),
     );
   }, [isFullscreen]);
 
@@ -270,6 +291,20 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const heightPxRef = useRef(heightPx);
   heightPxRef.current = heightPx;
+
+  const hostCornerResize = layoutResizeRef != null;
+  useEffect(() => {
+    if (!layoutResizeRef) return;
+    layoutResizeRef.current = {
+      getHeightPx: () => heightPxRef.current,
+      setHeightPx: setPanelHeightPx,
+      resetHeightPx,
+      getMaxHeightPx: maxPanelHeightPx,
+    };
+    return () => {
+      layoutResizeRef.current = null;
+    };
+  }, [layoutResizeRef, maxPanelHeightPx, resetHeightPx, setPanelHeightPx]);
 
   useEffect(() => {
     setManualSession(readManualBayLayoutSession(sessionId));
@@ -582,7 +617,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     [manualStop.templates, stopId],
   );
 
-  type ManualSeed = "blank" | CargoBayPackMode;
+  type ManualSeed = "blank" | CargoBayPackMode | string;
+
+  const isCargoBayPackMode = useCallback((seed: string): seed is CargoBayPackMode => {
+    return cargoBayPackModes.some((mode) => mode.id === seed);
+  }, []);
 
   /** Fresh Automatic pack for a mode — same boxes Automatic Path would show. */
   const packBoxesForMode = useCallback(
@@ -603,6 +642,39 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       stopId,
       supportsPrioritized,
     ],
+  );
+
+  /** Boxes for a Base template seed (Blank, Automatic mode, or custom template). */
+  const boxesForManualSeed = useCallback(
+    (seed: ManualSeed): PlacedCargoBox[] => {
+      if (seed === "blank") return [];
+      if (isCargoBayPackMode(seed)) return packBoxesForMode(seed);
+      const template = manualStop.templates.find((entry) => entry.id === seed);
+      if (!template) return [];
+      return boxesFromManualTemplate(template, manualBaseBoxes);
+    },
+    [
+      isCargoBayPackMode,
+      manualBaseBoxes,
+      manualStop.templates,
+      packBoxesForMode,
+    ],
+  );
+
+  const labelForManualSeed = useCallback(
+    (seed: ManualSeed): string => {
+      if (seed === "blank") return "Blank";
+      if (isCargoBayPackMode(seed)) {
+        return (
+          cargoBayPackModes.find((mode) => mode.id === seed)?.label ?? "Manual"
+        );
+      }
+      return (
+        manualStop.templates.find((entry) => entry.id === seed)?.name ??
+        "Manual"
+      );
+    },
+    [isCargoBayPackMode, manualStop.templates],
   );
 
   const patchActiveTemplateBoxes = useCallback(
@@ -695,29 +767,20 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const previewManualSeed = useCallback(
     (seed: ManualSeed) => {
       if (!stopId) return;
-      const sourceBoxes = seed === "blank" ? [] : packBoxesForMode(seed);
       setManualSeedPreview(seed);
-      setManualLiveBoxes(sourceBoxes);
+      setManualLiveBoxes(boxesForManualSeed(seed));
       setSortingMode("manual");
       setSortingHidden(false);
     },
-    [packBoxesForMode, setSortingHidden, setSortingMode, stopId],
+    [boxesForManualSeed, setSortingHidden, setSortingMode, stopId],
   );
 
   const saveManualSeedAsTemplate = useCallback(() => {
     if (!stopId || manualSeedPreview == null) return;
     const sourceBoxes =
-      manualLiveBoxes ??
-      (manualSeedPreview === "blank"
-        ? []
-        : packBoxesForMode(manualSeedPreview));
-    const seedLabel =
-      manualSeedPreview === "blank"
-        ? "Blank"
-        : (cargoBayPackModes.find((mode) => mode.id === manualSeedPreview)
-            ?.label ?? "Manual");
+      manualLiveBoxes ?? boxesForManualSeed(manualSeedPreview);
     const template = createManualTemplateFromBoxes(sourceBoxes, {
-      name: seedLabel,
+      name: labelForManualSeed(manualSeedPreview),
     });
     if (!template) return;
     updateStopManual((current) => ({
@@ -728,10 +791,11 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     setManualSeedPicker(false);
     setManualSeedPreview(null);
   }, [
+    boxesForManualSeed,
     createManualTemplateFromBoxes,
+    labelForManualSeed,
     manualLiveBoxes,
     manualSeedPreview,
-    packBoxesForMode,
     stopId,
     updateStopManual,
   ]);
@@ -1513,6 +1577,33 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                   </button>
                                 );
                               })}
+                            {manualStop.templates.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {manualStop.templates.map((template) => {
+                                  const selected =
+                                    manualSeedPreview === template.id;
+                                  return (
+                                    <button
+                                      key={template.id}
+                                      type="button"
+                                      title={`Start from ${template.name}`}
+                                      aria-pressed={selected}
+                                      onClick={() =>
+                                        previewManualSeed(template.id)
+                                      }
+                                      className={[
+                                        "min-w-0 max-w-full truncate rounded-rsi border px-1.5 py-1.5 font-mono text-[0.5rem] uppercase tracking-[0.1em] transition-colors",
+                                        selected
+                                          ? "border-rsi-accent/50 bg-rsi-accent-muted/30 text-rsi-accent"
+                                          : "border-rsi-border/70 bg-rsi-bg-deep/40 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                                      ].join(" ")}
+                                    >
+                                      {template.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
                           </div>
                           <button
                             type="button"
@@ -1739,7 +1830,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             </>
           ) : null}
           <div
-            data-cargo-bay-height-panel
             className={[pushPackGutterClass, pushGraphTopClass]
               .filter(Boolean)
               .join(" ") || undefined}
@@ -1764,7 +1854,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 </button>
               </div>
             ) : null}
-            <div className="relative">
+            {/* Sized graph only — height clamp measures this node, not tabs/footer. */}
+            <div
+              data-cargo-bay-height-panel
+              className="relative"
+              style={{ height: panelHeightPx }}
+            >
               <CargoGridSketch
                 sketch={sketch}
                 cellPx={14}
@@ -1863,7 +1958,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               />
             </div>
           ) : null}
-          {!isFullscreen ? (
+          {!isFullscreen && !hostCornerResize ? (
             <div className="-mx-4 mt-1">
               <button
                 type="button"

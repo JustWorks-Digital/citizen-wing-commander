@@ -15,6 +15,7 @@ import {
   previewManualBayDrop,
   previewManualBayStackDrop,
   previewManualBayZoneFill,
+  tryAddManualBayBox,
   tryDropManualBayBox,
   tryDropManualBayStack,
   tryFillManualBayZoneWithCargoType,
@@ -22,6 +23,7 @@ import {
   tryMoveManualBayBox,
   tryRotateManualBayBox,
   manualBayBoxCanRotate,
+  previewManualBayPlacement,
 } from "@/lib/ships/manualBayMove";
 
 /** Minimal 6×4 cargo sketch (no gaps) for drop tests. */
@@ -111,7 +113,7 @@ describe("manualBayBoxFocusLayer", () => {
 
 describe("manualBayBoxStackColumn", () => {
   // Two-high column: deck 2×2 + 1×1 resting on it.
-  it("returns bottom-to-top members linked by resting contact", () => {
+  it("returns seed plus crates resting above it", () => {
     const base = boxAt("base", 0, 0, 2, 2, 0, 1);
     const top = boxAt("top", 0, 0, 1, 1, 1, 1);
     const beside = boxAt("beside", 3, 0, 1, 1, 0, 1);
@@ -119,11 +121,30 @@ describe("manualBayBoxStackColumn", () => {
     expect(stack.map((box) => box.id)).toEqual(["base", "top"]);
   });
 
-  it("finds the same column when seeded from the top crate", () => {
+  it("does not include crates under the seed", () => {
     const base = boxAt("base", 0, 0, 2, 2, 0, 1);
     const top = boxAt("top", 0, 0, 1, 1, 1, 1);
     expect(manualBayBoxStackColumn(top, [base, top]).map((b) => b.id)).toEqual([
-      "base",
+      "top",
+    ]);
+  });
+
+  // Nested: 4 SCU base + 2 SCU mid + 2 SCU top — mid badge peels the 2s.
+  it("peels a nested mid sub-stack without the larger base", () => {
+    const four = boxAt("four", 0, 0, 2, 2, 0, 1);
+    const mid = boxAt("mid", 0, 0, 2, 1, 1, 1);
+    const top = boxAt("top", 0, 0, 2, 1, 2, 1);
+    const boxes = [four, mid, top];
+    expect(manualBayBoxStackColumn(four, boxes).map((b) => b.id)).toEqual([
+      "four",
+      "mid",
+      "top",
+    ]);
+    expect(manualBayBoxStackColumn(mid, boxes).map((b) => b.id)).toEqual([
+      "mid",
+      "top",
+    ]);
+    expect(manualBayBoxStackColumn(top, boxes).map((b) => b.id)).toEqual([
       "top",
     ]);
   });
@@ -168,6 +189,37 @@ describe("tryDropManualBayStack", () => {
       { dx: 0, dy: 0 },
     );
     expect(next).toBeNull();
+  });
+
+  // 4 SCU + 2 + 2 — badge on the mid 2 peels both 2s; 4 stays put.
+  it("moves only the mid sub-stack when seeded from a nested 2 SCU", () => {
+    const sketch = tallToySketch();
+    const four = boxAt("four", 0, 0, 2, 2, 0, 1);
+    const mid = boxAt("mid", 0, 0, 2, 1, 1, 1);
+    const top = boxAt("top", 0, 0, 2, 1, 2, 1);
+    const next = tryDropManualBayStack(
+      sketch,
+      [four, mid, top],
+      "mid",
+      { x: 3, y: 1, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    expect(next!.find((box) => box.id === "four")!.origin).toEqual({
+      x: 0,
+      y: 0,
+      z: 0,
+    });
+    expect(next!.find((box) => box.id === "mid")!.origin).toEqual({
+      x: 3,
+      y: 1,
+      z: 0,
+    });
+    expect(next!.find((box) => box.id === "top")!.origin).toEqual({
+      x: 3,
+      y: 1,
+      z: 1,
+    });
   });
 });
 
@@ -215,24 +267,21 @@ describe("tryRotateManualBayBox", () => {
     expect(tryRotateManualBayBox(sketch, [crate], "four")).toBeNull();
   });
 
-  it("rotates every crate in a stacked column when any member is selected", () => {
+  it("rotates the selected crate and everything stacked on it", () => {
     const sketch = toySketch();
     // Two 2 SCU crates stacked: 2×1 at Z0 and Z1.
     const base = boxAt("base", 0, 0, 2, 1, 0, 1);
     const top = boxAt("top", 0, 0, 2, 1, 1, 1);
-    const fromTop = tryRotateManualBayBox(sketch, [base, top], "top");
-    expect(fromTop).not.toBeNull();
-    expect(fromTop!.find((box) => box.id === "base")!.footprint).toEqual({
-      dx: 1,
-      dy: 2,
-      dz: 1,
-    });
-    expect(fromTop!.find((box) => box.id === "top")!.footprint).toEqual({
-      dx: 1,
-      dy: 2,
-      dz: 1,
-    });
+    // Top alone → 1×2 would hang off the 2×1 support — reject.
+    expect(tryRotateManualBayBox(sketch, [base, top], "top")).toBeNull();
+    // Seed from base — rotates base + top together and stays aligned.
     const fromBase = tryRotateManualBayBox(sketch, [base, top], "base");
+    expect(fromBase).not.toBeNull();
+    expect(fromBase!.find((box) => box.id === "base")!.footprint).toEqual({
+      dx: 1,
+      dy: 2,
+      dz: 1,
+    });
     expect(fromBase!.find((box) => box.id === "top")!.footprint).toEqual({
       dx: 1,
       dy: 2,
@@ -312,6 +361,135 @@ describe("tryDropManualBayBox", () => {
       "air",
       { x: 2, y: 1, z: 0 },
       { dx: 0, dy: 0 },
+    );
+    expect(next).toBeNull();
+  });
+
+  // Full-support stack: smaller-on-larger OK; larger-on-smaller / overhang rejected.
+  it("stacks a 1 SCU crate on a 4 SCU base", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("four", 0, 0, 2, 2), boxAt("one", 4, 0)];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "one",
+      { x: 1, y: 1, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    expect(next!.find((box) => box.id === "one")?.origin).toEqual({
+      x: 1,
+      y: 1,
+      z: 1,
+    });
+  });
+
+  it("stacks a 2 SCU crate fully on a 4 SCU base", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("four", 0, 0, 2, 2), boxAt("two", 4, 0, 2, 1)];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "two",
+      { x: 0, y: 0, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    expect(next!.find((box) => box.id === "two")?.origin).toEqual({
+      x: 0,
+      y: 0,
+      z: 1,
+    });
+  });
+
+  it("rejects a larger SCU on smaller support crates", () => {
+    const sketch = toySketch();
+    // Flat Z1 top from two 1 SCU crates — not enough SCU to hold a 2.
+    const boxes = [
+      boxAt("a", 0, 0),
+      boxAt("b", 1, 0),
+      boxAt("two", 3, 0, 2, 1),
+    ];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "two",
+      { x: 0, y: 0, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).toBeNull();
+  });
+
+  it("rejects a crate that hangs off the edge of the support", () => {
+    const sketch = toySketch();
+    // 4 SCU at (0,0)–(1,1); 2 SCU drop origin (1,0) covers (1,0)+(2,0) — one cell off.
+    const boxes = [boxAt("four", 0, 0, 2, 2), boxAt("two", 4, 0, 2, 1)];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "two",
+      { x: 1, y: 0, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).toBeNull();
+  });
+});
+
+describe("tryAddManualBayBox", () => {
+  const traySpec = {
+    size: 1 as const,
+    commoditySlug: "processed-food",
+    commodityName: "Processed Food",
+    color: null,
+    color2: null,
+  };
+
+  it("places a 1 SCU from the tray onto a 4 SCU base", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("four", 0, 0, 2, 2)];
+    const next = tryAddManualBayBox(sketch, boxes, traySpec, {
+      x: 0,
+      y: 0,
+      z: 0,
+    });
+    expect(next).not.toBeNull();
+    const added = next!.find((box) => box.id !== "four");
+    expect(added?.origin).toEqual({ x: 0, y: 0, z: 1 });
+    expect(added?.size).toBe(1);
+  });
+
+  it("rejects tray place of a 2 SCU that overhangs a 1 SCU", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("one", 0, 0)];
+    const next = tryAddManualBayBox(
+      sketch,
+      boxes,
+      { ...traySpec, size: 2 },
+      { x: 0, y: 0, z: 0 },
+    );
+    expect(next).toBeNull();
+    const preview = previewManualBayPlacement(
+      sketch,
+      boxes,
+      { ...traySpec, size: 2 },
+      { x: 0, y: 0, z: 0 },
+    );
+    expect(preview?.fits).toBe(false);
+  });
+
+  it("rejects tray place of a 4 SCU on smaller 1 SCU supports", () => {
+    const sketch = toySketch();
+    const boxes = [
+      boxAt("a", 0, 0),
+      boxAt("b", 1, 0),
+      boxAt("c", 0, 1),
+      boxAt("d", 1, 1),
+    ];
+    const next = tryAddManualBayBox(
+      sketch,
+      boxes,
+      { ...traySpec, size: 4 },
+      { x: 0, y: 0, z: 0 },
     );
     expect(next).toBeNull();
   });

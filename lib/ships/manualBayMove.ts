@@ -194,8 +194,8 @@ function supportSizesUnder(
 }
 
 /**
- * True when every support cell is filled and each support crate is at least
- * as large as the moving crate (same size or larger base — Manual stack rule).
+ * True when every footprint XY cell has support and each support crate’s SCU
+ * is at least the moving crate’s SCU (no overhang; no larger-on-smaller).
  */
 function isCompatibleStackSupport(
   movingSize: number,
@@ -206,6 +206,45 @@ function isCompatibleStackSupport(
     if (size == null || size < movingSize) return false;
   }
   return true;
+}
+
+/**
+ * Snap Z for a footprint at XY: deck (0) when empty and flat, else onto a
+ * full-support stack top. Null when uneven, overhanging, oversized-on-small,
+ * colliding, or out of bay height.
+ */
+function resolveManualBayStackZ(
+  sketch: ShipCargoGridSketch,
+  boxes: readonly PlacedCargoBox[],
+  footprint: PlacedCargoBox["footprint"],
+  size: number,
+  originX: number,
+  originY: number,
+  ignoreBoxIds: ReadonlySet<string>,
+): number | null {
+  const tops = columnStackTops(
+    boxes,
+    originX,
+    originY,
+    footprint,
+    ignoreBoxIds,
+  );
+  if (tops.length === 0) return null;
+  const first = tops[0]!;
+  // Uneven tops = hole / step under the footprint (partial stack).
+  if (!tops.every((top) => top === first)) return null;
+
+  const candidateZ = first;
+  if (candidateZ + footprint.dz > sketch.heightCells) return null;
+
+  const origin: CargoGridCoord = { x: originX, y: originY, z: candidateZ };
+  const cells = footprintCells(origin, footprint);
+  if (!cellsClear(sketch, boxes, cells, ignoreBoxIds)) return null;
+  if (candidateZ === 0) return 0;
+
+  const support = supportSizesUnder(boxes, origin, footprint, ignoreBoxIds);
+  if (!isCompatibleStackSupport(size, support)) return null;
+  return candidateZ;
 }
 
 /**
@@ -222,35 +261,15 @@ export function resolveManualBayDropZ(
 ): number | null {
   const ignore = new Set(ignoreBoxIds ?? []);
   ignore.add(moving.id);
-  const tops = columnStackTops(
+  return resolveManualBayStackZ(
+    sketch,
     boxes,
+    moving.footprint,
+    moving.size,
     originX,
     originY,
-    moving.footprint,
     ignore,
   );
-  if (tops.length === 0) return null;
-  const first = tops[0]!;
-  const flat = tops.every((top) => top === first);
-  if (!flat) return null;
-
-  const candidateZ = first;
-  if (candidateZ + moving.footprint.dz > sketch.heightCells) return null;
-
-  const origin: CargoGridCoord = { x: originX, y: originY, z: candidateZ };
-  if (!canPlaceManualBayBox(sketch, [...boxes], moving.id, origin, ignore)) {
-    return null;
-  }
-  if (candidateZ === 0) return 0;
-
-  const support = supportSizesUnder(
-    boxes,
-    origin,
-    moving.footprint,
-    ignore,
-  );
-  if (!isCompatibleStackSupport(moving.size, support)) return null;
-  return candidateZ;
 }
 
 /** Origin for a drop under the pointer; XY from grab offset, Z auto-snapped. */
@@ -420,8 +439,8 @@ export function manualBayBoxCanRotate(box: PlacedCargoBox): boolean {
 }
 
 /**
- * Cycle the selected crate’s footprint at the same origin. When the crate is
- * in a vertical stack, every crate in that column rotates together.
+ * Cycle the selected crate’s footprint at the same origin. Also rotates every
+ * crate stacked on it (same upward sub-stack as the stack badge).
  * Returns null when nothing changes or the new poses do not fit.
  */
 export function tryRotateManualBayBox(
@@ -461,7 +480,21 @@ export function tryRotateManualBayBox(
     }
   }
 
-  return boxes.map((box) => rotated.get(box.id) ?? box);
+  // After rotate, every elevated crate still needs full support (no overhang).
+  const proposedBoxes = boxes.map((box) => rotated.get(box.id) ?? box);
+  for (const member of column) {
+    const pose = rotated.get(member.id) ?? member;
+    if (pose.origin.z <= 0) continue;
+    const support = supportSizesUnder(
+      proposedBoxes,
+      pose.origin,
+      pose.footprint,
+      new Set([pose.id]),
+    );
+    if (!isCompatibleStackSupport(pose.size, support)) return null;
+  }
+
+  return proposedBoxes;
 }
 
 function footprintsOverlapXY(
@@ -504,8 +537,10 @@ function restsDirectlyOn(
 }
 
 /**
- * Vertical stack column containing `seed` — every crate linked by resting
- * on / supporting another, ordered bottom → top.
+ * Sub-stack from `seed` upward — seed plus every crate resting on it
+ * (directly or transitively). Does **not** include crates under the seed,
+ * so a mid-stack badge can peel nested crates off a larger base.
+ * Ordered bottom → top (seed first).
  */
 export function manualBayBoxStackColumn(
   seed: PlacedCargoBox,
@@ -522,7 +557,8 @@ export function manualBayBoxStackColumn(
       for (const id of stackIds) {
         const member = byId.get(id);
         if (!member) continue;
-        if (restsDirectlyOn(box, member) || restsDirectlyOn(member, box)) {
+        // Grow upward only — never pull in supports under the seed.
+        if (restsDirectlyOn(box, member)) {
           stackIds.add(box.id);
           grew = true;
           break;
@@ -536,8 +572,8 @@ export function manualBayBoxStackColumn(
 }
 
 /**
- * Drop a whole vertical stack (from the stacked-crate badge). Preserves
- * relative XY/Z; snaps the bottom crate like a normal Manual drop.
+ * Drop the sub-stack from the stacked-crate badge (seed + crates above).
+ * Preserves relative XY/Z; snaps the sub-stack bottom like a normal drop.
  */
 export function tryDropManualBayStack(
   sketch: ShipCargoGridSketch,
@@ -730,7 +766,8 @@ export function tryRemoveManualBayBox(
 
 /**
  * Ghost footprint for Manual tray place / drag.
- * Uses `orientationIndex` (R cycles). Marks fits when the footprint is clear.
+ * Uses `orientationIndex` (R cycles). Z snaps like crate drops (deck or
+ * full-support stack) — UI active layer is only the hover XY hint.
  */
 export function previewManualBayPlacement(
   sketch: ShipCargoGridSketch,
@@ -741,13 +778,32 @@ export function previewManualBayPlacement(
 ): { cells: CargoGridCoord[]; fits: boolean } | null {
   const footprint = footprintAtOrientation(spec.size, orientationIndex);
   if (!footprint) return null;
-  const cells = footprintCells(origin, footprint);
-  return { cells, fits: cellsClear(sketch, boxes, cells) };
+  const z = resolveManualBayStackZ(
+    sketch,
+    boxes,
+    footprint,
+    spec.size,
+    origin.x,
+    origin.y,
+    new Set(),
+  );
+  if (z == null) {
+    const fallbackCells = footprintCells(
+      { x: origin.x, y: origin.y, z: origin.z },
+      footprint,
+    );
+    return { cells: fallbackCells, fits: false };
+  }
+  const placedOrigin: CargoGridCoord = { x: origin.x, y: origin.y, z };
+  return {
+    cells: footprintCells(placedOrigin, footprint),
+    fits: true,
+  };
 }
 
 /**
- * Place a new crate from the Manual tray at `origin` (active Z from UI)
- * using the chosen orientation index.
+ * Place a new crate from the Manual tray at `origin` XY.
+ * Z snaps to deck or a full-support stack (same rules as crate drag).
  */
 export function tryAddManualBayBox(
   sketch: ShipCargoGridSketch,
@@ -758,13 +814,23 @@ export function tryAddManualBayBox(
 ): PlacedCargoBox[] | null {
   const footprint = footprintAtOrientation(spec.size, orientationIndex);
   if (!footprint) return null;
-  const cells = footprintCells(origin, footprint);
-  if (!cellsClear(sketch, boxes, cells)) return null;
-  const id = `manual-${spec.commoditySlug}-${spec.size}-${origin.x}-${origin.y}-${origin.z}-${Date.now()}`;
+  const z = resolveManualBayStackZ(
+    sketch,
+    boxes,
+    footprint,
+    spec.size,
+    origin.x,
+    origin.y,
+    new Set(),
+  );
+  if (z == null) return null;
+  const placedOrigin: CargoGridCoord = { x: origin.x, y: origin.y, z };
+  const cells = footprintCells(placedOrigin, footprint);
+  const id = `manual-${spec.commoditySlug}-${spec.size}-${placedOrigin.x}-${placedOrigin.y}-${placedOrigin.z}-${Date.now()}`;
   const next: PlacedCargoBox = {
     id,
     size: spec.size,
-    origin: { ...origin },
+    origin: { ...placedOrigin },
     footprint,
     commoditySlug: spec.commoditySlug,
     commodityName: spec.commodityName,

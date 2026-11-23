@@ -45,6 +45,8 @@ import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 import {
+  cargoBox2dLayerRole,
+  cargoBoxesStackedAbove,
   cargoBoxStackRoomOpacity,
   freeStackLayersAbove,
 } from "@/lib/ships/cargoBoxStackRoom";
@@ -1286,17 +1288,17 @@ export function CargoGridSketch({
     }
     return buried;
   }, [manualEdit, trayFitBoxes]);
-  /** Manual: every crate in a multi-crate vertical column (top and bottom). */
+  /**
+   * Manual: crates that have cargo resting on them — each gets a stack badge
+   * that moves that crate and everything above it (nested sub-stacks OK).
+   */
   const stackedManualBoxIds = useMemo(() => {
     if (!manualEdit) return null;
     const stacked = new Set<string>();
-    const visited = new Set<string>();
     for (const box of trayFitBoxes) {
-      if (visited.has(box.id)) continue;
-      const column = manualBayBoxStackColumn(box, trayFitBoxes);
-      for (const member of column) visited.add(member.id);
-      if (column.length <= 1) continue;
-      for (const member of column) stacked.add(member.id);
+      if (manualBayBoxStackColumn(box, trayFitBoxes).length > 1) {
+        stacked.add(box.id);
+      }
     }
     return stacked;
   }, [manualEdit, trayFitBoxes]);
@@ -2301,8 +2303,8 @@ export function CargoGridSketch({
 
                 // Anchor by origin cell (not full footprint) so a cross-zone
                 // move keeps one DOM host until the origin enters the next zone.
-                // Active Z: solid crates that intersect this layer. Crates
-                // entirely below render as ghost underlays (behind solids).
+                // Active Z: solids that intersect. Below → underlay ghosts.
+                // Crates above bleed into each solid via stacked-above patches.
                 const boxesOnLayer = useBoxFootprints
                   ? renderPlacementBoxes
                       .filter((box) => {
@@ -2314,18 +2316,13 @@ export function CargoGridSketch({
                         ) {
                           return false;
                         }
-                        const topZ = box.origin.z + box.footprint.dz - 1;
-                        const intersectsActive =
-                          box.origin.z <= z && z <= topZ;
-                        const entirelyBelow = topZ < z;
-                        return intersectsActive || entirelyBelow;
+                        return cargoBox2dLayerRole(box, z) != null;
                       })
                       .sort((a, b) => {
-                        // Underlays first so solid active-layer crates paint on top.
                         const aUnder =
-                          a.origin.z + a.footprint.dz - 1 < z ? 0 : 1;
+                          cargoBox2dLayerRole(a, z) === "underlay" ? 0 : 1;
                         const bUnder =
-                          b.origin.z + b.footprint.dz - 1 < z ? 0 : 1;
+                          cargoBox2dLayerRole(b, z) === "underlay" ? 0 : 1;
                         if (aUnder !== bUnder) return aUnder - bUnder;
                         return a.origin.z - b.origin.z;
                       })
@@ -2597,11 +2594,15 @@ export function CargoGridSketch({
                       );
                     })}
                     {boxesOnLayer.map((box) => {
-                      const boxTopZ = box.origin.z + box.footprint.dz - 1;
-                      const isUnderlayGhost = boxTopZ < z;
+                      const layerRole = cargoBox2dLayerRole(box, z);
+                      const isUnderlayGhost = layerRole === "underlay";
                       const isLegendHologram =
                         isPlacementBoxLegendHidden(box);
                       const isHologram = isUnderlayGhost || isLegendHologram;
+                      const stackedAbove =
+                        !isHologram
+                          ? cargoBoxesStackedAbove(box, renderPlacementBoxes)
+                          : [];
                       const freeStackLayers =
                         stackFreeByBoxId.get(box.id) ??
                         freeStackLayersAbove(
@@ -2745,9 +2746,23 @@ export function CargoGridSketch({
                             : "pointer-events-auto z-[8] cursor-default touch-none";
                       const manualTitleHint = isInStack
                         ? isBuried
-                          ? " · click to select · R rotates stack · drag the stack badge to move"
-                          : " · click to select · drag to move · R rotates stack · stack badge moves whole stack · double-click to return to tray"
+                          ? " · click to select · R rotates this crate and everything on it · drag the stack badge to move them"
+                          : " · click to select · drag to move · R rotates this crate and everything on it · stack badge moves them · double-click to return to tray"
                         : " · click to select · drag to move · R to rotate · double-click to return to tray";
+                      const stackBleedTitle =
+                        stackedAbove.length > 0
+                          ? ` · stacked above: ${stackedAbove
+                              .map((above) => {
+                                const placed = renderPlacementBoxes.find(
+                                  (entry) => entry.id === above.id,
+                                );
+                                const label =
+                                  placed?.commodityName ??
+                                  `${above.footprint.dx * above.footprint.dy * above.footprint.dz} SCU`;
+                                return `${label} Z${above.origin.z}`;
+                              })
+                              .join(", ")}`
+                          : "";
                       return (
                         <div
                           key={
@@ -2768,7 +2783,7 @@ export function CargoGridSketch({
                                     freeStackLayers === 0
                                       ? "stack full"
                                       : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
-                                  }${
+                                  }${stackBleedTitle}${
                                     manualEdit
                                       ? manualTitleHint
                                       : " · click to select"
@@ -2826,8 +2841,8 @@ export function CargoGridSketch({
                             height: boxHeightPx,
                             backgroundColor: hex,
                             // Stack-room opacity: solid = no room on top;
-                            // fainter = more free layers. Legend holograms stay
-                            // fixed-faint; dragging leaves a footprint.
+                            // fainter = more free layers. Underlay ghosts sit
+                            // behind. Legend holograms stay fixed-faint.
                             opacity: isUnderlayGhost
                               ? cargoBoxStackRoomOpacity(
                                   freeStackLayers,
@@ -2865,12 +2880,75 @@ export function CargoGridSketch({
                               : null),
                           }}
                         >
+                          {!isHologram
+                            ? stackedAbove.map((above) => {
+                                const placed = renderPlacementBoxes.find(
+                                  (entry) => entry.id === above.id,
+                                );
+                                const aboveHex =
+                                  resolveCommodityColorHex(
+                                    placed?.color ?? null,
+                                    placed?.color2 ?? null,
+                                    placed?.commoditySlug ?? "",
+                                  ) ?? "#54a0f7";
+                                const aboveLeft =
+                                  (zone.lengthCells -
+                                    (above.origin.x - zoneX0) -
+                                    above.footprint.dx) *
+                                  viewCellPx;
+                                const relLeft = aboveLeft - left;
+                                const relTop =
+                                  (above.origin.y - box.origin.y) * viewCellPx;
+                                const aboveFree =
+                                  (above.id != null
+                                    ? stackFreeByBoxId.get(above.id)
+                                    : undefined) ??
+                                  freeStackLayersAbove(
+                                    above,
+                                    placementBoxes,
+                                    sketch.heightCells,
+                                  );
+                                const bleedOpacity = cargoBoxStackRoomOpacity(
+                                  aboveFree,
+                                  sketch.heightCells,
+                                  "overlay",
+                                );
+                                const stripePx = Math.max(
+                                  2,
+                                  Math.round(viewCellPx * 0.18),
+                                );
+                                return (
+                                  <div
+                                    key={`bleed-${box.id}-${above.id}-z${z}`}
+                                    aria-hidden
+                                    className="pointer-events-none absolute box-border"
+                                    style={{
+                                      left: relLeft,
+                                      top: relTop,
+                                      width: above.footprint.dx * viewCellPx,
+                                      height: above.footprint.dy * viewCellPx,
+                                      // Tint the base with the upper crate color;
+                                      // hatch keeps same-commodity stacks visible.
+                                      backgroundColor: `color-mix(in srgb, ${aboveHex} ${Math.round(bleedOpacity * 100)}%, transparent)`,
+                                      backgroundImage: `repeating-linear-gradient(
+                                        -45deg,
+                                        color-mix(in srgb, ${aboveHex} 75%, white) 0 ${stripePx}px,
+                                        transparent ${stripePx}px ${stripePx * 2}px
+                                      )`,
+                                      boxShadow:
+                                        "inset 0 0 0 1px color-mix(in srgb, white 45%, transparent)",
+                                      zIndex: 0,
+                                    }}
+                                  />
+                                );
+                              })
+                            : null}
                           {!isHologram &&
                           groupStroke != null &&
                           box.locationGroupIndex != null &&
                           locationLabelBoxIds.has(box.id) ? (
                             <span
-                              className="absolute inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums leading-none"
+                              className="absolute z-[2] inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums leading-none"
                               style={{
                                 top: badgeInsetPx,
                                 left: badgeInsetPx,
@@ -2896,7 +2974,7 @@ export function CargoGridSketch({
                           ) : null}
                           {!isHologram && showCargoNames ? (
                             <span
-                              className="pointer-events-none select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
+                              className="pointer-events-none relative z-[2] select-none font-mono font-semibold uppercase leading-none tracking-[0.04em] text-rsi-bg-deep"
                               style={{
                                 fontSize: abbrevPx,
                                 writingMode: isTallNarrow
@@ -2912,7 +2990,7 @@ export function CargoGridSketch({
                           {!isHologram &&
                           scuSizeBadges.has(box.size as CargoBoxScu) ? (
                             <span
-                              className="pointer-events-none absolute inline-flex items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 font-mono font-bold tabular-nums leading-none text-rsi-text"
+                              className="pointer-events-none absolute z-[2] inline-flex items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 font-mono font-bold tabular-nums leading-none text-rsi-text"
                               style={{
                                 bottom: badgeInsetPx,
                                 [isInStack ? "left" : "right"]: badgeInsetPx,
@@ -2936,8 +3014,8 @@ export function CargoGridSketch({
                                 width: badgePx,
                                 height: badgePx,
                               }}
-                              title="Drag to move this whole stack"
-                              aria-label={`Move stack containing ${box.commodityName} ${box.size} SCU crate`}
+                              title="Drag to move this crate and everything stacked on it"
+                              aria-label={`Move ${box.commodityName} ${box.size} SCU crate and everything stacked on it`}
                               onPointerDown={(event) => {
                                 if (!manualEdit) return;
                                 event.preventDefault();

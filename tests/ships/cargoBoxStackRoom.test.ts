@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  STACK_ROOM_OPACITY_OVERLAY_FULL,
+  STACK_ROOM_OPACITY_OVERLAY_OPEN,
   STACK_ROOM_OPACITY_SOLID_FULL,
   STACK_ROOM_OPACITY_SOLID_OPEN,
   STACK_ROOM_OPACITY_UNDERLAY_FULL,
   STACK_ROOM_OPACITY_UNDERLAY_OPEN,
+  cargoBox2dLayerRole,
+  cargoBoxesStackedAbove,
   cargoBoxStackRoomOpacity,
   freeStackLayersAbove,
   type CargoBoxStackRoomFootprint,
@@ -67,6 +71,55 @@ describe("freeStackLayersAbove", () => {
   });
 });
 
+describe("cargoBox2dLayerRole", () => {
+  // Layer hosts are only solids + underlays — above crates bleed into the base.
+  it("returns solid or underlay hosts only", () => {
+    const four = box({
+      id: "four",
+      origin: { x: 0, y: 0, z: 0 },
+      footprint: { dx: 2, dy: 2, dz: 1 },
+    });
+    const two = box({
+      id: "two",
+      origin: { x: 0, y: 0, z: 1 },
+      footprint: { dx: 2, dy: 1, dz: 1 },
+    });
+    expect(cargoBox2dLayerRole(four, 0)).toBe("solid");
+    expect(cargoBox2dLayerRole(two, 0)).toBeNull();
+    expect(cargoBox2dLayerRole(four, 1)).toBe("underlay");
+    expect(cargoBox2dLayerRole(two, 1)).toBe("solid");
+  });
+});
+
+describe("cargoBoxesStackedAbove", () => {
+  // SA at Z0 with HF stacked on Z1–Z2 — layer-1 bleed lists both HF crates.
+  it("lists overlapping crates above the support bottom-to-top", () => {
+    const sa = box({
+      id: "sa",
+      origin: { x: 0, y: 0, z: 0 },
+      footprint: { dx: 2, dy: 1, dz: 1 },
+    });
+    const hf1 = box({
+      id: "hf1",
+      origin: { x: 0, y: 0, z: 1 },
+      footprint: { dx: 2, dy: 1, dz: 1 },
+    });
+    const hf2 = box({
+      id: "hf2",
+      origin: { x: 0, y: 0, z: 2 },
+      footprint: { dx: 2, dy: 1, dz: 1 },
+    });
+    const beside = box({
+      id: "beside",
+      origin: { x: 3, y: 0, z: 1 },
+      footprint: { dx: 1, dy: 1, dz: 1 },
+    });
+    expect(
+      cargoBoxesStackedAbove(sa, [sa, hf1, hf2, beside]).map((b) => b.id),
+    ).toEqual(["hf1", "hf2"]);
+  });
+});
+
 describe("cargoBoxStackRoomOpacity", () => {
   // Opaque when nothing more fits on top.
   it("is fully opaque at 0 free layers", () => {
@@ -75,6 +128,9 @@ describe("cargoBoxStackRoomOpacity", () => {
     );
     expect(cargoBoxStackRoomOpacity(0, 4, "underlay")).toBe(
       STACK_ROOM_OPACITY_UNDERLAY_FULL,
+    );
+    expect(cargoBoxStackRoomOpacity(0, 4, "overlay")).toBe(
+      STACK_ROOM_OPACITY_OVERLAY_FULL,
     );
   });
 
@@ -86,6 +142,9 @@ describe("cargoBoxStackRoomOpacity", () => {
     expect(cargoBoxStackRoomOpacity(3, 4, "underlay")).toBe(
       STACK_ROOM_OPACITY_UNDERLAY_OPEN,
     );
+    expect(cargoBoxStackRoomOpacity(3, 4, "overlay")).toBe(
+      STACK_ROOM_OPACITY_OVERLAY_OPEN,
+    );
   });
 
   // Mid stack room sits between full and open (height 4, 1 of 3 free).
@@ -96,5 +155,8 @@ describe("cargoBoxStackRoomOpacity", () => {
     const midUnderlay = cargoBoxStackRoomOpacity(1, 4, "underlay");
     expect(midUnderlay).toBeGreaterThan(STACK_ROOM_OPACITY_UNDERLAY_OPEN);
     expect(midUnderlay).toBeLessThan(STACK_ROOM_OPACITY_UNDERLAY_FULL);
+    const midOverlay = cargoBoxStackRoomOpacity(1, 4, "overlay");
+    expect(midOverlay).toBeGreaterThan(STACK_ROOM_OPACITY_OVERLAY_OPEN);
+    expect(midOverlay).toBeLessThan(STACK_ROOM_OPACITY_OVERLAY_FULL);
   });
 });
