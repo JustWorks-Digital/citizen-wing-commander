@@ -45,9 +45,17 @@ import { locationGroupBoxOutlines } from "@/lib/ships/locationGroupOutline";
 import { abbreviateCommodityName } from "@/lib/missions/stopDeliveryBoxes";
 import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 import {
+  cargoBoxStackRoomOpacity,
+  freeStackLayersAbove,
+} from "@/lib/ships/cargoBoxStackRoom";
+import {
   cargoCellCoordFromPoint,
+  manualBayBoxFocusLayer,
+  manualBayBoxIsBuried,
+  manualBayBoxStackColumn,
   previewManualBayDrop,
   previewManualBayPlacement,
+  previewManualBayStackDrop,
   previewManualBayZoneFill,
   previewManualBayZoneMissionFill,
   type ManualBayAddBoxSpec,
@@ -123,56 +131,40 @@ function fitZoomForViewport(
   return clampGridZoom(Math.min(availW / baseW, availH / baseH));
 }
 
-function ZoomLockIcon({ locked }: { locked: boolean }) {
+/**
+ * Scroll arrows (trackpad/wheel) — bold enough to read at control size.
+ * Slash when scroll-to-zoom is off.
+ */
+function ScrollZoomIcon({ scrollZoomOff }: { scrollZoomOff: boolean }) {
   return (
     <svg
       viewBox="0 0 16 16"
-      width="0.85em"
-      height="0.85em"
+      width="14"
+      height="14"
       aria-hidden
-      className="block"
+      className="block shrink-0"
     >
-      {locked ? (
-        <>
-          <rect
-            x="3.5"
-            y="7"
-            width="9"
-            height="6.5"
-            rx="1.25"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-          />
-          <path
-            d="M5.25 7V5.25a2.75 2.75 0 0 1 5.5 0V7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-          />
-        </>
-      ) : (
-        <>
-          <rect
-            x="3.5"
-            y="7"
-            width="9"
-            height="6.5"
-            rx="1.25"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-          />
-          <path
-            d="M5.25 7V5.25a2.75 2.75 0 0 1 5.25-1.15"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-          />
-        </>
-      )}
+      {/* Up / down chevrons = scroll */}
+      <path
+        d="M8 2.25 4.75 5.5h6.5L8 2.25Zm0 11.5 3.25-3.25h-6.5L8 13.75Z"
+        fill="currentColor"
+      />
+      <path
+        d="M8 6.25v3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      {scrollZoomOff ? (
+        <path
+          d="M2.5 2.5 13.5 13.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      ) : null}
     </svg>
   );
 }
@@ -183,8 +175,9 @@ function CargoGridZoomControls({
   onZoomOut,
   onReset,
   onZoomChange,
-  locked = false,
-  onLockedChange,
+  /** When true, trackpad/wheel zoom is off — +/- and % still work. */
+  scrollZoomOff = false,
+  onScrollZoomOffChange,
   ariaLabel = "Grid zoom",
 }: {
   zoom: number;
@@ -192,8 +185,8 @@ function CargoGridZoomControls({
   onZoomOut: () => void;
   onReset: () => void;
   onZoomChange: (zoom: number) => void;
-  locked?: boolean;
-  onLockedChange?: (locked: boolean) => void;
+  scrollZoomOff?: boolean;
+  onScrollZoomOffChange?: (off: boolean) => void;
   ariaLabel?: string;
 }) {
   const buttonClass =
@@ -202,12 +195,14 @@ function CargoGridZoomControls({
     <div
       className="inline-flex overflow-hidden rounded-rsi border border-rsi-border"
       role="group"
-      aria-label={locked ? `${ariaLabel} (locked)` : ariaLabel}
+      aria-label={
+        scrollZoomOff ? `${ariaLabel} (scroll zoom off)` : ariaLabel
+      }
     >
       <button
         type="button"
         aria-label="Zoom out"
-        disabled={locked || zoom <= GRID_ZOOM_MIN}
+        disabled={zoom <= GRID_ZOOM_MIN}
         onClick={onZoomOut}
         className={`${buttonClass} border-0 border-r border-rsi-border`}
       >
@@ -219,40 +214,41 @@ function CargoGridZoomControls({
         max={GRID_ZOOM_MAX}
         onChange={onZoomChange}
         onClick={onReset}
-        disabled={locked}
-        title={
-          locked
-            ? "Zoom locked"
-            : "Fit grid in view · double-click to set"
-        }
-        aria-label={locked ? "Zoom locked" : "Fit grid in view"}
+        title="Fit grid in view · double-click to set"
+        aria-label="Fit grid in view"
         className={`${buttonClass} min-w-[2.25rem] border-0 border-r border-rsi-border px-1 text-[0.5rem] tabular-nums sm:min-w-[2.75rem] sm:px-1.5 sm:text-[0.6rem]`}
       />
       <button
         type="button"
         aria-label="Zoom in"
-        disabled={locked || zoom >= GRID_ZOOM_MAX}
+        disabled={zoom >= GRID_ZOOM_MAX}
         onClick={onZoomIn}
         className={`${buttonClass} border-0 border-r border-rsi-border`}
       >
         +
       </button>
-      {onLockedChange ? (
+      {onScrollZoomOffChange ? (
         <button
           type="button"
-          aria-label={locked ? "Unlock zoom" : "Lock zoom"}
-          aria-pressed={locked}
-          title={locked ? "Unlock zoom" : "Lock zoom"}
-          onClick={() => onLockedChange(!locked)}
+          aria-label={
+            scrollZoomOff ? "Enable scroll zoom" : "Disable scroll zoom"
+          }
+          aria-pressed={scrollZoomOff}
+          title={
+            scrollZoomOff
+              ? "Scroll zoom off — click or V to enable"
+              : "Scroll zoom on — click or V to disable"
+          }
+          onClick={() => onScrollZoomOffChange(!scrollZoomOff)}
           className={[
             buttonClass,
             "border-0",
-            locked
+            scrollZoomOff
               ? "bg-rsi-accent-muted/40 text-rsi-accent"
-              : "",
+              : "text-rsi-text",
           ].join(" ")}
         >
-          <ZoomLockIcon locked={locked} />
+          <ScrollZoomIcon scrollZoomOff={scrollZoomOff} />
         </button>
       ) : null}
     </div>
@@ -319,9 +315,11 @@ export type CargoGridSketchProps = {
   syncedZoom?: boolean;
   onSyncedZoomChange?: (synced: boolean) => void;
   /** Freeze 2D zoom controls / wheel. */
+  /** When true, 2D trackpad/wheel zoom is off (+/- still work). */
   topZoomLocked?: boolean;
   onTopZoomLockedChange?: (locked: boolean) => void;
   /** Freeze 3D zoom controls / wheel. */
+  /** When true, 3D trackpad/wheel zoom is off (+/- still work). */
   isoZoomLocked?: boolean;
   onIsoZoomLockedChange?: (locked: boolean) => void;
   /** Hide Peel (e.g. parent hosts it next to Packing). */
@@ -341,6 +339,7 @@ export type CargoGridSketchProps = {
     boxId: string,
     clientX: number,
     clientY: number,
+    options?: { moveStack?: boolean },
   ) => void;
   /** Pointer moved while dragging — parent updates the floating ghost. */
   onManualDragMove?: (
@@ -357,6 +356,7 @@ export type CargoGridSketchProps = {
   /**
    * Live placed-crate drag — footprint cells light up under the pointer
    * (accent = legal drop, danger = gap / collision / miss).
+   * `moveStack` is set when the drag started from the stacked-crate badge.
    */
   manualCrateDrag?: {
     boxId: string;
@@ -364,6 +364,7 @@ export type CargoGridSketchProps = {
     clientY: number;
     grabOffsetX: number;
     grabOffsetY: number;
+    moveStack?: boolean;
   } | null;
   /**
    * Manual tray drag-and-drop onto a 2D cell.
@@ -391,6 +392,8 @@ export type CargoGridSketchProps = {
   onTrayPlaceCancel?: () => void;
   /** Double-click a crate in Manual mode to return it to the tray. */
   onManualBoxRemove?: (boxId: string) => void;
+  /** Rotate the selected placed crate (R). */
+  onManualBoxRotate?: (boxId: string) => void;
   /** Controlled 2D zoom (and Split). Falls back to internal state. */
   topZoom?: number;
   onTopZoomChange?: (zoom: number) => void;
@@ -492,6 +495,7 @@ export function CargoGridSketch({
   onTrayRotate,
   onTrayPlaceCancel,
   onManualBoxRemove,
+  onManualBoxRotate,
   topZoom: topZoomProp,
   onTopZoomChange,
   isoZoom: isoZoomProp,
@@ -504,6 +508,14 @@ export function CargoGridSketch({
     pointerId: number;
     lastClientX: number;
     lastClientY: number;
+    moveStack: boolean;
+  } | null>(null);
+  /** Last legal Manual drop preview — sync 2D Z after release. */
+  const lastCrateDropPreviewRef = useRef<{
+    boxId: string;
+    origin: CargoGridCoord;
+    footprintDz: number;
+    fits: boolean;
   } | null>(null);
   /** Pending press — drag only after moving past threshold (keeps dbl-click). */
   const manualPressRef = useRef<{
@@ -512,6 +524,7 @@ export function CargoGridSketch({
     startX: number;
     startY: number;
     dragging: boolean;
+    moveStack: boolean;
   } | null>(null);
   const manualLastTapRef = useRef<{ boxId: string; at: number } | null>(null);
   /** Active Manual crate drag — other crates go pointer-events-none. */
@@ -522,11 +535,16 @@ export function CargoGridSketch({
   const onManualDragMoveRef = useRef(onManualDragMove);
   const onManualDragEndRef = useRef(onManualDragEnd);
   const onManualBoxRemoveRef = useRef(onManualBoxRemove);
+  const onManualBoxRotateRef = useRef(onManualBoxRotate);
+  const publishSelectedCoordRef = useRef<(coord: CargoGridCoord | null) => void>(
+    () => {},
+  );
   const manualDragWindowCleanupRef = useRef<(() => void) | null>(null);
   onManualDragStartRef.current = onManualDragStart;
   onManualDragMoveRef.current = onManualDragMove;
   onManualDragEndRef.current = onManualDragEnd;
   onManualBoxRemoveRef.current = onManualBoxRemove;
+  onManualBoxRotateRef.current = onManualBoxRotate;
 
   useEffect(
     () => () => {
@@ -545,16 +563,21 @@ export function CargoGridSketch({
       pointerId: number,
       clientX: number,
       clientY: number,
+      options?: { moveStack?: boolean },
     ) => {
       manualDragWindowCleanupRef.current?.();
+      const moveStack = options?.moveStack === true;
       manualDragRef.current = {
         boxId,
         pointerId,
         lastClientX: clientX,
         lastClientY: clientY,
+        moveStack,
       };
       setDraggingManualBoxId(boxId);
-      onManualDragStartRef.current?.(boxId, clientX, clientY);
+      onManualDragStartRef.current?.(boxId, clientX, clientY, {
+        moveStack,
+      });
 
       const onMove = (event: PointerEvent) => {
         const drag = manualDragRef.current;
@@ -578,9 +601,24 @@ export function CargoGridSketch({
         if (!drag || drag.pointerId !== pointerId) return;
         const endX = event.clientX;
         const endY = event.clientY;
+        const preview = lastCrateDropPreviewRef.current;
         manualDragRef.current = null;
         setDraggingManualBoxId(null);
         onManualDragEndRef.current?.(drag.boxId, endX, endY);
+        // Follow auto-snapped Z so a deck drop from layer 3 stays visible.
+        if (
+          preview &&
+          preview.fits &&
+          preview.boxId === drag.boxId
+        ) {
+          const layer = Math.max(
+            0,
+            preview.origin.z + preview.footprintDz - 1,
+          );
+          setActiveZ(layer);
+          setFocusBoxId(drag.boxId);
+          publishSelectedCoordRef.current(preview.origin);
+        }
       };
 
       window.addEventListener("pointermove", onMove);
@@ -610,6 +648,7 @@ export function CargoGridSketch({
       pointerId: number,
       clientX: number,
       clientY: number,
+      options?: { moveStack?: boolean },
     ) => {
       manualDragWindowCleanupRef.current?.();
       manualPressRef.current = {
@@ -618,6 +657,7 @@ export function CargoGridSketch({
         startX: clientX,
         startY: clientY,
         dragging: false,
+        moveStack: options?.moveStack === true,
       };
 
       const detach = () => {
@@ -644,6 +684,7 @@ export function CargoGridSketch({
           press.pointerId,
           press.startX,
           press.startY,
+          { moveStack: press.moveStack },
         );
         onManualDragMoveRef.current?.(
           press.boxId,
@@ -659,6 +700,8 @@ export function CargoGridSketch({
         const press = manualPressRef.current;
         manualPressRef.current = null;
         if (!press || press.pointerId !== pointerId || press.dragging) return;
+        // Stack-badge press is drag-only (no return-to-tray double-click).
+        if (press.moveStack) return;
 
         const now = Date.now();
         const last = manualLastTapRef.current;
@@ -671,6 +714,8 @@ export function CargoGridSketch({
           onManualBoxRemoveRef.current?.(press.boxId);
           return;
         }
+        // Single click selects the crate (R rotates while selected).
+        setFocusBoxId(press.boxId);
         manualLastTapRef.current = { boxId: press.boxId, at: now };
       };
 
@@ -727,18 +772,13 @@ export function CargoGridSketch({
       if (onSyncedZoomChange) onSyncedZoomChange(synced);
       else {
         setSyncedZoomInternal(synced);
-        if (synced && !isoZoomLocked) {
+        if (synced) {
           const value = topZoomProp ?? topZoomInternal;
           setIsoZoomInternal(value);
         }
       }
     },
-    [
-      isoZoomLocked,
-      onSyncedZoomChange,
-      topZoomInternal,
-      topZoomProp,
-    ],
+    [onSyncedZoomChange, topZoomInternal, topZoomProp],
   );
   const setTopZoomLocked = useCallback(
     (locked: boolean) => {
@@ -756,46 +796,40 @@ export function CargoGridSketch({
   );
   const setTopZoom = useCallback(
     (next: number | ((value: number) => number)) => {
-      if (topZoomLocked) return;
       const value =
         typeof next === "function" ? next(topZoomProp ?? topZoomInternal) : next;
       if (onTopZoomChange) onTopZoomChange(value);
       else setTopZoomInternal(value);
-      if (syncedZoom && !isoZoomLocked) {
+      if (syncedZoom) {
         if (onIsoZoomChange) onIsoZoomChange(value);
         else setIsoZoomInternal(value);
       }
     },
     [
-      isoZoomLocked,
       onIsoZoomChange,
       onTopZoomChange,
       syncedZoom,
       topZoomInternal,
-      topZoomLocked,
       topZoomProp,
     ],
   );
   const setIsoZoom = useCallback(
     (next: number | ((value: number) => number)) => {
-      if (isoZoomLocked) return;
       const value =
         typeof next === "function" ? next(isoZoomProp ?? isoZoomInternal) : next;
       if (onIsoZoomChange) onIsoZoomChange(value);
       else setIsoZoomInternal(value);
-      if (syncedZoom && !topZoomLocked) {
+      if (syncedZoom) {
         if (onTopZoomChange) onTopZoomChange(value);
         else setTopZoomInternal(value);
       }
     },
     [
       isoZoomInternal,
-      isoZoomLocked,
       isoZoomProp,
       onIsoZoomChange,
       onTopZoomChange,
       syncedZoom,
-      topZoomLocked,
     ],
   );
   const topScrollRef = useRef<HTMLDivElement | null>(null);
@@ -832,6 +866,59 @@ export function CargoGridSketch({
   const totalScu = cargoGridTotalScu(sketch);
   const maxWidth = cargoGridMaxWidth(sketch);
   const [activeZ, setActiveZ] = useState(0);
+  /** Uncontrolled cell pick when parent omits `selectedCoord` / `onSelectCoord`. */
+  const [internalSelectedCoord, setInternalSelectedCoord] =
+    useState<CargoGridCoord | null>(null);
+  /** Crate focused from 3D (Split) — ring on 2D + Manual-ready. */
+  const [focusBoxId, setFocusBoxId] = useState<string | null>(null);
+  const selectedCoordResolved = selectedCoord ?? internalSelectedCoord;
+  const publishSelectedCoord = useCallback(
+    (coord: CargoGridCoord | null) => {
+      if (onSelectCoord) onSelectCoord(coord);
+      else setInternalSelectedCoord(coord);
+    },
+    [onSelectCoord],
+  );
+  publishSelectedCoordRef.current = publishSelectedCoord;
+  const focusBoxIdRef = useRef<string | null>(null);
+  focusBoxIdRef.current = focusBoxId;
+  const focusPlacementBoxFromIso = useCallback(
+    (boxId: string, coord: CargoGridCoord) => {
+      if (focusBoxIdRef.current === boxId) {
+        setFocusBoxId(null);
+        publishSelectedCoord(null);
+        return;
+      }
+      const box =
+        placementBoxes.find((entry) => entry.id === boxId) ??
+        trayCollisionBoxes?.find((entry) => entry.id === boxId);
+      if (!box) {
+        setFocusBoxId(null);
+        publishSelectedCoord(coord);
+        return;
+      }
+      const layer = Math.min(
+        sketch.heightCells - 1,
+        manualBayBoxFocusLayer(box),
+      );
+      setActiveZ(layer);
+      setHiddenIsoLayers((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (
+          let zLayer = box.origin.z;
+          zLayer < box.origin.z + box.footprint.dz;
+          zLayer += 1
+        ) {
+          if (next.delete(zLayer)) changed = true;
+        }
+        return changed ? next : prev;
+      });
+      setFocusBoxId(boxId);
+      publishSelectedCoord(box.origin);
+    },
+    [placementBoxes, publishSelectedCoord, sketch.heightCells, trayCollisionBoxes],
+  );
   const [peelStackInternal, setPeelStackInternal] = useState(false);
   const peelStack = peelStackProp ?? peelStackInternal;
   function setPeelStack(value: boolean | ((prev: boolean) => boolean)) {
@@ -854,16 +941,16 @@ export function CargoGridSketch({
   function makeZoomControls(
     zoom: number,
     setZoom: (next: number | ((value: number) => number)) => void,
-    locked: boolean,
-    onLockedChange: (locked: boolean) => void,
+    scrollZoomOff: boolean,
+    onScrollZoomOffChange: (off: boolean) => void,
     ariaLabel: string,
     fitZoom: () => number,
   ): ReactNode {
     return (
       <CargoGridZoomControls
         zoom={zoom}
-        locked={locked}
-        onLockedChange={onLockedChange}
+        scrollZoomOff={scrollZoomOff}
+        onScrollZoomOffChange={onScrollZoomOffChange}
         onZoomIn={() => setZoom((value) => clampGridZoom(value + GRID_ZOOM_STEP))}
         onZoomOut={() =>
           setZoom((value) => clampGridZoom(value - GRID_ZOOM_STEP))
@@ -1082,6 +1169,21 @@ export function CargoGridSketch({
     return placementBoxes;
   }, [showHologram, visiblePlacementBoxes, placementBoxes]);
 
+  /**
+   * Free Z cells above each crate (physical bay occupancy). Drives 2D opacity:
+   * solid = no room on top; fainter = more stack room left.
+   */
+  const stackFreeByBoxId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const box of placementBoxes) {
+      map.set(
+        box.id,
+        freeStackLayersAbove(box, placementBoxes, sketch.heightCells),
+      );
+    }
+    return map;
+  }, [placementBoxes, sketch.heightCells]);
+
   /** 0-based Z layers that currently have at least one visible (legend-filtered) box. */
   const occupiedTopLayers = useMemo(() => {
     const occupied = new Set<number>();
@@ -1175,6 +1277,29 @@ export function CargoGridSketch({
   }, [manualCrateDrag, trayDragSpec, trayPointerClient]);
 
   const trayFitBoxes = trayCollisionBoxes ?? placementBoxes;
+  /** Manual: crates with cargo stacked above — no body-drag until cleared. */
+  const buriedManualBoxIds = useMemo(() => {
+    if (!manualEdit) return null;
+    const buried = new Set<string>();
+    for (const box of trayFitBoxes) {
+      if (manualBayBoxIsBuried(box, trayFitBoxes)) buried.add(box.id);
+    }
+    return buried;
+  }, [manualEdit, trayFitBoxes]);
+  /** Manual: every crate in a multi-crate vertical column (top and bottom). */
+  const stackedManualBoxIds = useMemo(() => {
+    if (!manualEdit) return null;
+    const stacked = new Set<string>();
+    const visited = new Set<string>();
+    for (const box of trayFitBoxes) {
+      if (visited.has(box.id)) continue;
+      const column = manualBayBoxStackColumn(box, trayFitBoxes);
+      for (const member of column) visited.add(member.id);
+      if (column.length <= 1) continue;
+      for (const member of column) stacked.add(member.id);
+    }
+    return stacked;
+  }, [manualEdit, trayFitBoxes]);
   const trayDropPreview = useMemo(() => {
     if (!trayDragSpec || !trayHoverCoord || manualCrateDrag) return null;
     if (trayMissionFill) {
@@ -1224,17 +1349,43 @@ export function CargoGridSketch({
       : null;
   const crateDropPreview = useMemo(() => {
     if (!manualCrateDrag || !trayHoverCoord) return null;
+    const grab = {
+      dx: manualCrateDrag.grabOffsetX,
+      dy: manualCrateDrag.grabOffsetY,
+    };
+    if (manualCrateDrag.moveStack) {
+      return previewManualBayStackDrop(
+        sketch,
+        trayFitBoxes,
+        manualCrateDrag.boxId,
+        trayHoverCoord,
+        grab,
+      );
+    }
     return previewManualBayDrop(
       sketch,
       trayFitBoxes,
       manualCrateDrag.boxId,
       trayHoverCoord,
-      {
-        dx: manualCrateDrag.grabOffsetX,
-        dy: manualCrateDrag.grabOffsetY,
-      },
+      grab,
     );
   }, [manualCrateDrag, sketch, trayFitBoxes, trayHoverCoord]);
+  const draggingBoxFootprintDz = (() => {
+    if (!manualCrateDrag) return 1;
+    const seed = trayFitBoxes.find(
+      (box) => box.id === manualCrateDrag.boxId,
+    );
+    return seed?.footprint.dz ?? 1;
+  })();
+  lastCrateDropPreviewRef.current =
+    manualCrateDrag && crateDropPreview
+      ? {
+          boxId: manualCrateDrag.boxId,
+          origin: crateDropPreview.origin,
+          footprintDz: draggingBoxFootprintDz,
+          fits: crateDropPreview.fits,
+        }
+      : null;
   const dropPreviewKeys = useMemo(() => {
     const preview = crateDropPreview ?? trayDropPreview;
     if (!preview) return null;
@@ -1332,6 +1483,33 @@ export function CargoGridSketch({
         setTrayHoverCoord(null);
         return;
       }
+      // Selected placed crate: R rotates footprint (not mid-drag).
+      if (
+        manualEdit &&
+        showTop &&
+        !trayDragSpec &&
+        !manualDragRef.current &&
+        focusBoxId &&
+        (event.key === "r" || event.key === "R")
+      ) {
+        event.preventDefault();
+        onManualBoxRotateRef.current?.(focusBoxId);
+        return;
+      }
+      // V — toggle scroll-to-zoom off/on (same control as the zoom toolbar).
+      if (event.key === "v" || event.key === "V") {
+        event.preventDefault();
+        if (showTop && showIso) {
+          const next = !topZoomLocked;
+          setTopZoomLocked(next);
+          setIsoZoomLocked(next);
+        } else if (showTop) {
+          setTopZoomLocked(!topZoomLocked);
+        } else {
+          setIsoZoomLocked(!isoZoomLocked);
+        }
+        return;
+      }
       const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code);
       if (!match) return;
       const layer = Number(match[1]) - 1;
@@ -1342,12 +1520,18 @@ export function CargoGridSketch({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    focusBoxId,
+    isoZoomLocked,
+    manualEdit,
     onTrayPlaceCancel,
     onTrayRotate,
     selectBayLayer,
+    setIsoZoomLocked,
+    setTopZoomLocked,
     showIso,
     showTop,
     sketch.heightCells,
+    topZoomLocked,
     trayDragSpec,
   ]);
 
@@ -1801,17 +1985,17 @@ export function CargoGridSketch({
   }
 
   function selectCell(coord: CargoGridCoord) {
-    if (!onSelectCoord) return;
+    setFocusBoxId(null);
     if (
-      selectedCoord &&
-      selectedCoord.x === coord.x &&
-      selectedCoord.y === coord.y &&
-      selectedCoord.z === coord.z
+      selectedCoordResolved &&
+      selectedCoordResolved.x === coord.x &&
+      selectedCoordResolved.y === coord.y &&
+      selectedCoordResolved.z === coord.z
     ) {
-      onSelectCoord(null);
+      publishSelectedCoord(null);
       return;
     }
-    onSelectCoord(coord);
+    publishSelectedCoord(coord);
   }
 
   return (
@@ -2085,16 +2269,34 @@ export function CargoGridSketch({
 
                 // Anchor by origin cell (not full footprint) so a cross-zone
                 // move keeps one DOM host until the origin enters the next zone.
+                // Active Z: solid crates that intersect this layer. Crates
+                // entirely below render as ghost underlays (behind solids).
                 const boxesOnLayer = useBoxFootprints
-                  ? renderPlacementBoxes.filter(
-                      (box) =>
-                        box.origin.z <= z &&
-                        z < box.origin.z + box.footprint.dz &&
-                        box.origin.x >= zoneX0 &&
-                        box.origin.x < zoneX0 + zone.lengthCells &&
-                        box.origin.y >= yOffset &&
-                        box.origin.y < yOffset + zoneWidth,
-                    )
+                  ? renderPlacementBoxes
+                      .filter((box) => {
+                        if (
+                          box.origin.x < zoneX0 ||
+                          box.origin.x >= zoneX0 + zone.lengthCells ||
+                          box.origin.y < yOffset ||
+                          box.origin.y >= yOffset + zoneWidth
+                        ) {
+                          return false;
+                        }
+                        const topZ = box.origin.z + box.footprint.dz - 1;
+                        const intersectsActive =
+                          box.origin.z <= z && z <= topZ;
+                        const entirelyBelow = topZ < z;
+                        return intersectsActive || entirelyBelow;
+                      })
+                      .sort((a, b) => {
+                        // Underlays first so solid active-layer crates paint on top.
+                        const aUnder =
+                          a.origin.z + a.footprint.dz - 1 < z ? 0 : 1;
+                        const bUnder =
+                          b.origin.z + b.footprint.dz - 1 < z ? 0 : 1;
+                        if (aUnder !== bUnder) return aUnder - bUnder;
+                        return a.origin.z - b.origin.z;
+                      })
                   : [];
 
                 const bayLabel = (text: string) => (
@@ -2132,7 +2334,9 @@ export function CargoGridSketch({
                         title="Grid break"
                         aria-label={`${zone.label} grid break`}
                         className={[
-                          "relative flex items-center justify-center border bg-rsi-bg-deep/40",
+                          // Never steal Manual crate / cell hits (door label
+                          // visually spills into cargo; lift gap sits between).
+                          "pointer-events-none relative flex items-center justify-center border bg-rsi-bg-deep/40 select-none",
                           fillClass,
                         ].join(" ")}
                         style={{
@@ -2196,14 +2400,24 @@ export function CargoGridSketch({
                   >
                     {cells.map((cell) => {
                       const isSelected =
-                        selectedCoord != null &&
-                        selectedCoord.x === cell.x &&
-                        selectedCoord.y === cell.y &&
-                        selectedCoord.z === z;
+                        selectedCoordResolved != null &&
+                        selectedCoordResolved.x === cell.x &&
+                        selectedCoordResolved.y === cell.y &&
+                        selectedCoordResolved.z === z;
                       const isSameColumn =
-                        selectedCoord != null &&
-                        selectedCoord.x === cell.x &&
-                        selectedCoord.y === cell.y;
+                        selectedCoordResolved != null &&
+                        selectedCoordResolved.x === cell.x &&
+                        selectedCoordResolved.y === cell.y;
+                      const isFocusBoxCell =
+                        focusBoxId != null &&
+                        boxesOnLayer.some(
+                          (box) =>
+                            box.id === focusBoxId &&
+                            cell.x >= box.origin.x &&
+                            cell.x < box.origin.x + box.footprint.dx &&
+                            cell.y >= box.origin.y &&
+                            cell.y < box.origin.y + box.footprint.dy,
+                        );
                       const coordKey = cargoGridCoordKey({
                         x: cell.x,
                         y: cell.y,
@@ -2232,7 +2446,8 @@ export function CargoGridSketch({
                       const isHighlightColumn = highlightXY.has(
                         `${cell.x},${cell.y}`,
                       );
-                      const canSelect = Boolean(onSelectCoord);
+                      const canSelect =
+                        Boolean(onSelectCoord) || isSplit || manualEdit;
                       const canTrayPlace = Boolean(
                         manualTrayDrop && trayDragSpec,
                       );
@@ -2290,7 +2505,7 @@ export function CargoGridSketch({
                               ? dropPreviewFits
                                 ? "z-[7] bg-rsi-accent/45 ring-2 ring-inset ring-rsi-accent"
                                 : "z-[7] bg-rsi-danger/35 ring-2 ring-inset ring-rsi-danger"
-                              : isSelected
+                              : isSelected || isFocusBoxCell
                                 ? "z-[6] ring-2 ring-inset ring-rsi-accent"
                                 : tint?.action === "pickup" && isHighlightExact
                                   ? "ring-1 ring-inset ring-rsi-accent/50"
@@ -2335,7 +2550,18 @@ export function CargoGridSketch({
                       );
                     })}
                     {boxesOnLayer.map((box) => {
-                      const isHologram = isPlacementBoxLegendHidden(box);
+                      const boxTopZ = box.origin.z + box.footprint.dz - 1;
+                      const isUnderlayGhost = boxTopZ < z;
+                      const isLegendHologram =
+                        isPlacementBoxLegendHidden(box);
+                      const isHologram = isUnderlayGhost || isLegendHologram;
+                      const freeStackLayers =
+                        stackFreeByBoxId.get(box.id) ??
+                        freeStackLayersAbove(
+                          box,
+                          placementBoxes,
+                          sketch.heightCells,
+                        );
                       const hex =
                         resolveCommodityColorHex(
                           box.color,
@@ -2414,14 +2640,41 @@ export function CargoGridSketch({
                           ),
                         ),
                       );
-                      const onManualPointerDown = (
+                      // Corner badges track cell zoom so they do not dominate
+                      // when the bay is zoomed out.
+                      const badgePx = Math.max(
+                        7,
+                        Math.min(14, Math.round(viewCellPx * 0.55)),
+                      );
+                      const badgeFontPx = Math.max(
+                        5,
+                        Math.min(9, Math.round(badgePx * 0.55)),
+                      );
+                      const badgeInsetPx = Math.max(
+                        1,
+                        Math.round(badgePx * 0.12),
+                      );
+                      const isBuried =
+                        Boolean(buriedManualBoxIds?.has(box.id)) &&
+                        !isHologram;
+                      const isInStack =
+                        Boolean(stackedManualBoxIds?.has(box.id)) &&
+                        !isHologram;
+                      const onBoxPointerDown = (
                         event: ReactPointerEvent<HTMLDivElement>,
                       ) => {
-                        if (!manualEdit || event.button !== 0) return;
+                        if (event.button !== 0) return;
+                        event.preventDefault();
                         event.stopPropagation();
-                        // Don't start drag yet — threshold keeps double-click
-                        // (return to tray) working. Window listeners survive
-                        // cross-zone remounts once the drag begins.
+                        if (selectedCoordResolved) {
+                          publishSelectedCoord(null);
+                        }
+                        // Buried / non-Manual: click selects only (default cursor).
+                        // Manual top crates: press arms drag after a move threshold.
+                        if (!manualEdit || isBuried) {
+                          setFocusBoxId(box.id);
+                          return;
+                        }
                         armManualBoxPointer(
                           box.id,
                           event.pointerId,
@@ -2432,46 +2685,79 @@ export function CargoGridSketch({
                       const isDraggingThis =
                         draggingManualBoxId != null &&
                         draggingManualBoxId === box.id;
-                      const cratePointerClass = isHologram
-                        ? "pointer-events-none z-[4]"
-                        : draggingManualBoxId != null || trayDragSpec
-                          ? // While dragging a crate or Fill tray chip, crates
-                            // must not steal hits over empty cells.
-                            "pointer-events-none z-[5]"
-                          : manualEdit
-                            ? "pointer-events-auto z-[5] cursor-grab touch-none active:cursor-grabbing"
-                            : "pointer-events-auto z-[5]";
+                      // Idle crates sit above selected cells (z-6) so Door /
+                      // Lift selection rings do not steal clicks. While a
+                      // crate/tray drag runs, crates go PE-none so cells get
+                      // drop hits (preview uses z-7).
+                      const cratePointerClass = isUnderlayGhost
+                        ? "pointer-events-none z-[3]"
+                        : isHologram
+                          ? "pointer-events-none z-[4]"
+                          : draggingManualBoxId != null || trayDragSpec
+                            ? "pointer-events-none z-[5]"
+                            : "pointer-events-auto z-[8] cursor-default touch-none";
+                      const manualTitleHint = isInStack
+                        ? isBuried
+                          ? " · click to select · R rotates stack · drag the stack badge to move"
+                          : " · click to select · drag to move · R rotates stack · stack badge moves whole stack · double-click to return to tray"
+                        : " · click to select · drag to move · R to rotate · double-click to return to tray";
                       return (
                         <div
-                          key={box.id}
-                          title={
-                            isHologram
-                              ? undefined
-                              : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)}${manualEdit ? " · drag to move · double-click to return to tray" : ""}`
+                          key={
+                            isUnderlayGhost
+                              ? `${box.id}-underlay-z${z}`
+                              : box.id
                           }
-                          role={manualEdit && !isHologram ? "button" : undefined}
-                          aria-hidden={
-                            isHologram || !manualEdit ? true : undefined
+                          title={
+                            isUnderlayGhost
+                              ? `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · under layer ${z + 1} (Z${box.origin.z}) · ${
+                                  freeStackLayers === 0
+                                    ? "stack full"
+                                    : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
+                                }`
+                              : isLegendHologram
+                                ? undefined
+                                : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)} · ${
+                                    freeStackLayers === 0
+                                      ? "stack full"
+                                      : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
+                                  }${
+                                    manualEdit
+                                      ? manualTitleHint
+                                      : " · click to select"
+                                  }`
+                          }
+                          role={!isHologram ? "button" : undefined}
+                          aria-hidden={isHologram ? true : undefined}
+                          aria-pressed={
+                            !isHologram && focusBoxId === box.id
+                              ? true
+                              : undefined
                           }
                           aria-grabbed={
-                            manualEdit && !isHologram
+                            manualEdit && !isHologram && !isBuried
                               ? isDraggingThis
                               : undefined
                           }
                           aria-label={
-                            manualEdit && !isHologram
-                              ? `Move ${box.commodityName} ${box.size} SCU crate`
+                            !isHologram
+                              ? isBuried
+                                ? `Select stacked ${box.commodityName} ${box.size} SCU crate`
+                                : manualEdit
+                                  ? `Select or move ${box.commodityName} ${box.size} SCU crate`
+                                  : `Select ${box.commodityName} ${box.size} SCU crate`
                               : undefined
                           }
                           onPointerDown={
-                            manualEdit && !isHologram
-                              ? onManualPointerDown
-                              : undefined
+                            !isHologram ? onBoxPointerDown : undefined
                           }
                           onDoubleClick={
                             // Handled in armManualBoxPointer (pointer path);
                             // keep this as a fallback when the browser fires it.
-                            manualEdit && !isHologram && onManualBoxRemove
+                            manualEdit &&
+                            !isHologram &&
+                            !isBuried &&
+                            onManualBoxRemove
                               ? (event) => {
                                   event.preventDefault();
                                   event.stopPropagation();
@@ -2492,14 +2778,37 @@ export function CargoGridSketch({
                             width: boxWidthPx,
                             height: boxHeightPx,
                             backgroundColor: hex,
-                            // Hologram: barely there so solid crates stay readable.
-                            // Dragging: leave a faint footprint while the ghost follows the cursor.
-                            opacity: isHologram
-                              ? 0.12
-                              : isDraggingThis
-                                ? 0.28
-                                : 0.92,
-                            ...borderStyle,
+                            // Stack-room opacity: solid = no room on top;
+                            // fainter = more free layers. Legend holograms stay
+                            // fixed-faint; dragging leaves a footprint.
+                            opacity: isUnderlayGhost
+                              ? cargoBoxStackRoomOpacity(
+                                  freeStackLayers,
+                                  sketch.heightCells,
+                                  "underlay",
+                                )
+                              : isLegendHologram
+                                ? 0.12
+                                : isDraggingThis
+                                  ? 0.28
+                                  : cargoBoxStackRoomOpacity(
+                                      freeStackLayers,
+                                      sketch.heightCells,
+                                      "solid",
+                                    ),
+                            ...(isUnderlayGhost
+                              ? {
+                                  border:
+                                    "1px dashed color-mix(in srgb, var(--rsi-border-strong) 55%, transparent)",
+                                }
+                              : borderStyle),
+                            ...(focusBoxId === box.id && !isHologram
+                              ? {
+                                  boxShadow:
+                                    "0 0 0 1px #000, 0 0 0 2.5px var(--rsi-accent)",
+                                  zIndex: 9,
+                                }
+                              : null),
                             ...(debugBoxOutlines && !isHologram
                               ? {
                                   boxShadow:
@@ -2514,11 +2823,16 @@ export function CargoGridSketch({
                           box.locationGroupIndex != null &&
                           locationLabelBoxIds.has(box.id) ? (
                             <span
-                              className="absolute top-0.5 left-0.5 inline-flex size-3.5 items-center justify-center rounded-full font-mono text-[0.55rem] font-bold tabular-nums leading-none"
+                              className="absolute inline-flex items-center justify-center rounded-full font-mono font-bold tabular-nums leading-none"
                               style={{
+                                top: badgeInsetPx,
+                                left: badgeInsetPx,
+                                width: badgePx,
+                                height: badgePx,
+                                fontSize: badgeFontPx,
                                 color: groupStroke,
                                 backgroundColor: "var(--rsi-bg-deep)",
-                                boxShadow: `0 0 0 1px #000, 0 0 0 2.5px ${groupStroke}`,
+                                boxShadow: `0 0 0 1px #000, 0 0 0 ${Math.max(1, Math.round(badgePx * 0.18))}px ${groupStroke}`,
                               }}
                             >
                               {box.locationGroupIndex}
@@ -2529,7 +2843,8 @@ export function CargoGridSketch({
                           box.footprint.dz >= 2 ? (
                             <span
                               aria-hidden
-                              className="pointer-events-none absolute inset-[3px] rounded-[1px] border border-rsi-bg-deep/55"
+                              className="pointer-events-none absolute rounded-[1px] border border-rsi-bg-deep/55"
+                              style={{ inset: Math.max(2, badgeInsetPx) }}
                             />
                           ) : null}
                           {!isHologram && showCargoNames ? (
@@ -2550,11 +2865,74 @@ export function CargoGridSketch({
                           {!isHologram &&
                           scuSizeBadges.has(box.size as CargoBoxScu) ? (
                             <span
-                              className="pointer-events-none absolute right-0.5 bottom-0.5 inline-flex min-w-[0.85rem] items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 px-0.5 font-mono text-[0.5rem] font-bold tabular-nums leading-none text-rsi-text"
+                              className="pointer-events-none absolute inline-flex items-center justify-center rounded-[2px] bg-rsi-bg-deep/75 font-mono font-bold tabular-nums leading-none text-rsi-text"
+                              style={{
+                                bottom: badgeInsetPx,
+                                [isInStack ? "left" : "right"]: badgeInsetPx,
+                                minWidth: badgePx,
+                                height: badgePx,
+                                paddingInline: Math.max(1, badgeInsetPx),
+                                fontSize: badgeFontPx,
+                              }}
                               title={`${box.size} ${SCU_TITLE}`}
                             >
                               {box.size}
                             </span>
+                          ) : null}
+                          {!isHologram && isInStack ? (
+                            <button
+                              type="button"
+                              className="absolute z-[9] inline-flex cursor-grab items-center justify-center rounded-[2px] bg-rsi-bg-deep/85 text-rsi-warn touch-none active:cursor-grabbing"
+                              style={{
+                                right: badgeInsetPx,
+                                bottom: badgeInsetPx,
+                                width: badgePx,
+                                height: badgePx,
+                              }}
+                              title="Drag to move this whole stack"
+                              aria-label={`Move stack containing ${box.commodityName} ${box.size} SCU crate`}
+                              onPointerDown={(event) => {
+                                if (!manualEdit) return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                if (selectedCoordResolved) {
+                                  publishSelectedCoord(null);
+                                }
+                                armManualBoxPointer(
+                                  box.id,
+                                  event.pointerId,
+                                  event.clientX,
+                                  event.clientY,
+                                  { moveStack: true },
+                                );
+                              }}
+                            >
+                              {/* Two offset squares = stacked crates */}
+                              <svg
+                                viewBox="0 0 12 12"
+                                style={{
+                                  width: Math.max(6, badgePx * 0.7),
+                                  height: Math.max(6, badgePx * 0.7),
+                                }}
+                                aria-hidden
+                              >
+                                <rect
+                                  x="1"
+                                  y="4"
+                                  width="6"
+                                  height="6"
+                                  fill="currentColor"
+                                  opacity="0.55"
+                                />
+                                <rect
+                                  x="4"
+                                  y="1"
+                                  width="6"
+                                  height="6"
+                                  fill="currentColor"
+                                />
+                              </svg>
+                            </button>
                           ) : null}
                         </div>
                       );
@@ -2621,8 +2999,9 @@ export function CargoGridSketch({
                 onZoomChange={
                   wheelZoom && !isoZoomLocked ? setIsoZoom : undefined
                 }
-                selectedCoord={selectedCoord}
-                onSelectCoord={onSelectCoord}
+                selectedCoord={selectedCoordResolved}
+                onSelectCoord={publishSelectedCoord}
+                onSelectBox={isSplit ? focusPlacementBoxFromIso : undefined}
                 highlightedCoords={highlightedCoords}
                 placementTints={placementTints}
                 placementBoxes={
@@ -2687,9 +3066,9 @@ export function CargoGridSketch({
               <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
                 Selected cell
               </p>
-              {selectedCoord ? (
+              {selectedCoordResolved ? (
                 <p className="mt-1 font-mono tabular-nums text-rsi-text">
-                  {formatCargoGridCoord(selectedCoord)}
+                  {formatCargoGridCoord(selectedCoordResolved)}
                 </p>
               ) : (
                 <p className="mt-1 text-rsi-text-muted">

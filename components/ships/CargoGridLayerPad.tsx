@@ -28,18 +28,28 @@ export type CargoGridLayerPadProps = {
   emptyLayers?: ReadonlySet<number>;
   /** Split → top; solo 2D / 3D → bottom. */
   placement?: "top" | "bottom";
+  /**
+   * Button edge in px — pass from bay `viewCellPx` so the pad shrinks when
+   * the grid is zoomed out. Default 16 (`size-4`).
+   */
+  buttonSizePx?: number;
   ariaLabel?: string;
   className?: string;
 };
 
 const BUTTON_BASE =
-  "inline-flex size-4 items-center justify-center rounded-[2px] border font-mono text-[0.5rem] tabular-nums transition-colors";
+  "inline-flex items-center justify-center rounded-[2px] border font-mono tabular-nums transition-colors";
 const BUTTON_ON =
   "border-rsi-accent/50 bg-rsi-accent-muted/35 text-rsi-accent";
 const BUTTON_OFF =
   "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text shadow-rsi-panel";
 const BUTTON_EMPTY =
   "cursor-not-allowed border-rsi-border/50 bg-rsi-bg-deep/30 text-rsi-text-muted/35";
+
+/** Clamp layer-pad buttons to stay usable but track cell zoom. */
+export function layerPadButtonSizePx(viewCellPx: number): number {
+  return Math.max(8, Math.min(16, Math.round(viewCellPx * 0.75)));
+}
 
 export function CargoGridLayerPad({
   layers,
@@ -50,22 +60,32 @@ export function CargoGridLayerPad({
   onToggleLayer,
   emptyLayers,
   placement = "top",
+  buttonSizePx = 16,
   ariaLabel = "Z layers",
   className,
 }: CargoGridLayerPadProps) {
   if (layers.length === 0) return null;
+  const size = Math.max(8, Math.round(buttonSizePx));
+  const fontPx = Math.max(6, Math.round(size * 0.5));
+  const gapPx = Math.max(2, Math.round(size * 0.2));
+  const buttonStyle = {
+    width: size,
+    height: size,
+    fontSize: fontPx,
+  } as const;
 
   return (
     <div
       role={mode === "select" ? "radiogroup" : "group"}
       aria-label={ariaLabel}
       className={[
-        "pointer-events-auto absolute left-1/2 z-20 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-nowrap items-center justify-center gap-1 overflow-x-auto sm:max-w-[calc(100%-8.5rem)]",
+        "pointer-events-auto absolute left-1/2 z-20 flex max-w-[calc(100%-7.5rem)] -translate-x-1/2 flex-nowrap items-center justify-center overflow-x-auto sm:max-w-[calc(100%-8.5rem)]",
         placement === "bottom" ? "bottom-2" : "top-2",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
+      style={{ gap: gapPx }}
     >
       {layers.map((layer) => {
         const label = layer + 1;
@@ -90,6 +110,7 @@ export function CargoGridLayerPad({
                 BUTTON_BASE,
                 isEmpty ? BUTTON_EMPTY : isActive ? BUTTON_ON : BUTTON_OFF,
               ].join(" ")}
+              style={buttonStyle}
             >
               {label}
             </button>
@@ -113,6 +134,7 @@ export function CargoGridLayerPad({
               BUTTON_BASE,
               isEmpty ? BUTTON_EMPTY : isOn ? BUTTON_ON : BUTTON_OFF,
             ].join(" ")}
+            style={buttonStyle}
           >
             {label}
           </button>

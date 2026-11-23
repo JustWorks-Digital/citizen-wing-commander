@@ -8,8 +8,11 @@ export const CARGO_BAY_MODAL_MAX_HEIGHT_VH = 0.85;
 export const CARGO_BAY_MODAL_MAX_HEIGHT_PX = 52 * 16;
 
 /** Absolute max height for the modal shell in the current viewport. */
-export function cargoBayModalShellMaxHeightPx(): number {
+export function cargoBayModalShellMaxHeightPx(options?: {
+  fullscreen?: boolean;
+}): number {
   if (typeof window === "undefined") return CARGO_BAY_MODAL_MAX_HEIGHT_PX;
+  if (options?.fullscreen) return window.innerHeight;
   return Math.min(
     window.innerHeight * CARGO_BAY_MODAL_MAX_HEIGHT_VH,
     CARGO_BAY_MODAL_MAX_HEIGHT_PX,
@@ -54,9 +57,9 @@ export type CargoBayChromePrefs = {
   splitOrientation: CargoBaySplitOrientation;
   /** When true, 2D and 3D zoom stay at the same percentage. */
   syncedZoom: boolean;
-  /** Freeze 2D zoom controls / wheel. Independent of 3D. */
+  /** Disable 2D trackpad/wheel zoom only (+/- still work). Independent of 3D. */
   topZoomLocked: boolean;
-  /** Freeze 3D zoom controls / wheel. Independent of 2D. */
+  /** Disable 3D trackpad/wheel zoom only (+/- still work). Independent of 2D. */
   isoZoomLocked: boolean;
   /** Packing type (Suggested / Cargo type / Contract based / Manual). */
   sortingMode: CargoBaySortingMode;
@@ -128,6 +131,7 @@ function isCargoBayAutoPackMode(value: unknown): value is CargoBayAutoPackMode {
 const STORAGE_PREFIX = "cwc:session:";
 const STORAGE_SUFFIX = ":cargoBayLayoutHeightPx";
 const WIDTH_SUFFIX = ":cargoBayLayoutWidthPx";
+const FULLSCREEN_SUFFIX = ":cargoBayLayoutFullscreen";
 const CHROME_SUFFIX = ":cargoBayChrome";
 
 function storageKey(sessionId: string): string {
@@ -136,6 +140,10 @@ function storageKey(sessionId: string): string {
 
 function widthStorageKey(sessionId: string): string {
   return `${STORAGE_PREFIX}${sessionId}${WIDTH_SUFFIX}`;
+}
+
+function fullscreenStorageKey(sessionId: string): string {
+  return `${STORAGE_PREFIX}${sessionId}${FULLSCREEN_SUFFIX}`;
 }
 
 function chromeStorageKey(sessionId: string): string {
@@ -216,6 +224,35 @@ export function writeCargoBayLayoutWidthPx(
     window.localStorage.setItem(
       widthStorageKey(sessionId),
       String(clampCargoBayLayoutWidthPx(widthPx)),
+    );
+  } catch {
+    // Quota / private mode — ignore.
+  }
+}
+
+/** Read per-session cargo-bays modal fullscreen flag (browser only). */
+export function readCargoBayLayoutFullscreen(
+  sessionId: string | null | undefined,
+): boolean {
+  if (!sessionId || typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(fullscreenStorageKey(sessionId));
+    return raw === "1" || raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Persist per-session cargo-bays modal fullscreen flag (browser only). */
+export function writeCargoBayLayoutFullscreen(
+  sessionId: string | null | undefined,
+  fullscreen: boolean,
+): void {
+  if (!sessionId || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      fullscreenStorageKey(sessionId),
+      fullscreen ? "1" : "0",
     );
   } catch {
     // Quota / private mode — ignore.

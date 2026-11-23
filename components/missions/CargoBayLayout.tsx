@@ -54,16 +54,20 @@ import {
   type CargoBayPackMode,
   type PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
+import type { CargoBoxScu } from "@/lib/ships/cargoBoxSizes";
 import { getCargoGridSketchBySlug } from "@/lib/ships/cargoGrids";
 import { manualBayInventory } from "@/lib/ships/manualBayInventory";
 import {
   cargoCellCoordFromPoint,
+  manualBayBoxStackColumn,
   nextManualBayOrientationIndex,
   tryAddManualBayBox,
   tryDropManualBayBox,
+  tryDropManualBayStack,
   tryFillManualBayZoneWithCargoType,
   tryFillManualBayZoneWithMission,
   tryRemoveManualBayBox,
+  tryRotateManualBayBox,
   type ManualBayAddBoxSpec,
   type ManualBayBulkFillSpec,
   type ManualBayMissionFillSpec,
@@ -104,6 +108,8 @@ export type CargoBayLayoutProps = {
   headerAside?:
     | ReactNode
     | ((ctx: { gridPlacedScu: number }) => ReactNode);
+  /** When true, graph height fills the modal shell (no height drag). */
+  isFullscreen?: boolean;
   className?: string;
 };
 
@@ -120,6 +126,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   onStopScopeChange,
   sessionId = null,
   headerAside = null,
+  isFullscreen = false,
   className,
 }: CargoBayLayoutProps) {
   const sketch = useMemo(
@@ -185,11 +192,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     clientY: number;
     grabOffsetX: number;
     grabOffsetY: number;
+    moveStack?: boolean;
   } | null>(null);
   const crateDragRef = useRef(crateDrag);
   crateDragRef.current = crateDrag;
   const { heightPx, setHeightPx, resetHeightPx } =
     useSessionCargoBayLayoutHeight(sessionId);
+  /** Ephemeral fill height while fullscreen — does not overwrite stored height. */
+  const [fullscreenHeightPx, setFullscreenHeightPx] = useState<number | null>(
+    null,
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{
@@ -200,22 +212,45 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   /** Cap panel height so the modal shell never overflows into a scroll area. */
   const maxPanelHeightPx = useCallback((): number => {
-    const shellMax = cargoBayModalShellMaxHeightPx();
+    const shellMax = cargoBayModalShellMaxHeightPx({ fullscreen: isFullscreen });
     const root = rootRef.current;
     const panel = root?.querySelector("[data-cargo-bay-height-panel]");
     if (!root || !(panel instanceof HTMLElement)) {
-      return Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax);
+      return isFullscreen
+        ? shellMax
+        : Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax);
+    }
+    if (isFullscreen) {
+      // Root is already viewport-tall; do not treat leftover flex gap as chrome.
+      const rootRect = root.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      let siblingBelow = 0;
+      let sib: Element | null = panel.nextElementSibling;
+      while (sib) {
+        if (sib instanceof HTMLElement) {
+          siblingBelow += sib.getBoundingClientRect().height;
+        }
+        sib = sib.nextElementSibling;
+      }
+      const above = Math.max(0, panelRect.top - rootRect.top);
+      const padBottom =
+        Number.parseFloat(getComputedStyle(root).paddingBottom) || 0;
+      return Math.max(
+        MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
+        Math.floor(rootRect.height - above - siblingBelow - padBottom),
+      );
     }
     const rootHeight = root.getBoundingClientRect().height;
     const panelHeight = panel.getBoundingClientRect().height;
     const chrome = Math.max(0, rootHeight - panelHeight);
     // Modal padding around the panel (`p-3` / `sm:p-6`).
-    const modalPad = typeof window !== "undefined" && window.innerWidth >= 640 ? 48 : 24;
+    const modalPad =
+      typeof window !== "undefined" && window.innerWidth >= 640 ? 48 : 24;
     return Math.max(
       MIN_CARGO_BAY_LAYOUT_HEIGHT_PX,
       Math.min(MAX_CARGO_BAY_LAYOUT_HEIGHT_PX, shellMax - chrome - modalPad),
     );
-  }, []);
+  }, [isFullscreen]);
 
   const setPanelHeightPx = useCallback(
     (next: number, options?: { persist?: boolean }) => {
@@ -223,6 +258,9 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     },
     [maxPanelHeightPx, setHeightPx],
   );
+
+  const panelHeightPx =
+    isFullscreen && fullscreenHeightPx != null ? fullscreenHeightPx : heightPx;
 
   const heightPxRef = useRef(heightPx);
   heightPxRef.current = heightPx;
@@ -456,6 +494,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   const showViewTabs = showGrid;
 
   useEffect(() => {
+    if (isFullscreen) return;
     const reclamp = () => {
       const max = maxPanelHeightPx();
       if (heightPxRef.current > max) setHeightPx(max);
@@ -463,7 +502,32 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     reclamp();
     window.addEventListener("resize", reclamp);
     return () => window.removeEventListener("resize", reclamp);
-  }, [maxPanelHeightPx, setHeightPx, showGrid]);
+  }, [maxPanelHeightPx, setHeightPx, showGrid, isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setFullscreenHeightPx(null);
+      return;
+    }
+    const sync = () => {
+      setFullscreenHeightPx(maxPanelHeightPx());
+    };
+    sync();
+    const raf = requestAnimationFrame(sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", sync);
+    };
+  }, [
+    isFullscreen,
+    maxPanelHeightPx,
+    showGrid,
+    sortingHidden,
+    legendHidden,
+    sidePanelsOverlay,
+    viewTab,
+  ]);
   const canPeel = useMemo(() => {
     if (!plan) return false;
     let maxZ = -1;
@@ -608,7 +672,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
   );
 
   const onManualDragStart = useCallback(
-    (boxId: string, clientX: number, clientY: number) => {
+    (
+      boxId: string,
+      clientX: number,
+      clientY: number,
+      options?: { moveStack?: boolean },
+    ) => {
       const base = workingBoxes.map((box) => ({ ...box }));
       manualDragBaseRef.current = base;
       // Keep bay crates at the pre-drag pose; the ghost follows the cursor.
@@ -625,6 +694,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         clientY,
         grabOffsetX,
         grabOffsetY,
+        moveStack: options?.moveStack === true,
       });
     },
     [workingBoxes],
@@ -663,10 +733,13 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         return;
       }
 
-      const next = tryDropManualBayBox(sketch, base, boxId, dropCell, {
+      const grab = {
         dx: drag.grabOffsetX,
         dy: drag.grabOffsetY,
-      });
+      };
+      const next = drag.moveStack
+        ? tryDropManualBayStack(sketch, base, boxId, dropCell, grab)
+        : tryDropManualBayBox(sketch, base, boxId, dropCell, grab);
       if (!next) {
         revert();
         return;
@@ -768,6 +841,16 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       persistManualBoxes(next);
     },
     [isManual, persistManualBoxes, workingBoxes],
+  );
+
+  const onManualBoxRotate = useCallback(
+    (boxId: string) => {
+      if (!isManual || !sketch) return;
+      const next = tryRotateManualBayBox(sketch, workingBoxes, boxId);
+      if (!next) return;
+      persistManualBoxes(next);
+    },
+    [isManual, persistManualBoxes, sketch, workingBoxes],
   );
 
   const clearBayToTray = useCallback(() => {
@@ -958,7 +1041,10 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     <div
       ref={rootRef}
       className={[
-        "min-w-0 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface/90 px-4 pt-4 shadow-rsi-panel",
+        "min-w-0 overflow-hidden bg-rsi-surface/90 px-4 pt-4 shadow-rsi-panel",
+        isFullscreen
+          ? "flex h-full flex-col rounded-none border-0"
+          : "rounded-rsi border border-rsi-border",
         showGrid ? "pb-0" : "pb-4",
         className,
       ]
@@ -1043,13 +1129,25 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             const dragged = workingBoxes.find(
               (box) => box.id === crateDrag.boxId,
             );
-            return dragged ? (
+            if (!dragged) return null;
+            const stack = crateDrag.moveStack
+              ? manualBayBoxStackColumn(dragged, workingBoxes)
+              : [dragged];
+            const cellPx = 14;
+            return stack.map((box) => (
               <ManualBayPlacedBoxDragGhost
-                box={dragged}
-                clientX={crateDrag.clientX}
-                clientY={crateDrag.clientY}
+                key={`stack-ghost-${box.id}`}
+                box={box}
+                clientX={
+                  crateDrag.clientX +
+                  (box.origin.x - dragged.origin.x) * cellPx
+                }
+                clientY={
+                  crateDrag.clientY +
+                  (box.origin.y - dragged.origin.y) * cellPx
+                }
               />
-            ) : null;
+            ));
           })()
         : null}
 
@@ -1058,7 +1156,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
           Select a ship with a known cargo grid to see bay placement.
         </p>
       ) : showGrid ? (
-        <div className="relative">
+        <div
+          className={[
+            "relative",
+            isFullscreen ? "flex min-h-0 flex-1 flex-col" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {showViewTabs ? (
             <>
               {sidePanelsOverlay ? (
@@ -1128,7 +1233,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                     }),
                     "flex flex-col space-y-2",
                   ].join(" ")}
-                  style={{ height: heightPx }}
+                  style={{ height: panelHeightPx }}
                 >
                   <div ref={packModeMenuRef} className="relative min-w-0">
                     <p className="mb-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
@@ -1454,7 +1559,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 hidePeel
                 peelStack={peelStack}
                 onPeelStackChange={setPeelStack}
-                panelHeightPx={heightPx}
+                panelHeightPx={panelHeightPx}
                 placementTints={placementTints}
                 placementBoxes={plan!.boxes}
                 legendItems={legendItems}
@@ -1502,6 +1607,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 onTrayRotate={rotateTrayOrientation}
                 onTrayPlaceCancel={clearTrayPlacement}
                 onManualBoxRemove={onManualBoxRemove}
+                onManualBoxRotate={onManualBoxRotate}
                 topZoom={topZoom}
                 onTopZoomChange={setTopZoom}
                 isoZoom={isoZoom}
@@ -1529,48 +1635,50 @@ export const CargoBayLayout = memo(function CargoBayLayout({
               />
             </div>
           ) : null}
-          <div className="-mx-4 mt-1">
-            <button
-              type="button"
-              role="slider"
-              aria-label="Cargo bays height"
-              aria-orientation="vertical"
-              aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
-              aria-valuemax={panelHeightMax}
-              aria-valuenow={heightPx}
-              title="Drag to resize · double-click to reset"
-              onPointerDown={onResizePointerDown}
-              onPointerMove={onResizePointerMove}
-              onPointerUp={endResize}
-              onPointerCancel={endResize}
-              onDoubleClick={resetHeightPx}
-              onKeyDown={(event) => {
-                const step = event.shiftKey ? 48 : 16;
-                if (event.key === "ArrowUp" || event.key === "ArrowRight") {
-                  event.preventDefault();
-                  setPanelHeightPx(heightPx + step);
-                } else if (
-                  event.key === "ArrowDown" ||
-                  event.key === "ArrowLeft"
-                ) {
-                  event.preventDefault();
-                  setPanelHeightPx(heightPx - step);
-                } else if (event.key === "Home") {
-                  event.preventDefault();
-                  setPanelHeightPx(panelHeightMax);
-                } else if (event.key === "End") {
-                  event.preventDefault();
-                  setPanelHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
-                }
-              }}
-              className="group flex h-3 w-full cursor-ns-resize items-center justify-center"
-            >
-              <span
-                aria-hidden
-                className="h-0.5 w-10 rounded-full bg-rsi-border-strong/80 group-hover:bg-rsi-accent"
-              />
-            </button>
-          </div>
+          {!isFullscreen ? (
+            <div className="-mx-4 mt-1">
+              <button
+                type="button"
+                role="slider"
+                aria-label="Cargo bays height"
+                aria-orientation="vertical"
+                aria-valuemin={MIN_CARGO_BAY_LAYOUT_HEIGHT_PX}
+                aria-valuemax={panelHeightMax}
+                aria-valuenow={heightPx}
+                title="Drag to resize · double-click to reset"
+                onPointerDown={onResizePointerDown}
+                onPointerMove={onResizePointerMove}
+                onPointerUp={endResize}
+                onPointerCancel={endResize}
+                onDoubleClick={resetHeightPx}
+                onKeyDown={(event) => {
+                  const step = event.shiftKey ? 48 : 16;
+                  if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+                    event.preventDefault();
+                    setPanelHeightPx(heightPx + step);
+                  } else if (
+                    event.key === "ArrowDown" ||
+                    event.key === "ArrowLeft"
+                  ) {
+                    event.preventDefault();
+                    setPanelHeightPx(heightPx - step);
+                  } else if (event.key === "Home") {
+                    event.preventDefault();
+                    setPanelHeightPx(panelHeightMax);
+                  } else if (event.key === "End") {
+                    event.preventDefault();
+                    setPanelHeightPx(MIN_CARGO_BAY_LAYOUT_HEIGHT_PX);
+                  }
+                }}
+                className="group flex h-3 w-full cursor-ns-resize items-center justify-center"
+              >
+                <span
+                  aria-hidden
+                  className="h-0.5 w-10 rounded-full bg-rsi-border-strong/80 group-hover:bg-rsi-accent"
+                />
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <>

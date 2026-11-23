@@ -9,7 +9,7 @@ export const ROUTE_CHECKLIST_SHORTCUTS = [
   { key: "C", action: "Contracts" },
   { key: "H", action: "Hide / show history" },
   { key: "D", action: "Mark step done" },
-  { key: "R", action: "Show / hide recorder" },
+  { key: ";", action: "Show / hide recorder" },
 ] as const;
 
 export type RouteChecklistControlsModalProps = {

@@ -1,6 +1,7 @@
 /**
  * Validate / apply XY moves for Manual 2D bay editing.
- * Z and footprint stay fixed; 3D reads the same placed boxes.
+ * Footprint stays fixed; drop snaps Z to deck or onto a flat stack top.
+ * 3D reads the same placed boxes.
  */
 
 /** @deprecated HTML5 MIME kept for any external callers; tray uses pointer place. */
@@ -57,18 +58,27 @@ function occupiesCargoCell(
   );
 }
 
+function ignoreIdSet(
+  ignoreBoxIds?: string | ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (ignoreBoxIds == null) return new Set();
+  if (typeof ignoreBoxIds === "string") return new Set([ignoreBoxIds]);
+  return ignoreBoxIds;
+}
+
 function cellsClear(
   sketch: ShipCargoGridSketch,
   boxes: PlacedCargoBox[],
   cells: CargoGridCoord[],
-  ignoreBoxId?: string,
+  ignoreBoxIds?: string | ReadonlySet<string>,
 ): boolean {
+  const ignore = ignoreIdSet(ignoreBoxIds);
   for (const cell of cells) {
     if (!occupiesCargoCell(sketch, cell)) return false;
   }
   const occupied = new Set<string>();
   for (const box of boxes) {
-    if (ignoreBoxId && box.id === ignoreBoxId) continue;
+    if (ignore.has(box.id)) continue;
     for (const cell of box.cells) {
       occupied.add(`${cell.x},${cell.y},${cell.z}`);
     }
@@ -85,11 +95,14 @@ export function canPlaceManualBayBox(
   boxes: PlacedCargoBox[],
   boxId: string,
   origin: CargoGridCoord,
+  ignoreBoxIds?: ReadonlySet<string>,
 ): boolean {
   const moving = boxes.find((box) => box.id === boxId);
   if (!moving) return false;
   const nextCells = footprintCells(origin, moving.footprint);
-  return cellsClear(sketch, boxes, nextCells, boxId);
+  const ignore = new Set(ignoreBoxIds ?? []);
+  ignore.add(boxId);
+  return cellsClear(sketch, boxes, nextCells, ignore);
 }
 
 /**
@@ -114,22 +127,150 @@ export function tryMoveManualBayBox(
   return applyManualBayPoses(boxes, [{ boxId, origin }]);
 }
 
-/** Origin for a drop under the pointer, preserving grab offset in the footprint. */
+/**
+ * Per-column stack height (next free Z) under the footprint XY, ignoring
+ * `ignoreBoxId`. Empty column → 0.
+ */
+function columnStackTops(
+  boxes: readonly PlacedCargoBox[],
+  originX: number,
+  originY: number,
+  footprint: PlacedCargoBox["footprint"],
+  ignoreBoxIds: string | ReadonlySet<string>,
+): number[] {
+  const ignore = ignoreIdSet(ignoreBoxIds);
+  const tops: number[] = [];
+  for (let dx = 0; dx < footprint.dx; dx += 1) {
+    for (let dy = 0; dy < footprint.dy; dy += 1) {
+      const x = originX + dx;
+      const y = originY + dy;
+      let top = 0;
+      for (const box of boxes) {
+        if (ignore.has(box.id)) continue;
+        for (const cell of box.cells) {
+          if (cell.x !== x || cell.y !== y) continue;
+          top = Math.max(top, cell.z + 1);
+        }
+      }
+      tops.push(top);
+    }
+  }
+  return tops;
+}
+
+/**
+ * Support cell SCU sizes directly under `origin` (z-1). Null entries mean a
+ * hole — not a flat compatible stack.
+ */
+function supportSizesUnder(
+  boxes: readonly PlacedCargoBox[],
+  origin: CargoGridCoord,
+  footprint: PlacedCargoBox["footprint"],
+  ignoreBoxIds: string | ReadonlySet<string>,
+): Array<number | null> {
+  const ignore = ignoreIdSet(ignoreBoxIds);
+  if (origin.z <= 0) return [];
+  const sizes: Array<number | null> = [];
+  for (let dx = 0; dx < footprint.dx; dx += 1) {
+    for (let dy = 0; dy < footprint.dy; dy += 1) {
+      const x = origin.x + dx;
+      const y = origin.y + dy;
+      const z = origin.z - 1;
+      let found: number | null = null;
+      for (const box of boxes) {
+        if (ignore.has(box.id)) continue;
+        for (const cell of box.cells) {
+          if (cell.x === x && cell.y === y && cell.z === z) {
+            found = box.size;
+            break;
+          }
+        }
+        if (found != null) break;
+      }
+      sizes.push(found);
+    }
+  }
+  return sizes;
+}
+
+/**
+ * True when every support cell is filled and each support crate is at least
+ * as large as the moving crate (same size or larger base — Manual stack rule).
+ */
+function isCompatibleStackSupport(
+  movingSize: number,
+  supportSizes: ReadonlyArray<number | null>,
+): boolean {
+  if (supportSizes.length === 0) return false;
+  for (const size of supportSizes) {
+    if (size == null || size < movingSize) return false;
+  }
+  return true;
+}
+
+/**
+ * Snap drop Z: empty footprint → deck (0); flat compatible stack → on top.
+ * Returns null when the XY cannot host the crate (uneven stack / no fit).
+ */
+export function resolveManualBayDropZ(
+  sketch: ShipCargoGridSketch,
+  boxes: readonly PlacedCargoBox[],
+  moving: PlacedCargoBox,
+  originX: number,
+  originY: number,
+  ignoreBoxIds?: ReadonlySet<string>,
+): number | null {
+  const ignore = new Set(ignoreBoxIds ?? []);
+  ignore.add(moving.id);
+  const tops = columnStackTops(
+    boxes,
+    originX,
+    originY,
+    moving.footprint,
+    ignore,
+  );
+  if (tops.length === 0) return null;
+  const first = tops[0]!;
+  const flat = tops.every((top) => top === first);
+  if (!flat) return null;
+
+  const candidateZ = first;
+  if (candidateZ + moving.footprint.dz > sketch.heightCells) return null;
+
+  const origin: CargoGridCoord = { x: originX, y: originY, z: candidateZ };
+  if (!canPlaceManualBayBox(sketch, [...boxes], moving.id, origin, ignore)) {
+    return null;
+  }
+  if (candidateZ === 0) return 0;
+
+  const support = supportSizesUnder(
+    boxes,
+    origin,
+    moving.footprint,
+    ignore,
+  );
+  if (!isCompatibleStackSupport(moving.size, support)) return null;
+  return candidateZ;
+}
+
+/** Origin for a drop under the pointer; XY from grab offset, Z auto-snapped. */
 export function manualBayDropOrigin(
+  sketch: ShipCargoGridSketch,
+  boxes: readonly PlacedCargoBox[],
   moving: PlacedCargoBox,
   dropCell: CargoGridCoord,
   grabOffset: { dx: number; dy: number },
-): CargoGridCoord {
-  return {
-    x: dropCell.x - grabOffset.dx,
-    y: dropCell.y - grabOffset.dy,
-    z: moving.origin.z,
-  };
+): CargoGridCoord | null {
+  const x = dropCell.x - grabOffset.dx;
+  const y = dropCell.y - grabOffset.dy;
+  const z = resolveManualBayDropZ(sketch, boxes, moving, x, y);
+  if (z == null) return null;
+  return { x, y, z };
 }
 
 /**
  * Live footprint highlight while dragging a placed crate.
- * `fits` is false on gaps, collisions, or out-of-bay cells.
+ * `fits` is false on gaps, collisions, uneven stacks, or out-of-bay cells.
  */
 export function previewManualBayDrop(
   sketch: ShipCargoGridSketch,
@@ -140,19 +281,36 @@ export function previewManualBayDrop(
 ): { cells: CargoGridCoord[]; origin: CargoGridCoord; fits: boolean } | null {
   const moving = boxes.find((box) => box.id === boxId);
   if (!moving) return null;
-  const origin = manualBayDropOrigin(moving, dropCell, grabOffset);
-  const cells = footprintCells(origin, moving.footprint);
+  const origin = manualBayDropOrigin(
+    sketch,
+    boxes,
+    moving,
+    dropCell,
+    grabOffset,
+  );
+  if (!origin) {
+    const fallback: CargoGridCoord = {
+      x: dropCell.x - grabOffset.dx,
+      y: dropCell.y - grabOffset.dy,
+      z: moving.origin.z,
+    };
+    return {
+      cells: footprintCells(fallback, moving.footprint),
+      origin: fallback,
+      fits: false,
+    };
+  }
   return {
-    cells,
+    cells: footprintCells(origin, moving.footprint),
     origin,
-    fits: canPlaceManualBayBox(sketch, boxes, boxId, origin),
+    fits: true,
   };
 }
 
 /**
  * Drop a dragged crate onto a pointer cell, preserving grab offset within the
- * footprint. Returns null when the cell is a gap / out of bay / collision —
- * caller should keep the pre-drag layout.
+ * footprint and snapping Z to deck or a compatible stack top. Returns null when
+ * illegal — caller should keep the pre-drag layout.
  */
 export function tryDropManualBayBox(
   sketch: ShipCargoGridSketch,
@@ -163,7 +321,14 @@ export function tryDropManualBayBox(
 ): PlacedCargoBox[] | null {
   const moving = boxes.find((box) => box.id === boxId);
   if (!moving) return null;
-  const origin = manualBayDropOrigin(moving, dropCell, grabOffset);
+  const origin = manualBayDropOrigin(
+    sketch,
+    boxes,
+    moving,
+    dropCell,
+    grabOffset,
+  );
+  if (!origin) return null;
   if (
     origin.x === moving.origin.x &&
     origin.y === moving.origin.y &&
@@ -171,8 +336,15 @@ export function tryDropManualBayBox(
   ) {
     return boxes;
   }
-  if (!canPlaceManualBayBox(sketch, boxes, boxId, origin)) return null;
-  return applyManualBayPoses(boxes, [{ boxId, origin }]);
+  return boxes.map((box) =>
+    box.id === boxId
+      ? {
+          ...box,
+          origin: { ...origin },
+          cells: footprintCells(origin, moving.footprint),
+        }
+      : box,
+  );
 }
 
 export type ManualBayAddBoxSpec = {
@@ -195,6 +367,320 @@ export function nextManualBayOrientationIndex(
   const count = cargoBoxOrientations(size).length;
   if (count <= 1) return 0;
   return ((orientationIndex % count) + count + 1) % count;
+}
+
+/**
+ * Next footprint for selected-crate R rotate.
+ * Cycles official orientations; falls back to dx↔dy when elongated.
+ */
+export function nextManualBayDragFootprint(
+  box: Pick<PlacedCargoBox, "size" | "footprint">,
+): PlacedCargoBox["footprint"] | null {
+  const { footprint } = box;
+  const size = box.size;
+  if (
+    size === 1 ||
+    size === 2 ||
+    size === 4 ||
+    size === 8 ||
+    size === 16 ||
+    size === 32
+  ) {
+    const orientations = cargoBoxOrientations(size);
+    if (orientations.length > 1) {
+      const currentIndex = orientations.findIndex(
+        (entry) =>
+          entry.dx === footprint.dx &&
+          entry.dy === footprint.dy &&
+          entry.dz === footprint.dz,
+      );
+      const start = currentIndex >= 0 ? currentIndex : 0;
+      for (let step = 1; step < orientations.length; step += 1) {
+        const next = orientations[(start + step) % orientations.length];
+        if (
+          next &&
+          (next.dx !== footprint.dx ||
+            next.dy !== footprint.dy ||
+            next.dz !== footprint.dz)
+        ) {
+          return { ...next };
+        }
+      }
+    }
+  }
+  if (footprint.dx !== footprint.dy) {
+    return { dx: footprint.dy, dy: footprint.dx, dz: footprint.dz };
+  }
+  return null;
+}
+
+/** True when this crate has an alternate Manual orientation. */
+export function manualBayBoxCanRotate(box: PlacedCargoBox): boolean {
+  return nextManualBayDragFootprint(box) != null;
+}
+
+/**
+ * Cycle the selected crate’s footprint at the same origin. When the crate is
+ * in a vertical stack, every crate in that column rotates together.
+ * Returns null when nothing changes or the new poses do not fit.
+ */
+export function tryRotateManualBayBox(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  boxId: string,
+): PlacedCargoBox[] | null {
+  const moving = boxes.find((box) => box.id === boxId);
+  if (!moving) return null;
+  const stack = manualBayBoxStackColumn(moving, boxes);
+  const column = stack.length > 0 ? stack : [moving];
+  const columnIds = new Set(column.map((box) => box.id));
+
+  const rotated = new Map<string, PlacedCargoBox>();
+  for (const member of column) {
+    const nextFootprint = nextManualBayDragFootprint(member);
+    if (!nextFootprint) continue;
+    if (member.origin.z + nextFootprint.dz > sketch.heightCells) return null;
+    const nextCells = footprintCells(member.origin, nextFootprint);
+    if (!cellsClear(sketch, boxes, nextCells, columnIds)) return null;
+    rotated.set(member.id, {
+      ...member,
+      footprint: { ...nextFootprint },
+      cells: nextCells,
+    });
+  }
+  if (rotated.size === 0) return null;
+
+  // Column members must not occupy the same cells after rotate.
+  const proposedCells = new Set<string>();
+  for (const member of column) {
+    const pose = rotated.get(member.id) ?? member;
+    for (const cell of pose.cells) {
+      const key = `${cell.x},${cell.y},${cell.z}`;
+      if (proposedCells.has(key)) return null;
+      proposedCells.add(key);
+    }
+  }
+
+  return boxes.map((box) => rotated.get(box.id) ?? box);
+}
+
+function footprintsOverlapXY(
+  a: PlacedCargoBox,
+  b: PlacedCargoBox,
+): boolean {
+  return !(
+    a.origin.x + a.footprint.dx <= b.origin.x ||
+    b.origin.x + b.footprint.dx <= a.origin.x ||
+    a.origin.y + a.footprint.dy <= b.origin.y ||
+    b.origin.y + b.footprint.dy <= a.origin.y
+  );
+}
+
+/**
+ * True when another crate rests on this box’s top face (same XY overlap,
+ * origin at or above this box’s top Z). Buried crates must not drag until
+ * the stack above is cleared — unless dragging via the stack badge.
+ */
+export function manualBayBoxIsBuried(
+  box: PlacedCargoBox,
+  boxes: readonly PlacedCargoBox[],
+): boolean {
+  const topZ = box.origin.z + box.footprint.dz;
+  for (const other of boxes) {
+    if (other.id === box.id) continue;
+    if (other.origin.z < topZ) continue;
+    if (footprintsOverlapXY(box, other)) return true;
+  }
+  return false;
+}
+
+/** True when `upper` rests directly on `lower` (XY overlap, Z touching). */
+function restsDirectlyOn(
+  upper: PlacedCargoBox,
+  lower: PlacedCargoBox,
+): boolean {
+  if (upper.origin.z !== lower.origin.z + lower.footprint.dz) return false;
+  return footprintsOverlapXY(upper, lower);
+}
+
+/**
+ * Vertical stack column containing `seed` — every crate linked by resting
+ * on / supporting another, ordered bottom → top.
+ */
+export function manualBayBoxStackColumn(
+  seed: PlacedCargoBox,
+  boxes: readonly PlacedCargoBox[],
+): PlacedCargoBox[] {
+  const byId = new Map(boxes.map((box) => [box.id, box]));
+  if (!byId.has(seed.id)) return [];
+  const stackIds = new Set<string>([seed.id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const box of boxes) {
+      if (stackIds.has(box.id)) continue;
+      for (const id of stackIds) {
+        const member = byId.get(id);
+        if (!member) continue;
+        if (restsDirectlyOn(box, member) || restsDirectlyOn(member, box)) {
+          stackIds.add(box.id);
+          grew = true;
+          break;
+        }
+      }
+    }
+  }
+  return boxes
+    .filter((box) => stackIds.has(box.id))
+    .sort((a, b) => a.origin.z - b.origin.z || a.id.localeCompare(b.id));
+}
+
+/**
+ * Drop a whole vertical stack (from the stacked-crate badge). Preserves
+ * relative XY/Z; snaps the bottom crate like a normal Manual drop.
+ */
+export function tryDropManualBayStack(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  seedBoxId: string,
+  dropCell: CargoGridCoord,
+  grabOffset: { dx: number; dy: number },
+): PlacedCargoBox[] | null {
+  const seed = boxes.find((box) => box.id === seedBoxId);
+  if (!seed) return null;
+  const stack = manualBayBoxStackColumn(seed, boxes);
+  if (stack.length <= 1) {
+    return tryDropManualBayBox(sketch, boxes, seedBoxId, dropCell, grabOffset);
+  }
+  const bottom = stack[0]!;
+  const ignore = new Set(stack.map((box) => box.id));
+  const seedOriginX = dropCell.x - grabOffset.dx;
+  const seedOriginY = dropCell.y - grabOffset.dy;
+  const deltaX = seedOriginX - seed.origin.x;
+  const deltaY = seedOriginY - seed.origin.y;
+  const bottomX = bottom.origin.x + deltaX;
+  const bottomY = bottom.origin.y + deltaY;
+  const stackTopSpan = Math.max(
+    ...stack.map(
+      (box) => box.origin.z + box.footprint.dz - bottom.origin.z,
+    ),
+  );
+  const bottomZ = resolveManualBayDropZ(
+    sketch,
+    boxes,
+    bottom,
+    bottomX,
+    bottomY,
+    ignore,
+  );
+  if (bottomZ == null) return null;
+  if (bottomZ + stackTopSpan > sketch.heightCells) return null;
+  const deltaZ = bottomZ - bottom.origin.z;
+
+  const poses = stack.map((box) => ({
+    boxId: box.id,
+    origin: {
+      x: box.origin.x + deltaX,
+      y: box.origin.y + deltaY,
+      z: box.origin.z + deltaZ,
+    },
+  }));
+
+  for (const pose of poses) {
+    const box = stack.find((entry) => entry.id === pose.boxId);
+    if (!box) return null;
+    if (
+      !canPlaceManualBayBox(sketch, boxes, box.id, pose.origin, ignore)
+    ) {
+      return null;
+    }
+  }
+
+  const unchanged = poses.every((pose) => {
+    const box = stack.find((entry) => entry.id === pose.boxId);
+    return (
+      box != null &&
+      pose.origin.x === box.origin.x &&
+      pose.origin.y === box.origin.y &&
+      pose.origin.z === box.origin.z
+    );
+  });
+  if (unchanged) return boxes;
+  return applyManualBayPoses(boxes, poses);
+}
+
+/**
+ * Live footprint highlight while dragging a stack via the stacked badge.
+ * Cells are the union of every stack member at the previewed pose.
+ */
+export function previewManualBayStackDrop(
+  sketch: ShipCargoGridSketch,
+  boxes: PlacedCargoBox[],
+  seedBoxId: string,
+  dropCell: CargoGridCoord,
+  grabOffset: { dx: number; dy: number },
+): { cells: CargoGridCoord[]; origin: CargoGridCoord; fits: boolean } | null {
+  const seed = boxes.find((box) => box.id === seedBoxId);
+  if (!seed) return null;
+  const stack = manualBayBoxStackColumn(seed, boxes);
+  if (stack.length <= 1) {
+    return previewManualBayDrop(
+      sketch,
+      boxes,
+      seedBoxId,
+      dropCell,
+      grabOffset,
+    );
+  }
+  const bottom = stack[0]!;
+  const ignore = new Set(stack.map((box) => box.id));
+  const deltaX = dropCell.x - grabOffset.dx - seed.origin.x;
+  const deltaY = dropCell.y - grabOffset.dy - seed.origin.y;
+  const stackTopSpan = Math.max(
+    ...stack.map(
+      (box) => box.origin.z + box.footprint.dz - bottom.origin.z,
+    ),
+  );
+  const bottomZ = resolveManualBayDropZ(
+    sketch,
+    boxes,
+    bottom,
+    bottom.origin.x + deltaX,
+    bottom.origin.y + deltaY,
+    ignore,
+  );
+  let fits =
+    bottomZ != null && bottomZ + stackTopSpan <= sketch.heightCells;
+  const deltaZ = fits && bottomZ != null ? bottomZ - bottom.origin.z : 0;
+  const cells: CargoGridCoord[] = [];
+  for (const box of stack) {
+    const origin: CargoGridCoord = {
+      x: box.origin.x + deltaX,
+      y: box.origin.y + deltaY,
+      z: box.origin.z + deltaZ,
+    };
+    cells.push(...footprintCells(origin, box.footprint));
+    if (
+      fits &&
+      !canPlaceManualBayBox(sketch, boxes, box.id, origin, ignore)
+    ) {
+      fits = false;
+    }
+  }
+  return {
+    cells,
+    origin: {
+      x: seed.origin.x + deltaX,
+      y: seed.origin.y + deltaY,
+      z: seed.origin.z + deltaZ,
+    },
+    fits,
+  };
+}
+
+/** 2D Z layer that shows this crate’s top face (Split 3D→2D focus). */
+export function manualBayBoxFocusLayer(box: PlacedCargoBox): number {
+  return Math.max(0, box.origin.z + box.footprint.dz - 1);
 }
 
 /** Resolve a 2D bay cell under the pointer (`data-cargo-cell` buttons). */

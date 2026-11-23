@@ -157,13 +157,11 @@ export function useSessionCargoBayChrome(
   const setTopZoom = useCallback(
     (zoom: number) => {
       setPrefs((prev) => {
-        if (prev.topZoomLocked) return prev;
+        // Zoom lock only blocks scroll-to-zoom — +/- / fit still persist.
         const next: CargoBayChromePrefs = {
           ...prev,
           topZoom: zoom,
-          ...(prev.syncedZoom && !prev.isoZoomLocked
-            ? { isoZoom: zoom }
-            : {}),
+          ...(prev.syncedZoom ? { isoZoom: zoom } : {}),
         };
         writeCargoBayChromePrefs(sessionId, next);
         return next;
@@ -175,13 +173,10 @@ export function useSessionCargoBayChrome(
   const setIsoZoom = useCallback(
     (zoom: number) => {
       setPrefs((prev) => {
-        if (prev.isoZoomLocked) return prev;
         const next: CargoBayChromePrefs = {
           ...prev,
           isoZoom: zoom,
-          ...(prev.syncedZoom && !prev.topZoomLocked
-            ? { topZoom: zoom }
-            : {}),
+          ...(prev.syncedZoom ? { topZoom: zoom } : {}),
         };
         writeCargoBayChromePrefs(sessionId, next);
         return next;

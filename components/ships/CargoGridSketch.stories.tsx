@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Ship bay 2D / 3D views with Front/Rear rails (rear left, front right). Split stacks 2D above 3D on mobile and side-by-side from sm+. 2D uses square facing snaps; 3D keeps iso facings. Zoom is independent per pane. Legend toggles hide inactive cargo types completely.",
+          "Ship bay 2D / 3D views with Front/Rear rails (rear left, front right). Split stacks 2D above 3D on mobile and side-by-side from sm+. 2D uses square facing snaps; 3D keeps iso facings. Zoom is independent per pane. Legend toggles hide inactive cargo types completely. Manual edit: crates sit above cell selection so Door/Lift Gap chrome cannot steal grabs; click a crate to select it, then R or the rotate control to cycle orientations (2/16/32 SCU); stacked crates show a bottom-right badge — drag that badge to move the whole stack. Split: click a 3D crate to focus it on 2D (auto Z layer + accent ring) so you can drag it in Manual. 2D active layer shows ghost underlays for crates entirely below that Z; crate fill opacity tracks free stack room (solid = cannot fit on top, fainter = more layers free).",
       },
     },
   },

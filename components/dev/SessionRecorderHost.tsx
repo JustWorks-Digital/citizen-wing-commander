@@ -77,7 +77,7 @@ function sessionIdFromPath(pathname: string): string | null {
 /**
  * App-wide UI action recorder overlay. Mount only when capability gate is on.
  * Listeners attach only while the user has started recording.
- * Press `R` to show / hide the box (ignored while typing in a field).
+ * Press `;` to show / hide the box (ignored while typing in a field).
  * Panel open/closed is stored in localStorage so it survives reloads.
  */
 export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
@@ -113,7 +113,8 @@ export function SessionRecorderHost({ enabled }: SessionRecorderHostProps) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.repeat) return;
       if (isTypingTarget(event.target)) return;
-      if (event.key.toLowerCase() !== "r") return;
+      // `;` — leave `R` for Manual tray / selected-crate rotate.
+      if (event.key !== ";") return;
       event.preventDefault();
       setPanelOpen((open) => {
         const next = !open;

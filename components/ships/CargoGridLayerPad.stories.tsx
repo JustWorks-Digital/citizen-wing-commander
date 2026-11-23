@@ -76,7 +76,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Z-layer pad for 2D (select) and 3D (toggle). Solo views place it at the bottom; Split keeps it at the top. Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled.",
+          "Centered Z-layer pad for 2D (select) and 3D (toggle). Solo views place it at the bottom; Split keeps it at the top. Legend “On grid” shows or hides the pad. Empty layers (no visible cargo after legend filters) are disabled. Pad button size stays fixed across zoom; optional `buttonSizePx` overrides the default.",
       },
     },
   },

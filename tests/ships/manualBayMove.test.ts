@@ -9,12 +9,19 @@ import {
   canPlaceManualBayBox,
   estimateManualBayBulkFillFootprint,
   layoutManualBayBulkFillPreview,
+  manualBayBoxFocusLayer,
+  manualBayBoxIsBuried,
+  manualBayBoxStackColumn,
   previewManualBayDrop,
+  previewManualBayStackDrop,
   previewManualBayZoneFill,
   tryDropManualBayBox,
+  tryDropManualBayStack,
   tryFillManualBayZoneWithCargoType,
   tryFillManualBayZoneWithMission,
   tryMoveManualBayBox,
+  tryRotateManualBayBox,
+  manualBayBoxCanRotate,
 } from "@/lib/ships/manualBayMove";
 
 /** Minimal 6×4 cargo sketch (no gaps) for drop tests. */
@@ -45,18 +52,22 @@ function boxAt(
   y: number,
   dx = 1,
   dy = 1,
+  z = 0,
+  dz = 1,
 ): PlacedCargoBox {
   const cells = [];
   for (let ox = 0; ox < dx; ox += 1) {
     for (let oy = 0; oy < dy; oy += 1) {
-      cells.push({ x: x + ox, y: y + oy, z: 0 });
+      for (let oz = 0; oz < dz; oz += 1) {
+        cells.push({ x: x + ox, y: y + oy, z: z + oz });
+      }
     }
   }
   return {
     id,
-    size: dx * dy,
-    origin: { x, y, z: 0 },
-    footprint: { dx, dy, dz: 1 },
+    size: dx * dy * dz,
+    origin: { x, y, z },
+    footprint: { dx, dy, dz },
     commoditySlug: "processed-food",
     commodityName: "Processed Food",
     color: null,
@@ -65,6 +76,170 @@ function boxAt(
     action: "pickup",
   };
 }
+
+describe("manualBayBoxIsBuried", () => {
+  it("is false for a lone deck crate", () => {
+    const base = boxAt("base", 0, 0, 2, 2);
+    expect(manualBayBoxIsBuried(base, [base])).toBe(false);
+  });
+
+  it("is true when another crate sits on the same XY column", () => {
+    const base = boxAt("base", 0, 0, 2, 2, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    expect(manualBayBoxIsBuried(base, [base, top])).toBe(true);
+    expect(manualBayBoxIsBuried(top, [base, top])).toBe(false);
+  });
+
+  it("is false for a neighbor that only sits beside, not above", () => {
+    const base = boxAt("base", 0, 0, 2, 2);
+    const beside = boxAt("beside", 2, 0, 1, 1);
+    expect(manualBayBoxIsBuried(base, [base, beside])).toBe(false);
+  });
+});
+
+describe("manualBayBoxFocusLayer", () => {
+  it("uses the top face Z of a tall crate", () => {
+    const tall = boxAt("tall", 0, 0, 1, 1, 0, 2);
+    expect(manualBayBoxFocusLayer(tall)).toBe(1);
+  });
+
+  it("is the origin Z for a flat deck crate", () => {
+    const flat = boxAt("flat", 0, 0, 2, 2, 0, 1);
+    expect(manualBayBoxFocusLayer(flat)).toBe(0);
+  });
+});
+
+describe("manualBayBoxStackColumn", () => {
+  // Two-high column: deck 2×2 + 1×1 resting on it.
+  it("returns bottom-to-top members linked by resting contact", () => {
+    const base = boxAt("base", 0, 0, 2, 2, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    const beside = boxAt("beside", 3, 0, 1, 1, 0, 1);
+    const stack = manualBayBoxStackColumn(base, [base, top, beside]);
+    expect(stack.map((box) => box.id)).toEqual(["base", "top"]);
+  });
+
+  it("finds the same column when seeded from the top crate", () => {
+    const base = boxAt("base", 0, 0, 2, 2, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    expect(manualBayBoxStackColumn(top, [base, top]).map((b) => b.id)).toEqual([
+      "base",
+      "top",
+    ]);
+  });
+});
+
+describe("tryDropManualBayStack", () => {
+  /** Height-4 bay so a 2-high stack can relocate on the deck. */
+  function tallToySketch(): ShipCargoGridSketch {
+    return { ...toySketch(), heightCells: 4 };
+  }
+
+  it("moves the whole stacked column by the seed grab offset", () => {
+    const sketch = tallToySketch();
+    const base = boxAt("base", 0, 0, 2, 2, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    // Grabbed buried base at its origin; drop that corner on (3,1).
+    const next = tryDropManualBayStack(
+      sketch,
+      [base, top],
+      "base",
+      { x: 3, y: 1, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    const movedBase = next!.find((box) => box.id === "base");
+    const movedTop = next!.find((box) => box.id === "top");
+    expect(movedBase!.origin).toEqual({ x: 3, y: 1, z: 0 });
+    expect(movedTop!.origin).toEqual({ x: 3, y: 1, z: 1 });
+  });
+
+  it("rejects a stack drop that would exceed bay height", () => {
+    const sketch = { ...toySketch(), heightCells: 2 };
+    const base = boxAt("base", 0, 0, 1, 1, 0, 1);
+    const mid = boxAt("mid", 0, 0, 1, 1, 1, 1);
+    // Another deck crate at (2,0) — stacking the column on it needs Z2.
+    const support = boxAt("support", 2, 0, 1, 1, 0, 1);
+    const next = tryDropManualBayStack(
+      sketch,
+      [base, mid, support],
+      "base",
+      { x: 2, y: 0, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).toBeNull();
+  });
+});
+
+describe("previewManualBayStackDrop", () => {
+  it("marks fits when the whole stack can relocate on the deck", () => {
+    const sketch = { ...toySketch(), heightCells: 4 };
+    const base = boxAt("base", 0, 0, 2, 2, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    const preview = previewManualBayStackDrop(
+      sketch,
+      [base, top],
+      "base",
+      { x: 3, y: 1, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(preview).not.toBeNull();
+    expect(preview!.fits).toBe(true);
+    expect(preview!.origin).toEqual({ x: 3, y: 1, z: 0 });
+  });
+});
+
+describe("tryRotateManualBayBox", () => {
+  // 2 SCU: 2×1×1 ↔ 1×2×1
+  it("cycles a 2 SCU crate between length and width orientations", () => {
+    const sketch = toySketch();
+    const crate = boxAt("two", 1, 1, 2, 1, 0, 1);
+    expect(manualBayBoxCanRotate(crate)).toBe(true);
+    const next = tryRotateManualBayBox(sketch, [crate], "two");
+    expect(next).not.toBeNull();
+    expect(next![0]!.footprint).toEqual({ dx: 1, dy: 2, dz: 1 });
+    expect(next![0]!.origin).toEqual({ x: 1, y: 1, z: 0 });
+  });
+
+  it("returns null when the next orientation collides", () => {
+    const sketch = toySketch();
+    const crate = boxAt("two", 0, 0, 2, 1, 0, 1);
+    const blocker = boxAt("block", 0, 1, 1, 1, 0, 1);
+    expect(tryRotateManualBayBox(sketch, [crate, blocker], "two")).toBeNull();
+  });
+
+  it("returns null for a square 4 SCU crate with one orientation", () => {
+    const sketch = toySketch();
+    const crate = boxAt("four", 0, 0, 2, 2, 0, 1);
+    expect(manualBayBoxCanRotate(crate)).toBe(false);
+    expect(tryRotateManualBayBox(sketch, [crate], "four")).toBeNull();
+  });
+
+  it("rotates every crate in a stacked column when any member is selected", () => {
+    const sketch = toySketch();
+    // Two 2 SCU crates stacked: 2×1 at Z0 and Z1.
+    const base = boxAt("base", 0, 0, 2, 1, 0, 1);
+    const top = boxAt("top", 0, 0, 2, 1, 1, 1);
+    const fromTop = tryRotateManualBayBox(sketch, [base, top], "top");
+    expect(fromTop).not.toBeNull();
+    expect(fromTop!.find((box) => box.id === "base")!.footprint).toEqual({
+      dx: 1,
+      dy: 2,
+      dz: 1,
+    });
+    expect(fromTop!.find((box) => box.id === "top")!.footprint).toEqual({
+      dx: 1,
+      dy: 2,
+      dz: 1,
+    });
+    const fromBase = tryRotateManualBayBox(sketch, [base, top], "base");
+    expect(fromBase!.find((box) => box.id === "top")!.footprint).toEqual({
+      dx: 1,
+      dy: 2,
+      dz: 1,
+    });
+  });
+});
 
 describe("tryDropManualBayBox", () => {
   it("moves by grab offset onto a clear cargo cell", () => {
@@ -82,6 +257,35 @@ describe("tryDropManualBayBox", () => {
     expect(next![0]!.origin).toEqual({ x: 3, y: 1, z: 0 });
   });
 
+  it("snaps a high crate down to the deck on empty cells", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("a", 0, 0, 1, 1, 1, 1)];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "a",
+      { x: 3, y: 2, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    expect(next![0]!.origin).toEqual({ x: 3, y: 2, z: 0 });
+  });
+
+  it("stacks onto a compatible same-size crate", () => {
+    const sketch = toySketch();
+    const boxes = [boxAt("base", 2, 1), boxAt("air", 0, 0, 1, 1, 1, 1)];
+    const next = tryDropManualBayBox(
+      sketch,
+      boxes,
+      "air",
+      { x: 2, y: 1, z: 0 },
+      { dx: 0, dy: 0 },
+    );
+    expect(next).not.toBeNull();
+    const air = next!.find((box) => box.id === "air");
+    expect(air?.origin).toEqual({ x: 2, y: 1, z: 1 });
+  });
+
   it("returns null when the drop footprint leaves the bay", () => {
     const sketch = toySketch();
     const boxes = [boxAt("a", 0, 0, 2, 2)];
@@ -95,20 +299,21 @@ describe("tryDropManualBayBox", () => {
     expect(next).toBeNull();
   });
 
-  it("returns null when colliding with another crate", () => {
-    const sketch = toySketch();
-    const boxes = [boxAt("a", 0, 0), boxAt("b", 2, 0)];
+  it("returns null when stacking would exceed bay height", () => {
+    const sketch = toySketch(); // heightCells: 2
+    const boxes = [
+      boxAt("base", 2, 1),
+      boxAt("mid", 2, 1, 1, 1, 1, 1),
+      boxAt("air", 0, 0),
+    ];
     const next = tryDropManualBayBox(
       sketch,
       boxes,
-      "a",
-      { x: 2, y: 0, z: 0 },
+      "air",
+      { x: 2, y: 1, z: 0 },
       { dx: 0, dy: 0 },
     );
     expect(next).toBeNull();
-    expect(canPlaceManualBayBox(sketch, boxes, "a", { x: 2, y: 0, z: 0 })).toBe(
-      false,
-    );
   });
 });
 

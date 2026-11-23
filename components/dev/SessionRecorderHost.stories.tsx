@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Dev UI action recorder HUD (bottom-right). Capability-gated. Press `R` to show/hide the box (persisted in localStorage across reloads); Record/Stop attaches capture listeners only while recording.",
+          "Dev UI action recorder HUD (bottom-right). Capability-gated. Press `;` to show/hide the box (persisted in localStorage across reloads); Record/Stop attaches capture listeners only while recording.",
       },
     },
   },

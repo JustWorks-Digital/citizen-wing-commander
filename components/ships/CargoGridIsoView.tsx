@@ -68,6 +68,11 @@ export type CargoGridIsoViewProps = {
   cellPx?: number;
   selectedCoord?: CargoGridCoord | null;
   onSelectCoord?: (coord: CargoGridCoord | null) => void;
+  /**
+   * Placed crate pick (Split Manual / focus). Prefer this over bare
+   * `onSelectCoord` when `boxId` is known so 2D can switch Z layers.
+   */
+  onSelectBox?: (boxId: string, coord: CargoGridCoord) => void;
   highlightedCoords?: CargoGridCoord[];
   /** Per-cell commodity colors (placement mode). */
   placementTints?: CargoGridPlacementTint[];
@@ -713,6 +718,7 @@ export function CargoGridIsoView({
   cellPx = 14,
   selectedCoord = null,
   onSelectCoord,
+  onSelectBox,
   highlightedCoords = [],
   placementTints = [],
   placementBoxes = [],
@@ -1625,7 +1631,9 @@ export function CargoGridIsoView({
                       : (ZONE_FACE[zoneColorIndex.get(cube.zoneId) ?? 0] ??
                         ZONE_FACE[0]);
           const canSelect =
-            Boolean(onSelectCoord) && cube.kind === "cargo" && !isHologram;
+            cube.kind === "cargo" &&
+            !isHologram &&
+            (Boolean(onSelectBox) || Boolean(onSelectCoord));
           const outline: LocationGroupBoxOutline | undefined = cube.boxId
             ? locationOutlines.get(cube.boxId)
             : undefined;
@@ -1705,17 +1713,26 @@ export function CargoGridIsoView({
               tabIndex={canSelect ? 0 : undefined}
               style={{ cursor: canSelect ? "pointer" : undefined }}
               onClick={() => {
-                if (!canSelect || !onSelectCoord) return;
+                if (!canSelect) return;
+                if (onSelectBox && cube.boxId) {
+                  onSelectBox(cube.boxId, cube.coord);
+                  return;
+                }
+                if (!onSelectCoord) return;
                 if (isSelected) onSelectCoord(null);
                 else onSelectCoord(cube.coord);
               }}
               onKeyDown={(event) => {
-                if (!canSelect || !onSelectCoord) return;
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  if (isSelected) onSelectCoord(null);
-                  else onSelectCoord(cube.coord);
+                if (!canSelect) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (onSelectBox && cube.boxId) {
+                  onSelectBox(cube.boxId, cube.coord);
+                  return;
                 }
+                if (!onSelectCoord) return;
+                if (isSelected) onSelectCoord(null);
+                else onSelectCoord(cube.coord);
               }}
             >
               <title>
