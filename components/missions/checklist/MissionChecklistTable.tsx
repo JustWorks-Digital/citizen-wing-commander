@@ -406,9 +406,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     rows.filter((row) => row.isCompleted).length +
     (showQuantumOrigin && quantumCompleted ? 1 : 0);
   /**
-   * Accordion stack always keeps completed stops as history tabs + the current
-   * incomplete stop. `hideCompleted` only affects the Stops progress band —
-   * not this stack.
+   * Accordion stack: completed stops above the open card are history tabs.
+   * `hideCompleted` hides those tabs; the Stops progress timeline always stays.
    */
   const visibleRows = displayRows;
   const canAddStops = Boolean(onInsertQuantumTravel);
@@ -686,7 +685,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
       ? missions.some((mission) => !mission.isHidden)
         ? "All contracts complete — reopen one from Contracts to rebuild the route"
         : "No contracts yet"
-      : "All contracts complete — show history to review";
+      : "All contracts complete — open a stop from the timeline to review";
 
   const stepById = new Map(
     displayRows.map((row, index) => [row.id, index + 1]),
@@ -856,8 +855,8 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const isTripComplete =
     displayRows.length > 0 && displayRows.every((row) => row.isCompleted);
   const showTripSummary = Boolean(isTripComplete && tripSummary);
-  const showProgressTimeline =
-    displayRows.length > 0 && (isTripComplete || !hideCompleted);
+  /** Stops progress band / rail — always when the route has stops. */
+  const showProgressTimeline = displayRows.length > 0;
 
   if (showProgressTimeline) {
     checklistListItems.push({ kind: "progressSection" });
@@ -866,10 +865,33 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   if (showTripSummary) {
     checklistListItems.push({ kind: "tripSummary" });
   } else {
+    const openStopIndex =
+      openActiveId === QUANTUM_ORIGIN_ROW_ID
+        ? -1
+        : displayRows.findIndex((row) => row.id === openActiveId);
+    const historyCutoffIndex =
+      openStopIndex >= 0
+        ? openStopIndex
+        : displayRows.findIndex((row) => !row.isCompleted);
+
     if (showQuantumOrigin) {
-      checklistListItems.push({ kind: "quantum" });
+      const hideQuantumHistory =
+        hideCompleted &&
+        quantumCompleted &&
+        openActiveId !== QUANTUM_ORIGIN_ROW_ID &&
+        expandedCompletedRowId !== QUANTUM_ORIGIN_ROW_ID;
+      if (!hideQuantumHistory) {
+        checklistListItems.push({ kind: "quantum" });
+      }
     }
-    for (const row of displayRows) {
+    for (const [rowIndex, row] of displayRows.entries()) {
+      const hideHistoryTab =
+        hideCompleted &&
+        row.isCompleted &&
+        row.id !== openActiveId &&
+        row.id !== expandedCompletedRowId &&
+        (historyCutoffIndex < 0 || rowIndex < historyCutoffIndex);
+      if (hideHistoryTab) continue;
       checklistListItems.push({ kind: "stop", row });
     }
   }
@@ -1409,6 +1431,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             <button
               type="button"
               aria-expanded={isOpen}
+              title={
+                condensedHopTitle
+                  ? `${location}, ${condensedHopTitle} to next`
+                  : location
+              }
               ref={(node) => {
                 if (node) accordionTabElsRef.current.set(row.id, node);
                 else accordionTabElsRef.current.delete(row.id);
@@ -1440,9 +1467,14 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               >
                 <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
               </svg>
-              <span className="truncate text-[0.7rem] font-medium text-rsi-text-secondary">
+              <span className="min-w-0 flex-1 truncate text-[0.7rem] font-medium text-rsi-text-secondary">
                 {location}
               </span>
+              {condensedHopLabel ? (
+                <span className="shrink-0 font-mono text-[0.6rem] tabular-nums tracking-wide text-rsi-text-muted">
+                  {condensedHopLabel}
+                </span>
+              ) : null}
             </button>
           );
 

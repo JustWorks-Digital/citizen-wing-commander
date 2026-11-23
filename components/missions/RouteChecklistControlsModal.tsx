@@ -7,7 +7,7 @@ export const ROUTE_CHECKLIST_SHORTCUTS = [
   { key: "B", action: "Cargo bays" },
   { key: "S", action: "Stops" },
   { key: "C", action: "Contracts" },
-  { key: "H", action: "Hide / show history" },
+  { key: "H", action: "Hide / show completed stop tabs" },
   { key: "D", action: "Mark step done" },
   { key: ";", action: "Show / hide recorder" },
 ] as const;

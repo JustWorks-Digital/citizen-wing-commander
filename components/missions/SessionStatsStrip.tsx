@@ -377,10 +377,9 @@ function StopTransferFlowArrow({ inbound }: { inbound: boolean }) {
 }
 
 /**
- * Cargo strip left (Cargo | Aboard | Peak | Capacity | Stop in/out);
- * Stats strip right (Stats | Contracts | aUEC | Time).
- * Below `sm`, aUEC moves to the ⋯ menu; Time stays in the strip.
- * Distance lives in the Stops rail; Stops open from that rail / mobile section.
+ * Cargo strip left (Cargo | Aboard/capacity | Peak | Stop in/out);
+ * Stats strip right (Stats | Contracts as completed + aUEC | Time).
+ * Time stays in the strip. Distance lives in the Stops rail.
  */
 export function SessionRouteProgressStats({
   completedLegs: _completedLegs,
@@ -415,23 +414,8 @@ export function SessionRouteProgressStats({
   const stopPickup = Math.max(0, Math.floor(stopPickupScu ?? 0));
   const stopDelivery = Math.max(0, Math.floor(stopDeliveryScu ?? 0));
   const bayAria = showStopTransfer
-    ? `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU, stop pick up ${stopPickup} SCU, drop off ${stopDelivery} SCU`
-    : `Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`;
-  const stopTransferBody = showStopTransfer ? (
-    <div
-      className="flex flex-col justify-center gap-0.5"
-      title={`This stop: ${stopPickup} ${SCU_TITLE} onto ship, ${stopDelivery} ${SCU_TITLE} off ship`}
-    >
-      <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-accent sm:text-[0.7rem]">
-        <StopTransferFlowArrow inbound />
-        <span>{stopPickup}</span>
-      </p>
-      <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-gold sm:text-[0.7rem]">
-        <StopTransferFlowArrow inbound={false} />
-        <span>{stopDelivery}</span>
-      </p>
-    </div>
-  ) : null;
+    ? `Cargo ${onboardScu} of ${capacityLabel} SCU aboard, peak ${peakScu} SCU, stop pick up ${stopPickup} SCU, drop off ${stopDelivery} SCU`
+    : `Cargo ${onboardScu} of ${capacityLabel} SCU aboard, peak ${peakScu} SCU`;
   const scuUnit = (
     <span
       className="ml-1 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
@@ -440,49 +424,90 @@ export function SessionRouteProgressStats({
       SCU
     </span>
   );
-  const aboardBody = (
+  const stopTransferBody = showStopTransfer ? (
+    <div
+      className="flex items-center gap-0.5"
+      title={`This stop: ${stopPickup} ${SCU_TITLE} onto ship, ${stopDelivery} ${SCU_TITLE} off ship`}
+    >
+      <div className="flex flex-col justify-center gap-0.5">
+        <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-accent sm:text-[0.7rem]">
+          <StopTransferFlowArrow inbound />
+          <span>{stopPickup}</span>
+        </p>
+        <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-gold sm:text-[0.7rem]">
+          <StopTransferFlowArrow inbound={false} />
+          <span>{stopDelivery}</span>
+        </p>
+      </div>
+      {scuUnit}
+    </div>
+  ) : null;
+  const aboardCapacityBody = (
     <>
-      <StatLabel title="SCU currently aboard">Aboard</StatLabel>
-      <StatValue className={isOverCapacity ? "text-rsi-warn" : undefined}>
-        {onboardScu}
+      <StatLabel title={`SCU currently aboard / ship capacity (${SCU_TITLE})`}>
+        Aboard
+      </StatLabel>
+      <StatValue>
+        <Fraction
+          current={onboardScu}
+          total={capacityLabel}
+          currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
+        />
+        {scuUnit}
       </StatValue>
     </>
   );
   const peakBody = (
     <>
       <StatLabel title="Highest SCU aboard during this trip">Peak</StatLabel>
-      <StatValue className={isPeakOverCapacity ? "text-rsi-warn" : undefined}>
-        {peakScu}
-      </StatValue>
-    </>
-  );
-  const capacityBody = (
-    <>
-      <StatLabel title="Ship cargo capacity">Capacity</StatLabel>
       <StatValue>
-        {capacityLabel}
+        <span className={isPeakOverCapacity ? "text-rsi-warn" : undefined}>
+          {peakScu}
+        </span>
         {scuUnit}
       </StatValue>
     </>
   );
-  const auecBody = (
+  const contractsAuecTitle = showAuec
+    ? `${missionsCompleted} of ${missionCount} contracts completed; projected ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC`
+    : `${missionsCompleted} of ${missionCount} contracts completed`;
+  const contractsAuecAria = showAuec
+    ? `${missionsCompleted} of ${missionCount} contracts completed, aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)}`
+    : `${missionsCompleted} of ${missionCount} contracts completed`;
+  const contractsAuecBody = (
     <>
-      <StatLabel title={AUEC_TITLE}>
-        <span className="normal-case">aUEC</span>
-      </StatLabel>
-      <StatValue>
-        <Fraction
-          current={formatToolbarAuec(auecEarned)}
-          total={formatToolbarAuec(auecProjected)}
-          currentClassName={
-            auecEarned > 0 && auecEarned >= auecProjected
-              ? "text-rsi-success"
-              : undefined
-          }
-          /* Match Contracts total count (secondary). */
-          totalClassName="text-rsi-text-secondary"
-        />
-      </StatValue>
+      <StatLabel title={contractsAuecTitle}>Contracts</StatLabel>
+      <div className="mt-0.5 flex items-center sm:mt-1">
+        <StatValue className="!mt-0 pr-2.5 sm:pr-3">
+          <Fraction
+            current={missionsCompleted}
+            total={missionCount}
+            totalClassName="text-rsi-text-secondary"
+          />
+        </StatValue>
+        {showAuec ? (
+          <StatValue
+            className="!mt-0 flex items-baseline border-l border-rsi-border pl-2.5 sm:pl-3"
+          >
+            <Fraction
+              current={formatToolbarAuec(auecEarned)}
+              total={formatToolbarAuec(auecProjected)}
+              currentClassName={
+                auecEarned > 0 && auecEarned >= auecProjected
+                  ? "text-rsi-success"
+                  : undefined
+              }
+              totalClassName="text-rsi-text-secondary"
+            />
+            <span
+              className="ml-1 text-[0.45rem] tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]"
+              title={AUEC_TITLE}
+            >
+              aUEC
+            </span>
+          </StatValue>
+        ) : null}
+      </div>
     </>
   );
 
@@ -506,27 +531,23 @@ export function SessionRouteProgressStats({
               "flex-row items-stretch gap-0 !p-0",
             ].join(" ")}
             title="Open bays"
-            aria-label={`Cargo ${onboardScu} SCU aboard, peak ${peakScu} SCU, capacity ${capacityLabel} SCU`}
+            aria-label={`Cargo ${onboardScu} of ${capacityLabel} SCU aboard, peak ${peakScu} SCU`}
           >
             <StripSpine label="Cargo" />
-            <span className={`${cellClass} border-0`}>{aboardBody}</span>
+            <span className={`${cellClass} border-0`}>
+              {aboardCapacityBody}
+            </span>
             <span
               className={`${cellClass} border-0 border-l border-rsi-border`}
             >
               {peakBody}
             </span>
-            <span
-              className={`${cellClass} border-0 border-l border-rsi-border`}
-            >
-              {capacityBody}
-            </span>
           </button>
         ) : (
           <>
             <StripSpine label="Cargo" />
-            <div className={cellClass}>{aboardBody}</div>
+            <div className={cellClass}>{aboardCapacityBody}</div>
             <div className={cellClass}>{peakBody}</div>
-            <div className={cellClass}>{capacityBody}</div>
           </>
         )}
         {stopTransferBody ? (
@@ -549,47 +570,21 @@ export function SessionRouteProgressStats({
           role="group"
           aria-label="Stats — contracts, payout and time"
         >
-          <StripSpine label="Stats" />
-          <div className="group/contracts-auec flex min-w-0 items-stretch divide-x divide-rsi-border">
-            <button
-              type="button"
-              onClick={onMissionsClick}
-              className={[
-                cellClass,
-                "bg-rsi-surface/80 transition-colors group-hover/contracts-auec:bg-rsi-surface-raised",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-              ].join(" ")}
-              title={`${missionsCompleted} of ${missionCount} contracts completed`}
-              aria-label={`${missionsCompleted} of ${missionCount} contracts completed`}
-            >
-              <StatLabel>Contracts</StatLabel>
-              <StatValue>
-                {missionsCompleted}
-                <span className="mx-0.5 text-rsi-text-muted" aria-hidden>
-                  /
-                </span>
-                <span className="text-rsi-text-secondary">{missionCount}</span>
-                <span className="ml-1.5 text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]">
-                  completed
-                </span>
-              </StatValue>
-            </button>
-            {showAuec ? (
-              <button
-                type="button"
-                onClick={onMissionsClick}
-                className={[
-                  cellClass,
-                  "hidden shrink-0 bg-rsi-surface/80 transition-colors group-hover/contracts-auec:bg-rsi-surface-raised sm:flex",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-                ].join(" ")}
-                title={`Projected payout ${formatToolbarAuecExact(auecProjected)} aUEC; earned ${formatToolbarAuecExact(auecEarned)} aUEC from completed contracts`}
-                aria-label={`aUEC ${formatToolbarAuecExact(auecEarned)} of ${formatToolbarAuecExact(auecProjected)} — open contracts`}
-              >
-                {auecBody}
-              </button>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            onClick={onMissionsClick}
+            className={[
+              interactiveCellClass,
+              "flex-row items-stretch gap-0 !p-0",
+            ].join(" ")}
+            title={contractsAuecTitle}
+            aria-label={contractsAuecAria}
+          >
+            <StripSpine label="Stats" />
+            <span className={`${cellClass} border-0`}>
+              {contractsAuecBody}
+            </span>
+          </button>
           {elapsed ? (
             <div
               className={[cellClass, "shrink-0"].join(" ")}

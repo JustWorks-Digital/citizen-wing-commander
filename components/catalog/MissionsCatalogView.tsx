@@ -283,9 +283,7 @@ export function MissionsCatalogView({
   return (
     <div
       className={
-        fillHeight
-          ? "flex h-full min-h-0 flex-col gap-3"
-          : "space-y-6"
+        fillHeight ? "space-y-3 pt-4 sm:pt-5" : "space-y-6"
       }
     >
       {showHeading ? (
@@ -495,21 +493,18 @@ export function MissionsCatalogView({
               No contracts match these filters.
             </p>
           ) : (
-            <div className={fillHeight ? "min-h-0 flex-1" : undefined}>
-              <MissionCatalogTable
-                missions={visible}
-                selectedId={selected?.id ?? null}
-                onSelect={setSelected}
-                onViewSource={openSource}
-                onViewObject={setJsonMission}
-                sort={sort}
-                onSortChange={setSort}
-                checkedIds={checkedIds}
-                onCheckedIdsChange={setCheckedIds}
-                visibleColumns={visibleColumns}
-                fillHeight={fillHeight}
-              />
-            </div>
+            <MissionCatalogTable
+              missions={visible}
+              selectedId={selected?.id ?? null}
+              onSelect={setSelected}
+              onViewSource={openSource}
+              onViewObject={setJsonMission}
+              sort={sort}
+              onSortChange={setSort}
+              checkedIds={checkedIds}
+              onCheckedIdsChange={setCheckedIds}
+              visibleColumns={visibleColumns}
+            />
           )}
         </>
       )}

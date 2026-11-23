@@ -2331,14 +2331,26 @@ export function CargoGridSketch({
                       })
                   : [];
 
+                // Scale chrome labels with cell zoom (fixed rem drifts vs the bay).
+                const bayChromeLabelPx = Math.max(
+                  5,
+                  Math.min(10, Math.round(viewCellPx * 0.38)),
+                );
+                const gapLabelPx = Math.max(
+                  6,
+                  Math.min(12, Math.round(viewCellPx * 0.45)),
+                );
+                const gapLabelPadY = Math.max(1, Math.round(gapLabelPx * 0.22));
+                const gapLabelPadX = Math.max(2, Math.round(gapLabelPx * 0.4));
                 const bayLabel = (text: string) => (
                   <span
-                    className="pointer-events-none shrink-0 select-none whitespace-nowrap font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted"
-                    style={
-                      bayLabelChrome.labelTransform
+                    className="pointer-events-none shrink-0 select-none whitespace-nowrap font-mono uppercase tracking-[0.14em] text-rsi-text-muted"
+                    style={{
+                      fontSize: bayChromeLabelPx,
+                      ...(bayLabelChrome.labelTransform
                         ? { transform: bayLabelChrome.labelTransform }
-                        : undefined
-                    }
+                        : {}),
+                    }}
                     title={zone.label}
                   >
                     {text}
@@ -2353,7 +2365,8 @@ export function CargoGridSketch({
                 const bayLabelHeightSpacer = (
                   <span
                     aria-hidden
-                    className="pointer-events-none block w-0 shrink-0 overflow-hidden whitespace-nowrap font-mono text-[0.55rem] uppercase tracking-[0.14em]"
+                    className="pointer-events-none block w-0 shrink-0 overflow-hidden whitespace-nowrap font-mono uppercase tracking-[0.14em]"
+                    style={{ fontSize: bayChromeLabelPx }}
                   >
                     Zone 1
                   </span>
@@ -2378,22 +2391,24 @@ export function CargoGridSketch({
                       >
                         <span
                           className={[
-                            "pointer-events-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted",
+                            "pointer-events-none font-mono uppercase tracking-[0.16em] text-rsi-text-muted",
                             isDoor ? "absolute inset-0 flex items-center justify-center" : "",
                           ].join(" ")}
+                          style={{ fontSize: gapLabelPx }}
                         >
                           <span
-                            className="rounded-sm bg-rsi-bg-deep/75 px-1.5 py-0.5"
-                            style={
-                              isDoor
+                            className="rounded-sm bg-rsi-bg-deep/75"
+                            style={{
+                              padding: `${gapLabelPadY}px ${gapLabelPadX}px`,
+                              ...(isDoor
                                 ? {
                                     // Run along the door strip; nudge screen-right.
                                     transform: `translateX(${viewCellPx}px) rotate(-90deg)`,
                                     transformOrigin: "center",
                                     whiteSpace: "nowrap",
                                   }
-                                : undefined
-                            }
+                                : {}),
+                            }}
                           >
                             {zone.label}
                           </span>

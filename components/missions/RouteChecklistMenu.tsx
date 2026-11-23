@@ -38,9 +38,8 @@ export type RouteChecklistMenuProps = {
 
 /**
  * Trip-header ⋯ (beside Find a Contract).
- * Holds aUEC on small phones, Prioritize pickup, Collapse missions, Copy trip,
- * Hide / Show history, Repair route (when the invalid banner is dismissed),
- * Summary (when the trip is complete), Controls, and Crash out.
+ * Holds aUEC on small phones, Copy trip, Controls, Crash out, Prioritize
+ * pickup, Collapse missions, Hide history, Repair route, and Summary.
  */
 export function RouteChecklistMenu({
   hideCompleted,
@@ -63,7 +62,6 @@ export function RouteChecklistMenu({
   const [controlsOpen, setControlsOpen] = useState(false);
   const [copyPending, setCopyPending] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const historyLabel = hideCompleted ? "Show history" : "Hide history";
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +80,12 @@ export function RouteChecklistMenu({
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  const menuItemClass = [
+    "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
+    "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+  ].join(" ");
 
   return (
     <>
@@ -151,9 +155,8 @@ export function RouteChecklistMenu({
                   })();
                 }}
                 className={[
-                  "flex w-full items-center gap-2 rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
-                  "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                  menuItemClass,
+                  "gap-2",
                   "disabled:cursor-not-allowed disabled:opacity-60",
                 ].join(" ")}
               >
@@ -166,45 +169,61 @@ export function RouteChecklistMenu({
             <button
               type="button"
               role="menuitem"
-              disabled={completedCount === 0}
               onClick={() => {
-                onToggleHistory();
                 setOpen(false);
+                setControlsOpen(true);
               }}
-              className={[
-                "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
-                "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                "disabled:cursor-not-allowed disabled:opacity-40",
-              ].join(" ")}
+              className={menuItemClass}
             >
-              {historyLabel}
+              Controls
             </button>
-            {onPrioritizePickupChange || onCollapseMissionCardsChange ? (
-              <div
+            {onLogCrash && canLogCrash ? (
+              <button
+                type="button"
                 role="menuitem"
-                className="mt-1 space-y-1.5 border-t border-rsi-divider px-1.5 pt-1.5"
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
+                onClick={() => {
+                  onLogCrash();
+                  setOpen(false);
+                }}
+                className={[
+                  "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-danger transition-colors",
+                  "hover:bg-rsi-danger-muted/40 hover:text-rsi-danger",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
+                ].join(" ")}
               >
-                {onPrioritizePickupChange ? (
-                  <Switch
-                    label="Prioritize pickup"
-                    ariaLabel="Prioritize pickup — show Pick up as the left tab"
-                    checked={prioritizePickup}
-                    onCheckedChange={onPrioritizePickupChange}
-                  />
-                ) : null}
-                {onCollapseMissionCardsChange ? (
-                  <Switch
-                    label="Collapse missions"
-                    ariaLabel="Collapse missions — show cargo as plain text on the current stop"
-                    checked={collapseMissionCards}
-                    onCheckedChange={onCollapseMissionCardsChange}
-                  />
-                ) : null}
-              </div>
+                Crash out
+              </button>
             ) : null}
+            <div
+              role="menuitem"
+              className="mt-1 space-y-1.5 border-t border-rsi-divider px-1.5 pt-1.5"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              {onPrioritizePickupChange ? (
+                <Switch
+                  label="Prioritize pickup"
+                  ariaLabel="Prioritize pickup — show Pick up as the left tab"
+                  checked={prioritizePickup}
+                  onCheckedChange={onPrioritizePickupChange}
+                />
+              ) : null}
+              {onCollapseMissionCardsChange ? (
+                <Switch
+                  label="Collapse missions"
+                  ariaLabel="Collapse missions — show cargo as plain text on the current stop"
+                  checked={collapseMissionCards}
+                  onCheckedChange={onCollapseMissionCardsChange}
+                />
+              ) : null}
+              <Switch
+                label="Hide history"
+                ariaLabel="Hide history — hide completed stop tabs above the open accordion"
+                checked={hideCompleted}
+                disabled={completedCount === 0 && !hideCompleted}
+                onCheckedChange={() => onToggleHistory()}
+              />
+            </div>
             {onRepairTrip ? (
               <button
                 type="button"
@@ -226,38 +245,6 @@ export function RouteChecklistMenu({
                   <Spinner className="size-3" label="Repairing route" />
                 ) : null}
                 Repair route
-              </button>
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                setControlsOpen(true);
-              }}
-              className={[
-                "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
-                "hover:bg-rsi-bg-deep/70 hover:text-rsi-text",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-              ].join(" ")}
-            >
-              Controls
-            </button>
-            {onLogCrash && canLogCrash ? (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onLogCrash();
-                  setOpen(false);
-                }}
-                className={[
-                  "flex w-full items-center rounded-rsi px-1.5 py-1 text-left font-mono text-[0.65rem] uppercase tracking-[0.14em] text-rsi-danger transition-colors",
-                  "hover:bg-rsi-danger-muted/40 hover:text-rsi-danger",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                ].join(" ")}
-              >
-                Crash out
               </button>
             ) : null}
           </div>

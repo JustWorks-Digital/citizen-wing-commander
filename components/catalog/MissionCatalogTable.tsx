@@ -44,13 +44,12 @@ export type MissionCatalogTableProps = {
    * Does not affect search/filters — display only.
    */
   visibleColumns?: CatalogTableColumnKey[];
-  /** Fill parent height and scroll inside (modal embed). Sticky header. */
-  fillHeight?: boolean;
 };
 
 const thClass = [
   "sticky top-0 z-10 px-2.5 py-2 text-left font-mono text-[0.55rem] font-medium uppercase tracking-[0.16em] text-rsi-text-muted sm:px-3",
-  "border-b border-rsi-divider bg-rsi-bg-deep",
+  // Solid fill + upward shadow so nothing shows through above the stuck header.
+  "border-b border-rsi-divider bg-rsi-bg-deep shadow-[0_-1.5rem_0_1.5rem_var(--rsi-surface)]",
 ].join(" ");
 
 const tdClass =
@@ -176,7 +175,6 @@ export function MissionCatalogTable({
   checkedIds,
   onCheckedIdsChange,
   visibleColumns: visibleColumnsProp,
-  fillHeight = false,
 }: MissionCatalogTableProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -235,17 +233,10 @@ export function MissionCatalogTable({
   };
 
   return (
-    <div
-      className={[
-        "rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel",
-        fillHeight
-          ? "h-full min-h-0 overflow-auto overscroll-contain"
-          : "overflow-x-auto",
-      ].join(" ")}
-    >
+    <div className="rounded-rsi border border-rsi-border bg-rsi-surface/90 shadow-rsi-panel">
       {/*
-        min-w keeps a usable layout under ~1000px without forcing scroll on
-        typical smaller desktops; overflow-x-auto still allows scroll below that.
+        No overflow here — intermediate overflow-x breaks sticky thead against
+        the modal body scrollport. Wide tables scroll with that parent instead.
       */}
       <table
         className={[

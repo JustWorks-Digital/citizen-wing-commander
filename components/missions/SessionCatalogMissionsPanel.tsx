@@ -56,7 +56,7 @@ export function SessionCatalogMissionsPanel({
           </p>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-5 sm:py-5">
+        <div className="min-h-0 flex-1 overflow-auto overscroll-contain px-4 pb-4 sm:px-5 sm:pb-5">
           <Suspense fallback={<MissionCatalogSkeleton />}>
             <MissionsCatalogView
               persistUrlState={false}
