@@ -100,8 +100,8 @@ export type CargoGridIsoViewProps = {
   hiddenActions?: ReadonlySet<CargoGridBoxAction>;
   onToggleAction?: (action: CargoGridBoxAction) => void;
   /**
-   * When true, legend-hidden / layer-off crates render as barely-visible
-   * holograms instead of disappearing.
+   * When true, legend-hidden crates render as barely-visible holograms
+   * instead of disappearing. Layer-off crates stay fully hidden.
    */
   showHologram?: boolean;
   /**
@@ -643,7 +643,8 @@ function buildCubes(
         deliveryLocationSlug: box.deliveryLocationSlug,
         locationGroupIndex: box.locationGroupIndex,
       });
-      // Ghost pads under elevated crates so stack height stays readable.
+      // Ghost pads under elevated crates (empty air columns). Settle should
+      // clear these; keep them so a packing bug stays visible in 3D.
       for (let ox = 0; ox < footprint.dx; ox += 1) {
         for (let oy = 0; oy < footprint.dy; oy += 1) {
           for (let below = 0; below < origin.z; below += 1) {
@@ -1756,14 +1757,14 @@ export function CargoGridIsoView({
                     isHologram
                       ? HOLOGRAM_OPACITY
                       : layerOff
-                        ? showHologram
-                          ? HOLOGRAM_OPACITY
-                          : LAYER_OFF_OPACITY
+                        ? LAYER_OFF_OPACITY
                         : isPlaceholder
                           ? 0.45
                           : 1
                   }
-                  pointerEvents={isHologram ? "none" : undefined}
+                  pointerEvents={
+                    isHologram || layerOff ? "none" : undefined
+                  }
                 >
                   {leftGroupStroke || useFullGroupOutline ? (
                     <polygon

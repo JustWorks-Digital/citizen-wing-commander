@@ -272,6 +272,122 @@ export function resolveManualBayDropZ(
   );
 }
 
+/** True when every footprint XY cell has a solid cell directly underneath. */
+function hasSolidSupportUnder(
+  boxes: readonly PlacedCargoBox[],
+  origin: CargoGridCoord,
+  footprint: PlacedCargoBox["footprint"],
+  ignoreBoxIds: ReadonlySet<string>,
+): boolean {
+  if (origin.z <= 0) return true;
+  const support = supportSizesUnder(boxes, origin, footprint, ignoreBoxIds);
+  return support.length > 0 && support.every((size) => size != null);
+}
+
+/**
+ * Drop elevated crates that have empty space under them onto the deck or the
+ * stack top under their footprint. Processes bottom→top until stable so a
+ * floating stack settles as a unit onto support.
+ */
+export function settleFloatingBayBoxes(
+  sketch: ShipCargoGridSketch,
+  boxes: readonly PlacedCargoBox[],
+): PlacedCargoBox[] {
+  if (boxes.length === 0) return [];
+  let working = boxes.map((box) => ({
+    ...box,
+    origin: { ...box.origin },
+    cells: box.cells.map((cell) => ({ ...cell })),
+  }));
+
+  let changed = true;
+  let guard = 0;
+  const maxPasses = sketch.heightCells + boxes.length + 2;
+  while (changed && guard < maxPasses) {
+    changed = false;
+    guard += 1;
+    const order = [...working].sort(
+      (a, b) =>
+        a.origin.z - b.origin.z || a.id.localeCompare(b.id),
+    );
+    for (const box of order) {
+      if (box.origin.z <= 0) continue;
+      const ignore = new Set([box.id]);
+      if (hasSolidSupportUnder(working, box.origin, box.footprint, ignore)) {
+        continue;
+      }
+
+      // Only crates with cells below this origin count as landing pads —
+      // never rest on a higher crate in the same floating stack.
+      const belowOnly = working.filter(
+        (other) =>
+          other.id !== box.id &&
+          other.cells.some((cell) => cell.z < box.origin.z),
+      );
+      const tops = columnStackTops(
+        belowOnly,
+        box.origin.x,
+        box.origin.y,
+        box.footprint,
+        ignore,
+      );
+      // Lowest column top avoids floating over a hole; walk down if needed.
+      let targetZ = tops.length > 0 ? Math.min(...tops) : 0;
+      targetZ = Math.max(
+        0,
+        Math.min(targetZ, sketch.heightCells - box.footprint.dz),
+      );
+      if (targetZ === box.origin.z) {
+        // Still unsupported at same Z (partial hole) — force toward deck.
+        targetZ = Math.max(0, box.origin.z - 1);
+      }
+
+      let placed = false;
+      for (let z = targetZ; z >= 0; z -= 1) {
+        if (z + box.footprint.dz > sketch.heightCells) continue;
+        const origin: CargoGridCoord = {
+          x: box.origin.x,
+          y: box.origin.y,
+          z,
+        };
+        const cells = footprintCells(origin, box.footprint);
+        if (!cellsClear(sketch, working, cells, ignore)) continue;
+        if (!hasSolidSupportUnder(working, origin, box.footprint, ignore)) {
+          continue;
+        }
+        working = working.map((entry) =>
+          entry.id === box.id
+            ? { ...entry, origin: { ...origin }, cells }
+            : entry,
+        );
+        changed = true;
+        placed = true;
+        break;
+      }
+      if (!placed) {
+        const origin: CargoGridCoord = {
+          x: box.origin.x,
+          y: box.origin.y,
+          z: 0,
+        };
+        const cells = footprintCells(origin, box.footprint);
+        if (
+          box.footprint.dz <= sketch.heightCells &&
+          cellsClear(sketch, working, cells, ignore)
+        ) {
+          working = working.map((entry) =>
+            entry.id === box.id
+              ? { ...entry, origin: { ...origin }, cells }
+              : entry,
+          );
+          changed = true;
+        }
+      }
+    }
+  }
+  return working;
+}
+
 /** Origin for a drop under the pointer; XY from grab offset, Z auto-snapped. */
 export function manualBayDropOrigin(
   sketch: ShipCargoGridSketch,

@@ -70,6 +70,7 @@ import {
   tryFillManualBayZoneWithMission,
   tryRemoveManualBayBox,
   tryRotateManualBayBox,
+  settleFloatingBayBoxes,
   type ManualBayAddBoxSpec,
   type ManualBayBulkFillSpec,
   type ManualBayMissionFillSpec,
@@ -462,10 +463,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       boxes = boxesFromManualTemplate(activeManualTemplate, manualBaseBoxes);
     }
     // Transfer: doorward / aisle first; clear a stack top→bottom before another.
-    return manualBayCarryover.retagDeliveryPreferringTop(
+    const retagged = manualBayCarryover.retagDeliveryPreferringTop(
       boxes,
       deliveryRetagOptions,
     );
+    // Templates / carryover / pack bugs can leave crates mid-air — settle them.
+    return sketch
+      ? settleFloatingBayBoxes(sketch, retagged)
+      : retagged;
   }, [
     activeManualTemplate,
     basePlan,
@@ -474,6 +479,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     isManual,
     manualBaseBoxes,
     manualLiveBoxes,
+    sketch,
   ]);
 
   const displayBoxes = useMemo(() => {

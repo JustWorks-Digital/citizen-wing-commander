@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
-import { manualBayInventory } from "@/lib/ships/manualBayInventory";
+import {
+  manualBayInventory,
+  shortMissionDisplayId,
+} from "@/lib/ships/manualBayInventory";
 import type { PlacedCargoBox } from "@/lib/ships/cargoGridPlacement";
 import { cargo, makeStop } from "./fixtures";
 
@@ -23,10 +26,12 @@ function placedBox(
 function missionStub(
   id: string,
   title: string,
+  catalogMissionId?: string | null,
 ): SessionMission {
   return {
     id,
     title,
+    catalogMissionId: catalogMissionId ?? null,
     contractor: "Outdr",
     rewardAuec: 0,
     from: [],
@@ -45,6 +50,22 @@ function missionStub(
     },
   };
 }
+
+describe("shortMissionDisplayId", () => {
+  // Session c6dee823… — intake ids contract-1… were truncating to "contract".
+  it("prefers catalog UUID short form over intake contract-N ids", () => {
+    expect(
+      shortMissionDisplayId(
+        "contract-1",
+        "0556f030-58b8-4c67-bd6d-f6e610f224bd",
+      ),
+    ).toBe("0556f030");
+  });
+
+  it("keeps intake contract-N when no catalog link", () => {
+    expect(shortMissionDisplayId("contract-2", null)).toBe("contract-2");
+  });
+});
 
 describe("manualBayInventory", () => {
   it("groups identical commodity and size under separate missions", () => {
@@ -71,7 +92,11 @@ describe("manualBayInventory", () => {
       [],
       {
         missions: [
-          missionStub("mission-a", "Contract A"),
+          missionStub(
+            "mission-a",
+            "Contract A",
+            "0556f030-58b8-4c67-bd6d-f6e610f224bd",
+          ),
           missionStub("mission-b", "Contract B"),
         ],
       },
@@ -82,6 +107,12 @@ describe("manualBayInventory", () => {
       "Contract A",
       "Contract B",
     ]);
+    expect(
+      groups.find((group) => group.missionId === "mission-a")?.catalogMissionId,
+    ).toBe("0556f030-58b8-4c67-bd6d-f6e610f224bd");
+    expect(
+      groups.find((group) => group.missionId === "mission-b")?.catalogMissionId,
+    ).toBeNull();
     for (const group of groups) {
       const eight = group.lines.find((line) => line.size === 8);
       expect(eight?.demanded).toBe(2);

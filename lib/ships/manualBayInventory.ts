@@ -37,8 +37,31 @@ export type ManualBayInventoryLine = {
 export type ManualBayInventoryMissionGroup = {
   missionId: string | null;
   missionTitle: string;
+  /** `catalog_missions.id` when linked — preferred for tray short id. */
+  catalogMissionId?: string | null;
   lines: ManualBayInventoryLine[];
 };
+
+/**
+ * Short id for Manual tray headers. Prefer catalog UUID (RDB); do not mangle
+ * intake ids like `contract-1` into the literal word "contract".
+ */
+export function shortMissionDisplayId(
+  missionId: string | null,
+  catalogMissionId?: string | null,
+): string | null {
+  const catalog = catalogMissionId?.trim() || null;
+  if (catalog) {
+    return catalog.replace(/-/g, "").slice(0, 8);
+  }
+  const id = missionId?.trim() || null;
+  if (!id) return null;
+  const undashed = id.replace(/-/g, "");
+  if (/^[0-9a-f]{12,}$/i.test(undashed)) {
+    return undashed.slice(0, 8);
+  }
+  return id;
+}
 
 /** One commodity within a mission (Fill row — stays visible after placing). */
 export type ManualBayInventoryCommodityGroup = {
@@ -67,13 +90,29 @@ function inventoryLineKey(
   return `${missionId ?? "_"}:${commoditySlug}:${size}`;
 }
 
+function missionForId(
+  missionId: string | null,
+  missions: SessionMission[] | undefined,
+): SessionMission | undefined {
+  if (!missionId) return undefined;
+  return missions?.find((mission) => mission.id === missionId);
+}
+
 function missionTitleForId(
   missionId: string | null,
   missions: SessionMission[] | undefined,
 ): string {
   if (!missionId) return "Unassigned";
-  const hit = missions?.find((mission) => mission.id === missionId);
+  const hit = missionForId(missionId, missions);
   return hit?.title?.trim() || missionId.slice(0, 8);
+}
+
+function catalogMissionIdForId(
+  missionId: string | null,
+  missions: SessionMission[] | undefined,
+): string | null {
+  const hit = missionForId(missionId, missions);
+  return hit?.catalogMissionId?.trim() || null;
 }
 
 function sizesForCargo(cargo: {
@@ -334,6 +373,10 @@ export const manualBayInventory = {
       groups.set(groupKey, {
         missionId: line.missionId,
         missionTitle: line.missionTitle,
+        catalogMissionId: catalogMissionIdForId(
+          line.missionId,
+          options?.missions,
+        ),
         lines: [line],
       });
     }

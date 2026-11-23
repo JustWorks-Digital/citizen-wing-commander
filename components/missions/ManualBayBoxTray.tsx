@@ -15,6 +15,7 @@ import {
   missionFillSpecFromGroup,
   missionPlacedScu,
   missionRemainingScu,
+  shortMissionDisplayId,
   type ManualBayInventoryMissionGroup,
 } from "@/lib/ships/manualBayInventory";
 import type {
@@ -94,11 +95,6 @@ export function trayFootprintStyle(
   };
 }
 
-/** Short mission id for tray headers (same-name contracts stay distinct). */
-function shortMissionId(missionId: string | null): string | null {
-  if (!missionId) return null;
-  return missionId.replace(/-/g, "").slice(0, 8);
-}
 
 function specFromLine(line: {
   missionId: string | null;
@@ -434,7 +430,10 @@ export function ManualBayBoxTray({
       </div>
       <div className="min-h-0 flex-1 basis-0 space-y-2 overflow-y-auto [scrollbar-width:thin]">
         {groups.map((group) => {
-          const idShort = shortMissionId(group.missionId);
+          const idShort = shortMissionDisplayId(
+            group.missionId,
+            group.catalogMissionId,
+          );
           const commodities = commodityGroupsFromMission(group);
           const missionKey = missionLineKey(group.missionId);
           const missionFill = missionFillSpecFromGroup(group);

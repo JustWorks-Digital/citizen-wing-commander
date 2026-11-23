@@ -72,8 +72,8 @@ describe("freeStackLayersAbove", () => {
 });
 
 describe("cargoBox2dLayerRole", () => {
-  // Layer hosts are only solids + underlays — above crates bleed into the base.
-  it("returns solid or underlay hosts only", () => {
+  // Solids + underlays + overlay ghosts for crates on other layers.
+  it("returns solid underlay or overlay hosts", () => {
     const four = box({
       id: "four",
       origin: { x: 0, y: 0, z: 0 },
@@ -85,7 +85,7 @@ describe("cargoBox2dLayerRole", () => {
       footprint: { dx: 2, dy: 1, dz: 1 },
     });
     expect(cargoBox2dLayerRole(four, 0)).toBe("solid");
-    expect(cargoBox2dLayerRole(two, 0)).toBeNull();
+    expect(cargoBox2dLayerRole(two, 0)).toBe("overlay");
     expect(cargoBox2dLayerRole(four, 1)).toBe("underlay");
     expect(cargoBox2dLayerRole(two, 1)).toBe("solid");
   });

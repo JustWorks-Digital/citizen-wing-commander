@@ -1,21 +1,25 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { getLocationImageSrc, getLocationShortName, getShipIconSrc } from "@/lib/fixtures";
+import {
+  getLocationImageSrc,
+  getLocationShortName,
+  getShipIconSrc,
+} from "@/lib/fixtures";
 import type { ScuTransfer } from "@/lib/missions/cargoInventory";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import { SpaceshipIcon } from "./ChecklistIcons";
 
-/** Chevrons point left → right (pickup Station→Ship, drop-off Ship→Station). */
+/** Compact chevrons for receipt header (from → to). */
 export function TransferArrow() {
   return (
     <span
       aria-hidden
-      className="flex shrink-0 self-center px-3 text-rsi-text-muted sm:px-7"
+      className="flex shrink-0 self-center px-1.5 text-rsi-text-muted sm:px-2.5"
     >
       <svg
         viewBox="0 0 30 20"
-        className="h-4 w-[1.35rem]"
+        className="h-3.5 w-[1.15rem]"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -48,78 +52,61 @@ export function transferToneClasses(isDone: boolean): {
   };
 }
 
-export function TransferColumnLabel({ children }: { children: ReactNode }) {
-  return (
-    <p className="mb-2 w-fit border-b border-rsi-text-muted/45 pb-0.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-      {children}
-    </p>
-  );
-}
-
-/**
- * Station / ship thumb with the same quiet caption under both — one visual
- * unit. Ship stays a cutout (no plate); station keeps its photo frame only.
- */
-export function TransferEndpointName({
+/** Inline thumb + name — one header unit, not a tall stacked column. */
+function TransferEndpointInline({
   kind,
   name,
   imageSrc,
   isDone,
   mute,
-  strike,
 }: {
   kind: "station" | "ship";
   name: string;
   imageSrc: string | null;
   isDone: boolean;
   mute: string;
-  strike: string;
 }) {
   return (
-    <div className="flex w-full min-w-0 flex-col items-start self-stretch">
-      <div className="flex w-fit max-w-full flex-col items-center gap-1">
-        <span
-          aria-hidden
-          className={[
-            "inline-flex h-10 w-16 shrink-0 items-center justify-center overflow-hidden rounded-rsi",
-            kind === "station"
-              ? "border border-rsi-border/70 bg-rsi-bg-deep/50"
-              : "",
-          ].join(" ")}
-        >
-          {imageSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
-            <img
-              src={imageSrc}
-              alt=""
-              className={
-                kind === "ship"
-                  ? "h-full w-auto max-w-full object-contain"
-                  : "size-full object-cover"
-              }
-            />
-          ) : kind === "ship" ? (
-            <SpaceshipIcon className="h-5 w-8 text-rsi-text-muted" />
-          ) : (
-            <span className="size-full bg-rsi-bg-deep/40" />
-          )}
-        </span>
-        <p
-          className={[
-            "max-w-[5.5rem] text-center font-mono text-[0.55rem] uppercase leading-tight tracking-[0.12em]",
-            isDone ? mute : "text-rsi-text-secondary",
-            strike,
-          ].join(" ")}
-          title={name}
-        >
-          {name}
-        </p>
-      </div>
+    <div className="flex w-full min-w-0 items-center gap-2">
+      <span
+        aria-hidden
+        className={[
+          "inline-flex h-8 w-12 shrink-0 items-center justify-center overflow-hidden rounded-rsi",
+          kind === "station"
+            ? "border border-rsi-border/70 bg-rsi-bg-deep/50"
+            : "",
+        ].join(" ")}
+      >
+        {imageSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element -- fixture static assets
+          <img
+            src={imageSrc}
+            alt=""
+            className={
+              kind === "ship"
+                ? "h-full w-auto max-w-full object-contain"
+                : "size-full object-cover"
+            }
+          />
+        ) : kind === "ship" ? (
+          <SpaceshipIcon className="h-4 w-7 text-rsi-text-muted" />
+        ) : (
+          <span className="size-full bg-rsi-bg-deep/40" />
+        )}
+      </span>
+      <p
+        className={[
+          "min-w-0 font-mono text-[0.6rem] uppercase leading-tight tracking-[0.12em]",
+          isDone ? mute : "text-rsi-text-secondary",
+        ].join(" ")}
+        title={name}
+      >
+        {name}
+      </p>
     </div>
   );
 }
 
-/** Large green check stamp over Station ↔ Ship when that role is marked done. */
 function TransferDoneStamp() {
   return (
     <span
@@ -128,7 +115,7 @@ function TransferDoneStamp() {
     >
       <svg
         viewBox="0 0 120 120"
-        className="size-[4.75rem] sm:size-[5.5rem]"
+        className="size-[3.75rem] sm:size-[4.25rem]"
         role="img"
       >
         <circle
@@ -172,22 +159,20 @@ export function TransferBlockFrame({
 }: {
   title: string;
   isDone: boolean;
-  /** Pickup = station→ship (accent); delivery = ship→station (gold). */
   tone: "pickup" | "delivery";
   children: ReactNode;
 }) {
+  /** Hairline only — role tint lives on the parent Pick up / Drop off shell. */
   const surface =
     tone === "pickup"
-      ? "border-rsi-accent/20 bg-rsi-accent-muted/20"
-      : "border-rsi-gold/20 bg-rsi-gold-muted/20";
+      ? "border-rsi-accent/30 bg-rsi-bg-deep/25"
+      : "border-rsi-gold/30 bg-rsi-bg-deep/25";
   const doneLabel = tone === "pickup" ? "Picked up" : "Dropped off";
 
   return (
     <div
       className={[
-        // Equal endpoint columns. Pickup: Station → Ship; Drop off: Ship → Station.
-        // Text wraps; never truncates.
-        "relative grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-2 overflow-hidden rounded-rsi border px-3 py-4 sm:gap-x-4 sm:px-4",
+        "relative overflow-hidden rounded-rsi border px-3 py-2.5",
         surface,
         isDone ? "opacity-75 text-rsi-text-muted" : "",
       ].join(" ")}
@@ -228,10 +213,6 @@ export function TransferScuLine({
   strike: string;
   mute: string;
   isDone: boolean;
-  /**
-   * When set (column has a number above), right-align digits so ones line up
-   * (e.g. 6 under 36). Omit when the signed line stands alone — keep ± flush.
-   */
   digitCols?: number | null;
 }) {
   const signed = /^([+−+-])(.*)$/.exec(amount);
@@ -247,7 +228,6 @@ export function TransferScuLine({
         strike,
       ].join(" ")}
     >
-      {/* Sign gutter; optional fixed digit width when stacking under before/after. */}
       <span
         className="inline-grid items-baseline"
         style={{
@@ -280,248 +260,195 @@ export function TransferScuLine({
   );
 }
 
-export function PickupTransferBlock({
-  location,
-  locationSlug,
-  shipName,
-  shipSlug = null,
-  transfer,
+type ReceiptRow = {
+  label: string;
+  /** Signed or plain digit string shown before the optional unit. */
+  amount: string;
+  showScu?: boolean;
+  tone: string;
+  /** Emphasize as the closing balance line. */
+  isBalance?: boolean;
+};
+
+function TransferReceiptTable({
+  rows,
   isDone,
+  mute,
 }: {
+  rows: ReceiptRow[];
+  isDone: boolean;
+  mute: string;
+}) {
+  return (
+    <table className="mt-2 w-full border-collapse font-mono text-sm tabular-nums">
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={row.label}
+            className={
+              row.isBalance
+                ? [
+                    "border-t",
+                    isDone ? "border-rsi-divider" : "border-rsi-border-strong",
+                  ].join(" ")
+                : undefined
+            }
+          >
+            <th
+              scope="row"
+              className={[
+                "py-0.5 pr-3 text-left text-[0.65rem] font-normal tracking-wide",
+                isDone ? mute : "text-rsi-text-muted",
+              ].join(" ")}
+            >
+              {row.label}
+            </th>
+            <td
+              className={[
+                "py-0.5 text-right leading-5 tracking-wide",
+                isDone ? mute : row.tone,
+              ].join(" ")}
+            >
+              {row.amount}
+              {row.showScu ? (
+                <>
+                  {" "}
+                  <span
+                    className={[
+                      "text-[0.65rem] font-normal",
+                      isDone ? "" : "text-rsi-text-muted",
+                    ].join(" ")}
+                    title={SCU_TITLE}
+                  >
+                    SCU
+                  </span>
+                </>
+              ) : null}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+type TransferBlockSharedProps = {
   location: string;
   locationSlug: string;
   shipName: string;
   shipSlug?: string | null;
   transfer: ScuTransfer;
   isDone: boolean;
-}) {
-  const { strike, mute } = transferToneClasses(isDone);
-  const digitCols = transferScuDigitCols(transfer);
+};
+
+/**
+ * Compact transfer receipt: inline from→to thumbs, then a tight ledger table.
+ * Pickup = station → ship; drop-off = ship → station.
+ */
+function TransferReceiptBlock({
+  location,
+  locationSlug,
+  shipName,
+  shipSlug = null,
+  transfer,
+  isDone,
+  tone,
+}: TransferBlockSharedProps & { tone: "pickup" | "delivery" }) {
+  const { mute } = transferToneClasses(isDone);
   const stationShortName = getLocationShortName(locationSlug);
   const stationImageSrc = getLocationImageSrc(locationSlug);
   const shipImageSrc = getShipIconSrc(shipSlug);
 
+  const from =
+    tone === "pickup"
+      ? {
+          kind: "station" as const,
+          name: stationShortName,
+          imageSrc: stationImageSrc,
+        }
+      : {
+          kind: "ship" as const,
+          name: shipName,
+          imageSrc: shipImageSrc,
+        };
+  const to =
+    tone === "pickup"
+      ? {
+          kind: "ship" as const,
+          name: shipName,
+          imageSrc: shipImageSrc,
+        }
+      : {
+          kind: "station" as const,
+          name: stationShortName,
+          imageSrc: stationImageSrc,
+        };
+
+  const title =
+    tone === "pickup"
+      ? `Load ${transfer.amount} SCU from ${location}`
+      : `Transfer ${transfer.amount} SCU to ${location}`;
+
+  const transferRow: ReceiptRow =
+    tone === "pickup"
+      ? {
+          label: "Deposit",
+          amount: `+${transfer.amount}`,
+          tone: "text-rsi-success",
+        }
+      : {
+          label: "Withdrawal",
+          amount: `−${transfer.amount}`,
+          tone: "text-rsi-danger",
+        };
+
+  const rows: ReceiptRow[] = [
+    {
+      label: "Available",
+      amount: String(transfer.before),
+      showScu: true,
+      tone: "text-rsi-text-muted",
+    },
+    transferRow,
+    {
+      label: "Total on ship",
+      amount: String(transfer.after),
+      showScu: true,
+      tone: "text-rsi-text",
+      isBalance: true,
+    },
+  ];
+
   return (
-    <TransferBlockFrame
-      title={`Load ${transfer.amount} SCU from ${location}`}
-      isDone={isDone}
-      tone="pickup"
-    >
-      <TransferColumnLabel>Station</TransferColumnLabel>
-      <span aria-hidden className="col-start-2" />
-      <TransferColumnLabel>Ship</TransferColumnLabel>
-
-      <TransferEndpointName
-        kind="station"
-        name={stationShortName}
-        imageSrc={stationImageSrc}
-        isDone={isDone}
-        mute={mute}
-        strike={strike}
-      />
-      {/* Match thumb height so chevrons center on the images, not captions. */}
-      <div className="flex h-10 items-center justify-center self-start">
+    <TransferBlockFrame title={title} isDone={isDone} tone={tone}>
+      <div className="relative z-[2] grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1">
+        <TransferEndpointInline
+          kind={from.kind}
+          name={from.name}
+          imageSrc={from.imageSrc}
+          isDone={isDone}
+          mute={mute}
+        />
         <TransferArrow />
-      </div>
-      <TransferEndpointName
-        kind="ship"
-        name={shipName}
-        imageSrc={shipImageSrc}
-        isDone={isDone}
-        mute={mute}
-        strike={strike}
-      />
-
-      <div className="col-span-3 py-5">
-        <div
-          aria-hidden
-          className={[
-            "border-t",
-            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
-          ].join(" ")}
-        />
-      </div>
-
-      <span aria-hidden className="col-start-1" />
-      <div className="col-start-3 min-w-0">
-        <TransferScuLine
-          amount={String(transfer.before)}
-          suffix="SCU"
-          tone="text-rsi-text-muted"
-          strike={strike}
-          mute={mute}
+        <TransferEndpointInline
+          kind={to.kind}
+          name={to.name}
+          imageSrc={to.imageSrc}
           isDone={isDone}
-          digitCols={digitCols}
-        />
-      </div>
-
-      <div className="col-start-1 min-w-0">
-        <TransferScuLine
-          amount={`−${transfer.amount}`}
-          suffix="withdrawal"
-          tone="text-rsi-danger"
-          strike={strike}
           mute={mute}
-          isDone={isDone}
         />
       </div>
-      <div className="col-start-2 flex items-center justify-center self-center">
-        <TransferArrow />
-      </div>
-      <div className="col-start-3 min-w-0">
-        <TransferScuLine
-          amount={`+${transfer.amount}`}
-          suffix="deposit"
-          tone="text-rsi-success"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-          digitCols={digitCols}
-        />
-      </div>
-
-      <span aria-hidden className="col-start-1" />
-      <div className="col-start-3 min-w-0 w-fit">
-        <div
-          aria-hidden
-          className={[
-            "mb-1 border-t",
-            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
-          ].join(" ")}
-        />
-        <TransferScuLine
-          amount={String(transfer.after)}
-          suffix="remaining on ship"
-          tone="text-rsi-text"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-          digitCols={digitCols}
-        />
+      <div className="relative z-[2]">
+        <TransferReceiptTable rows={rows} isDone={isDone} mute={mute} />
       </div>
     </TransferBlockFrame>
   );
 }
 
-export function DeliveryTransferBlock({
-  location,
-  locationSlug,
-  shipName,
-  shipSlug = null,
-  transfer,
-  isDone,
-}: {
-  location: string;
-  locationSlug: string;
-  shipName: string;
-  shipSlug?: string | null;
-  transfer: ScuTransfer;
-  isDone: boolean;
-}) {
-  const { strike, mute } = transferToneClasses(isDone);
-  const digitCols = transferScuDigitCols(transfer);
-  const stationShortName = getLocationShortName(locationSlug);
-  const stationImageSrc = getLocationImageSrc(locationSlug);
-  const shipImageSrc = getShipIconSrc(shipSlug);
+export function PickupTransferBlock(props: TransferBlockSharedProps) {
+  return <TransferReceiptBlock {...props} tone="pickup" />;
+}
 
-  return (
-    <TransferBlockFrame
-      title={`Transfer ${transfer.amount} SCU to ${location}`}
-      isDone={isDone}
-      tone="delivery"
-    >
-      <TransferColumnLabel>Ship</TransferColumnLabel>
-      <span aria-hidden className="col-start-2" />
-      <TransferColumnLabel>Station</TransferColumnLabel>
-
-      <TransferEndpointName
-        kind="ship"
-        name={shipName}
-        imageSrc={shipImageSrc}
-        isDone={isDone}
-        mute={mute}
-        strike={strike}
-      />
-      {/* Match thumb height so chevrons center on the images, not captions. */}
-      <div className="flex h-10 items-center justify-center self-start">
-        <TransferArrow />
-      </div>
-      <TransferEndpointName
-        kind="station"
-        name={stationShortName}
-        imageSrc={stationImageSrc}
-        isDone={isDone}
-        mute={mute}
-        strike={strike}
-      />
-
-      <div className="col-span-3 py-5">
-        <div
-          aria-hidden
-          className={[
-            "border-t",
-            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
-          ].join(" ")}
-        />
-      </div>
-
-      <div className="col-start-1 min-w-0">
-        <TransferScuLine
-          amount={String(transfer.before)}
-          suffix="SCU"
-          tone="text-rsi-text-muted"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-          digitCols={digitCols}
-        />
-      </div>
-      <span aria-hidden className="col-start-3" />
-
-      <div className="col-start-1 min-w-0">
-        <TransferScuLine
-          amount={`−${transfer.amount}`}
-          suffix="withdrawal"
-          tone="text-rsi-danger"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-          digitCols={digitCols}
-        />
-      </div>
-      <div className="col-start-2 flex items-center justify-center self-center">
-        <TransferArrow />
-      </div>
-      <div className="col-start-3 min-w-0">
-        <TransferScuLine
-          amount={`+${transfer.amount}`}
-          suffix="deposit"
-          tone="text-rsi-success"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-        />
-      </div>
-
-      <div className="col-start-1 min-w-0 w-fit">
-        <div
-          aria-hidden
-          className={[
-            "mb-1 border-t",
-            isDone ? "border-rsi-divider" : "border-rsi-border-strong",
-          ].join(" ")}
-        />
-        <TransferScuLine
-          amount={String(transfer.after)}
-          suffix="remaining on ship"
-          tone="text-rsi-text"
-          strike={strike}
-          mute={mute}
-          isDone={isDone}
-          digitCols={digitCols}
-        />
-      </div>
-      <span aria-hidden className="col-start-3" />
-    </TransferBlockFrame>
-  );
+export function DeliveryTransferBlock(props: TransferBlockSharedProps) {
+  return <TransferReceiptBlock {...props} tone="delivery" />;
 }

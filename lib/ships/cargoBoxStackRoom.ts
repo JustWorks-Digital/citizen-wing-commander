@@ -69,19 +69,22 @@ export const STACK_ROOM_OPACITY_OVERLAY_FULL = 0.72;
 export const STACK_ROOM_OPACITY_OVERLAY_OPEN = 0.42;
 
 /**
- * How a crate paints as a 2D layer host (solids + underlays only).
- * Crates above the active Z are not hosts — they bleed into supports via
- * `cargoBoxesStackedAbove`.
+ * How a crate paints as a 2D layer host.
+ * - solid — intersects the active Z (interactive)
+ * - underlay — entirely below (ghost footprint)
+ * - overlay — entirely above (ghost footprint; also bleeds into supports via
+ *   `cargoBoxesStackedAbove` when a solid is present)
  */
 export function cargoBox2dLayerRole(
   box: CargoBoxStackRoomFootprint,
   activeLayer: number,
-): "solid" | "underlay" | null {
+): "solid" | "underlay" | "overlay" | null {
   if (!Number.isFinite(activeLayer)) return null;
   const z = Math.floor(activeLayer);
   const topZ = box.origin.z + box.footprint.dz - 1;
   if (box.origin.z <= z && z <= topZ) return "solid";
   if (topZ < z) return "underlay";
+  if (box.origin.z > z) return "overlay";
   return null;
 }
 

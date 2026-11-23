@@ -1071,14 +1071,42 @@ export function CargoGroups({
   };
 
   const [activeRole, setActiveRole] = useState<"pickup" | "delivery">(roleDefault);
+  const prevRoleHandledRef = useRef({
+    pickup: pickupHandled,
+    delivery: deliveryHandled,
+  });
 
-  // Only coerce the tab when a role section disappears — finishing Pickup /
-  // Drop off (last cargo checkbox or graph mark) must not jump tabs.
+  // Only coerce the tab when a role section disappears.
   useEffect(() => {
     if (!showRoleTabs) {
       setActiveRole(hasPickupSection ? "pickup" : "delivery");
     }
   }, [showRoleTabs, hasPickupSection]);
+
+  // Finishing Pickup / Drop off jumps to the other tab when it is still open.
+  // Completing the last remaining role stays put.
+  useEffect(() => {
+    if (!showRoleTabs) {
+      prevRoleHandledRef.current = {
+        pickup: pickupHandled,
+        delivery: deliveryHandled,
+      };
+      return;
+    }
+    const prev = prevRoleHandledRef.current;
+    const pickupJustDone = !prev.pickup && pickupHandled;
+    const deliveryJustDone = !prev.delivery && deliveryHandled;
+    prevRoleHandledRef.current = {
+      pickup: pickupHandled,
+      delivery: deliveryHandled,
+    };
+
+    if (pickupJustDone && !deliveryHandled) {
+      setActiveRole("delivery");
+    } else if (deliveryJustDone && !pickupHandled) {
+      setActiveRole("pickup");
+    }
+  }, [showRoleTabs, pickupHandled, deliveryHandled]);
 
   const cargoPanelsRef = useRef<HTMLDivElement | null>(null);
   const [graphMinHeightPx, setGraphMinHeightPx] = useState<number | null>(null);
@@ -1360,15 +1388,40 @@ export function CargoGroups({
     role === "pickup" ? hasPickupSection : hasDeliverySection,
   );
 
+  /** Shared shell so the active tab, transfer receipt, cards, and pad graph read as one unit. */
+  const roleShell = (role: "pickup" | "delivery") =>
+    role === "pickup"
+      ? {
+          edge: "border-rsi-accent/25",
+          seam: "bg-rsi-accent/25",
+          fill: "bg-rsi-accent-muted/15",
+          tabActive:
+            "relative z-[1] border-rsi-accent/25 border-b-transparent bg-rsi-accent-muted/15 text-rsi-accent",
+          tabInactive:
+            "border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+        }
+      : {
+          edge: "border-rsi-gold/25",
+          seam: "bg-rsi-gold/25",
+          fill: "bg-rsi-gold-muted/15",
+          tabActive:
+            "relative z-[1] border-rsi-gold/25 border-b-transparent bg-rsi-gold-muted/15 text-rsi-gold",
+          tabInactive:
+            "border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+        };
+
+  const activeShell = roleShell(activeRole);
+
   const roleTabs = showRoleTabs ? (
     <div
       role="tablist"
       aria-label="Stop cargo actions"
-      className="flex min-w-0 items-stretch gap-1 border-b border-rsi-divider"
+      className="flex min-w-0 items-end"
     >
       {tabRoles.map((role) => {
         const isActive = activeRole === role;
         const isDone = role === "pickup" ? pickupHandled : deliveryHandled;
+        const shell = roleShell(role);
         return (
           <button
             key={role}
@@ -1380,13 +1433,9 @@ export function CargoGroups({
             tabIndex={isActive ? 0 : -1}
             onClick={() => setActiveRole(role)}
             className={[
-              "relative -mb-px inline-flex min-w-0 flex-1 items-center justify-start gap-1.5 px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
+              "inline-flex min-w-0 flex-1 items-center justify-start gap-1.5 rounded-t-rsi border px-2.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
-              isActive
-                ? role === "pickup"
-                  ? "border-b-2 border-rsi-accent text-rsi-accent"
-                  : "border-b-2 border-rsi-gold text-rsi-gold"
-                : "border-b-2 border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+              isActive ? shell.tabActive : shell.tabInactive,
               isDone && !isActive ? "opacity-70" : "",
             ].join(" ")}
           >
@@ -1437,63 +1486,105 @@ export function CargoGroups({
         .filter(Boolean)
         .join(" ");
 
+    const activeTabIndex = tabRoles.indexOf(activeRole);
+
     return (
-      <div className="flex flex-col gap-3 text-sm lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4 lg:gap-y-2">
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">{roleTabs}</div>
+      <div className="flex flex-col text-sm">
+        {roleTabs}
         <div
-          ref={cargoPanelsRef}
-          className="min-w-0 lg:col-start-1 lg:row-start-2 lg:grid"
+          className={[
+            "relative rounded-b-rsi border border-t-0 px-3 py-3 sm:px-3.5 sm:py-3.5",
+            activeTabIndex === 0 ? "rounded-tr-rsi" : "rounded-tl-rsi",
+            activeShell.edge,
+            activeShell.fill,
+          ].join(" ")}
         >
-          {tabRoles.map((role) => {
-            const isActive = role === activeRole;
-            return (
+          {/* Top seam only under inactive tabs — open under the active tab. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 flex"
+          >
+            {tabRoles.map((role) => (
               <div
-                key={`${row.id}-equal-panel-${role}`}
-                data-cargo-role-panel={role}
-                className={desktopEqualHeight(isActive)}
-                aria-hidden={!isActive}
-              >
-                {renderRoleSection(role, { withAside: false })}
-              </div>
-            );
-          })}
-        </div>
-        {/* Min height = transfer + first mission-card row (not the full card grid). */}
-        <div className="min-w-0 lg:col-start-2 lg:row-start-2 lg:grid">
-          {tabRoles.map((role) => {
-            const isActive = role === activeRole;
-            const aside = bayAside?.(role);
-            if (!aside) return null;
-            return (
-              <div
-                key={`${row.id}-equal-aside-${role}`}
+                key={`${row.id}-tab-seam-${role}`}
                 className={[
-                  desktopEqualHeight(isActive),
-                  "flex w-full flex-col lg:[&>*]:min-h-0 lg:[&>*]:flex-1",
+                  "h-px min-w-0 flex-1",
+                  role === activeRole ? "bg-transparent" : activeShell.seam,
                 ].join(" ")}
-                style={
-                  graphMinHeightPx != null
-                    ? { minHeight: graphMinHeightPx }
-                    : undefined
-                }
-                aria-hidden={!isActive}
-              >
-                {aside}
-              </div>
-            );
-          })}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4">
+            <div ref={cargoPanelsRef} className="min-w-0 lg:grid">
+              {tabRoles.map((role) => {
+                const isActive = role === activeRole;
+                return (
+                  <div
+                    key={`${row.id}-equal-panel-${role}`}
+                    data-cargo-role-panel={role}
+                    className={desktopEqualHeight(isActive)}
+                    aria-hidden={!isActive}
+                  >
+                    {renderRoleSection(role, { withAside: false })}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Min height = transfer + first mission-card row (not the full card grid). */}
+            <div className="min-w-0 lg:grid">
+              {tabRoles.map((role) => {
+                const isActive = role === activeRole;
+                const aside = bayAside?.(role);
+                if (!aside) return null;
+                return (
+                  <div
+                    key={`${row.id}-equal-aside-${role}`}
+                    className={[
+                      desktopEqualHeight(isActive),
+                      "flex w-full flex-col lg:[&>*]:min-h-0 lg:[&>*]:flex-1",
+                    ].join(" ")}
+                    style={
+                      graphMinHeightPx != null
+                        ? { minHeight: graphMinHeightPx }
+                        : undefined
+                    }
+                    aria-hidden={!isActive}
+                  >
+                    {aside}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  const soloRole: "pickup" | "delivery" | null = hasPickupSection
+    ? "pickup"
+    : hasDeliverySection
+      ? "delivery"
+      : null;
+
+  if (soloRole) {
+    const shell = roleShell(soloRole);
+    return (
+      <div
+        className={[
+          "rounded-rsi border px-3 py-3 text-sm sm:px-3.5 sm:py-3.5",
+          shell.edge,
+          shell.fill,
+        ].join(" ")}
+      >
+        {renderRoleSection(soloRole)}
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      {hasPickupSection
-        ? renderRoleSection("pickup")
-        : hasDeliverySection
-          ? renderRoleSection("delivery")
-          : renderRoleSection(null)}
+      {renderRoleSection(null)}
     </div>
   );
 }

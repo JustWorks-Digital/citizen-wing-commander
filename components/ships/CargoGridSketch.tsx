@@ -1016,8 +1016,8 @@ export function CargoGridSketch({
   /** Abbreviated commodity labels on 2D crates. */
   const [showCargoNames, setShowCargoNames] = useState(true);
   /**
-   * Barely-visible ghosts for legend-hidden crates (and off layers in 3D)
-   * so stacked / surrounding cargo stays readable.
+   * Barely-visible ghosts for legend-hidden crates only (3D / 2D).
+   * Off layers stay fully hidden — real bay cargo is never hologrammed.
    */
   const [showHologram, setShowHologram] = useState(false);
 
@@ -1443,24 +1443,15 @@ export function CargoGridSketch({
   }
 
   /**
-   * Keyboard layer shortcut: set 2D layer and solo that Z in 3D so Split stays
-   * aligned. Tall crates still show if they intersect the visible layer
-   * (iso `layerOff` uses every-hidden, not any-hidden).
+   * Keyboard layer shortcut: set the 2D active Z only. 3D keeps the full bay
+   * solid — soloing layers used to hologram / hide real cargo and confuse.
    */
   const selectBayLayer = useCallback(
     (layer: number) => {
       if (layer < 0 || layer >= sketch.heightCells) return;
       setActiveZ(layer);
-      if (!showIso) return;
-      startTransition(() => {
-        const hidden = new Set<number>();
-        for (let z = 0; z < sketch.heightCells; z += 1) {
-          if (z !== layer) hidden.add(z);
-        }
-        setHiddenIsoLayers(hidden);
-      });
     },
-    [showIso, sketch.heightCells],
+    [sketch.heightCells],
   );
 
   useEffect(() => {
@@ -1956,7 +1947,7 @@ export function CargoGridSketch({
                 label="Show hologram"
                 checked={showHologram}
                 onCheckedChange={setShowHologram}
-                ariaLabel="Show barely visible ghosts of hidden crates"
+                ariaLabel="Show barely visible ghosts of legend-hidden crates"
               />
               <Switch
                 label="Overlay"
@@ -2303,8 +2294,9 @@ export function CargoGridSketch({
 
                 // Anchor by origin cell (not full footprint) so a cross-zone
                 // move keeps one DOM host until the origin enters the next zone.
-                // Active Z: solids that intersect. Below → underlay ghosts.
-                // Crates above bleed into each solid via stacked-above patches.
+                // Active Z: solids that intersect. Other layers → ghost hosts
+                // (underlay below / overlay above). Stacked-above still bleeds
+                // into solids — skip overlay hosts that already bleed there.
                 const boxesOnLayer = useBoxFootprints
                   ? renderPlacementBoxes
                       .filter((box) => {
@@ -2316,14 +2308,30 @@ export function CargoGridSketch({
                         ) {
                           return false;
                         }
-                        return cargoBox2dLayerRole(box, z) != null;
+                        const role = cargoBox2dLayerRole(box, z);
+                        if (role == null) return false;
+                        if (role === "overlay") {
+                          const bleedsOntoSolid = renderPlacementBoxes.some(
+                            (other) =>
+                              cargoBox2dLayerRole(other, z) === "solid" &&
+                              cargoBoxesStackedAbove(other, [box]).length > 0,
+                          );
+                          if (bleedsOntoSolid) return false;
+                        }
+                        return true;
                       })
                       .sort((a, b) => {
-                        const aUnder =
-                          cargoBox2dLayerRole(a, z) === "underlay" ? 0 : 1;
-                        const bUnder =
-                          cargoBox2dLayerRole(b, z) === "underlay" ? 0 : 1;
-                        if (aUnder !== bUnder) return aUnder - bUnder;
+                        const roleRank = (
+                          role: ReturnType<typeof cargoBox2dLayerRole>,
+                        ) =>
+                          role === "underlay"
+                            ? 0
+                            : role === "overlay"
+                              ? 1
+                              : 2;
+                        const aRank = roleRank(cargoBox2dLayerRole(a, z));
+                        const bRank = roleRank(cargoBox2dLayerRole(b, z));
+                        if (aRank !== bRank) return aRank - bRank;
                         return a.origin.z - b.origin.z;
                       })
                   : [];
@@ -2596,9 +2604,11 @@ export function CargoGridSketch({
                     {boxesOnLayer.map((box) => {
                       const layerRole = cargoBox2dLayerRole(box, z);
                       const isUnderlayGhost = layerRole === "underlay";
+                      const isOverlayGhost = layerRole === "overlay";
+                      const isLayerGhost = isUnderlayGhost || isOverlayGhost;
                       const isLegendHologram =
                         isPlacementBoxLegendHidden(box);
-                      const isHologram = isUnderlayGhost || isLegendHologram;
+                      const isHologram = isLayerGhost || isLegendHologram;
                       const stackedAbove =
                         !isHologram
                           ? cargoBoxesStackedAbove(box, renderPlacementBoxes)
@@ -2739,11 +2749,13 @@ export function CargoGridSketch({
                       // drop hits (preview uses z-7).
                       const cratePointerClass = isUnderlayGhost
                         ? "pointer-events-none z-[3]"
-                        : isHologram
+                        : isOverlayGhost
                           ? "pointer-events-none z-[4]"
-                          : draggingManualBoxId != null || trayDragSpec
-                            ? "pointer-events-none z-[5]"
-                            : "pointer-events-auto z-[8] cursor-default touch-none";
+                          : isHologram
+                            ? "pointer-events-none z-[4]"
+                            : draggingManualBoxId != null || trayDragSpec
+                              ? "pointer-events-none z-[5]"
+                              : "pointer-events-auto z-[8] cursor-default touch-none";
                       const manualTitleHint = isInStack
                         ? isBuried
                           ? " · click to select · R rotates this crate and everything on it · drag the stack badge to move them"
@@ -2768,7 +2780,9 @@ export function CargoGridSketch({
                           key={
                             isUnderlayGhost
                               ? `${box.id}-underlay-z${z}`
-                              : box.id
+                              : isOverlayGhost
+                                ? `${box.id}-overlay-z${z}`
+                                : box.id
                           }
                           title={
                             isUnderlayGhost
@@ -2777,17 +2791,23 @@ export function CargoGridSketch({
                                     ? "stack full"
                                     : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
                                 }`
-                              : isLegendHologram
-                                ? undefined
-                                : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)} · ${
+                              : isOverlayGhost
+                                ? `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · above layer ${z + 1} (Z${box.origin.z}) · ${
                                     freeStackLayers === 0
                                       ? "stack full"
                                       : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
-                                  }${stackBleedTitle}${
-                                    manualEdit
-                                      ? manualTitleHint
-                                      : " · click to select"
                                   }`
+                                : isLegendHologram
+                                  ? undefined
+                                  : `${locationLabel}${actionLabel}${box.commodityName} · ${box.size} ${SCU_TITLE} · ${formatCargoGridCoord(box.origin)} · ${
+                                      freeStackLayers === 0
+                                        ? "stack full"
+                                        : `${freeStackLayers} layer${freeStackLayers === 1 ? "" : "s"} free above`
+                                    }${stackBleedTitle}${
+                                      manualEdit
+                                        ? manualTitleHint
+                                        : " · click to select"
+                                    }`
                           }
                           role={!isHologram ? "button" : undefined}
                           aria-hidden={isHologram ? true : undefined}
@@ -2841,24 +2861,30 @@ export function CargoGridSketch({
                             height: boxHeightPx,
                             backgroundColor: hex,
                             // Stack-room opacity: solid = no room on top;
-                            // fainter = more free layers. Underlay ghosts sit
-                            // behind. Legend holograms stay fixed-faint.
+                            // fainter = more free layers. Other-layer ghosts
+                            // sit behind. Legend holograms stay fixed-faint.
                             opacity: isUnderlayGhost
                               ? cargoBoxStackRoomOpacity(
                                   freeStackLayers,
                                   sketch.heightCells,
                                   "underlay",
                                 )
-                              : isLegendHologram
-                                ? 0.12
-                                : isDraggingThis
-                                  ? 0.28
-                                  : cargoBoxStackRoomOpacity(
-                                      freeStackLayers,
-                                      sketch.heightCells,
-                                      "solid",
-                                    ),
-                            ...(isUnderlayGhost
+                              : isOverlayGhost
+                                ? cargoBoxStackRoomOpacity(
+                                    freeStackLayers,
+                                    sketch.heightCells,
+                                    "overlay",
+                                  )
+                                : isLegendHologram
+                                  ? 0.12
+                                  : isDraggingThis
+                                    ? 0.28
+                                    : cargoBoxStackRoomOpacity(
+                                        freeStackLayers,
+                                        sketch.heightCells,
+                                        "solid",
+                                      ),
+                            ...(isLayerGhost
                               ? {
                                   border:
                                     "1px dashed color-mix(in srgb, var(--rsi-border-strong) 55%, transparent)",

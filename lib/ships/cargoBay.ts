@@ -15,6 +15,7 @@ import {
   type CargoGridPlacementPlan,
 } from "@/lib/ships/cargoGridPlacement";
 import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
+import { settleFloatingBayBoxes } from "@/lib/ships/manualBayMove";
 import { packBaysFromSketch } from "@/lib/ships/packBaysFromSketch";
 import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
 import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
@@ -84,10 +85,15 @@ export const cargoBay = {
       // still dense-repacks so official capacity snaps to 720+excess.
       clusterByKey: packMode === "by-cargo-type",
     });
-    if (packMode !== "by-cargo-type") return packed;
+    // Pack / overflow can leave elevated crates with empty space under them.
+    const boxes = settleFloatingBayBoxes(sketch, packed.boxes);
+    if (packMode !== "by-cargo-type") {
+      return { ...packed, boxes };
+    }
     return {
       ...packed,
-      cargoTypeClusters: validateCargoTypePackClusters(packed.boxes),
+      boxes,
+      cargoTypeClusters: validateCargoTypePackClusters(boxes),
     };
   },
 

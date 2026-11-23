@@ -24,6 +24,7 @@ import {
   tryRotateManualBayBox,
   manualBayBoxCanRotate,
   previewManualBayPlacement,
+  settleFloatingBayBoxes,
 } from "@/lib/ships/manualBayMove";
 
 /** Minimal 6×4 cargo sketch (no gaps) for drop tests. */
@@ -841,5 +842,43 @@ describe("tryFillManualBayZoneWithCargoType", () => {
         `${zoneId} open cells should be toward aisle (middle)`,
       ).toBeLessThan(mean(occupiedDists));
     }
+  });
+
+  it("settleFloatingBayBoxes drops elevated crates with nothing below to the deck", () => {
+    const sketch: ShipCargoGridSketch = {
+      ...toySketch(),
+      heightCells: 4,
+    };
+    // Mid-air 1 SCU at z=2 with empty column under it.
+    const floating = boxAt("air", 1, 1, 1, 1, 2, 1);
+    const settled = settleFloatingBayBoxes(sketch, [floating]);
+    expect(settled).toHaveLength(1);
+    expect(settled[0]!.origin).toEqual({ x: 1, y: 1, z: 0 });
+    expect(settled[0]!.cells).toEqual([{ x: 1, y: 1, z: 0 }]);
+  });
+
+  it("settleFloatingBayBoxes keeps crates that already rest on support", () => {
+    const sketch: ShipCargoGridSketch = {
+      ...toySketch(),
+      heightCells: 4,
+    };
+    const base = boxAt("base", 0, 0, 1, 1, 0, 1);
+    const top = boxAt("top", 0, 0, 1, 1, 1, 1);
+    const settled = settleFloatingBayBoxes(sketch, [base, top]);
+    expect(settled.find((b) => b.id === "base")!.origin.z).toBe(0);
+    expect(settled.find((b) => b.id === "top")!.origin.z).toBe(1);
+  });
+
+  it("settleFloatingBayBoxes drops a floating stack onto the deck as a unit", () => {
+    const sketch: ShipCargoGridSketch = {
+      ...toySketch(),
+      heightCells: 4,
+    };
+    // Both elevated — nothing at z=0 under them.
+    const lower = boxAt("lower", 2, 1, 1, 1, 1, 1);
+    const upper = boxAt("upper", 2, 1, 1, 1, 2, 1);
+    const settled = settleFloatingBayBoxes(sketch, [lower, upper]);
+    expect(settled.find((b) => b.id === "lower")!.origin.z).toBe(0);
+    expect(settled.find((b) => b.id === "upper")!.origin.z).toBe(1);
   });
 });
