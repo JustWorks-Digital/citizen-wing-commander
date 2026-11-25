@@ -30,7 +30,6 @@ import {
 import type {
   CargoGridBoxAction,
   CargoGridPlacementTint,
-  PlacementLocationLegendItem,
   PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
@@ -83,16 +82,8 @@ export type CargoGridIsoViewProps = {
   placementBoxes?: PlacedCargoBox[];
   /** Legend entries (top-right); derived from tints when omitted. */
   legendItems?: CargoGridIsoLegendItem[];
-  /** Delivery location groups for the legend / show-hide filter. */
-  locationLegendItems?: PlacementLocationLegendItem[];
-  /**
-   * When true, draw mission-location perimeter outlines + number badges.
-   * Location filter toggles still work when false.
-   */
+  /** When true, draw mission-location perimeter outlines + number badges. */
   showLocationOutlines?: boolean;
-  /** Delivery locations hidden via legend toggles. */
-  hiddenLocations?: ReadonlySet<string>;
-  onToggleLocation?: (locationSlug: string) => void;
   /** Commodities hidden via legend toggles (omit from the graph). */
   hiddenCommodities?: ReadonlySet<string>;
   onToggleCommodity?: (commoditySlug: string) => void;
@@ -724,10 +715,7 @@ export function CargoGridIsoView({
   placementTints = [],
   placementBoxes = [],
   legendItems,
-  locationLegendItems = [],
   showLocationOutlines = false,
-  hiddenLocations = new Set(),
-  onToggleLocation,
   hiddenCommodities = new Set(),
   onToggleCommodity,
   hiddenActions = new Set(),
@@ -1179,14 +1167,9 @@ export function CargoGridIsoView({
     (tint) => tint.action === "delivery",
   );
   const showActionKey = hasPickup || hasDelivery;
-  const showLocationKey = locationLegendItems.length > 0;
   const showLegend =
     !hideLegend &&
-    (legend.length > 0 ||
-      showActionKey ||
-      showLayers ||
-      showLocationKey ||
-      showDebugOutlines);
+    (legend.length > 0 || showActionKey || showLayers || showDebugOutlines);
 
   const showToolbar =
     showPeel || mode !== "placement" || Boolean(toolbarBelow);
@@ -1199,7 +1182,6 @@ export function CargoGridIsoView({
     legend.length,
     showActionKey,
     showLayers,
-    showLocationKey,
     showDebugOutlines,
     debugSectionExpanded,
     panelHeightPx,
@@ -1214,7 +1196,7 @@ export function CargoGridIsoView({
           ? "h-full w-full bg-transparent"
           : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
       ].join(" ")}
-      style={{ height: panelHeightPx }}
+      style={embedded ? undefined : { height: panelHeightPx }}
     >
       {showToolbar ? (
         <div className="mb-1 flex shrink-0 flex-col items-start gap-1.5">
@@ -1278,69 +1260,8 @@ export function CargoGridIsoView({
           })}
           aria-label="Cargo color legend"
         >
-          {showLocationKey ? (
-            <ul className="space-y-0.5" aria-label="Delivery locations">
-              {locationLegendItems.map((item) => {
-                const isOn = !hiddenLocations.has(item.locationSlug);
-                const canToggle = Boolean(onToggleLocation);
-                const row = (
-                  <span
-                    className={[
-                      "flex min-w-0 flex-1 items-center gap-1.5",
-                      isOn ? "" : "opacity-55",
-                    ].join(" ")}
-                  >
-                    <span
-                      className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
-                      style={{
-                        borderColor: item.stroke,
-                        backgroundColor: isOn ? item.stroke : "transparent",
-                        color: isOn ? undefined : item.stroke,
-                      }}
-                      aria-hidden
-                    >
-                      {item.groupIndex}
-                    </span>
-                    <span
-                      className={[
-                        "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                        isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                      ].join(" ")}
-                    >
-                      {item.locationName}
-                    </span>
-                    <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                      {item.scu}
-                    </span>
-                  </span>
-                );
-                return (
-                  <li key={item.locationSlug}>
-                    {canToggle ? (
-                      <button
-                        type="button"
-                        aria-pressed={isOn}
-                        aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
-                        onClick={() => onToggleLocation?.(item.locationSlug)}
-                        className="flex w-full cursor-pointer text-left"
-                      >
-                        {row}
-                      </button>
-                    ) : (
-                      <div className="flex text-left">{row}</div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
           {legend.length > 0 ? (
-            <ul
-              className={[
-                "space-y-0.5",
-                showLocationKey ? "border-t border-rsi-border/60 pt-1.5" : "",
-              ].join(" ")}
-            >
+            <ul className="space-y-0.5">
               {legend.map((item) => {
                 const hex =
                   resolveCommodityColorHex(
@@ -1509,10 +1430,7 @@ export function CargoGridIsoView({
               isExpanded={debugSectionExpanded}
               onToggle={() => setDebugSectionExpanded((value) => !value)}
               showBorder={Boolean(
-                showLocationKey ||
-                  legend.length > 0 ||
-                  showActionKey ||
-                  showLayers,
+                legend.length > 0 || showActionKey || showLayers,
               )}
             >
               <button
@@ -1569,9 +1487,7 @@ export function CargoGridIsoView({
             !isFloor &&
             ((commoditySlug != null &&
               hiddenCommodities.has(commoditySlug)) ||
-              (action != null && hiddenActions.has(action)) ||
-              (cube.deliveryLocationSlug != null &&
-                hiddenLocations.has(cube.deliveryLocationSlug)));
+              (action != null && hiddenActions.has(action)));
           if (legendHidden && !showHologram) {
             return null;
           }

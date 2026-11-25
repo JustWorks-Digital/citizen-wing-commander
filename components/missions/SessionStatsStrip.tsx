@@ -611,8 +611,11 @@ export function SessionRouteProgressStats({
 }
 
 export type SessionInventoryStatProps = {
-  /** SCU aboard from completed stops so far. */
-  onboardScu: number;
+  /**
+   * @deprecated No longer shown in the cargo-bays inventory strip (On grid
+   * covers placed SCU). Kept optional for call-site compat.
+   */
+  onboardScu?: number;
   /** Highest SCU aboard if the full route is flown as planned. */
   peakScu: number;
   /** Sum of cargo SCU across agreed contracts. */
@@ -632,14 +635,23 @@ export type SessionInventoryStatProps = {
    * Negative when the planned peak exceeds capacity. Null when capacity unknown.
    */
   availableScu: number | null;
+  /** @deprecated Unused after Current was removed from this strip. */
   isOverCapacity?: boolean;
   /**
    * Unstable overflow SCU in use (past snapped ship capacity), when the ship
    * has overflow grids. Separate from capacity; capacity + overflow = total bay.
+   * Overflow cell is hidden when `overflowCapacity` is 0.
    */
   overflowScu?: number;
   /** Geometric overflow reserve capacity (0 when the ship has none). */
   overflowCapacity?: number;
+  /**
+   * Stop transfer SCU by cargo type — shown left of Contracts total
+   * (cargo-bays header). Omit or empty to hide.
+   */
+  stopTransfers?: StopTransferCommodityScu[];
+  /** Location name for the stop-transfer block title. */
+  stopLabel?: string | null;
   className?: string;
 };
 
@@ -729,44 +741,6 @@ function ContractSourceButton({
   );
 }
 
-/** One cell in the cargo-bay current/peak/overflow/free quadrant grid. */
-function InventoryQuadrant({
-  value,
-  label,
-  valueClassName,
-  className,
-}: {
-  value: ReactNode;
-  label: string;
-  valueClassName?: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={[
-        "flex min-w-[4.5rem] flex-col justify-center gap-0.5 px-2 py-1.5 text-left",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
-        {label}
-      </p>
-      <p
-        className={[
-          "font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text",
-          valueClassName,
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 export type SessionCurrentStopPickupGridProps = {
   /** Pickup / delivery SCU by cargo type at this stop. */
   transfers: StopTransferCommodityScu[];
@@ -776,7 +750,7 @@ export type SessionCurrentStopPickupGridProps = {
 };
 
 /**
- * Stop transfer SCU by cargo type — under the cargo-bay graphs.
+ * Stop transfer SCU by cargo type — cargo-bays header (left of Contracts total).
  * Sized to content (no inner scroll for typical 2-column stop lists).
  */
 export function SessionCurrentStopPickupGrid({
@@ -931,7 +905,6 @@ export function SessionContractScuGrid({
 
 /** Inventory telemetry for the cargo-layout header (totals + bay load). */
 export function SessionInventoryStat({
-  onboardScu,
   peakScu,
   missionsTotalScu,
   gridPlacedScu = null,
@@ -939,11 +912,12 @@ export function SessionInventoryStat({
   sessionId = null,
   totalCapacity,
   availableScu,
-  isOverCapacity = false,
   overflowScu = 0,
   overflowCapacity = 0,
+  stopTransfers = [],
+  stopLabel = null,
   className,
-  /** When false, omit the per-contract grid (render it separately in the footer). */
+  /** When false, omit the per-contract grid (render it separately when needed). */
   showContractBreakdown = false,
 }: SessionInventoryStatProps & { showContractBreakdown?: boolean }) {
   const capacityLabel = totalCapacity > 0 ? totalCapacity : "—";
@@ -959,11 +933,15 @@ export function SessionInventoryStat({
     peakScu <= bayWithOverflow;
   const isOverAvailable = availableScu != null && availableScu < 0;
   const showGridPlaced = gridPlacedScu != null;
+  const showOverflow = overflowCapacity > 0;
   const isGridOverCapacity =
     showGridPlaced && totalCapacity > 0 && gridPlacedScu > totalCapacity;
   const contractsAria = showGridPlaced
     ? `Contracts total ${missionsTotalScu} SCU, on grid ${gridPlacedScu} of ${capacityLabel} SCU`
     : `Contracts total ${missionsTotalScu} SCU`;
+  const inventoryAria = showOverflow
+    ? `Inventory peak ${peakScu} SCU, ${availableLabel} SCU unallocated, overflow ${overflowScu} of ${overflowCapacity}`
+    : `Inventory peak ${peakScu} SCU, ${availableLabel} SCU unallocated`;
 
   return (
     <div
@@ -971,6 +949,12 @@ export function SessionInventoryStat({
         .filter(Boolean)
         .join(" ")}
     >
+      {stopTransfers.length > 0 ? (
+        <SessionCurrentStopPickupGrid
+          transfers={stopTransfers}
+          stopLabel={stopLabel}
+        />
+      ) : null}
       {showContractBreakdown && missionScuBreakdown.length > 0 ? (
         <SessionContractScuGrid
           missionScuBreakdown={missionScuBreakdown}
@@ -983,7 +967,7 @@ export function SessionInventoryStat({
         role="group"
         aria-label={contractsAria}
       >
-        <div className="flex w-fit flex-col items-end justify-center gap-0.5 px-2 py-1 text-right">
+        <div className="flex min-w-[5.5rem] w-fit flex-col items-end justify-center gap-0.5 px-3 py-1.5 text-right">
           <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
             Contracts total
           </p>
@@ -1025,51 +1009,75 @@ export function SessionInventoryStat({
         </div>
       </div>
       <div
-        className={[
-          stripClass,
-          "!w-fit max-w-full !overflow-hidden divide-x-0",
-        ].join(" ")}
+        className={[stripClass, "!w-fit max-w-full"].join(" ")}
         role="group"
-        aria-label={`Inventory ${onboardScu} of ${totalCapacity > 0 ? totalCapacity : "unknown"} onboard, peak ${peakScu}, ${availableLabel} free, overflow ${overflowScu}`}
+        aria-label={inventoryAria}
       >
-        <div className="grid w-fit grid-cols-2 divide-x divide-y divide-rsi-border">
-          <InventoryQuadrant
-            label="current"
-            value={
-              <Fraction
-                current={onboardScu}
-                total={capacityLabel}
-                currentClassName={isOverCapacity ? "text-rsi-warn" : undefined}
-              />
-            }
-          />
-          <InventoryQuadrant
-            label="peak"
-            value={peakScu}
-            valueClassName={
+        {/* Peak + unallocated stacked (same column as Contracts total / On grid). */}
+        <div className="flex min-w-[6.5rem] w-fit flex-col items-end justify-center gap-0.5 px-3 py-1.5 text-right">
+          <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+            Peak
+          </p>
+          <p
+            className={[
+              "font-mono text-sm leading-none tabular-nums tracking-wide text-rsi-text",
               isPeakOverCapacity
                 ? "text-rsi-danger"
                 : isPeakUsingOverflow
                   ? "text-rsi-warn"
-                  : undefined
-            }
+                  : undefined,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {peakScu}
+            <span
+              className="ml-1.5 text-[0.55rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+              title={SCU_TITLE}
+            >
+              SCU
+            </span>
+          </p>
+          <div
+            aria-hidden
+            className="my-1 w-full border-t border-rsi-border"
           />
-          <InventoryQuadrant
-            label="overflow"
-            value={
+          <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+            Unallocated
+          </p>
+          <p
+            className={[
+              "font-mono text-xs leading-none tabular-nums tracking-wide text-rsi-text",
+              isOverAvailable ? "text-rsi-danger" : undefined,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {availableLabel}
+            <span
+              className="ml-1.5 text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted"
+              title={SCU_TITLE}
+            >
+              SCU
+            </span>
+          </p>
+        </div>
+        {showOverflow ? (
+          <div className="flex min-w-[5.5rem] w-fit flex-col items-end justify-center gap-0.5 px-3 py-1.5 text-right">
+            <p className="font-mono text-[0.5rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted">
+              Overflow
+            </p>
+            <p className="font-mono text-xs leading-none tabular-nums tracking-wide text-rsi-text">
               <Fraction
                 current={overflowScu}
                 total={overflowCapacity}
-                currentClassName={overflowScu > 0 ? "text-rsi-warn" : undefined}
+                currentClassName={
+                  overflowScu > 0 ? "text-rsi-warn" : undefined
+                }
               />
-            }
-          />
-          <InventoryQuadrant
-            label="free"
-            value={availableLabel}
-            valueClassName={isOverAvailable ? "text-rsi-danger" : undefined}
-          />
-        </div>
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

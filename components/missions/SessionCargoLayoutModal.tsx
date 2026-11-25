@@ -23,6 +23,7 @@ import {
 } from "@/lib/sessions/cargoBayLayoutClientPrefs";
 import {
   CargoBayLayout,
+  type CargoBayHeaderAsideContext,
   type CargoBayLayoutResizeApi,
   type CargoBayStopScope,
 } from "./CargoBayLayout";
@@ -37,11 +38,11 @@ export type SessionCargoLayoutModalProps = {
   sessionId?: string | null;
   /**
    * Inventory / capacity aside beside the Cargo bays title.
-   * Render fn receives All-tab grid placed SCU for the On grid readout.
+   * Render fn receives On grid SCU + stop transfer lines for the header.
    */
   headerAside?:
     | ReactNode
-    | ((ctx: { gridPlacedScu: number }) => ReactNode);
+    | ((ctx: CargoBayHeaderAsideContext) => ReactNode);
   onClose: () => void;
 };
 

@@ -46,6 +46,8 @@ export function useSessionCargoBayChrome(
   setPrioritized: (prioritized: boolean) => void;
   setTopZoom: (zoom: number) => void;
   setIsoZoom: (zoom: number) => void;
+  /** Set 2D and 3D zoom together without syncedZoom forcing them equal. */
+  setGridZooms: (topZoom: number, isoZoom: number) => void;
 } {
   const [prefs, setPrefs] = useState<CargoBayChromePrefs>(
     DEFAULT_CARGO_BAY_CHROME_PREFS,
@@ -185,6 +187,21 @@ export function useSessionCargoBayChrome(
     [sessionId],
   );
 
+  const setGridZooms = useCallback(
+    (nextTopZoom: number, nextIsoZoom: number) => {
+      setPrefs((prev) => {
+        const next: CargoBayChromePrefs = {
+          ...prev,
+          topZoom: nextTopZoom,
+          isoZoom: nextIsoZoom,
+        };
+        writeCargoBayChromePrefs(sessionId, next);
+        return next;
+      });
+    },
+    [sessionId],
+  );
+
   return {
     legendHidden: prefs.legendHidden,
     sortingHidden: prefs.sortingHidden,
@@ -212,5 +229,6 @@ export function useSessionCargoBayChrome(
     setPrioritized,
     setTopZoom,
     setIsoZoom,
+    setGridZooms,
   };
 }

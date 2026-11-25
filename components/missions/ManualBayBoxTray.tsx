@@ -340,8 +340,8 @@ export function ManualBayPlacedBoxDragGhost({
 /**
  * Manual Cargo panel: remaining crates by mission × commodity × SCU size.
  * Drag a mission header to pack all remaining types as one block; drag Fill
- * for one cargo type. Size chips under each Fill are collapsed by default.
- * R rotates single-crate drag; Esc cancels.
+ * for one cargo type (two chips per row). Size chips + per-type Reset open
+ * under the chevron (full width). R rotates single-crate drag; Esc cancels.
  */
 export function ManualBayBoxTray({
   groups,
@@ -542,12 +542,35 @@ export function ManualBayBoxTray({
                   }
                 }}
                 className={[
-                  "flex min-w-0 flex-1 items-baseline gap-1 rounded-[2px] px-0.5 py-px text-left font-mono text-[0.45rem] uppercase tracking-[0.1em] transition-colors",
+                  "flex min-w-0 flex-1 items-center gap-1 rounded-[2px] px-0.5 py-0.5 text-left font-mono text-[0.45rem] uppercase tracking-[0.1em] transition-colors",
                   canMissionFill
                     ? "cursor-grab text-rsi-text-secondary hover:bg-rsi-accent-muted/20 hover:text-rsi-accent active:cursor-grabbing"
                     : "cursor-default text-rsi-text-muted",
                 ].join(" ")}
               >
+                <span
+                  aria-hidden
+                  className={[
+                    "inline-flex shrink-0 flex-col justify-center gap-0.5",
+                    canMissionFill
+                      ? "text-rsi-text-muted"
+                      : "text-rsi-text-muted/40",
+                  ].join(" ")}
+                  title={canMissionFill ? "Drag whole contract" : undefined}
+                >
+                  <span className="flex gap-0.5">
+                    <span className="size-[2px] rounded-full bg-current" />
+                    <span className="size-[2px] rounded-full bg-current" />
+                  </span>
+                  <span className="flex gap-0.5">
+                    <span className="size-[2px] rounded-full bg-current" />
+                    <span className="size-[2px] rounded-full bg-current" />
+                  </span>
+                  <span className="flex gap-0.5">
+                    <span className="size-[2px] rounded-full bg-current" />
+                    <span className="size-[2px] rounded-full bg-current" />
+                  </span>
+                </span>
                 <span className="min-w-0 truncate">{group.missionTitle}</span>
                 {idShort ? (
                   <span className="shrink-0 normal-case tracking-normal text-rsi-text-muted/80">
@@ -585,7 +608,8 @@ export function ManualBayBoxTray({
                 </button>
               ) : null}
               </div>
-              <div className="space-y-0.5">
+              {/* Two equal chips per row; per-type Reset lives under Sizes. */}
+              <div className="grid grid-cols-2 gap-1">
                 {commodities.map((commodity) => {
                   const bulkDragging = draggingLineKey === commodity.key;
                   const sizesExpanded = expandedSizeKeys.has(commodity.key);
@@ -595,7 +619,15 @@ export function ManualBayBoxTray({
                   const canReset =
                     Boolean(onResetCommodity) && commodity.placedScu > 0;
                   return (
-                    <div key={commodity.key} className="space-y-0.5">
+                    <div
+                      key={commodity.key}
+                      className={[
+                        "min-w-0 space-y-0.5",
+                        sizesExpanded ? "col-span-2" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
                       <div
                         className={[
                           "flex min-w-0 overflow-hidden rounded-[2px] border font-mono text-[0.5rem] leading-none tabular-nums",
@@ -612,7 +644,7 @@ export function ManualBayBoxTray({
                         title={
                           canFill
                             ? `Fill · drag onto a bay section to pack all remaining ${commodity.commodityName} (largest first)`
-                            : `${commodity.commodityName} is on the bay — Reset to pull it back`
+                            : `${commodity.commodityName} is on the bay — open Sizes to Reset`
                         }
                         aria-label={`Fill ${commodity.commodityName}, ${commodity.remainingScu}scu`}
                         onPointerDown={(event) => {
@@ -695,7 +727,7 @@ export function ManualBayBoxTray({
                           pendingRef.current = null;
                         }}
                         className={[
-                          "flex min-w-0 flex-1 touch-none items-center gap-1.5 px-1 py-1 text-left transition-colors",
+                          "flex min-w-0 flex-1 touch-none items-center gap-1 px-1.5 py-[0.3rem] text-left transition-colors",
                           !canFill
                             ? "cursor-default text-rsi-text-muted"
                             : bulkDragging
@@ -719,34 +751,6 @@ export function ManualBayBoxTray({
                           <span title={SCU_TITLE}>scu</span>
                         </span>
                       </button>
-                      {canReset ? (
-                        <button
-                          type="button"
-                          title={`Reset · pull ${commodity.commodityName} off the bay into Cargo`}
-                          aria-label={`Reset ${commodity.commodityName}`}
-                          onClick={() =>
-                            onResetCommodity?.(
-                              commodity.missionId,
-                              commodity.commoditySlug,
-                            )
-                          }
-                          className="inline-flex w-5 shrink-0 items-center justify-center border-l border-rsi-accent/30 text-rsi-text-muted transition-colors hover:bg-rsi-accent-muted/30 hover:text-rsi-text-secondary"
-                        >
-                          <svg
-                            aria-hidden
-                            viewBox="0 0 12 12"
-                            className="size-2.5"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3.5 4.5H8a2 2 0 0 1 0 4H5.5" />
-                            <path d="M5 2.5 3 4.5 5 6.5" />
-                          </svg>
-                        </button>
-                      ) : null}
                       {sizeChipCount > 0 ? (
                       <button
                         type="button"
@@ -787,9 +791,26 @@ export function ManualBayBoxTray({
                       ) : null}
                       </div>
                       {sizesExpanded ? (
+                      <div className="space-y-0.5 pl-0.5">
+                      {canReset ? (
+                        <button
+                          type="button"
+                          title={`Reset · pull ${commodity.commodityName} off the bay into Cargo`}
+                          aria-label={`Reset ${commodity.commodityName}`}
+                          onClick={() =>
+                            onResetCommodity?.(
+                              commodity.missionId,
+                              commodity.commoditySlug,
+                            )
+                          }
+                          className="rounded border border-rsi-border/70 px-1.5 py-0.5 font-mono text-[0.45rem] uppercase tracking-[0.1em] text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
+                        >
+                          Reset to Cargo
+                        </button>
+                      ) : null}
                       <ul
                         id={sizesId}
-                        className="flex flex-wrap items-end gap-1 pl-0.5"
+                        className="flex flex-wrap items-end gap-1"
                       >
                         {commodity.lines.map((line) => {
                           const canPlace = line.remaining > 0;
@@ -929,6 +950,7 @@ export function ManualBayBoxTray({
                           );
                         })}
                       </ul>
+                      </div>
                       ) : null}
                     </div>
                   );

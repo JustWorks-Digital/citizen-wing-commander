@@ -115,14 +115,24 @@ function catalogMissionIdForId(
   return hit?.catalogMissionId?.trim() || null;
 }
 
+/**
+ * Crates demanded for one soft-visible cargo line.
+ * Soft stay/partial lines keep the pickup `boxSizes` mix while `scu` shrinks —
+ * match the packer: use the mix only when it sums to `scu`, otherwise decompose.
+ */
 function sizesForCargo(cargo: {
   scu: number;
   boxSizes?: Array<1 | 2 | 4 | 8 | 16 | 32>;
 }): CargoBoxScu[] {
+  const scu = Math.max(0, Math.floor(cargo.scu));
+  if (scu <= 0) return [];
   if (cargo.boxSizes && cargo.boxSizes.length > 0) {
-    return cargo.boxSizes as CargoBoxScu[];
+    const sizes = cargo.boxSizes as CargoBoxScu[];
+    const sum = sizes.reduce((total, size) => total + size, 0);
+    if (sum === scu) return [...sizes];
+    return decomposeScuIntoBoxes(scu, maxCargoBoxScu(sizes));
   }
-  return decomposeScuIntoBoxes(cargo.scu, maxCargoBoxScu(cargo.boxSizes));
+  return decomposeScuIntoBoxes(scu, maxCargoBoxScu(cargo.boxSizes));
 }
 
 function countPlaced(

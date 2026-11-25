@@ -107,10 +107,14 @@ export function ChecklistProgressTimeline({
               title={title}
               onClick={() => onSelectStop(stop.id)}
               className={[
-                "flex shrink-0 flex-col items-center gap-1.5 rounded-rsi px-1 py-1 text-center transition-colors",
+                "flex shrink-0 flex-col items-center gap-1.5 rounded-rsi px-1 py-2 text-center transition-colors",
                 isVertical ? "w-full max-w-[7.5rem]" : "w-[5.75rem]",
                 "hover:bg-rsi-surface-raised/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
-                stop.isViewing ? "bg-rsi-accent-muted/30" : "",
+                stop.isCurrent
+                  ? "bg-rsi-accent-muted/30"
+                  : stop.isViewing
+                    ? "bg-rsi-surface-raised/50"
+                    : "",
               ].join(" ")}
             >
               {!isVertical ? (
@@ -121,11 +125,13 @@ export function ChecklistProgressTimeline({
               <span
                 className={[
                   "relative flex size-9 items-center justify-center overflow-hidden rounded-full bg-rsi-bg-deep sm:size-10",
-                  stop.isViewing
+                  stop.isCurrent
                     ? "border-4 border-rsi-accent"
-                    : stop.isCompleted
-                      ? "border-2 border-rsi-success"
-                      : "border-2 border-rsi-border",
+                    : stop.isViewing
+                      ? "border-4 border-rsi-text/70"
+                      : stop.isCompleted
+                        ? "border-2 border-rsi-success"
+                        : "border-2 border-rsi-border",
                 ].join(" ")}
               >
                 {imageSrc ? (
@@ -169,7 +175,7 @@ export function ChecklistProgressTimeline({
               <span
                 className={[
                   "w-full truncate text-[0.7rem] font-medium leading-tight",
-                  stop.isViewing
+                  stop.isCurrent || stop.isViewing
                     ? "text-rsi-text"
                     : stop.isCompleted
                       ? "text-rsi-text-muted"

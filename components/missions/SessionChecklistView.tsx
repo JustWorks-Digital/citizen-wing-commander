@@ -54,6 +54,7 @@ import {
 } from "@/lib/missions/sessionChecklist";
 import { TripCrashFinishModal } from "@/components/missions/TripCrashFinishModal";
 import { cargoInventory } from "@/lib/missions/cargoInventory";
+import type { CargoBayHeaderAsideContext } from "@/components/missions/CargoBayLayout";
 import {
   applyCompletedMissionStopState,
   rebuildRowsFromMissions,
@@ -800,7 +801,11 @@ export function SessionChecklistView({
   const closeCargoLayout = useCallback(() => setCargoLayoutOpen(false), []);
 
   const inventoryAside = useCallback(
-    ({ gridPlacedScu }: { gridPlacedScu: number }) => (
+    ({
+      gridPlacedScu,
+      stopTransfers,
+      stopLabel,
+    }: CargoBayHeaderAsideContext) => (
       <SessionInventoryStat
         onboardScu={onboardScu}
         peakScu={peakScu}
@@ -813,6 +818,8 @@ export function SessionChecklistView({
         isOverCapacity={isOverCapacity}
         overflowScu={overflowScu}
         overflowCapacity={overflowCapacity}
+        stopTransfers={stopTransfers}
+        stopLabel={stopLabel}
       />
     ),
     [

@@ -3222,15 +3222,38 @@ function sizesByDeliveryLocation(
   splits: DeliveryLocationScuSplit[],
 ): Array<{ locationSlug: string; sizes: CargoBoxScu[] }> {
   if (splits.length === 0) {
-    return [{ locationSlug: "", sizes: sizesForSegment(segment) }];
+    const sizes = sizesForSegment(segment);
+    const sizesScu = sizes.reduce((total, size) => total + size, 0);
+    // Soft stay keeps the pickup mix on a reduced `scu` with no remaining
+    // delivery pool — only trust boxSizes when they sum to segment.scu.
+    if (sizesScu === segment.scu) {
+      return [{ locationSlug: "", sizes }];
+    }
+    return [
+      {
+        locationSlug: "",
+        sizes: decomposeScuIntoBoxes(
+          segment.scu,
+          maxCargoBoxScu(segment.boxSizes),
+        ),
+      },
+    ];
   }
   if (splits.length === 1) {
     const only = splits[0]!;
-    if (segment.boxSizes && segment.scu === only.scu) {
+    const sizes = sizesForSegment(segment);
+    const sizesScu = sizes.reduce((total, size) => total + size, 0);
+    // Soft stay/partial lines keep the full pickup mix on a reduced `scu` —
+    // only trust boxSizes when they actually sum to this split.
+    if (
+      segment.boxSizes &&
+      segment.scu === only.scu &&
+      sizesScu === only.scu
+    ) {
       return [
         {
           locationSlug: only.locationSlug,
-          sizes: sizesForSegment(segment),
+          sizes,
         },
       ];
     }

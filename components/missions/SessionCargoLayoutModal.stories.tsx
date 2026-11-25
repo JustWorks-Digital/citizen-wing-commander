@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { mockSessionChecklist } from "@/lib/missions/mockSession";
 
+import type { CargoBayHeaderAsideContext } from "./CargoBayLayout";
 import { SessionInventoryStat } from "./SessionStatsStrip";
 import { SessionCargoLayoutModal } from "./SessionCargoLayoutModal";
 
@@ -12,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with All / Transfer scope toggle; bottom-right corner resizes width and height together (persisted per trip). Fullscreen toggle fills the browser (persisted); Esc exits fullscreen first, then dismisses. X sits in the mask above the panel (backdrop also dismiss). Header shows Contracts total, On grid (placed / capacity), and bay load; footer shows stop transfer SCU by cargo type.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with Packing + All/Transfer above the left grid; bottom-right corner resizes width and height together (persisted per trip). Fullscreen toggle fills the browser (persisted); Esc exits fullscreen first, then dismisses. X sits in the mask above the panel (backdrop also dismiss). Header shows stop transfer SCU (left of Contracts total), On grid (placed / capacity), and bay load.",
       },
     },
   },
@@ -28,7 +29,11 @@ const openArgs = {
   sessionId: mockSessionChecklist.id,
   focusedStopId: mockSessionChecklist.rows[0]?.id ?? null,
   onClose: () => {},
-  headerAside: ({ gridPlacedScu }: { gridPlacedScu: number }) => (
+  headerAside: ({
+    gridPlacedScu,
+    stopTransfers,
+    stopLabel,
+  }: CargoBayHeaderAsideContext) => (
     <SessionInventoryStat
       onboardScu={24}
       peakScu={72}
@@ -38,6 +43,8 @@ const openArgs = {
       sessionId={mockSessionChecklist.id}
       totalCapacity={696}
       availableScu={624}
+      stopTransfers={stopTransfers}
+      stopLabel={stopLabel}
     />
   ),
 } satisfies Story["args"];

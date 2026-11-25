@@ -82,7 +82,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Manual Cargo panel: drag a mission header to pack all remaining types together; mission Reset pulls that mission’s cargo off the bay; Fill rows stay after placing with per-type Reset. Chevron expands size chips. R rotates; Esc cancels.",
+          "Manual Cargo panel: drag a mission header (grip) to pack all remaining types together; mission Reset pulls that mission’s cargo off the bay. Cargo-type Fill chips sit two per row; chevron expands size chips (full width) with per-type Reset. R rotates; Esc cancels.",
       },
     },
   },

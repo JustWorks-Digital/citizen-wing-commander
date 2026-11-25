@@ -20,11 +20,13 @@ import {
   ManualBayTrayDragGhost,
   ManualBayTrayMissionDragGhost,
 } from "@/components/missions/ManualBayBoxTray";
-import { SessionCurrentStopPickupGrid } from "@/components/missions/SessionStatsStrip";
 import { useSessionCargoBayChrome } from "@/hooks/useSessionCargoBayChrome";
 import { useSessionCargoBayLayoutHeight } from "@/hooks/useSessionCargoBayLayoutHeight";
 import { getLocationBySlug } from "@/lib/fixtures";
-import { cargoInventory } from "@/lib/missions/cargoInventory";
+import {
+  cargoInventory,
+  type StopTransferCommodityScu,
+} from "@/lib/missions/cargoInventory";
 import type { HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import type { SessionMission } from "@/lib/missions/sessionMissions";
 
@@ -50,9 +52,7 @@ import {
 import {
   cargoBayPackModes,
   placementPlanLegend,
-  placementPlanLocationLegend,
   placementPlanTints,
-  upcomingDeliveryLocationSlugs,
   type CargoBayPackMode,
   type PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
@@ -95,6 +95,13 @@ export type CargoBayLayoutResizeApi = {
   getMaxHeightPx: () => number;
 };
 
+/** Args for `headerAside` render fn (On grid + stop transfer SCU). */
+export type CargoBayHeaderAsideContext = {
+  gridPlacedScu: number;
+  stopTransfers: StopTransferCommodityScu[];
+  stopLabel: string | null;
+};
+
 export type CargoBayLayoutProps = {
   rows: HaulingChecklistRow[];
   /** Session contracts — Manual tray groups identical crates by mission. */
@@ -114,11 +121,11 @@ export type CargoBayLayoutProps = {
   sessionId?: string | null;
   /**
    * Optional session stats — right of the Cargo bays title.
-   * Pass a render fn to receive All-tab grid placed SCU (packing / Manual).
+   * Pass a render fn for All-tab grid placed SCU + stop transfer lines.
    */
   headerAside?:
     | ReactNode
-    | ((ctx: { gridPlacedScu: number }) => ReactNode);
+    | ((ctx: CargoBayHeaderAsideContext) => ReactNode);
   /** When true, graph height fills the modal shell (no height drag). */
   isFullscreen?: boolean;
   /**
@@ -177,6 +184,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     setPrioritized,
     setTopZoom,
     setIsoZoom,
+    setGridZooms,
   } = useSessionCargoBayChrome(sessionId);
   const [peelStack, setPeelStack] = useState(false);
   /** Manual Path: preview Blank / Automatic seeds until Save. */
@@ -500,10 +508,14 @@ export const CargoBayLayout = memo(function CargoBayLayout({
 
   const headerAsideNode = useMemo(() => {
     if (typeof headerAside === "function") {
-      return headerAside({ gridPlacedScu });
+      return headerAside({
+        gridPlacedScu,
+        stopTransfers: thisStopTransfers,
+        stopLabel: thisStopLabel,
+      });
     }
     return headerAside;
-  }, [gridPlacedScu, headerAside]);
+  }, [gridPlacedScu, headerAside, thisStopLabel, thisStopTransfers]);
 
   const plan = useMemo(() => {
     if (!basePlan) return null;
@@ -542,12 +554,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     () => (plan ? placementPlanLegend(plan) : []),
     [plan],
   );
-  const locationLegendItems = useMemo(() => {
-    if (!plan || !activeRow) return [];
-    return placementPlanLocationLegend(plan, {
-      locationOrder: upcomingDeliveryLocationSlugs(rows, activeRow.id),
-    });
-  }, [plan, rows, activeRow]);
   const showLocationOutlines = packMode === "by-mission-location" && !isManual;
   // Manual must keep the empty bay visible after Clear / remove-all so tray place works.
   const showGrid = Boolean(
@@ -1190,17 +1196,26 @@ export const CargoBayLayout = memo(function CargoBayLayout({
     </div>
   );
 
-  /** Pack mode / graph top inset under Packing (+ Peel) toggles. */
-  const pushPackTopClass = showPeelToggle ? "top-14 sm:top-8" : "top-8";
   const pushPackOpen = !sidePanelsOverlay && !sortingHidden;
-  /** Overlay off: clear Packing (+ Peel); keep 2D/Split/3D above the grid. */
-  const pushGraphTopClass = !sidePanelsOverlay
-    ? showPeelToggle
-      ? "pt-14 sm:pt-8"
-      : "pt-8"
-    : "";
-  /** Left gutter matching Pack mode width so graph + footer clear the panel. */
+  /** Left gutter matching Pack mode width so the graph clears the panel. */
   const pushPackGutterClass = pushPackOpen ? "pl-[17.5rem]" : "";
+
+  const peelToggleButton = showPeelToggle ? (
+    <button
+      type="button"
+      aria-pressed={peelStack}
+      aria-label={peelStack ? "Disable peel" : "Enable peel"}
+      onClick={() => setPeelStack((value) => !value)}
+      className={[
+        "shrink-0 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+        peelStack
+          ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+          : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+      ].join(" ")}
+    >
+      Peel
+    </button>
+  ) : null;
 
   return (
     <div
@@ -1208,9 +1223,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
       className={[
         "min-w-0 overflow-hidden bg-rsi-surface/90 px-4 pt-4 shadow-rsi-panel",
         isFullscreen
-          ? "flex h-full flex-col rounded-none border-0"
-          : "rounded-rsi border border-rsi-border",
-        showGrid ? "pb-0" : "pb-4",
+          ? "flex h-full flex-col rounded-none border-0 pb-0"
+          : "rounded-rsi border border-rsi-border pb-4",
         className,
       ]
         .filter(Boolean)
@@ -1224,39 +1238,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             </p>
             {sketch ? (
               <p className="mt-1 text-sm text-rsi-text-secondary">{sketch.shipName}</p>
-            ) : null}
-            {onStopScopeChange ? (
-              <div
-                role="tablist"
-                aria-label="Bay cargo scope"
-                className="mt-2 inline-flex w-fit rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 p-0.5"
-              >
-                {(
-                  [
-                    { id: "all", label: "All" },
-                    { id: "transfer", label: "Transfer" },
-                  ] as const
-                ).map((option) => {
-                  const selected = stopScope === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      onClick={() => onStopScopeChange(option.id)}
-                      className={[
-                        "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-                        selected
-                          ? "bg-rsi-accent-muted/50 text-rsi-accent"
-                          : "text-rsi-text-muted hover:text-rsi-text",
-                      ].join(" ")}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
             ) : null}
           </div>
           {headerAsideNode ? (
@@ -1331,59 +1312,65 @@ export const CargoBayLayout = memo(function CargoBayLayout({
         >
           {showViewTabs ? (
             <>
-              {sidePanelsOverlay ? (
-                <div className="pointer-events-none absolute top-2 left-1/2 z-20 -translate-x-1/2">
-                  <div className="pointer-events-auto">{viewTabList}</div>
-                </div>
-              ) : null}
-              <div className="pointer-events-auto absolute top-2 left-2 z-30 flex flex-col items-start gap-1 sm:flex-row sm:items-center">
+              {/* Packing + All/Transfer above the left grid — same size as 2D/Split/3D. */}
+              <div className="pointer-events-auto absolute top-0 left-0 z-50 flex -translate-y-[calc(100%+0.25rem)] items-center gap-1">
                 <button
                   type="button"
                   aria-pressed={!sortingHidden}
                   aria-label={sortingHidden ? "Show packing" : "Hide packing"}
                   onClick={() => setSortingHidden(!sortingHidden)}
                   className={[
-                    "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                    "inline-flex items-center rounded-rsi border bg-rsi-bg-deep/95 p-0.5 shadow-rsi-panel transition-colors",
                     !sortingHidden
-                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                      ? "border-rsi-accent/50"
+                      : "border-rsi-border hover:border-rsi-border-strong",
                   ].join(" ")}
                 >
-                  Packing
-                </button>
-                {showPeelToggle ? (
-                  <button
-                    type="button"
-                    aria-pressed={peelStack}
-                    aria-label={peelStack ? "Disable peel" : "Enable peel"}
-                    onClick={() => setPeelStack((value) => !value)}
+                  <span
                     className={[
-                      "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
-                      peelStack
-                        ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                        : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                      "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em]",
+                      !sortingHidden
+                        ? "bg-rsi-accent-muted/50 text-rsi-accent"
+                        : "text-rsi-text-muted",
                     ].join(" ")}
                   >
-                    Peel
-                  </button>
+                    Packing
+                  </span>
+                </button>
+                {onStopScopeChange ? (
+                  <div
+                    role="tablist"
+                    aria-label="Bay cargo scope"
+                    className="inline-flex w-fit rounded-rsi border border-rsi-border bg-rsi-bg-deep/95 p-0.5 shadow-rsi-panel"
+                  >
+                    {(
+                      [
+                        { id: "all", label: "All" },
+                        { id: "transfer", label: "Transfer" },
+                      ] as const
+                    ).map((option) => {
+                      const selected = stopScope === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={selected}
+                          onClick={() => onStopScopeChange(option.id)}
+                          className={[
+                            "rounded-[calc(var(--radius-rsi)-2px)] px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
+                            selected
+                              ? "bg-rsi-accent-muted/50 text-rsi-accent"
+                              : "text-rsi-text-muted hover:text-rsi-text",
+                          ].join(" ")}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ) : null}
               </div>
-              {sidePanelsOverlay ? (
-                <button
-                  type="button"
-                  aria-pressed={!legendHidden}
-                  aria-label={legendHidden ? "Show legend" : "Hide legend"}
-                  onClick={() => setLegendHidden(!legendHidden)}
-                  className={[
-                    "pointer-events-auto absolute top-2 right-2 z-30 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
-                    !legendHidden
-                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                  ].join(" ")}
-                >
-                  Legend
-                </button>
-              ) : null}
               {!sortingHidden ? (
                 <div
                   role="region"
@@ -1392,8 +1379,8 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                     cargoBaySidePanelClassName({
                       overlay: true,
                       side: "left",
-                      toggleAbove: true,
-                      topClassName: pushPackTopClass,
+                      topClassName: "top-0",
+                      insetClassName: "left-0",
                       matchGraphHeight: true,
                     }),
                     "flex flex-col space-y-2",
@@ -1427,7 +1414,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                               else selectAutoMode(lastAutoPackMode);
                             }}
                             className={[
-                              "rounded-rsi border px-2 py-1.5 font-mono text-[0.55rem] uppercase tracking-[0.12em] transition-colors",
+                              "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
                               selected
                                 ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
                                 : "border-rsi-border/80 bg-rsi-bg-deep/50 text-rsi-text-muted hover:border-rsi-border-strong hover:text-rsi-text-secondary",
@@ -1628,7 +1615,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                       ) : (
                         <div className="min-w-0 space-y-1">
                           <div className="flex items-center justify-between gap-1">
-                            <p className="font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-muted">
+                            <p className="font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
                               Templates
                             </p>
                             <button
@@ -1639,12 +1626,12 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                 setManualSeedPicker(true);
                                 setManualSeedPreview(null);
                               }}
-                              className="inline-flex size-6 shrink-0 items-center justify-center rounded border border-dashed border-rsi-border/80 font-mono text-[0.75rem] leading-none text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
+                              className="inline-flex size-4 shrink-0 items-center justify-center rounded border border-dashed border-rsi-border/80 font-mono text-[0.65rem] leading-none text-rsi-text-muted transition-colors hover:border-rsi-border-strong hover:text-rsi-text-secondary"
                             >
                               +
                             </button>
                           </div>
-                          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto pr-0.5">
+                          <div className="flex max-h-32 flex-col gap-0.5 overflow-y-auto pr-0.5">
                             {manualStop.templates.map((template) => {
                               const selected =
                                 template.id === manualStop.activeTemplateId;
@@ -1653,7 +1640,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                 <div
                                   key={template.id}
                                   className={[
-                                    "flex min-w-0 items-stretch gap-1 rounded-rsi border px-2 py-2",
+                                    "flex min-w-0 items-stretch gap-0.5 rounded-[2px] border px-1.5 py-0.5",
                                     selected
                                       ? "border-rsi-accent/50 bg-rsi-accent-muted/25"
                                       : "border-rsi-border/70 bg-rsi-bg-deep/40",
@@ -1686,7 +1673,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                           setRenameDraft("");
                                         }
                                       }}
-                                      className="min-w-0 flex-1 rounded border border-rsi-accent/40 bg-rsi-bg-deep px-1.5 py-1 font-mono text-[0.7rem] text-rsi-text outline-none"
+                                      className="min-w-0 flex-1 rounded border border-rsi-accent/40 bg-rsi-bg-deep px-1 py-px font-mono text-[0.55rem] text-rsi-text outline-none"
                                     />
                                   ) : (
                                     <button
@@ -1711,7 +1698,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                         setRenameDraft(template.name);
                                       }}
                                       className={[
-                                        "min-w-0 flex-1 truncate text-left font-mono text-[0.7rem] tracking-wide",
+                                        "min-w-0 flex-1 truncate text-left font-mono text-[0.55rem] tracking-wide",
                                         selected
                                           ? "text-rsi-accent"
                                           : "text-rsi-text-secondary hover:text-rsi-text",
@@ -1727,7 +1714,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                                     onClick={() =>
                                       deleteManualTemplate(template.id)
                                     }
-                                    className="shrink-0 px-1 text-[0.85rem] leading-none text-rsi-text-muted hover:text-rsi-danger"
+                                    className="shrink-0 px-0.5 text-[0.7rem] leading-none text-rsi-text-muted hover:text-rsi-danger"
                                   >
                                     ×
                                   </button>
@@ -1836,36 +1823,38 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             </>
           ) : null}
           <div
-            className={[pushPackGutterClass, pushGraphTopClass]
-              .filter(Boolean)
-              .join(" ") || undefined}
+            className={pushPackGutterClass || undefined}
           >
-            {/* Overlay off: 2D / Split / 3D left, Legend right — same row above the grid. */}
-            {showViewTabs && !sidePanelsOverlay ? (
-              <div className="mb-2 flex items-center justify-between gap-2">
-                {viewTabList}
-                <button
-                  type="button"
-                  aria-pressed={!legendHidden}
-                  aria-label={legendHidden ? "Show legend" : "Hide legend"}
-                  onClick={() => setLegendHidden(!legendHidden)}
-                  className={[
-                    "shrink-0 rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
-                    !legendHidden
-                      ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
-                      : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
-                  ].join(" ")}
-                >
-                  Legend
-                </button>
-              </div>
-            ) : null}
-            {/* Sized graph only — height clamp measures this node, not tabs/footer. */}
+            {/* Sized graph — 2D/Split/3D sits on the top border (center between panes). */}
             <div
               data-cargo-bay-height-panel
               className="relative"
               style={{ height: panelHeightPx }}
             >
+              {showViewTabs ? (
+                <div className="pointer-events-none absolute top-0 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+                  <div className="pointer-events-auto">{viewTabList}</div>
+                </div>
+              ) : null}
+              {showViewTabs ? (
+                <div className="pointer-events-auto absolute top-2 right-2 z-30 flex items-center gap-1">
+                  {peelToggleButton}
+                  <button
+                    type="button"
+                    aria-pressed={!legendHidden}
+                    aria-label={legendHidden ? "Show legend" : "Hide legend"}
+                    onClick={() => setLegendHidden(!legendHidden)}
+                    className={[
+                      "rounded-rsi border px-1.5 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] shadow-rsi-panel transition-colors",
+                      !legendHidden
+                        ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
+                        : "border-rsi-border bg-rsi-bg-deep/95 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
+                    ].join(" ")}
+                  >
+                    Legend
+                  </button>
+                </div>
+              ) : null}
               <CargoGridSketch
                 sketch={sketch}
                 cellPx={14}
@@ -1874,7 +1863,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 views={viewTab}
                 inlineTopLegend={viewTab === "top" || viewTab === "split"}
                 hideLegend={legendHidden}
-                legendToggleAbove={sidePanelsOverlay}
+                legendToggleAbove
                 sidePanelsOverlay={sidePanelsOverlay}
                 onSidePanelsOverlayChange={setSidePanelsOverlay}
                 splitOrientation={splitOrientation}
@@ -1892,7 +1881,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 placementTints={placementTints}
                 placementBoxes={plan!.boxes}
                 legendItems={legendItems}
-                locationLegendItems={locationLegendItems}
                 showLocationOutlines={showLocationOutlines}
                 manualEdit={isManual && (viewTab === "top" || viewTab === "split")}
                 onManualDragStart={onManualDragStart}
@@ -1941,6 +1929,7 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 onTopZoomChange={setTopZoom}
                 isoZoom={isoZoom}
                 onIsoZoomChange={setIsoZoom}
+                onGridZoomsChange={setGridZooms}
               />
             </div>
           </div>
@@ -1948,22 +1937,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
             Ship orientation: back (ramp) on the left, front (nose) on the
             right.
           </p>
-          {thisStopTransfers.length > 0 ? (
-            <div
-              className={[
-                "mt-2 border-t border-rsi-border/80 pt-2",
-                // Overlay off: sit under the graph, not under the Pack mode column.
-                pushPackGutterClass,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <SessionCurrentStopPickupGrid
-                transfers={thisStopTransfers}
-                stopLabel={thisStopLabel}
-              />
-            </div>
-          ) : null}
           {!isFullscreen && !hostCornerResize ? (
             <div className="-mx-4 mt-1">
               <button
@@ -2018,14 +1991,6 @@ export const CargoBayLayout = memo(function CargoBayLayout({
                 : "No cargo placed at this stop yet."
               : "No route stops yet."}
           </p>
-          {thisStopTransfers.length > 0 ? (
-            <div className="mt-2 border-t border-rsi-border/80 pt-2 pb-3">
-              <SessionCurrentStopPickupGrid
-                transfers={thisStopTransfers}
-                stopLabel={thisStopLabel}
-              />
-            </div>
-          ) : null}
         </>
       )}
     </div>

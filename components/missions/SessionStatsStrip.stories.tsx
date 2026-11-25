@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
   SessionContractScuGrid,
-  SessionCurrentStopPickupGrid,
   SessionInventoryStat,
   SessionRouteProgressStats,
   SessionSourceStat,
@@ -106,7 +105,7 @@ export const Inventory: Story = {
   ),
 };
 
-/** Inventory header + stop pickup grid (storage-bays modal pattern). */
+/** Inventory header with stop transfer SCU left of Contracts total. */
 export const ContractScuFourPerColumn: Story = {
   render: () => (
     <div className="flex w-full max-w-3xl flex-col gap-3">
@@ -117,44 +116,40 @@ export const ContractScuFourPerColumn: Story = {
         missionScuBreakdown={[]}
         totalCapacity={216}
         availableScu={36}
+        stopLabel="Everus Harbor"
+        stopTransfers={[
+          {
+            action: "pickup",
+            commoditySlug: "pressurized-ice",
+            scu: 32,
+          },
+          {
+            action: "pickup",
+            commoditySlug: "processed-food",
+            scu: 24,
+          },
+          { action: "pickup", commoditySlug: "agricium", scu: 40 },
+        ]}
       />
-      <div className="flex min-w-0 flex-wrap items-start gap-3">
-        <SessionCurrentStopPickupGrid
-          stopLabel="Everus Harbor"
-          transfers={[
-            {
-              action: "pickup",
-              commoditySlug: "pressurized-ice",
-              scu: 32,
-            },
-            {
-              action: "pickup",
-              commoditySlug: "processed-food",
-              scu: 24,
-            },
-            { action: "pickup", commoditySlug: "agricium", scu: 40 },
-          ]}
-        />
-        <SessionContractScuGrid
-          missionScuBreakdown={Array.from({ length: 9 }, (_, index) => ({
-            missionId: `m${index + 1}`,
-            title: [
-              "Trainee Rank — Medical Supplies",
-              "Junior Rank — Quartz",
-              "Member Rank — Stims",
-              "Senior Rank — Waste",
-              "Master Rank — Agricium",
-              "Junior Rank — Pressurized Ice",
-              "Member Rank — Processed Food",
-              "Senior Rank — Scrap",
-              "Trainee Rank — Distilled Spirits",
-            ][index]!,
-            scu: [16, 24, 48, 64, 80, 32, 40, 56, 72][index]!,
-            screenshots: index % 2 === 0 ? [`demo/c${index + 1}.png`] : [],
-          }))}
-          sessionId="demo-session"
-        />
-      </div>
+      <SessionContractScuGrid
+        missionScuBreakdown={Array.from({ length: 9 }, (_, index) => ({
+          missionId: `m${index + 1}`,
+          title: [
+            "Trainee Rank — Medical Supplies",
+            "Junior Rank — Quartz",
+            "Member Rank — Stims",
+            "Senior Rank — Waste",
+            "Master Rank — Agricium",
+            "Junior Rank — Pressurized Ice",
+            "Member Rank — Processed Food",
+            "Senior Rank — Scrap",
+            "Trainee Rank — Distilled Spirits",
+          ][index]!,
+          scu: [16, 24, 48, 64, 80, 32, 40, 56, 72][index]!,
+          screenshots: index % 2 === 0 ? [`demo/c${index + 1}.png`] : [],
+        }))}
+        sessionId="demo-session"
+      />
     </div>
   ),
 };
@@ -202,11 +197,10 @@ export const InventoryWithOverflow: Story = {
   ),
 };
 
-/** Cargo bays modal: Current stays mission-progress; On grid is placed bay SCU. */
+/** Cargo bays modal: On grid is placed bay SCU; overflow only when capacity &gt; 0. */
 export const InventoryWithOnGrid: Story = {
   render: () => (
     <SessionInventoryStat
-      onboardScu={0}
       peakScu={727}
       missionsTotalScu={727}
       gridPlacedScu={727}
@@ -214,6 +208,21 @@ export const InventoryWithOnGrid: Story = {
       availableScu={425}
       overflowScu={7}
       overflowCapacity={432}
+    />
+  ),
+};
+
+/** No overflow cell when the ship has no overflow capacity. */
+export const InventoryNoOverflowCapacity: Story = {
+  render: () => (
+    <SessionInventoryStat
+      peakScu={48}
+      missionsTotalScu={71}
+      gridPlacedScu={28}
+      totalCapacity={696}
+      availableScu={648}
+      overflowScu={0}
+      overflowCapacity={0}
     />
   ),
 };

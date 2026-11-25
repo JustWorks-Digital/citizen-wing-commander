@@ -37,7 +37,6 @@ import {
 import type {
   CargoGridBoxAction,
   CargoGridPlacementTint,
-  PlacementLocationLegendItem,
   PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
 import { locationGroupStroke } from "@/lib/ships/cargoGridPlacement";
@@ -89,7 +88,6 @@ import { EditableZoomPercent } from "@/components/ui/EditableZoomPercent";
 import { Switch } from "@/components/ui/Switch";
 
 type LegendSectionKey =
-  | "locations"
   | "commodities"
   | "actions"
   | "scuSizes"
@@ -216,8 +214,8 @@ function CargoGridZoomControls({
         max={GRID_ZOOM_MAX}
         onChange={onZoomChange}
         onClick={onReset}
-        title="Fit grid in view · double-click to set"
-        aria-label="Fit grid in view"
+        title="Fit full bay in view (2D & 3D) · double-click to set"
+        aria-label="Fit full bay in view"
         className={`${buttonClass} min-w-[2.25rem] border-0 border-r border-rsi-border px-1 text-[0.5rem] tabular-nums sm:min-w-[2.75rem] sm:px-1.5 sm:text-[0.6rem]`}
       />
       <button
@@ -275,12 +273,7 @@ export type CargoGridSketchProps = {
   /** Whole 8/4/2/1 crates for solid 3D box rendering. */
   placementBoxes?: PlacedCargoBox[];
   legendItems?: CargoGridIsoLegendItem[];
-  /** Delivery location groups for the legend / show-hide filter. */
-  locationLegendItems?: PlacementLocationLegendItem[];
-  /**
-   * When true, draw mission-location perimeter outlines + number badges.
-   * Filter toggles still work when false (Suggested / Cargo type).
-   */
+  /** When true, draw mission-location perimeter outlines + number badges. */
   showLocationOutlines?: boolean;
   /** When set, other commodities start hidden so this one stands out. */
   focusCommoditySlug?: string | null;
@@ -324,7 +317,7 @@ export type CargoGridSketchProps = {
   /** When true, 3D trackpad/wheel zoom is off (+/- still work). */
   isoZoomLocked?: boolean;
   onIsoZoomLockedChange?: (locked: boolean) => void;
-  /** Hide Peel (e.g. parent hosts it next to Packing). */
+  /** Hide Peel (e.g. parent hosts it left of Legend). */
   hidePeel?: boolean;
   /** Controlled peel; falls back to internal state when omitted. */
   peelStack?: boolean;
@@ -402,6 +395,11 @@ export type CargoGridSketchProps = {
   /** Controlled 3D zoom (and Split). Falls back to internal state. */
   isoZoom?: number;
   onIsoZoomChange?: (zoom: number) => void;
+  /**
+   * Set 2D + 3D zooms in one shot (fit-all). Does not force them equal when
+   * synced zoom is on — each view keeps its own fit.
+   */
+  onGridZoomsChange?: (topZoom: number, isoZoom: number) => void;
 };
 
 const CARGO_ZONE_FILL = [
@@ -458,7 +456,6 @@ export function CargoGridSketch({
   placementTints = [],
   placementBoxes = [],
   legendItems,
-  locationLegendItems = [],
   showLocationOutlines = false,
   focusCommoditySlug = null,
   compact = false,
@@ -502,6 +499,7 @@ export function CargoGridSketch({
   onTopZoomChange,
   isoZoom: isoZoomProp,
   onIsoZoomChange,
+  onGridZoomsChange,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
@@ -940,13 +938,37 @@ export function CargoGridSketch({
   const viewCellPx = Math.max(4, Math.round(cellPx * topScale * topZoom));
   const viewIsoCellPx = Math.max(4, Math.round(isoCellPx * isoScale * isoZoom));
 
+  /**
+   * Fit 2D and 3D independently so each shows the full bay.
+   * Writes both zooms in one shot so syncedZoom cannot copy one fit onto the other.
+   */
+  const fitVisibleBayZooms = () => {
+    const topFit = topScrollRef.current
+      ? fitZoomForViewport(
+          topScrollRef.current,
+          topContentRef.current,
+          topZoom,
+        )
+      : null;
+    const isoFit = isoFitZoomRef.current?.() ?? null;
+    const nextTop = topFit ?? topZoom;
+    const nextIso = isoFit ?? isoZoom;
+    if (onGridZoomsChange) {
+      onGridZoomsChange(nextTop, nextIso);
+      return;
+    }
+    if (onTopZoomChange) onTopZoomChange(nextTop);
+    else setTopZoomInternal(nextTop);
+    if (onIsoZoomChange) onIsoZoomChange(nextIso);
+    else setIsoZoomInternal(nextIso);
+  };
+
   function makeZoomControls(
     zoom: number,
     setZoom: (next: number | ((value: number) => number)) => void,
     scrollZoomOff: boolean,
     onScrollZoomOffChange: (off: boolean) => void,
     ariaLabel: string,
-    fitZoom: () => number,
   ): ReactNode {
     return (
       <CargoGridZoomControls
@@ -957,7 +979,7 @@ export function CargoGridSketch({
         onZoomOut={() =>
           setZoom((value) => clampGridZoom(value - GRID_ZOOM_STEP))
         }
-        onReset={() => setZoom(fitZoom())}
+        onReset={fitVisibleBayZooms}
         onZoomChange={(next) => setZoom(clampGridZoom(next))}
         ariaLabel={ariaLabel}
       />
@@ -970,8 +992,6 @@ export function CargoGridSketch({
     topZoomLocked,
     setTopZoomLocked,
     "2D grid zoom",
-    () =>
-      fitZoomForViewport(topScrollRef.current, topContentRef.current, topZoom),
   );
   const isoZoomControls = makeZoomControls(
     isoZoom,
@@ -979,7 +999,6 @@ export function CargoGridSketch({
     isoZoomLocked,
     setIsoZoomLocked,
     "3D grid zoom",
-    () => isoFitZoomRef.current?.() ?? 1,
   );
   const commoditySlugs = useMemo(() => {
     if (legendItems && legendItems.length > 0) {
@@ -1001,9 +1020,6 @@ export function CargoGridSketch({
   const [hiddenActions, setHiddenActions] = useState<
     ReadonlySet<CargoGridBoxAction>
   >(() => new Set());
-  const [hiddenLocations, setHiddenLocations] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   /** Which crate sizes show a numeric badge on the top-view boxes. */
   const [scuSizeBadges, setScuSizeBadges] = useState<ReadonlySet<CargoBoxScu>>(
     () => new Set(),
@@ -1034,13 +1050,6 @@ export function CargoGridSketch({
     () => [...commoditySlugs].sort().join("|"),
     [commoditySlugs],
   );
-  const locationSlugsKey = useMemo(
-    () =>
-      [...locationLegendItems.map((item) => item.locationSlug)]
-        .sort()
-        .join("|"),
-    [locationLegendItems],
-  );
 
   // Pack mode / box order can reshuffle legend lists — keep user filters for
   // slugs that are still present; only drop entries that left the bay.
@@ -1048,13 +1057,6 @@ export function CargoGridSketch({
     const available = new Set(commoditySlugs);
     setHiddenCommodities((prev) => pruneHiddenSet(prev, available));
   }, [commoditySlugsKey, commoditySlugs]);
-
-  useEffect(() => {
-    const available = new Set(
-      locationLegendItems.map((item) => item.locationSlug),
-    );
-    setHiddenLocations((prev) => pruneHiddenSet(prev, available));
-  }, [locationSlugsKey, locationLegendItems]);
 
   useEffect(() => {
     // Optional cargo-focus highlight: reveal every material again.
@@ -1080,17 +1082,6 @@ export function CargoGridSketch({
         const next = new Set(prev);
         if (next.has(action)) next.delete(action);
         else next.add(action);
-        return next;
-      });
-    });
-  }
-
-  function toggleLocation(slug: string) {
-    startTransition(() => {
-      setHiddenLocations((prev) => {
-        const next = new Set(prev);
-        if (next.has(slug)) next.delete(slug);
-        else next.add(slug);
         return next;
       });
     });
@@ -1149,18 +1140,9 @@ export function CargoGridSketch({
     (box: PlacedCargoBox) => {
       if (hiddenCommodities.has(box.commoditySlug)) return true;
       if (box.action != null && hiddenActions.has(box.action)) return true;
-      if (locationLegendItems.length === 0) return false;
-      // Untagged crates stay visible (overflow re-pack must preserve slugs;
-      // null must not wipe the whole bay when a location legend exists).
-      if (box.deliveryLocationSlug == null) return false;
-      return hiddenLocations.has(box.deliveryLocationSlug);
+      return false;
     },
-    [
-      hiddenCommodities,
-      hiddenActions,
-      hiddenLocations,
-      locationLegendItems.length,
-    ],
+    [hiddenCommodities, hiddenActions],
   );
   const visiblePlacementBoxes = useMemo(() => {
     return placementBoxes.filter((box) => !isPlacementBoxLegendHidden(box));
@@ -1338,17 +1320,6 @@ export function CargoGridSketch({
     trayMissionFill,
     trayOrientationIndex,
   ]);
-  const bulkFillFootprint =
-    (trayBulkFill || trayMissionFill) &&
-    trayDropPreview &&
-    "footprint" in trayDropPreview &&
-    trayDropPreview.footprint
-      ? (trayDropPreview.footprint as {
-          dx: number;
-          dy: number;
-          origin: { x: number; y: number; z: number };
-        })
-      : null;
   const crateDropPreview = useMemo(() => {
     if (!manualCrateDrag || !trayHoverCoord) return null;
     const grab = {
@@ -1388,18 +1359,54 @@ export function CargoGridSketch({
           fits: crateDropPreview.fits,
         }
       : null;
+  /**
+   * 2D drop highlight: project every preview cell to XY so the footprint stays
+   * visible even when Active layer ≠ the Z the packer will use.
+   */
   const dropPreviewKeys = useMemo(() => {
     const preview = crateDropPreview ?? trayDropPreview;
-    if (!preview) return null;
+    if (!preview || preview.cells.length === 0) return null;
     return {
       fits: preview.fits,
-      keys: new Set(
-        preview.cells
-          .filter((cell) => cell.z === activeZ)
-          .map((cell) => cargoGridCoordKey(cell)),
-      ),
+      keys: new Set(preview.cells.map((cell) => `${cell.x},${cell.y}`)),
+      cells: preview.cells,
     };
-  }, [activeZ, crateDropPreview, trayDropPreview]);
+  }, [crateDropPreview, trayDropPreview]);
+  /** Deck rectangle for dashed overlay (bulk/mission carry footprint; else bbox). */
+  const dropFootprint = useMemo(() => {
+    const preview = crateDropPreview ?? trayDropPreview;
+    if (!preview || preview.cells.length === 0) return null;
+    if (
+      "footprint" in preview &&
+      preview.footprint &&
+      typeof preview.footprint === "object" &&
+      "dx" in preview.footprint
+    ) {
+      return preview.footprint as {
+        dx: number;
+        dy: number;
+        origin: { x: number; y: number; z: number };
+      };
+    }
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let minZ = Number.POSITIVE_INFINITY;
+    for (const cell of preview.cells) {
+      minX = Math.min(minX, cell.x);
+      maxX = Math.max(maxX, cell.x);
+      minY = Math.min(minY, cell.y);
+      maxY = Math.max(maxY, cell.y);
+      minZ = Math.min(minZ, cell.z);
+    }
+    return {
+      dx: maxX - minX + 1,
+      dy: maxY - minY + 1,
+      origin: { x: minX, y: minY, z: minZ },
+    };
+  }, [crateDropPreview, trayDropPreview]);
+  const dropFootprintFits = dropPreviewKeys?.fits === true;
   const isPlacementView =
     compact &&
     (highlightedCoords.length > 0 ||
@@ -1415,7 +1422,6 @@ export function CargoGridSketch({
   const hasDelivery = placementTints.some(
     (tint) => tint.action === "delivery",
   );
-  const showLocationKey = locationLegendItems.length > 0;
   const showTopLayers = sketch.heightCells > 0;
   /** All Z layers (match Top legend); empty bays stay toggleable in 3D. */
   const isoLayerOptions = useMemo(
@@ -1503,32 +1509,10 @@ export function CargoGridSketch({
         }
         return;
       }
-      // Z — fit zoom (same as clicking the zoom % control).
+      // Z — fit zoom (same as clicking the zoom % control): show full bay in every visible view.
       if (event.key === "z" || event.key === "Z") {
         event.preventDefault();
-        if (showTop && showIso) {
-          const topFit = fitZoomForViewport(
-            topScrollRef.current,
-            topContentRef.current,
-            topZoom,
-          );
-          if (syncedZoom) {
-            setTopZoom(topFit);
-          } else {
-            setTopZoom(topFit);
-            setIsoZoom(isoFitZoomRef.current?.() ?? 1);
-          }
-        } else if (showTop) {
-          setTopZoom(
-            fitZoomForViewport(
-              topScrollRef.current,
-              topContentRef.current,
-              topZoom,
-            ),
-          );
-        } else if (showIso) {
-          setIsoZoom(isoFitZoomRef.current?.() ?? 1);
-        }
+        fitVisibleBayZooms();
         return;
       }
       const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code);
@@ -1568,7 +1552,6 @@ export function CargoGridSketch({
     (topLegend != null ||
       hasPickup ||
       hasDelivery ||
-      showLocationKey ||
       showTopLayers ||
       showScuSizeFilters);
   const showSplitLegend =
@@ -1577,7 +1560,6 @@ export function CargoGridSketch({
     (topLegend != null ||
       hasPickup ||
       hasDelivery ||
-      showLocationKey ||
       showTopLayers ||
       showIsoLayers ||
       showScuSizeFilters);
@@ -1612,51 +1594,6 @@ export function CargoGridSketch({
       })}
     </div>
   );
-
-  const locationLegendList = showLocationKey ? (
-    <ul className="space-y-0.5" aria-label="Delivery locations">
-      {locationLegendItems.map((item) => {
-        const isOn = !hiddenLocations.has(item.locationSlug);
-        return (
-          <li key={item.locationSlug}>
-            <button
-              type="button"
-              aria-pressed={isOn}
-              aria-label={`${isOn ? "Hide" : "Show"} ${item.locationName}`}
-              onClick={() => toggleLocation(item.locationSlug)}
-              className={[
-                "flex w-full min-w-0 cursor-pointer items-center gap-1.5 text-left",
-                isOn ? "" : "opacity-55",
-              ].join(" ")}
-            >
-              <span
-                className="inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] tabular-nums text-rsi-bg-deep"
-                style={{
-                  borderColor: item.stroke,
-                  backgroundColor: isOn ? item.stroke : "transparent",
-                  color: isOn ? undefined : item.stroke,
-                }}
-                aria-hidden
-              >
-                {item.groupIndex}
-              </span>
-              <span
-                className={[
-                  "min-w-0 flex-1 truncate text-[0.7rem] leading-none",
-                  isOn ? "text-rsi-text" : "text-rsi-text-muted",
-                ].join(" ")}
-              >
-                {item.locationName}
-              </span>
-              <span className="shrink-0 font-mono text-[0.55rem] tabular-nums text-rsi-text-muted">
-                {item.scu}
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-  ) : null;
 
   const commodityLegendList = topLegend ? (
     <ul className="space-y-0.5">
@@ -1766,23 +1703,12 @@ export function CargoGridSketch({
   }) {
     return (
       <>
-        {showLocationKey ? (
-          <CargoLegendSection
-            title="Locations"
-            sectionId="locations"
-            isExpanded={isLegendSectionExpanded("locations")}
-            onToggle={() => toggleLegendSection("locations")}
-          >
-            {locationLegendList}
-          </CargoLegendSection>
-        ) : null}
         {topLegend ? (
           <CargoLegendSection
             title="Cargo"
             sectionId="commodities"
             isExpanded={isLegendSectionExpanded("commodities")}
             onToggle={() => toggleLegendSection("commodities")}
-            showBorder={showLocationKey}
           >
             {commodityLegendList}
           </CargoLegendSection>
@@ -1793,7 +1719,7 @@ export function CargoGridSketch({
             sectionId="actions"
             isExpanded={isLegendSectionExpanded("actions")}
             onToggle={() => toggleLegendSection("actions")}
-            showBorder={Boolean(showLocationKey || topLegend)}
+            showBorder={Boolean(topLegend)}
           >
             {actionLegendControls}
           </CargoLegendSection>
@@ -1804,9 +1730,7 @@ export function CargoGridSketch({
             sectionId="scu-sizes"
             isExpanded={isLegendSectionExpanded("scuSizes")}
             onToggle={() => toggleLegendSection("scuSizes")}
-            showBorder={Boolean(
-              showLocationKey || topLegend || hasPickup || hasDelivery,
-            )}
+            showBorder={Boolean(topLegend || hasPickup || hasDelivery)}
           >
             {scuSizeFilterControls}
           </CargoLegendSection>
@@ -1818,11 +1742,7 @@ export function CargoGridSketch({
             isExpanded={isLegendSectionExpanded("topLayers")}
             onToggle={() => toggleLegendSection("topLayers")}
             showBorder={Boolean(
-              showLocationKey ||
-                topLegend ||
-                hasPickup ||
-                hasDelivery ||
-                showScuSizeFilters,
+              topLegend || hasPickup || hasDelivery || showScuSizeFilters,
             )}
           >
             <div className="space-y-1.5">
@@ -1883,8 +1803,7 @@ export function CargoGridSketch({
             isExpanded={isLegendSectionExpanded("isoLayers")}
             onToggle={() => toggleLegendSection("isoLayers")}
             showBorder={Boolean(
-              showLocationKey ||
-                topLegend ||
+              topLegend ||
                 hasPickup ||
                 hasDelivery ||
                 showScuSizeFilters ||
@@ -2024,7 +1943,13 @@ export function CargoGridSketch({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className={
+        compact
+          ? "flex h-full min-h-0 flex-col"
+          : "flex flex-col gap-4"
+      }
+    >
       {compact ? null : (
         <>
           <header className="flex flex-wrap items-end justify-between gap-3">
@@ -2117,20 +2042,33 @@ export function CargoGridSketch({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div
+        className={[
+          "flex flex-col lg:flex-row lg:items-start",
+          compact ? "h-full min-h-0 gap-0" : "gap-4",
+        ].join(" ")}
+      >
         <div
           className={[
             "relative min-w-0 flex-1",
+            compact ? "h-full min-h-0" : "",
             isSplit
               ? [
                   "grid grid-cols-1 overflow-hidden rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
-                  splitVertical ? "" : "sm:grid-cols-2",
+                  // Keep outer border inside panelHeightPx (same as packing panel).
+                  compact ? "h-full" : "",
+                  splitVertical ? "grid-rows-2" : "sm:grid-cols-2",
                 ]
                   .filter(Boolean)
                   .join(" ")
-              : "flex flex-col gap-4",
+              : compact
+                ? "flex h-full min-h-0 flex-col"
+                : "flex flex-col gap-4",
             showSplitLegend && !sidePanelsOverlay ? "sm:pr-[17.5rem]" : "",
           ].join(" ")}
+          style={
+            isSplit && !compact ? { height: panelHeightPx } : undefined
+          }
         >
           {showTop ? (
           <div
@@ -2144,8 +2082,15 @@ export function CargoGridSketch({
                   ? "border-b border-rsi-border"
                   : "border-b border-rsi-border sm:border-r sm:border-b-0"
                 : "rounded-rsi border border-rsi-border bg-rsi-bg-deep/50",
-            ].join(" ")}
-            style={{ height: isSplit ? splitPaneHeightPx : panelHeightPx }}
+              isSplit || compact ? "h-full min-h-0" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={
+              isSplit || compact
+                ? undefined
+                : { height: panelHeightPx }
+            }
           >
             {tabbed || compact ? (
               <span className="sr-only">2D view</span>
@@ -2504,7 +2449,7 @@ export function CargoGridSketch({
                         manualTrayDrop && trayDragSpec,
                       );
                       const isDropPreview = Boolean(
-                        dropPreviewKeys?.keys.has(coordKey),
+                        dropPreviewKeys?.keys.has(`${cell.x},${cell.y}`),
                       );
                       const dropPreviewFits = dropPreviewKeys?.fits === true;
                       const cellCoord = { x: cell.x, y: cell.y, z };
@@ -3115,19 +3060,24 @@ export function CargoGridSketch({
                 );
               });
               })()}
-              {useAbsoluteFloor && bulkFillFootprint ? (
+              {useAbsoluteFloor && dropFootprint ? (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute z-20 box-border border-2 border-dashed border-rsi-accent bg-rsi-accent/25"
+                  className={[
+                    "pointer-events-none absolute z-20 box-border border-2 border-dashed",
+                    dropFootprintFits
+                      ? "border-rsi-accent bg-rsi-accent/30"
+                      : "border-rsi-danger bg-rsi-danger/30",
+                  ].join(" ")}
                   style={{
                     left:
                       (totalLength -
-                        bulkFillFootprint.origin.x -
-                        bulkFillFootprint.dx) *
+                        dropFootprint.origin.x -
+                        dropFootprint.dx) *
                       viewCellPx,
-                    top: bulkFillFootprint.origin.y * viewCellPx,
-                    width: bulkFillFootprint.dx * viewCellPx,
-                    height: bulkFillFootprint.dy * viewCellPx,
+                    top: dropFootprint.origin.y * viewCellPx,
+                    width: dropFootprint.dx * viewCellPx,
+                    height: dropFootprint.dy * viewCellPx,
                   }}
                 />
               ) : null}
@@ -3141,7 +3091,17 @@ export function CargoGridSketch({
           ) : null}
 
           {showIso ? (
-            <div className={isSplit ? "relative min-w-0" : undefined}>
+            <div
+              className={
+                isSplit
+                  ? compact
+                    ? "relative h-full min-h-0 min-w-0"
+                    : "relative min-w-0"
+                  : compact
+                    ? "h-full min-h-0"
+                    : undefined
+              }
+            >
               <CargoGridIsoView
                 sketch={sketch}
                 cellPx={viewIsoCellPx}
@@ -3153,16 +3113,17 @@ export function CargoGridSketch({
                 selectedCoord={selectedCoordResolved}
                 onSelectCoord={publishSelectedCoord}
                 onSelectBox={isSplit ? focusPlacementBoxFromIso : undefined}
-                highlightedCoords={highlightedCoords}
+                highlightedCoords={
+                  dropPreviewKeys?.cells?.length
+                    ? dropPreviewKeys.cells
+                    : highlightedCoords
+                }
                 placementTints={placementTints}
                 placementBoxes={
                   showHologram ? placementBoxes : visiblePlacementBoxes
                 }
                 legendItems={legendItems}
-                locationLegendItems={locationLegendItems}
                 showLocationOutlines={showLocationOutlines}
-                hiddenLocations={hiddenLocations}
-                onToggleLocation={toggleLocation}
                 hiddenCommodities={hiddenCommodities}
                 onToggleCommodity={toggleCommodity}
                 hiddenActions={hiddenActions}
