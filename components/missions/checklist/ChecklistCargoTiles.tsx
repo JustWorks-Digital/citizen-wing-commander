@@ -1398,7 +1398,7 @@ export function CargoGroups({
           tabActive:
             "relative z-[1] border-rsi-accent/25 border-b-transparent bg-rsi-accent-muted/15 text-rsi-accent",
           tabInactive:
-            "border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+            "border-transparent text-rsi-text-muted hover:border-rsi-accent/25 hover:bg-rsi-accent-muted/15 hover:text-rsi-accent",
         }
       : {
           edge: "border-rsi-gold/25",
@@ -1407,7 +1407,7 @@ export function CargoGroups({
           tabActive:
             "relative z-[1] border-rsi-gold/25 border-b-transparent bg-rsi-gold-muted/15 text-rsi-gold",
           tabInactive:
-            "border-transparent text-rsi-text-muted hover:text-rsi-text-secondary",
+            "border-transparent text-rsi-text-muted hover:border-rsi-gold/25 hover:bg-rsi-gold-muted/15 hover:text-rsi-gold",
         };
 
   const activeShell = roleShell(activeRole);

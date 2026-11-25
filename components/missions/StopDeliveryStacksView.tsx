@@ -1050,12 +1050,10 @@ export function StopDeliveryStacksView({
                           cursor: canEditStopScu ? "text" : undefined,
                         }}
                         onClick={(event) => {
+                          // Swallow single click so the badge under the strip does not open
+                          // box types — that would steal the double-click for SCU edit.
                           event.preventDefault();
                           event.stopPropagation();
-                          if (isEditingScu) return;
-                          // Single click still opens box types (strip sits on top of the badge).
-                          if (!canEditBoxes || !label.missionId) return;
-                          onEditMissionBoxes?.(label.missionId);
                         }}
                         onDoubleClick={(event) => {
                           event.preventDefault();

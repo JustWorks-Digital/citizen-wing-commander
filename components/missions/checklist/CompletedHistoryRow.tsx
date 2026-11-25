@@ -118,11 +118,6 @@ export function ChecklistProgressTimeline({
                   {stop.step}
                 </span>
               ) : null}
-              {isVertical && statusLabel === "Next" ? (
-                <Badge variant="neutral" size="xs" className="max-w-full truncate">
-                  Next
-                </Badge>
-              ) : null}
               <span
                 className={[
                   "relative flex size-9 items-center justify-center overflow-hidden rounded-full bg-rsi-bg-deep sm:size-10",
@@ -154,6 +149,20 @@ export function ChecklistProgressTimeline({
                     <span className="flex size-5 items-center justify-center rounded-full bg-rsi-success font-mono text-[0.85rem] font-bold leading-none text-rsi-bg-deep shadow-[0_1px_2px_rgba(0,0,0,0.45)] sm:size-6 sm:text-[0.95rem]">
                       ✓
                     </span>
+                  </span>
+                ) : null}
+                {isVertical && statusLabel === "Next" ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 flex items-center justify-center bg-rsi-bg-deep/55"
+                  >
+                    <Badge
+                      variant="neutral"
+                      size="xs"
+                      className="max-w-[calc(100%-0.25rem)] truncate px-0.5"
+                    >
+                      Next
+                    </Badge>
                   </span>
                 ) : null}
               </span>
@@ -624,52 +633,6 @@ export function PayoutExpMeta({
   );
 }
 
-/** Same 3px inset as checklist cards — neutral so Next stop isn’t green/accent. */
-export const CHECKLIST_RAIL_NEUTRAL =
-  "shadow-[inset_3px_0_0_0_var(--rsi-border-strong)]";
-
-export function NextStopBridgeBand({
-  row,
-  nextLocationName,
-  nextLocationSlug,
-  shipSlug = null,
-  isPending = false,
-  onToggle,
-  bridgeRef,
-}: {
-  row: HaulingChecklistRow;
-  nextLocationName: string | null;
-  nextLocationSlug: string | null;
-  shipSlug?: string | null;
-  isPending?: boolean;
-  /** Completes the stop this hop belongs to (current incomplete stop). */
-  onToggle?: () => void;
-  /** Scroll target for advancing into the destination stop. */
-  bridgeRef?: (node: HTMLDivElement | null) => void;
-}) {
-  return (
-    <div
-      ref={bridgeRef}
-      className={[
-        "border-t border-rsi-divider/60 bg-rsi-bg-deep/60",
-        CHECKLIST_RAIL_NEUTRAL,
-      ].join(" ")}
-    >
-      <div className="px-3">
-        <NextDistanceMeta
-          row={row}
-          nextLocationName={nextLocationName}
-          nextLocationSlug={nextLocationSlug}
-          shipSlug={shipSlug}
-          variant="bridge"
-          isPending={isPending}
-          onToggle={onToggle}
-        />
-      </div>
-    </div>
-  );
-}
-
 /** Compact strip for a cargo stop (completed history or upcoming). */
 export function CondensedStopRow({
   location,
@@ -880,8 +843,8 @@ export function NextDistanceMeta({
   nextLocationName: string | null;
   nextLocationSlug: string | null;
   shipSlug?: string | null;
-  /** `bridge` outside the stop panel; `header` beside the stop title (right). */
-  variant?: "inline" | "bridge" | "header";
+  /** `header` beside the stop title (right); default `inline`. */
+  variant?: "inline" | "header";
   isPending?: boolean;
   locationLabel?: string;
   step?: number | string;
@@ -889,7 +852,6 @@ export function NextDistanceMeta({
   /** Done checkbox before the ship — marks this stop finished. */
   onToggle?: () => void;
 }) {
-  const isBridge = variant === "bridge";
   const isHeader = variant === "header";
   const shipIconSrc = getShipIconSrc(shipSlug);
   const isLastStop = nextLocationSlug == null && nextLocationName == null;
@@ -907,7 +869,7 @@ export function NextDistanceMeta({
 
   const shellClass = [
     "flex min-w-0 items-center gap-2 text-sm sm:gap-2.5",
-    isBridge ? "py-3" : isHeader ? "py-0" : "pt-5",
+    isHeader ? "py-0" : "pt-5",
   ].join(" ");
 
   const chevronTone = isPending
@@ -924,6 +886,44 @@ export function NextDistanceMeta({
    */
   const chevronWave = isPending || !row.isCompleted;
   const chevronWaveAlways = isPending;
+  const nextStopClass = [
+    "min-w-0 shrink-0 text-left",
+    isHeader
+      ? "max-w-[min(100%,14rem)] pr-1 sm:max-w-[16rem]"
+      : "max-w-[min(100%,18rem)]",
+  ].join(" ");
+  const nextStopCopy = (
+    <>
+      <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
+        Next stop
+      </p>
+            <p
+              className={[
+                "mt-0.5 text-sm font-medium leading-snug tracking-wide break-words [overflow-wrap:anywhere]",
+                isHeader
+                  ? "text-rsi-text"
+                  : row.isCompleted
+                    ? "text-rsi-text-muted"
+                    : "text-rsi-text-secondary",
+              ].join(" ")}
+            >
+        {nextLocationName}
+      </p>
+      {distance ? (
+        <p
+          className="mt-0.5 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-secondary"
+          title={distance}
+        >
+          <span className="md:hidden">{distanceCompact}</span>
+          <span className="hidden md:inline">{distance}</span>
+        </p>
+      ) : null}
+    </>
+  );
+  const markDone = () => {
+    if (isPending || !onToggle) return;
+    onToggle();
+  };
 
   return (
     <div className={shellClass}>
@@ -933,7 +933,7 @@ export function NextDistanceMeta({
           isHeader
             ? "h-12 w-20 sm:h-14 sm:w-24"
             : "h-14 w-24 sm:h-16 sm:w-28",
-          isBridge || isHeader ? "text-rsi-accent" : "text-rsi-text-secondary",
+          isHeader ? "text-rsi-accent" : "text-rsi-text-secondary",
         ].join(" ")}
         title="Next stop"
       >
@@ -977,8 +977,7 @@ export function NextDistanceMeta({
             title={isPending ? "Updating stop…" : "Mark this stop done"}
             onClick={(event) => {
               event.stopPropagation();
-              if (isPending) return;
-              onToggle();
+              markDone();
             }}
             className={[
               "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden",
@@ -1040,37 +1039,41 @@ export function NextDistanceMeta({
           </span>
         )}
       </span>
-      <div
-        className={[
-          "min-w-0 shrink-0 text-left",
-          isHeader ? "max-w-[min(100%,14rem)] pr-1 sm:max-w-[16rem]" : "max-w-[min(100%,18rem)]",
-        ].join(" ")}
-      >
-        <p className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-          Next stop
-        </p>
-        <p
-          className={[
-            "mt-0.5 text-sm font-medium leading-snug tracking-wide break-words [overflow-wrap:anywhere]",
-            isBridge || isHeader
-              ? "text-rsi-text"
+      {onToggle ? (
+        <button
+          type="button"
+          disabled={isPending}
+          aria-label={
+            isPending
+              ? `Stop ${doneStep}, updating: ${doneLocation}`
               : row.isCompleted
-                ? "text-rsi-text-muted"
-                : "text-rsi-text-secondary",
+                ? `Stop ${doneStep}, mark not done: ${doneLocation}`
+                : `Stop ${doneStep}, mark done: ${doneLocation}`
+          }
+          title={
+            isPending
+              ? "Updating stop…"
+              : row.isCompleted
+                ? "Mark this stop not done"
+                : "Mark this stop done"
+          }
+          onClick={(event) => {
+            event.stopPropagation();
+            markDone();
+          }}
+          className={[
+            nextStopClass,
+            "rounded-rsi focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+            isPending
+              ? "cursor-wait"
+              : "cursor-pointer hover:bg-rsi-surface-raised/35",
           ].join(" ")}
         >
-          {nextLocationName}
-        </p>
-        {distance ? (
-          <p
-            className="mt-0.5 font-mono text-[0.65rem] tabular-nums tracking-wide text-rsi-text-secondary"
-            title={distance}
-          >
-            <span className="md:hidden">{distanceCompact}</span>
-            <span className="hidden md:inline">{distance}</span>
-          </p>
-        ) : null}
-      </div>
+          {nextStopCopy}
+        </button>
+      ) : (
+        <div className={nextStopClass}>{nextStopCopy}</div>
+      )}
     </div>
   );
 }

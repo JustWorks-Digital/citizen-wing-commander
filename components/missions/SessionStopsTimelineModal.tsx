@@ -197,51 +197,49 @@ export function SessionStopsTimelineModal({
         <ModalCloseButton label="Dismiss" onClick={onClose} />
         <div className="flex max-h-[min(42rem,92vh)] w-full flex-col overflow-hidden rounded-rsi border border-rsi-border bg-rsi-surface shadow-rsi-panel">
         <div className="flex shrink-0 items-center gap-3 border-b border-rsi-border px-4 py-2.5 sm:px-5">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2
-                id={titleId}
-                className="text-sm font-semibold tracking-wide text-rsi-text"
-              >
-                Stops
-              </h2>
-              {onResetTrip ? (
+          <h2
+            id={titleId}
+            className="min-w-0 flex-1 text-sm font-semibold tracking-wide text-rsi-text"
+          >
+            Stops
+          </h2>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {orderDirty ? (
+              <>
                 <button
                   type="button"
-                  onClick={onResetTrip}
-                  title="Reset trip — clear stop completion to unlock reorder (contracts stay)"
+                  onClick={() => setDraftOrderIds(null)}
                   className="rounded-rsi border border-rsi-border px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text"
                 >
-                  Reset trip
+                  Cancel
                 </button>
-              ) : null}
-            </div>
-          </div>
-          {orderDirty ? (
-            <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!draftOrderIds || !onReorderStops) return;
+                    onReorderStops(draftOrderIds);
+                    setDraftOrderIds(null);
+                  }}
+                  className="rounded-rsi border border-rsi-accent/60 bg-rsi-accent-muted/40 px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-accent transition-colors hover:bg-rsi-accent-muted/60"
+                >
+                  Save order
+                </button>
+              </>
+            ) : null}
+            {onResetTrip ? (
               <button
                 type="button"
-                onClick={() => setDraftOrderIds(null)}
+                onClick={onResetTrip}
+                title="Reset trip — clear stop completion to unlock reorder (contracts stay)"
                 className="rounded-rsi border border-rsi-border px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors hover:border-rsi-border-strong hover:text-rsi-text"
               >
-                Cancel
+                Reset trip
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!draftOrderIds || !onReorderStops) return;
-                  onReorderStops(draftOrderIds);
-                  setDraftOrderIds(null);
-                }}
-                className="rounded-rsi border border-rsi-accent/60 bg-rsi-accent-muted/40 px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-accent transition-colors hover:bg-rsi-accent-muted/60"
-              >
-                Save order
-              </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-2 sm:px-4">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-2 sm:px-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {timeline.nodes.length === 0 ? (
             <p className="py-6 text-center text-sm text-rsi-text-muted">
               No route stops yet.
@@ -382,7 +380,7 @@ export function SessionStopsTimelineModal({
                           {meta}
                         </p>
                         {!isLast ? (
-                          <p className="shrink-0 font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary">
+                          <p className="shrink-0 pr-1 font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary">
                             {formatDistanceToNext(node.distanceToNext)}
                           </p>
                         ) : null}
@@ -396,11 +394,15 @@ export function SessionStopsTimelineModal({
         </div>
 
         <div className="shrink-0 border-t border-rsi-border bg-rsi-bg-deep/40 px-4 py-2 sm:px-5">
-          {timeline.totalStopCount > 0 ? (
-            <div className="mb-2">
+          <div className="mb-1.5 flex items-baseline justify-between gap-2 font-mono text-[0.55rem] uppercase tracking-[0.14em]">
+            <p className="min-w-0 tabular-nums text-rsi-text-muted">
+              Stops{" "}
+              <span className="text-rsi-text">{timeline.totalStopCount}</span>
+            </p>
+            {timeline.totalStopCount > 0 ? (
               <p
                 className={[
-                  "mb-1.5 text-center font-mono text-[0.55rem] uppercase tracking-[0.16em]",
+                  "shrink-0 text-center",
                   progressRatio >= 1
                     ? "text-rsi-success"
                     : "text-rsi-text-secondary",
@@ -410,44 +412,36 @@ export function SessionStopsTimelineModal({
                   ? "Complete"
                   : `Progress · ${Math.round(progressRatio * 100)}%`}
               </p>
+            ) : (
+              <span className="shrink-0" aria-hidden />
+            )}
+            <p className="min-w-0 text-right tabular-nums text-rsi-text-muted">
+              Total{" "}
+              <span className="text-rsi-text">
+                {formatDistanceToNext(timeline.total)}
+              </span>
+            </p>
+          </div>
+          {timeline.totalStopCount > 0 ? (
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-rsi-bg-deep"
+              role="progressbar"
+              aria-label="Route stop completion"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progressRatio * 100)}
+              aria-valuetext={
+                progressRatio >= 1
+                  ? "Complete"
+                  : `${timeline.completedStopCount} of ${timeline.totalStopCount} stops complete`
+              }
+            >
               <div
-                className="h-1.5 w-full overflow-hidden rounded-full bg-rsi-bg-deep"
-                role="progressbar"
-                aria-label="Route stop completion"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(progressRatio * 100)}
-                aria-valuetext={
-                  progressRatio >= 1
-                    ? "Complete"
-                    : `${timeline.completedStopCount} of ${timeline.totalStopCount} stops complete`
-                }
-              >
-                <div
-                  className="h-full rounded-full bg-rsi-success transition-[width] duration-300 ease-out"
-                  style={{ width: `${Math.min(100, progressRatio * 100)}%` }}
-                />
-              </div>
+                className="h-full rounded-full bg-rsi-success transition-[width] duration-300 ease-out"
+                style={{ width: `${Math.min(100, progressRatio * 100)}%` }}
+              />
             </div>
           ) : null}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                Stops
-              </p>
-              <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
-                {timeline.totalStopCount}
-              </p>
-            </div>
-            <div>
-              <p className="font-mono text-[0.45rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-                Total
-              </p>
-              <p className="mt-0.5 font-mono text-sm tabular-nums text-rsi-text">
-                {formatDistanceToNext(timeline.total)}
-              </p>
-            </div>
-          </div>
         </div>
         </div>
       </div>

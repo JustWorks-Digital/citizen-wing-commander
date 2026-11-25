@@ -130,24 +130,18 @@ export function CreateSessionModal({
           onClick={onClose}
           disabled={isBusy}
         />
-        <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent">
-          Trips
-        </p>
-        <h2
+        <p
           id="create-session-title"
-          className="mt-2 text-base font-semibold tracking-wide text-rsi-text"
+          className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-rsi-accent"
         >
-          New trip
-        </h2>
-        <p className="mt-2 text-sm text-rsi-text-secondary">
-          Give this tab a name you can find later. You can rename it anytime.
+          Trip
         </p>
         <div className="mt-4 flex items-baseline justify-between gap-3">
           <label
             htmlFor={inputId}
             className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted"
           >
-            Trip name
+            Name
           </label>
           <button
             type="button"

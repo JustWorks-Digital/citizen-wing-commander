@@ -4,15 +4,15 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && Boolean(window.localStorage);
 }
 
-/** Default off — mission cards show full cargo tiles. */
+/** Default on — compact cargo lines until the user expands. */
 export function readCollapseMissionCards(): boolean {
-  if (!canUseStorage()) return false;
+  if (!canUseStorage()) return true;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw == null) return false;
+    if (raw == null) return true;
     return raw === "1" || raw === "true";
   } catch {
-    return false;
+    return true;
   }
 }
 

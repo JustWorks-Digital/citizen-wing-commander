@@ -12,9 +12,9 @@ export type OutdoorFreightBadgeProps = {
 export function OutdoorFreightBadge({ locationSlug }: OutdoorFreightBadgeProps) {
   return (
     <Badge
-      variant="warn"
+      variant="neutral"
       size="sm"
-      className="gap-0.5"
+      className="gap-0.5 !border-rsi-text-muted !bg-rsi-text-muted/22 !text-rsi-text-secondary"
       title={OUTDOOR_FREIGHT_TITLE}
     >
       <OutdoorFreightIcon

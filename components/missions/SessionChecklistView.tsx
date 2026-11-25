@@ -33,6 +33,7 @@ import { ShipSelect } from "@/components/ui/ShipSelect";
 import {
   getLocationBySlug,
   getShipBySlug,
+  getShipIconSrc,
   sumShipCargoScu,
 } from "@/lib/fixtures";
 import {
@@ -94,6 +95,10 @@ import {
   readCollapseMissionCards,
   writeCollapseMissionCards,
 } from "@/lib/sessions/collapseMissionCardsPrefs";
+import {
+  readHideHistory,
+  writeHideHistory,
+} from "@/lib/sessions/hideHistoryPrefs";
 import { sessionMissionsAuecProgress } from "@/lib/missions/sessionMissionObjectives";
 import { estimateMissionHaulingRepXp } from "@/lib/missions/haulingRepXp";
 import {
@@ -151,9 +156,10 @@ export function SessionChecklistView({
   const [crashFinishOpen, setCrashFinishOpen] = useState(false);
   const [crashFinishBusy, setCrashFinishBusy] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideHistoryReady, setHideHistoryReady] = useState(false);
   const [prioritizePickup, setPrioritizePickup] = useState(true);
   const [prioritizePickupReady, setPrioritizePickupReady] = useState(false);
-  const [collapseMissionCards, setCollapseMissionCards] = useState(false);
+  const [collapseMissionCards, setCollapseMissionCards] = useState(true);
   const [collapseMissionCardsReady, setCollapseMissionCardsReady] =
     useState(false);
   /** After Continue on the finish report, show the last completed stop again. */
@@ -576,6 +582,8 @@ export function SessionChecklistView({
   useEffect(() => {
     setTripNavOpen(readSessionTripNavOpen());
     setTripNavPrefsReady(true);
+    setHideCompleted(readHideHistory());
+    setHideHistoryReady(true);
     setPrioritizePickup(readPrioritizePickup());
     setPrioritizePickupReady(true);
     setCollapseMissionCards(readCollapseMissionCards());
@@ -586,6 +594,11 @@ export function SessionChecklistView({
     if (!tripNavPrefsReady) return;
     writeSessionTripNavOpen(tripNavOpen);
   }, [tripNavOpen, tripNavPrefsReady]);
+
+  useEffect(() => {
+    if (!hideHistoryReady) return;
+    writeHideHistory(hideCompleted);
+  }, [hideCompleted, hideHistoryReady]);
 
   useEffect(() => {
     if (!prioritizePickupReady) return;
@@ -615,7 +628,6 @@ export function SessionChecklistView({
 
   useEffect(() => {
     setSummaryDismissed(false);
-    setHideCompleted(false);
   }, [session.id]);
 
   const openTripSummary = useCallback(() => {
@@ -1145,6 +1157,49 @@ export function SessionChecklistView({
     </>
   );
 
+  const selectedShipIconSrc = getShipIconSrc(selectedShipSlug);
+  const tripSetupRail = !isTripLoading ? (
+    <button
+      type="button"
+      aria-expanded={tripNavOpen}
+      aria-controls="session-trip-panel"
+      title={
+        selectedShipName
+          ? `${selectedShipName} — open setup`
+          : "Open setup"
+      }
+      onClick={() => setTripNavOpen(true)}
+      className={[
+        "flex w-full min-w-0 flex-col items-center gap-1 rounded-rsi border border-rsi-border/70 bg-rsi-bg-deep/40 px-1.5 py-2 text-center transition-colors",
+        "hover:border-rsi-border-strong hover:bg-rsi-surface-raised/40",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
+        tripNavOpen ? "border-rsi-accent/50" : "",
+      ].join(" ")}
+    >
+      {selectedShipIconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- static ship badge
+        <img
+          src={selectedShipIconSrc}
+          alt=""
+          className="h-10 w-full object-contain"
+        />
+      ) : (
+        <div
+          className="flex h-10 w-full items-center justify-center rounded-rsi border border-dashed border-rsi-border/70"
+          aria-hidden
+        />
+      )}
+      <span
+        className={[
+          "w-full truncate text-[0.65rem] font-medium leading-tight tracking-wide",
+          selectedShipName ? "text-rsi-text" : "text-rsi-text-muted",
+        ].join(" ")}
+      >
+        {selectedShipName ?? "No ship"}
+      </span>
+    </button>
+  ) : null;
+
   const closeSession = async (sessionId: string) => {
     if (initial) return;
     setTabsBusy(true);
@@ -1238,6 +1293,7 @@ export function SessionChecklistView({
         onFocusStop={setFocusedStopId}
         shipName={selectedShipName}
         shipSlug={selectedShipSlug}
+        aboveChecklistRail={tripSetupRail}
         missions={session.missions ?? []}
         sessionId={session.id}
         startLocationSlug={session.startLocationSlug ?? null}
@@ -1316,25 +1372,6 @@ export function SessionChecklistView({
                   className="max-w-[min(100%,14rem)] md:max-w-none"
                 />
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  {!isTripLoading && isTripSetupComplete ? (
-                    <button
-                      type="button"
-                      aria-expanded={tripNavOpen}
-                      aria-controls="session-trip-panel"
-                      title={tripNavOpen ? "Close setup" : "Open setup"}
-                      onClick={() => setTripNavOpen((open) => !open)}
-                      className={[
-                        "inline-flex h-9 shrink-0 items-center rounded-rsi border border-rsi-border bg-rsi-surface/80 px-3 font-mono text-[0.55rem] uppercase tracking-[0.14em] text-rsi-text-secondary transition-colors",
-                        "hover:border-rsi-border-strong hover:bg-rsi-surface-raised hover:text-rsi-text",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
-                        tripNavOpen
-                          ? "border-rsi-accent/50 text-rsi-accent"
-                          : "",
-                      ].join(" ")}
-                    >
-                      Setup
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     onClick={() => setCatalogOpen(true)}

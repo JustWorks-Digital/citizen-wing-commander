@@ -92,7 +92,6 @@ import {
   ChecklistProgressTimeline,
   FinishRunTile,
   NextDistanceMeta,
-  NextStopBridgeBand,
   PayoutExpMeta,
   checklistRowToneClass,
 } from "./CompletedHistoryRow";
@@ -132,6 +131,11 @@ export type MissionChecklistTableProps = {
    * expand/collapse). Matches checklist width beside the Progress rail.
    */
   aboveChecklist?: ReactNode;
+  /**
+   * Optional content in the desktop column left of `aboveChecklist` (same
+   * width as the Stops rail). Replaces the empty spacer when set.
+   */
+  aboveChecklistRail?: ReactNode;
   /**
    * Reopen / focus the inline finish report (FinishRunTile when summary was
    * dismissed). ⋯ menu lives beside Find a Contract in the trip header.
@@ -291,6 +295,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   onFocusStop,
   toolbarStart = null,
   aboveChecklist = null,
+  aboveChecklistRail = null,
   onOpenSummary,
   tripSummary = null,
   hideCompleted: hideCompletedProp,
@@ -379,8 +384,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const rowElsRef = useRef(new Map<string, HTMLLIElement>());
   /** Slim accordion tab — scroll target after Done / focus. */
   const accordionTabElsRef = useRef(new Map<string, HTMLElement>());
-  /** Next stop transition band — keyed by destination stop id. */
-  const bridgeElsRef = useRef(new Map<string, HTMLElement>());
   const stickyToolbarRef = useRef<HTMLDivElement | null>(null);
   /** Checklist card — desktop Progress rail matches this height. */
   const [checklistPanelEl, setChecklistPanelEl] = useState<HTMLElement | null>(
@@ -1575,25 +1578,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           const completionXp =
             estimateMissionsHaulingRepXp(expectedCompletions);
 
-          const prevRow =
-            routeIndex > 0 ? (displayRows[routeIndex - 1] ?? null) : null;
-          // Bridge only while the *next* stop is still open — drops once that
-          // stop is completed. With history hidden, render it above the next
-          // incomplete card so the hop stays visible.
-          const bridgeNextDistance =
-            row.isCompleted &&
-            nextRow != null &&
-            !nextRow.isCompleted;
-          const historyHiddenBridge =
-            hideCompleted &&
-            !row.isCompleted &&
-            prevRow != null &&
-            prevRow.isCompleted &&
-            !isQuantumTravelRow(prevRow);
-          const historyHiddenBridgeNextName = historyHiddenBridge
-            ? (getLocationBySlug(row.locationSlug)?.name ?? row.locationSlug)
-            : null;
-
           return (
             <Fragment key={row.id}>
             <li
@@ -1612,18 +1596,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               onClick={() => focusThisStop()}
             >
               {stopAccordionTab(openStopId === row.id)}
-              {historyHiddenBridge && prevRow ? (
-                <NextStopBridgeBand
-                  row={prevRow}
-                  nextLocationName={historyHiddenBridgeNextName}
-                  nextLocationSlug={row.locationSlug}
-                  shipSlug={shipSlug}
-                  bridgeRef={(node) => {
-                    if (node) bridgeElsRef.current.set(row.id, node);
-                    else bridgeElsRef.current.delete(row.id);
-                  }}
-                />
-              ) : null}
               <StopBodyReveal motion={bodyMotion}>
               <div className="flex min-h-0 flex-1 flex-col px-3 pt-4.5 pb-1">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -1897,13 +1869,19 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
-      {aboveChecklist ? (
+      {aboveChecklist || aboveChecklistRail ? (
         <div className="flex min-w-0 max-w-full items-start gap-4">
           {showStopsRailSlot ? (
-            <div
-              aria-hidden
-              className="hidden w-[8.75rem] shrink-0 lg:block"
-            />
+            aboveChecklistRail ? (
+              <div className="hidden w-[8.75rem] shrink-0 lg:block">
+                {aboveChecklistRail}
+              </div>
+            ) : (
+              <div
+                aria-hidden
+                className="hidden w-[8.75rem] shrink-0 lg:block"
+              />
+            )
           ) : null}
           <div className="flex min-w-0 max-w-full flex-1 flex-col gap-4">
             {aboveChecklist}

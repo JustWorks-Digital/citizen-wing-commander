@@ -15,7 +15,7 @@ export function TransferArrow() {
   return (
     <span
       aria-hidden
-      className="flex shrink-0 self-center px-1.5 text-rsi-text-muted sm:px-2.5"
+      className="flex shrink-0 self-center px-3 text-rsi-text-muted sm:px-5"
     >
       <svg
         viewBox="0 0 30 20"
@@ -67,7 +67,7 @@ function TransferEndpointInline({
   mute: string;
 }) {
   return (
-    <div className="flex w-full min-w-0 items-center gap-2">
+    <div className="flex w-fit max-w-full min-w-0 items-center gap-2">
       <span
         aria-hidden
         className={[
@@ -97,6 +97,7 @@ function TransferEndpointInline({
       <p
         className={[
           "min-w-0 font-mono text-[0.6rem] uppercase leading-tight tracking-[0.12em]",
+          kind === "station" ? "truncate" : "whitespace-nowrap",
           isDone ? mute : "text-rsi-text-secondary",
         ].join(" ")}
         title={name}
@@ -404,7 +405,7 @@ function TransferReceiptBlock({
 
   const rows: ReceiptRow[] = [
     {
-      label: "Available",
+      label: "Inventory",
       amount: String(transfer.before),
       showScu: true,
       tone: "text-rsi-text-muted",
@@ -421,22 +422,37 @@ function TransferReceiptBlock({
 
   return (
     <TransferBlockFrame title={title} isDone={isDone} tone={tone}>
-      <div className="relative z-[2] grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-1">
-        <TransferEndpointInline
-          kind={from.kind}
-          name={from.name}
-          imageSrc={from.imageSrc}
-          isDone={isDone}
-          mute={mute}
-        />
+      <div className="relative z-[2] flex w-full min-w-0 items-center">
+        {/* Content-sized; station capped, ship keeps full name. Short rows pack left. */}
+        <div
+          className={[
+            "min-w-0 w-fit",
+            from.kind === "station" ? "max-w-[11rem]" : "",
+          ].join(" ")}
+        >
+          <TransferEndpointInline
+            kind={from.kind}
+            name={from.name}
+            imageSrc={from.imageSrc}
+            isDone={isDone}
+            mute={mute}
+          />
+        </div>
         <TransferArrow />
-        <TransferEndpointInline
-          kind={to.kind}
-          name={to.name}
-          imageSrc={to.imageSrc}
-          isDone={isDone}
-          mute={mute}
-        />
+        <div
+          className={[
+            "min-w-0 w-fit",
+            to.kind === "station" ? "max-w-[11rem]" : "",
+          ].join(" ")}
+        >
+          <TransferEndpointInline
+            kind={to.kind}
+            name={to.name}
+            imageSrc={to.imageSrc}
+            isDone={isDone}
+            mute={mute}
+          />
+        </div>
       </div>
       <div className="relative z-[2]">
         <TransferReceiptTable rows={rows} isDone={isDone} mute={mute} />

@@ -18,10 +18,10 @@ function routeActionBadges(routeAction: RouteAction): { label: string; variant: 
     return [{ label: "Pick up", variant: "accent" }];
   }
   if (routeAction === "delivery") {
-    return [{ label: "Delivery", variant: "success" }];
+    return [{ label: "Delivery", variant: "warn" }];
   }
   return [
-    { label: "Delivery", variant: "success" },
+    { label: "Delivery", variant: "warn" },
     { label: "Pick up", variant: "accent" },
   ];
 }
@@ -213,7 +213,8 @@ export function LocationHeader({
       </div>
       <div
         className={[
-          "flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-1",
+          // Name is not a control — don't inherit the stop row's pointer cursor.
+          "flex min-h-14 min-w-0 flex-1 cursor-default flex-col justify-center gap-1",
           align === "end" ? "items-stretch" : "",
           showTravelChevron ? "" : "sm:min-h-14",
         ].join(" ")}

@@ -162,8 +162,8 @@ export function ChecklistStopsSkeleton({
               key={index}
               className="flex w-full flex-col items-center gap-1.5"
             >
-              <StopThumbBone />
               <div className={`h-2.5 w-12 ${bone}`} />
+              <StopThumbBone />
               {index < railStops - 1 ? (
                 <div className={`my-0.5 h-3 w-0.5 ${bone}`} />
               ) : null}

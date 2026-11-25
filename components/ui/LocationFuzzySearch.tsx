@@ -62,7 +62,7 @@ function LocationThumb({
 export function LocationFuzzySearch({
   valueSlug,
   onChange,
-  label = "Start location",
+  label = "Starting location",
   placeholder = "Search locations…",
   disabled = false,
   fullWidth = false,
