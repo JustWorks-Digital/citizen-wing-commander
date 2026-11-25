@@ -4,6 +4,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,10 @@ import {
 import { useOverflowScrollY } from "@/hooks/useOverflowScrollY";
 import { useRightClickPan } from "@/hooks/useRightClickPan";
 import { useWheelZoom } from "@/hooks/useWheelZoom";
+import {
+  cargoBayScrollEdgePadPx,
+  centerBayInScrollViewport,
+} from "@/lib/ships/cargoBayScrollPad";
 import {
   cargoGridCargoLength,
   cargoGridHasExplicitPlacement,
@@ -114,7 +119,34 @@ function clampGridZoom(value: number): number {
   );
 }
 
-/** Zoom that fits content in the scroll viewport (no H/V scroll). */
+/**
+ * Layout size plus any Front/Rear rail paint that sticks out via CSS transform
+ * (square facing). Zoom-% must clear those labels, not only the grid box.
+ */
+function contentFitSizePx(contentEl: HTMLElement): { w: number; h: number } {
+  const base = contentEl.getBoundingClientRect();
+  let minL = base.left;
+  let maxR = base.right;
+  let minT = base.top;
+  let maxB = base.bottom;
+  for (const node of contentEl.querySelectorAll("*")) {
+    if (!(node instanceof HTMLElement) || node.children.length > 0) continue;
+    const text = node.textContent?.trim();
+    if (text !== "Front" && text !== "Rear") continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    minL = Math.min(minL, rect.left);
+    maxR = Math.max(maxR, rect.right);
+    minT = Math.min(minT, rect.top);
+    maxB = Math.max(maxB, rect.bottom);
+  }
+  return {
+    w: Math.max(contentEl.offsetWidth, maxR - minL),
+    h: Math.max(contentEl.offsetHeight, maxB - minT),
+  };
+}
+
+/** Zoom that fits the full bay (incl. Front/Rear) in the scroll viewport. */
 function fitZoomForViewport(
   scrollEl: HTMLElement | null,
   contentEl: HTMLElement | null,
@@ -123,8 +155,7 @@ function fitZoomForViewport(
   if (!scrollEl || !contentEl || currentZoom <= 0) return 1;
   const availW = Math.max(0, scrollEl.clientWidth - GRID_FIT_PAD_PX);
   const availH = Math.max(0, scrollEl.clientHeight - GRID_FIT_PAD_PX);
-  const contentW = contentEl.offsetWidth;
-  const contentH = contentEl.offsetHeight;
+  const { w: contentW, h: contentH } = contentFitSizePx(contentEl);
   if (availW <= 0 || availH <= 0 || contentW <= 0 || contentH <= 0) return 1;
   const baseW = contentW / currentZoom;
   const baseH = contentH / currentZoom;
@@ -400,6 +431,11 @@ export type CargoGridSketchProps = {
    * synced zoom is on — each view keeps its own fit.
    */
   onGridZoomsChange?: (topZoom: number, isoZoom: number) => void;
+  /**
+   * When true, run the same fit as clicking the zoom % once the scroll
+   * viewport has a real size (modal open / ship change).
+   */
+  autoFitVisibleZooms?: boolean;
 };
 
 const CARGO_ZONE_FILL = [
@@ -500,6 +536,7 @@ export function CargoGridSketch({
   isoZoom: isoZoomProp,
   onIsoZoomChange,
   onGridZoomsChange,
+  autoFitVisibleZooms = false,
 }: CargoGridSketchProps) {
   const tabbed = views === "both";
   const [viewTab, setViewTab] = useState<CargoGridViewTab>("top");
@@ -834,7 +871,11 @@ export function CargoGridSketch({
   );
   const topScrollRef = useRef<HTMLDivElement | null>(null);
   const topContentRef = useRef<HTMLDivElement | null>(null);
-  const isoFitZoomRef = useRef<(() => number) | null>(null);
+  const isoFitZoomRef = useRef<(() => number | null) | null>(null);
+  const isoCenterScrollRef = useRef<(() => void) | null>(null);
+  const [topScrollEdgePadPx, setTopScrollEdgePadPx] = useState(() =>
+    cargoBayScrollEdgePadPx(null, sketch.shipSlug),
+  );
   /** 2D square facing — separate from 3D iso facing inside CargoGridIsoView. */
   const [topFacing, setTopFacing] = useState<BayFacing>(defaultBayFacing);
   const topFacingDegrees = bayFacingSquareDegrees(topFacing);
@@ -855,6 +896,18 @@ export function CargoGridSketch({
   /** Legend → Settings: wheel over the bay zooms (default on). */
   const [wheelZoom, setWheelZoom] = useState(true);
   useRightClickPan(topScrollRef, showTop);
+  useLayoutEffect(() => {
+    if (!showTop) return;
+    const el = topScrollRef.current;
+    if (!el) return;
+    const sync = () => {
+      setTopScrollEdgePadPx(cargoBayScrollEdgePadPx(el, sketch.shipSlug));
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showTop, sketch.shipSlug, panelHeightPx, sidePanelsOverlay]);
   useWheelZoom(topScrollRef, topContentRef, topZoom, setTopZoom, {
     enabled: showTop && wheelZoom && !topZoomLocked,
     min: GRID_ZOOM_MIN,
@@ -941,8 +994,11 @@ export function CargoGridSketch({
   /**
    * Fit 2D and 3D independently so each shows the full bay.
    * Writes both zooms in one shot so syncedZoom cannot copy one fit onto the other.
+   * Same path as clicking the zoom % / pressing Z.
    */
-  const fitVisibleBayZooms = () => {
+  /** After fit writes new zooms, center once those sizes are in the DOM. */
+  const pendingCenterAfterFitRef = useRef(false);
+  const fitVisibleBayZooms = useCallback(() => {
     const topFit = topScrollRef.current
       ? fitZoomForViewport(
           topScrollRef.current,
@@ -953,15 +1009,284 @@ export function CargoGridSketch({
     const isoFit = isoFitZoomRef.current?.() ?? null;
     const nextTop = topFit ?? topZoom;
     const nextIso = isoFit ?? isoZoom;
-    if (onGridZoomsChange) {
-      onGridZoomsChange(nextTop, nextIso);
+    const zoomChanged = nextTop !== topZoom || nextIso !== isoZoom;
+    if (zoomChanged) {
+      pendingCenterAfterFitRef.current = true;
+      if (onGridZoomsChange) {
+        onGridZoomsChange(nextTop, nextIso);
+      } else {
+        if (onTopZoomChange) onTopZoomChange(nextTop);
+        else setTopZoomInternal(nextTop);
+        if (onIsoZoomChange) onIsoZoomChange(nextIso);
+        else setIsoZoomInternal(nextIso);
+      }
       return;
     }
-    if (onTopZoomChange) onTopZoomChange(nextTop);
-    else setTopZoomInternal(nextTop);
-    if (onIsoZoomChange) onIsoZoomChange(nextIso);
-    else setIsoZoomInternal(nextIso);
-  };
+    // Same zoom — avoid setState thrash (breaks tray pointer-capture drags).
+    centerBayInScrollViewport(topScrollRef.current, topContentRef.current);
+    isoCenterScrollRef.current?.();
+  }, [
+    isoZoom,
+    onGridZoomsChange,
+    onIsoZoomChange,
+    onTopZoomChange,
+    topZoom,
+  ]);
+  const fitVisibleBayZoomsRef = useRef(fitVisibleBayZooms);
+  fitVisibleBayZoomsRef.current = fitVisibleBayZooms;
+  const topZoomRef = useRef(topZoom);
+  topZoomRef.current = topZoom;
+  const isoZoomRef = useRef(isoZoom);
+  isoZoomRef.current = isoZoom;
+  /**
+   * Hide the bay until open fit matches zoom-% (Front + Rear visible).
+   * Zoom-% click still works anytime after reveal.
+   */
+  const [autoFitReady, setAutoFitReady] = useState(!autoFitVisibleZooms);
+  /** Bumps when verify should run even if zoom did not change. */
+  const [autoFitVerifyTick, setAutoFitVerifyTick] = useState(0);
+  /** `wait` → stable layout; `verify` → fit/center until labels show; `done`. */
+  const autoFitPhaseRef = useRef<"off" | "wait" | "verify" | "done">(
+    autoFitVisibleZooms ? "wait" : "off",
+  );
+  const autoFitVerifyLeftRef = useRef(0);
+
+  const centerBayViews = useCallback(() => {
+    centerBayInScrollViewport(topScrollRef.current, topContentRef.current);
+    isoCenterScrollRef.current?.();
+  }, []);
+
+  /**
+   * Proper 2D open zoom: both Front and Rear end rails fully in the scroll
+   * viewport (same framing as a successful zoom-% click).
+   */
+  const topFrontRearVisible = useCallback((): boolean | null => {
+    const scrollEl = topScrollRef.current;
+    if (!scrollEl || !showTop) return true;
+    const scrollRect = scrollEl.getBoundingClientRect();
+    if (scrollRect.width < 40 || scrollRect.height < 40) return null;
+    let front: DOMRect | null = null;
+    let rear: DOMRect | null = null;
+    const nodes = scrollEl.querySelectorAll("*");
+    for (const node of nodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.children.length > 0) continue;
+      const text = node.textContent?.trim();
+      if (text === "Front") front = node.getBoundingClientRect();
+      else if (text === "Rear") rear = node.getBoundingClientRect();
+    }
+    if (!front || !rear) return null;
+    const fullyIn = (rect: DOMRect) =>
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.left >= scrollRect.left - 1 &&
+      rect.right <= scrollRect.right + 1 &&
+      rect.top >= scrollRect.top - 1 &&
+      rect.bottom <= scrollRect.bottom + 1;
+    return fullyIn(front) && fullyIn(rear);
+  }, [showTop]);
+
+  /** True when another zoom-% pass would not change zoom. */
+  const openFitZoomsMatch = useCallback((): boolean => {
+    if (showTop && topScrollRef.current && topContentRef.current) {
+      const ideal = fitZoomForViewport(
+        topScrollRef.current,
+        topContentRef.current,
+        topZoomRef.current,
+      );
+      if (ideal !== topZoomRef.current) return false;
+    }
+    if (showIso) {
+      const ideal = isoFitZoomRef.current?.();
+      if (ideal != null && ideal !== isoZoomRef.current) return false;
+    }
+    return true;
+  }, [showIso, showTop]);
+
+  useLayoutEffect(() => {
+    if (!pendingCenterAfterFitRef.current) return;
+    pendingCenterAfterFitRef.current = false;
+    // Pad lives outside contentRef so fit zoom is unchanged; recenter so the
+    // bay stays in the middle with equal edge room after fit.
+    centerBayViews();
+  }, [topZoom, isoZoom, topScrollEdgePadPx, centerBayViews]);
+
+  // Modal open / view change: wait for stable layout, then same fit as zoom-%.
+  // Stay invisible until Front+Rear are on-screen (verify/recenter; no jiggle).
+  useLayoutEffect(() => {
+    if (!autoFitVisibleZooms) {
+      autoFitPhaseRef.current = "off";
+      setAutoFitReady(true);
+      return;
+    }
+    autoFitPhaseRef.current = "wait";
+    autoFitVerifyLeftRef.current = 6;
+    setAutoFitReady(false);
+    let raf = 0;
+    let lastSig = "";
+    let stableFrames = 0;
+    let cancelled = false;
+    const STABLE_FRAMES = 4;
+    const hardStopAt = performance.now() + 1200;
+
+    const viewportReady = (): boolean => {
+      if (showTop) {
+        const scrollEl = topScrollRef.current;
+        const contentEl = topContentRef.current;
+        if (
+          !scrollEl ||
+          !contentEl ||
+          scrollEl.clientWidth < 40 ||
+          scrollEl.clientHeight < 40 ||
+          contentEl.offsetWidth <= 0 ||
+          contentEl.offsetHeight <= 0
+        ) {
+          return false;
+        }
+      }
+      if (showIso) {
+        const isoFit = isoFitZoomRef.current?.();
+        if (isoFit == null) return false;
+      }
+      return showTop || showIso;
+    };
+
+    const layoutSig = (): string => {
+      const snap = (n: number) => Math.round(n / 4) * 4;
+      const top = topScrollRef.current;
+      const content = topContentRef.current;
+      const z = topZoomRef.current || 1;
+      const topPart = top
+        ? `${snap(top.clientWidth)}x${snap(top.clientHeight)}`
+        : "no-top";
+      const contentPart =
+        content && content.offsetWidth > 0
+          ? `${snap(content.offsetWidth / z)}x${snap(content.offsetHeight / z)}`
+          : "no-content";
+      const isoPart = showIso
+        ? isoFitZoomRef.current?.() != null
+          ? "iso-ready"
+          : "iso-pending"
+        : "no-iso";
+      return `${topPart}|${contentPart}|${isoPart}`;
+    };
+
+    const beginVerify = () => {
+      if (cancelled || autoFitPhaseRef.current === "done") return;
+      autoFitPhaseRef.current = "verify";
+      fitVisibleBayZoomsRef.current();
+      // Kick verify even when zoom is already correct (no topZoom change).
+      setAutoFitVerifyTick((n) => n + 1);
+    };
+
+    const tick = () => {
+      if (cancelled || autoFitPhaseRef.current !== "wait") return;
+      if (performance.now() > hardStopAt) {
+        beginVerify();
+        return;
+      }
+      if (!viewportReady()) {
+        stableFrames = 0;
+        lastSig = "";
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const sig = layoutSig();
+      if (sig === lastSig) {
+        stableFrames += 1;
+      } else {
+        lastSig = sig;
+        stableFrames = 0;
+      }
+      if (stableFrames >= STABLE_FRAMES) {
+        beginVerify();
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [
+    autoFitVisibleZooms,
+    panelHeightPx,
+    showIso,
+    showTop,
+    sidePanelsOverlay,
+    sketch.shipSlug,
+    splitPaneHeightPx,
+    viewTab,
+    views,
+  ]);
+
+  // After each open-fit zoom paint: center, confirm Front/Rear (and zoom match).
+  useLayoutEffect(() => {
+    if (autoFitPhaseRef.current !== "verify") return;
+
+    const reveal = () => {
+      autoFitPhaseRef.current = "done";
+      centerBayViews();
+      setAutoFitReady(true);
+      requestAnimationFrame(() => {
+        centerBayViews();
+      });
+    };
+
+    centerBayViews();
+
+    const labelsOk = topFrontRearVisible();
+    const zoomOk = openFitZoomsMatch();
+    // Labels not in DOM yet — wait for another tick, do not get stuck invisible.
+    if (labelsOk === null && autoFitVerifyLeftRef.current > 0) {
+      autoFitVerifyLeftRef.current -= 1;
+      requestAnimationFrame(() => {
+        if (autoFitPhaseRef.current === "verify") {
+          setAutoFitVerifyTick((n) => n + 1);
+        }
+      });
+      return;
+    }
+    if (labelsOk === true && zoomOk) {
+      reveal();
+      return;
+    }
+
+    if (autoFitVerifyLeftRef.current <= 0) {
+      reveal();
+      return;
+    }
+
+    autoFitVerifyLeftRef.current -= 1;
+    if (!zoomOk) {
+      fitVisibleBayZoomsRef.current();
+      // If zoom is unchanged, still re-enter verify (no topZoom change).
+      setAutoFitVerifyTick((n) => n + 1);
+      return;
+    }
+    // Zoom matches contain-fit but Front/Rear still clipped → recenter, recheck.
+    requestAnimationFrame(() => {
+      if (autoFitPhaseRef.current !== "verify") return;
+      centerBayViews();
+      const again = topFrontRearVisible();
+      if (again === true && openFitZoomsMatch()) {
+        reveal();
+        return;
+      }
+      fitVisibleBayZoomsRef.current();
+      setAutoFitVerifyTick((n) => n + 1);
+    });
+  }, [
+    autoFitVerifyTick,
+    topZoom,
+    isoZoom,
+    topScrollEdgePadPx,
+    centerBayViews,
+    openFitZoomsMatch,
+    topFrontRearVisible,
+  ]);
 
   function makeZoomControls(
     zoom: number,
@@ -1525,6 +1850,7 @@ export function CargoGridSketch({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    fitVisibleBayZooms,
     focusBoxId,
     isoZoomLocked,
     manualEdit,
@@ -1539,7 +1865,6 @@ export function CargoGridSketch({
     showTop,
     sketch.heightCells,
     syncedZoom,
-    topZoom,
     topZoomLocked,
     trayDragSpec,
   ]);
@@ -2046,6 +2371,8 @@ export function CargoGridSketch({
         className={[
           "flex flex-col lg:flex-row lg:items-start",
           compact ? "h-full min-h-0 gap-0" : "gap-4",
+          // Keep layout for measure; hide until one-shot open fit so zoom does not jiggle.
+          autoFitVisibleZooms && !autoFitReady ? "invisible" : "",
         ].join(" ")}
       >
         <div
@@ -2147,6 +2474,8 @@ export function CargoGridSketch({
               <div
                 ref={topLegendScrollRef}
                 className={cargoBaySidePanelClassName({
+                  // Always absolute; Overlay off uses side padding so it sits
+                  // beside the bay instead of covering cargo.
                   overlay: true,
                   side: "right",
                   toggleAbove: legendToggleAbove,
@@ -2170,10 +2499,14 @@ export function CargoGridSketch({
               aria-label={`${sketch.shipName} 2D cargo grid, ${totalScu} SCU. Rear left, front right.`}
             >
               {/*
-                `m-auto` centers when the bay fits, and still lets overflow
-                scroll/pan reach every edge when zoomed in (unlike justify-center).
+                Outer pad expands scroll range for right-click pan past bay
+                edges; contentRef stays the bay so fit-zoom / wheel-anchor ignore the pad.
               */}
-              <div ref={topContentRef} className="m-auto w-fit shrink-0">
+              <div
+                className="m-auto w-fit shrink-0"
+                style={{ padding: topScrollEdgePadPx }}
+              >
+              <div ref={topContentRef} className="w-fit shrink-0">
               <RotatableTopBay degrees={topFacingDegrees}>
               <ShipBayEndsFrame
                 compact={isSplit}
@@ -3085,6 +3418,7 @@ export function CargoGridSketch({
               </ShipBayEndsFrame>
               </RotatableTopBay>
               </div>
+              </div>
             </div>
             </div>
           </div>
@@ -3107,6 +3441,7 @@ export function CargoGridSketch({
                 cellPx={viewIsoCellPx}
                 zoom={isoZoom}
                 fitZoomGetterRef={isoFitZoomRef}
+                centerScrollRef={isoCenterScrollRef}
                 onZoomChange={
                   wheelZoom && !isoZoomLocked ? setIsoZoom : undefined
                 }

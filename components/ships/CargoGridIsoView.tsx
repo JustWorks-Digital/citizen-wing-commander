@@ -14,6 +14,10 @@ import { useWheelZoom } from "@/hooks/useWheelZoom";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
 import { SCU_TITLE } from "@/lib/ui/abbrevTitles";
 import {
+  cargoBayScrollEdgePadPx,
+  centerBayInScrollViewport,
+} from "@/lib/ships/cargoBayScrollPad";
+import {
   cargoGridMaxWidth,
   cargoGridTotalLength,
   cargoGridZoneHeight,
@@ -107,8 +111,10 @@ export type CargoGridIsoViewProps = {
    * `fitZoomGetterRef` so the percent control can fit the full bay.
    */
   zoom?: number;
-  /** Parent reads this to fit the 3D bay in the scroll viewport. */
-  fitZoomGetterRef?: MutableRefObject<(() => number) | null>;
+  /** Parent reads this to fit the 3D bay in the scroll viewport (`null` = not measurable yet). */
+  fitZoomGetterRef?: MutableRefObject<(() => number | null) | null>;
+  /** Parent recenters the bay after fit (scroll pad lives outside contentRef). */
+  centerScrollRef?: MutableRefObject<(() => void) | null>;
   /** Wheel zoom over the 3D surface (controlled zoom). */
   onZoomChange?: (zoom: number | ((value: number) => number)) => void;
   /** Controls stacked above Peel (e.g. cargo grouping). */
@@ -726,6 +732,7 @@ export function CargoGridIsoView({
   toolbarBelow = null,
   zoom = 1,
   fitZoomGetterRef,
+  centerScrollRef,
   onZoomChange,
   showFacingPad = true,
   embedded = false,
@@ -746,7 +753,21 @@ export function CargoGridIsoView({
 }: CargoGridIsoViewProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const [scrollEdgePadPx, setScrollEdgePadPx] = useState(() =>
+    cargoBayScrollEdgePadPx(null, sketch.shipSlug),
+  );
   useRightClickPan(scrollRef);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const sync = () => {
+      setScrollEdgePadPx(cargoBayScrollEdgePadPx(el, sketch.shipSlug));
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sketch.shipSlug, panelHeightPx, sidePanelsOverlay, embedded]);
   useWheelZoom(
     scrollRef,
     contentRef,
@@ -1125,13 +1146,13 @@ export function CargoGridIsoView({
     fitZoomGetterRef.current = () => {
       const scrollEl = scrollRef.current;
       const contentEl = contentRef.current;
-      if (!scrollEl || !contentEl || zoom <= 0) return 1;
+      if (!scrollEl || !contentEl || zoom <= 0) return null;
       const availW = Math.max(0, scrollEl.clientWidth - FIT_PAD_PX);
       const availH = Math.max(0, scrollEl.clientHeight - FIT_PAD_PX);
       const contentW = contentEl.offsetWidth;
       const contentH = contentEl.offsetHeight;
-      if (availW <= 0 || availH <= 0 || contentW <= 0 || contentH <= 0) {
-        return 1;
+      if (availW < 40 || availH < 40 || contentW <= 0 || contentH <= 0) {
+        return null;
       }
       const baseW = contentW / zoom;
       const baseH = contentH / zoom;
@@ -1142,6 +1163,16 @@ export function CargoGridIsoView({
       fitZoomGetterRef.current = null;
     };
   }, [fitZoomGetterRef, zoom, bounds.width, bounds.height, cellPx]);
+
+  useLayoutEffect(() => {
+    if (!centerScrollRef) return;
+    centerScrollRef.current = () => {
+      centerBayInScrollViewport(scrollRef.current, contentRef.current);
+    };
+    return () => {
+      centerScrollRef.current = null;
+    };
+  }, [centerScrollRef, zoom, bounds.width, bounds.height, scrollEdgePadPx]);
 
   const endLabels = bounds.labels;
 
@@ -1253,6 +1284,8 @@ export function CargoGridIsoView({
         <div
           ref={isoLegendScrollRef}
           className={cargoBaySidePanelClassName({
+            // Always absolute; Overlay off uses side padding so it sits beside
+            // the bay instead of covering cargo.
             overlay: true,
             side: "right",
             toggleAbove: legendToggleAbove,
@@ -1461,10 +1494,14 @@ export function CargoGridIsoView({
       >
         <div className="flex min-h-full min-w-full">
       {/*
-        `m-auto` centers when the bay fits, and still lets overflow
-        scroll/pan reach every edge when zoomed in (unlike justify-center).
+        Outer pad expands scroll range for right-click pan past bay edges;
+        contentRef stays the SVG so fit-zoom / wheel-anchor ignore the pad.
       */}
-      <div ref={contentRef} className="m-auto w-fit shrink-0">
+      <div
+        className="m-auto w-fit shrink-0"
+        style={{ padding: scrollEdgePadPx }}
+      >
+      <div ref={contentRef} className="w-fit shrink-0">
       <svg
         role="img"
         aria-label={`${sketch.shipName} isometric cargo grid, ${cubes.length} cubes. Rear left, front right by default.`}
@@ -1923,6 +1960,7 @@ export function CargoGridIsoView({
           </text>
         ))}
       </svg>
+      </div>
       </div>
         </div>
       </div>

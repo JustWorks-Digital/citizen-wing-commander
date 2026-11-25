@@ -2674,6 +2674,39 @@ function splitRowCargo(row: HaulingChecklistRow): {
   return { deliveries, pickups };
 }
 
+/** Synthetic stop id for trip-wide contract packing (Cargo bay All tab). */
+export const ALL_CONTRACTS_PACK_STOP_ID = "__all_contracts__";
+
+/**
+ * One pickup-only stop listing every contract pickup on the trip.
+ * Used by the Cargo bay All tab for beginning-of-trip planning.
+ */
+export function stopsForAllContractPickups(
+  stops: HaulingChecklistRow[],
+): HaulingChecklistRow[] {
+  const pickups: CargoDelivery[] = [];
+  for (const stop of stops) {
+    const { pickups: stopPickups } = splitRowCargo(stop);
+    for (const { cargo } of stopPickups) {
+      pickups.push({
+        ...cargo,
+        role: "pickup",
+      });
+    }
+  }
+  return [
+    {
+      id: ALL_CONTRACTS_PACK_STOP_ID,
+      routeAction: "pickup",
+      locationSlug: stops[0]?.locationSlug ?? "unknown",
+      cargoDeliveries: pickups,
+      shipStorageLocation: "front",
+      distanceToNext: null,
+      isCompleted: false,
+    },
+  ];
+}
+
 /**
  * Walk the checklist in order. Pickups claim unique cells; deliveries free
  * matching FIFO lots so later pickups can reuse those coordinates.
@@ -3582,6 +3615,73 @@ export function collectSoftVisibleCargoAtStop(
   }
 
   return visible;
+}
+
+type SoftVisibleDemand = {
+  commoditySlug: string;
+  missionId: string | null;
+  remaining: number;
+  action?: CargoGridBoxAction;
+};
+
+function claimSoftVisibleDemand(
+  demand: SoftVisibleDemand[],
+  box: PlacedCargoBox,
+): SoftVisibleDemand | null {
+  const exact = demand.find(
+    (entry) =>
+      entry.remaining >= box.size &&
+      entry.commoditySlug === box.commoditySlug &&
+      entry.missionId != null &&
+      box.missionId != null &&
+      entry.missionId === box.missionId,
+  );
+  if (exact) return exact;
+  return (
+    demand.find(
+      (entry) =>
+        entry.remaining >= box.size &&
+        entry.commoditySlug === box.commoditySlug &&
+        (entry.missionId == null ||
+          box.missionId == null ||
+          entry.missionId === box.missionId),
+    ) ?? null
+  );
+}
+
+/**
+ * Keep All-tab placed boxes that match cargo aboard at `stopId`.
+ * Same origins/cells as All — the location tab is a filter, not a re-pack.
+ * `stopId` is first (entity the call is about).
+ */
+export function filterBoxesAboardAtStop(
+  stopId: string,
+  allBoxes: readonly PlacedCargoBox[],
+  stops: HaulingChecklistRow[],
+  options?: { includeAboardCargo?: boolean },
+): PlacedCargoBox[] {
+  const visible = collectSoftVisibleCargoAtStop(stops, stopId, options);
+  if (!visible || visible.length === 0) return [];
+
+  const demand: SoftVisibleDemand[] = visible.map((line) => ({
+    commoditySlug: line.cargo.commoditySlug,
+    missionId: line.cargo.missionId ?? null,
+    remaining: line.cargo.scu,
+    action: line.action,
+  }));
+
+  const kept: PlacedCargoBox[] = [];
+  for (const box of allBoxes) {
+    const entry = claimSoftVisibleDemand(demand, box);
+    if (!entry) continue;
+    entry.remaining -= box.size;
+    kept.push(
+      entry.action
+        ? { ...box, action: entry.action }
+        : { ...box, action: undefined },
+    );
+  }
+  return kept;
 }
 
 /**

@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with Packing + All/Transfer above the left grid; bottom-right corner resizes width and height together (persisted per trip). Fullscreen toggle fills the browser (persisted); Esc exits fullscreen first, then dismisses. X sits in the mask above the panel (backdrop also dismiss). Header shows stop transfer SCU (left of Contracts total), On grid (placed / capacity), and bay load.",
+          "Centered Cargo bays modal from sticky Cargo bay. Embeds CargoBayLayout with Packing + All / {shortName} (location = All-grid filter) above the left grid; bottom-right corner resizes width and height together (persisted per trip). Fullscreen toggle fills the browser (persisted); Esc exits fullscreen first, then dismisses. Fullscreen / close sit in a reserved chrome strip above the panel (never over Peel / Legend); backdrop also dismisses. Header shows stop transfer SCU (left of Contracts total), On grid (placed / capacity, or contracts total on All), and bay load.",
       },
     },
   },

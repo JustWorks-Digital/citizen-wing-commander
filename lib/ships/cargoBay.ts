@@ -6,13 +6,17 @@ import {
   type CargoBayPackProgram,
 } from "@/lib/ships/cargoBayPackProgram";
 import {
+  ALL_CONTRACTS_PACK_STOP_ID,
   defaultCargoBayPackMode,
+  filterBoxesAboardAtStop as filterPlacedBoxesAboardAtStop,
   packByCargoTypeAtStop,
   packDeliveriesFromStop,
   packSuggestedAtStop,
   placeUnplacedInOverflow,
+  stopsForAllContractPickups,
   type CargoBayPackMode,
   type CargoGridPlacementPlan,
+  type PlacedCargoBox,
 } from "@/lib/ships/cargoGridPlacement";
 import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
 import { settleFloatingBayBoxes } from "@/lib/ships/manualBayMove";
@@ -20,6 +24,8 @@ import { packBaysFromSketch } from "@/lib/ships/packBaysFromSketch";
 import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
 import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
+
+export { ALL_CONTRACTS_PACK_STOP_ID } from "@/lib/ships/cargoGridPlacement";
 
 export type CargoBayPackAtStopOptions = {
   packMode?: CargoBayPackMode;
@@ -108,4 +114,37 @@ export const cargoBay = {
    * `stopId` first = the stop the bay plan is for (not a grid-cell origin).
    */
   packDeliveriesFromStop: packDeliveriesFromStop,
+
+  /**
+   * Pack every contract pickup on the trip into one bay view (Cargo bay All tab).
+   * Amounts match contracts-total SCU; crates may exceed a single stop’s peak.
+   */
+  packAllContractPickups(
+    sketch: ShipCargoGridSketch,
+    stops: HaulingChecklistRow[],
+    packModeOrOptions:
+      | CargoBayPackMode
+      | CargoBayPackAtStopOptions = defaultCargoBayPackMode,
+  ): CargoGridPlacementPlan {
+    const packStops = stopsForAllContractPickups(stops);
+    return cargoBay.packAtStop(
+      ALL_CONTRACTS_PACK_STOP_ID,
+      sketch,
+      packStops,
+      packModeOrOptions,
+    );
+  },
+
+  /**
+   * Location tab: filter All-tab boxes to cargo aboard at `stopId`.
+   * Keeps All origins/cells — does not re-pack.
+   */
+  filterBoxesAboardAtStop(
+    stopId: string,
+    allBoxes: readonly PlacedCargoBox[],
+    stops: HaulingChecklistRow[],
+    options?: { includeAboardCargo?: boolean },
+  ): PlacedCargoBox[] {
+    return filterPlacedBoxesAboardAtStop(stopId, allBoxes, stops, options);
+  },
 };

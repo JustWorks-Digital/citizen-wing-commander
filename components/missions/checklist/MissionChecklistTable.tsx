@@ -86,7 +86,11 @@ import { StopDeliveryBayPreview } from "../StopDeliveryBayPreview";
 import { StopMissionBoxConfigModal } from "../StopMissionBoxConfigModal";
 import { StopMissionScreenshots } from "../StopMissionScreenshots";
 import { cargoPendingKey, CargoGroups } from "./ChecklistCargoTiles";
-import { AddStopAfterButton, LocationHeader } from "./ChecklistLocationHeader";
+import {
+  AddStopAfterButton,
+  CondensedRowTrailing,
+  LocationHeader,
+} from "./ChecklistLocationHeader";
 import {
   ChecklistProgressRail,
   ChecklistProgressTimeline,
@@ -1473,6 +1477,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
               <span className="min-w-0 flex-1 truncate text-[0.7rem] font-medium text-rsi-text-secondary">
                 {location}
               </span>
+              <CondensedRowTrailing
+                routeAction={row.routeAction}
+                badgesOnly
+              />
               {condensedHopLabel ? (
                 <span className="shrink-0 font-mono text-[0.6rem] tabular-nums tracking-wide text-rsi-text-muted">
                   {condensedHopLabel}

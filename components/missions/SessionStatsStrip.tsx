@@ -621,7 +621,7 @@ export type SessionInventoryStatProps = {
   /** Sum of cargo SCU across agreed contracts. */
   missionsTotalScu: number;
   /**
-   * SCU actually placed on the All-tab bay grid (packing / Manual).
+   * SCU actually placed on the Aboard-tab bay grid (packing / Manual).
    * Shown under Contracts total as placed / ship capacity. Omit to hide.
    */
   gridPlacedScu?: number | null;

@@ -14,8 +14,8 @@ import {
 
 /**
  * Per-session Legend / Packing visibility, overlay vs push side panels,
- * packing type, 2D/Split/3D view, and grid zooms in `localStorage`.
- * Survives modal close/reopen.
+ * packing type, and 2D/Split/3D view in `localStorage` (survives reopen).
+ * Grid zooms stay in memory for the open modal only — reopen resets + auto-fits.
  */
 export function useSessionCargoBayChrome(
   sessionId: string | null | undefined,
@@ -49,8 +49,10 @@ export function useSessionCargoBayChrome(
   /** Set 2D and 3D zoom together without syncedZoom forcing them equal. */
   setGridZooms: (topZoom: number, isoZoom: number) => void;
 } {
-  const [prefs, setPrefs] = useState<CargoBayChromePrefs>(
-    DEFAULT_CARGO_BAY_CHROME_PREFS,
+  // Sync read on first paint so modal open → auto-fit is not stomped by a
+  // later localStorage hydrate back to a stale 100% zoom.
+  const [prefs, setPrefs] = useState<CargoBayChromePrefs>(() =>
+    readCargoBayChromePrefs(sessionId),
   );
 
   useEffect(() => {
@@ -190,6 +192,9 @@ export function useSessionCargoBayChrome(
   const setGridZooms = useCallback(
     (nextTopZoom: number, nextIsoZoom: number) => {
       setPrefs((prev) => {
+        if (prev.topZoom === nextTopZoom && prev.isoZoom === nextIsoZoom) {
+          return prev;
+        }
         const next: CargoBayChromePrefs = {
           ...prev,
           topZoom: nextTopZoom,

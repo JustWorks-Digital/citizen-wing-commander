@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show stop transfer SCU (left of Contracts total), On grid (All-tab placed / capacity), and bay load. 2D/Split/3D sits on the top border of the graph (centered between panes in Split). Packing + All/Transfer sit above the left grid; Peel left of Legend top-right. Packing Type (Automatic By cargo type / By contract / External, or Manual with Blank/auto seed; custom templates also appear as Base template options on their own line after External). Legend Settings Overlay (float vs push). Standalone Storybook keeps a bottom height handle; the trip modal uses a corner resize for width+height.",
+          "Trip cargo layout as the ship’s bay grid at the active stop (cargoBay.packAtStop with stopId first). Header can show stop transfer SCU (left of Contracts total), On grid (placed / capacity, or contracts total on All), and bay load. 2D/Split/3D sits on the top border of the graph (centered between panes in Split). Packing + All / {shortName} sit above the left grid; Peel left of Legend top-right. Packing Type (Automatic By cargo type / By contract / External, or Manual with Blank/auto seed; custom templates also appear as Base template options on their own line after External). Legend Settings Overlay (float vs push). Standalone Storybook keeps a bottom height handle; the trip modal uses a corner resize for width+height.",
       },
     },
   },
@@ -66,7 +66,7 @@ export const WithInventory: Story = {
 
 export const WithStopScope: Story = {
   render: function StopScopeDemo(args) {
-    const [stopScope, setStopScope] = useState<CargoBayStopScope>("transfer");
+    const [stopScope, setStopScope] = useState<CargoBayStopScope>("stop");
     return (
       <CargoBayLayout
         {...args}

@@ -67,9 +67,15 @@ export type CargoBayChromePrefs = {
   lastAutoPackMode: CargoBayAutoPackMode;
   /** Prioritized packing toggle (Cargo type + ships that support it). */
   prioritized: boolean;
-  /** 2D (and Split) grid zoom — survives modal close/reopen. */
+  /**
+   * 2D (and Split) grid zoom — live while the modal is open only.
+   * Not restored from storage; each open starts at default then auto-fits.
+   */
   topZoom: number;
-  /** 3D (and Split) grid zoom — survives modal close/reopen. */
+  /**
+   * 3D (and Split) grid zoom — live while the modal is open only.
+   * Not restored from storage; each open starts at default then auto-fits.
+   */
   isoZoom: number;
 };
 
@@ -313,6 +319,7 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
       typeof record.prioritized === "boolean"
         ? record.prioritized
         : DEFAULT_CARGO_BAY_CHROME_PREFS.prioritized,
+    // Zoom is session-ephemeral (see read/write) — keep fields for in-memory use.
     topZoom:
       typeof record.topZoom === "number"
         ? clampCargoBayGridZoom(record.topZoom)
@@ -321,6 +328,15 @@ function normalizeChromePrefs(value: unknown): CargoBayChromePrefs {
       typeof record.isoZoom === "number"
         ? clampCargoBayGridZoom(record.isoZoom)
         : DEFAULT_CARGO_BAY_CHROME_PREFS.isoZoom,
+  };
+}
+
+/** Drop persisted zoom so reopen always starts at default + auto-fit. */
+function chromePrefsForStorage(prefs: CargoBayChromePrefs): CargoBayChromePrefs {
+  return {
+    ...normalizeChromePrefs(prefs),
+    topZoom: DEFAULT_CARGO_BAY_CHROME_PREFS.topZoom,
+    isoZoom: DEFAULT_CARGO_BAY_CHROME_PREFS.isoZoom,
   };
 }
 
@@ -334,13 +350,16 @@ export function readCargoBayChromePrefs(
   try {
     const raw = window.localStorage.getItem(chromeStorageKey(sessionId));
     if (raw == null) return { ...DEFAULT_CARGO_BAY_CHROME_PREFS };
-    return normalizeChromePrefs(JSON.parse(raw) as unknown);
+    // Always default zooms — modal reopen should not restore a prior pan/zoom.
+    return chromePrefsForStorage(
+      normalizeChromePrefs(JSON.parse(raw) as unknown),
+    );
   } catch {
     return { ...DEFAULT_CARGO_BAY_CHROME_PREFS };
   }
 }
 
-/** Persist Legend/Sorting visibility for a session. */
+/** Persist Legend/Sorting visibility for a session (zooms are not stored). */
 export function writeCargoBayChromePrefs(
   sessionId: string | null | undefined,
   prefs: CargoBayChromePrefs,
@@ -349,7 +368,7 @@ export function writeCargoBayChromePrefs(
   try {
     window.localStorage.setItem(
       chromeStorageKey(sessionId),
-      JSON.stringify(normalizeChromePrefs(prefs)),
+      JSON.stringify(chromePrefsForStorage(prefs)),
     );
   } catch {
     // Quota / private mode — ignore.

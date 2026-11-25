@@ -471,6 +471,7 @@ export function ManualBayBoxTray({
                   if (!canMissionFill || !missionFill || event.button !== 0) {
                     return;
                   }
+                  event.preventDefault();
                   pendingRef.current = {
                     kind: "mission",
                     pointerId: event.pointerId,
@@ -649,6 +650,7 @@ export function ManualBayBoxTray({
                         aria-label={`Fill ${commodity.commodityName}, ${commodity.remainingScu}scu`}
                         onPointerDown={(event) => {
                           if (!canFill || event.button !== 0) return;
+                          event.preventDefault();
                           pendingRef.current = {
                             kind: "bulk",
                             pointerId: event.pointerId,
@@ -831,6 +833,7 @@ export function ManualBayBoxTray({
                                 }
                                 onPointerDown={(event) => {
                                   if (!canPlace || event.button !== 0) return;
+                                  event.preventDefault();
                                   const spec = specFromLine(line);
                                   pendingRef.current = {
                                     kind: "single",

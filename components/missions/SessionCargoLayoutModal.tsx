@@ -49,8 +49,8 @@ export type SessionCargoLayoutModalProps = {
 /**
  * Centered cargo bays modal — CargoBayLayout panel opened from the sticky
  * Cargo bay control. Bottom-right corner resizes width and height together.
- * Fullscreen fills the browser; close X / expand sit above the panel (or inset
- * when fullscreen).
+ * Fullscreen fills the browser; close X / expand sit above the panel in a
+ * reserved chrome strip (never overlaid on Packing / Peel / Legend / graphs).
  */
 export function SessionCargoLayoutModal({
   open,
@@ -67,7 +67,7 @@ export function SessionCargoLayoutModal({
     useSessionCargoBayLayoutWidth(sessionId);
   const { isFullscreen, setIsFullscreen, toggleFullscreen } =
     useSessionCargoBayLayoutFullscreen(sessionId);
-  const [stopScope, setStopScope] = useState<CargoBayStopScope>("transfer");
+  const [stopScope, setStopScope] = useState<CargoBayStopScope>("stop");
   const [isResizing, setIsResizing] = useState(false);
   const layoutResizeRef = useRef<CargoBayLayoutResizeApi | null>(null);
   const dragRef = useRef<{
@@ -299,9 +299,9 @@ export function SessionCargoLayoutModal({
       >
         <div
           className={[
-            "z-20 flex items-center gap-2",
+            "z-20 flex shrink-0 items-center justify-end gap-2",
             isFullscreen
-              ? "absolute top-2 right-2"
+              ? "bg-rsi-bg-deep px-3 pt-2 pb-1.5"
               : "absolute right-0 bottom-full mb-2",
           ].join(" ")}
         >
@@ -315,7 +315,7 @@ export function SessionCargoLayoutModal({
           className={[
             "relative min-w-0",
             isFullscreen
-              ? "h-full overflow-hidden"
+              ? "min-h-0 flex-1 overflow-hidden"
               : // Grow with the graph; clamp height so we never scroll the shell.
                 "max-h-[min(85vh,52rem)] overflow-hidden",
           ].join(" ")}

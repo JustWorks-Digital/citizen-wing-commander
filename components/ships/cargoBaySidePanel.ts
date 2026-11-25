@@ -64,8 +64,9 @@ export function cargoBaySidePanelClassName({
     elevation,
     "relative z-10 shrink-0 self-stretch overflow-y-auto overscroll-contain",
     matchGraphHeight ? "box-border" : "max-h-full",
-    toggleAbove ? "mt-8" : "mt-2",
-    "mb-2",
+    // Graph-height packing docks flush beside the bay (no extra vertical gap).
+    matchGraphHeight ? "" : toggleAbove ? "mt-8" : "mt-2",
+    matchGraphHeight ? "" : "mb-2",
     scrollClassName,
   ]
     .filter(Boolean)

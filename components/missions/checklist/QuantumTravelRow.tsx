@@ -11,7 +11,7 @@ import { getLocationShopBySlug } from "@/lib/fixtures/locationShops";
 import { formatDistanceToNext, type HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
 import { DoneCheckbox, DoneStopButton } from "./ChecklistDoneControls";
-import { SpaceshipIcon, TravelChevronsIcon } from "./ChecklistIcons";
+import { SpaceshipIcon, TravelChevronIcon } from "./ChecklistIcons";
 import { LocationHeader } from "./ChecklistLocationHeader";
 import {
   CondensedQuantumRow,
@@ -248,26 +248,87 @@ export function QuantumTravelRow({
       </div>
     );
 
+  /**
+   * Same L→R chevron wave as Next stop (`NextDistanceMeta`): always while
+   * pending; hover while this hop is still open; settled complete = static.
+   */
+  const chevronTone = sectionBusy
+    ? "text-rsi-accent"
+    : isCompleted
+      ? "text-rsi-success"
+      : isFocused
+        ? "text-rsi-text-secondary"
+        : "text-rsi-text-muted";
+  const chevronWave = sectionBusy || !isCompleted;
+  const chevronWaveAlways = sectionBusy;
+
+  const travelChevrons = (
+    <>
+      {Array.from({ length: 40 }, (_, index) => (
+        <TravelChevronIcon
+          key={index}
+          className={[
+            "h-3.5 w-2 shrink-0 sm:h-4 sm:w-2.5",
+            chevronWave
+              ? chevronWaveAlways
+                ? "opacity-40 animate-rsi-done-chevron-wave"
+                : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+              : "",
+          ].join(" ")}
+          style={
+            chevronWave ? { animationDelay: `${index * 50}ms` } : undefined
+          }
+        />
+      ))}
+    </>
+  );
+
   const travelBlock =
     editing === "from" || editing === "to" ? null : (
       <div
-        className="flex w-full shrink-0 items-center justify-center gap-2.5 px-1 py-1 md:w-auto md:self-center sm:gap-3"
+        className="flex w-full min-w-0 shrink-0 items-center gap-2.5 px-1 py-1 md:min-w-[12rem] md:flex-1 md:self-center sm:gap-3"
         title="Travel"
       >
         <QuantumShipBadge
           shipSlug={shipSlug}
           className="h-12 w-20 sm:h-14 sm:w-24"
         />
-        <DoneCheckbox
-          location={location}
-          step="QT"
-          isCompleted={isCompleted}
-          isActive={isFocused}
-          isPending={isPending || isSavingSection}
-          onToggle={onToggle}
-        />
-        <span aria-hidden className="inline-flex text-rsi-text-muted">
-          <TravelChevronsIcon className="h-4 w-5 rotate-90 md:h-5 md:w-6 md:rotate-0" />
+        <span className="group/done flex min-w-0 flex-1 items-center gap-2">
+          <DoneCheckbox
+            location={location}
+            step="QT"
+            isCompleted={isCompleted}
+            isActive={isFocused}
+            isPending={isPending || isSavingSection}
+            onToggle={onToggle}
+          />
+          <button
+            type="button"
+            disabled={sectionBusy}
+            aria-label={
+              sectionBusy
+                ? `Quantum travel, updating: ${location}`
+                : isCompleted
+                  ? `Quantum travel, mark not done: ${location}`
+                  : `Quantum travel, mark done: ${location}`
+            }
+            title={sectionBusy ? "Updating…" : "Mark this quantum hop done"}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (sectionBusy) return;
+              onToggle();
+            }}
+            className={[
+              "flex min-w-4 flex-1 items-center justify-start gap-1 overflow-hidden",
+              "[mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              "[-webkit-mask-image:linear-gradient(to_right,black_0%,black_calc(100%-0.75rem),transparent)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
+              sectionBusy ? "cursor-wait" : "cursor-pointer",
+              chevronTone,
+            ].join(" ")}
+          >
+            {travelChevrons}
+          </button>
         </span>
       </div>
     );
