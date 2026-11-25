@@ -386,7 +386,7 @@ function StopTransferFlowArrow({ inbound }: { inbound: boolean }) {
 
 /**
  * Cargo strip left (Cargo | Aboard/capacity | Peak | Stop in/out);
- * Progress strip right (Prog | Contracts as completed + aUEC | Time).
+ * Progress strip right (TRIP | Contracts as completed + aUEC | Time).
  * Time stays in the strip. Distance lives in the Stops rail.
  */
 export function SessionRouteProgressStats({
@@ -588,7 +588,7 @@ export function SessionRouteProgressStats({
             title={contractsAuecTitle}
             aria-label={contractsAuecAria}
           >
-            <StripSpine label="Prog" title="Progress" />
+            <StripSpine label="TRIP" title="Trip" />
             <span className={`${cellClass} border-0`}>
               {contractsAuecBody}
             </span>

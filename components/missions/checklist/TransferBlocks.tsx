@@ -393,12 +393,12 @@ function TransferReceiptBlock({
   const transferRow: ReceiptRow =
     tone === "pickup"
       ? {
-          label: "Load",
+          label: "Loading",
           amount: `+${transfer.amount}`,
           tone: "text-rsi-success",
         }
       : {
-          label: "Unload",
+          label: "Unloading",
           amount: `−${transfer.amount}`,
           tone: "text-rsi-danger",
         };
