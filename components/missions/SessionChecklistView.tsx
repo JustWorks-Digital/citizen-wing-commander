@@ -1111,6 +1111,29 @@ export function SessionChecklistView({
   const tripSetupFields = (
     <>
       <div className="min-w-0">
+        <ShipSelect
+          fullWidth
+          valueSlug={selectedShipSlug}
+          options={shipCatalog.map((ship) => ({
+            slug: ship.slug,
+            name: ship.name,
+            cargoScu: ship.cargoScu,
+          }))}
+          isLoading={shipsLoading}
+          error={shipsError}
+          onChange={(slug) => {
+            persistSession(
+              applySessionCompletionTiming({
+                ...session,
+                shipSlugs: slug ? [slug] : [],
+                startLocationSlug: session.startLocationSlug ?? null,
+              }),
+            );
+          }}
+        />
+      </div>
+
+      <div className="min-w-0">
         <LocationFuzzySearch
           fullWidth
           valueSlug={session.startLocationSlug ?? null}
@@ -1133,29 +1156,6 @@ export function SessionChecklistView({
             Unknown start location slug: {session.startLocationSlug}
           </p>
         )}
-      </div>
-
-      <div className="min-w-0">
-        <ShipSelect
-          fullWidth
-          valueSlug={selectedShipSlug}
-          options={shipCatalog.map((ship) => ({
-            slug: ship.slug,
-            name: ship.name,
-            cargoScu: ship.cargoScu,
-          }))}
-          isLoading={shipsLoading}
-          error={shipsError}
-          onChange={(slug) => {
-            persistSession(
-              applySessionCompletionTiming({
-                ...session,
-                shipSlugs: slug ? [slug] : [],
-                startLocationSlug: session.startLocationSlug ?? null,
-              }),
-            );
-          }}
-        />
       </div>
 
       {loadError ? (

@@ -55,8 +55,8 @@ describe("stopCargoRole.arePresentRolesHandled", () => {
 });
 
 describe("stopCargoRole.isHandled", () => {
-  it("treats Dropped off as done when every active cargo type is handled", () => {
-    // 0 SCU skip line must not block the Dropped off mark.
+  it("treats Unloaded as done when every active cargo type is handled", () => {
+    // 0 SCU skip line must not block the Unloaded mark.
     const row: HaulingChecklistRow = {
       id: "leg-drop",
       routeAction: "delivery",

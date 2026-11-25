@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Session contracts (Accepted Contracts): stacked cards on small screens (no horizontal scroll); Rank / Title / Reward / SCU / EXP / From / To / Boxes / actions table from md+. Shows a table/card skeleton while rows paint. Under the title, cargo amounts use commodity-colored badges (not a bullet list). From/To use the same short-name location badges as the mission catalog (accent / success). Boxes always label the cargo type above the mix icons. Footer totals are contract sums for aUEC, SCU, EXP, and boxes; ⋯ menu for complete/hide/delete.",
+          "Contracts modal: two-up card grid (one column on narrow). Header title is “N Contracts”; sticky-style totals strip is Stops / Boxes / SCU / aUEC / XP. Click a card to open its source screenshot(s). Cards show rank/title, aUEC·SCU·EXP, cargo, From → To, box mix, ⋯ menu.",
       },
     },
   },
@@ -30,17 +30,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Desktop table / mobile cards; Boxes opens the crate-mix modal. */
-export const Table: Story = {};
+/** Card list with session totals in the header. */
+export const Cards: Story = {};
 
-/** Mobile card layout (viewport ≤767px). */
-export const MobileCards: Story = {
+/** Narrow viewport — same card layout. */
+export const Mobile: Story = {
   parameters: {
     viewport: { defaultViewport: "mobile1" },
   },
 };
-/** Opened from a stop Contracts tile — focused row is highlighted. */
-export const FocusedRow: Story = {
+
+/** Opened from a stop Contracts tile — scrolls that card into view. */
+export const ScrollToContract: Story = {
   args: {
     focusMissionId: mockSessionChecklist.missions[0]?.id ?? null,
   },

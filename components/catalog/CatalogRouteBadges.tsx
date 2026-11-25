@@ -87,8 +87,11 @@ function cargoBadgeStyle(commoditySlug: string | null | undefined) {
 /** Amount + commodity chips (contracts modal under title, etc.). */
 export function CargoAmountBadges({
   items,
+  /** When true, render `16SCU` with no space before the unit. */
+  tightScuUnit = false,
 }: {
   items: CargoAmountBadgeItem[];
+  tightScuUnit?: boolean;
 }) {
   if (items.length === 0) return <span>—</span>;
   return (
@@ -96,7 +99,9 @@ export function CargoAmountBadges({
       {items.map((item, index) => {
         const title =
           item.scu > 0
-            ? `${item.scu} ${SCU_TITLE} ${item.commodityName}`
+            ? tightScuUnit
+              ? `${item.commodityName} ${item.scu}${SCU_TITLE}`
+              : `${item.commodityName} ${item.scu} ${SCU_TITLE}`
             : item.commodityName;
         return (
           <li key={`${item.commoditySlug || "scu"}-${index}`}>
@@ -113,11 +118,12 @@ export function CargoAmountBadges({
               <span className="min-w-0 truncate">
                 {item.scu > 0 ? (
                   <>
-                    <span className="tabular-nums">{item.scu}</span>{" "}
+                    {item.commodityName}{" "}
+                    <span className="tabular-nums">{item.scu}</span>
+                    {tightScuUnit ? null : " "}
                     <span className="text-[0.45rem] tracking-wide" title={SCU_TITLE}>
                       SCU
-                    </span>{" "}
-                    {item.commodityName}
+                    </span>
                   </>
                 ) : (
                   item.commodityName

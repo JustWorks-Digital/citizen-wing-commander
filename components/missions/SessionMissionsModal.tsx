@@ -17,9 +17,14 @@ import {
   CatalogLocationBadges,
 } from "@/components/catalog/CatalogRouteBadges";
 import { CargoBoxCountIcons } from "@/components/ships/CargoBoxSizeIcon";
+import {
+  ImageLightbox,
+  type ImageLightboxItem,
+} from "@/components/ui/ImageLightbox";
 import { ModalCloseButton } from "@/components/ui/ModalCloseButton";
 import { fetchCatalogMissionsByIds } from "@/lib/api/catalogMissionsApi";
 import { resolveCommodityColorHex } from "@/lib/fixtures/commodityColors";
+import { screenshotUrlFromLogicalPath } from "@/lib/missions/catalogScreenshotUrl";
 import {
   boxCountsFromBreakdown,
 } from "@/lib/missions/boxBreakdownOptions";
@@ -65,7 +70,7 @@ export type SessionMissionsModalProps = {
   rows?: HaulingChecklistRow[];
   /** Session id — Source screenshot URLs in the box-types modal. */
   sessionId?: string | null;
-  /** When set, scroll to and highlight this contract row. */
+  /** When set, scroll this contract card into view on open. */
   focusMissionId?: string | null;
   onClose: () => void;
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
@@ -177,12 +182,6 @@ function formatRewardCell(mission: SessionMission): string {
   return Math.floor(amount).toLocaleString("en-US");
 }
 
-const thClass =
-  "px-2.5 py-2 text-left font-mono text-[0.55rem] font-medium uppercase tracking-[0.16em] text-rsi-text-muted sm:px-3";
-
-const tdClass =
-  "px-2.5 py-2 align-top text-xs leading-snug text-rsi-text-secondary sm:px-3";
-
 function MissionActionsMenu({
   mission,
   onToggleCompleted,
@@ -238,7 +237,7 @@ function MissionActionsMenu({
           setOpen((value) => !value);
         }}
         className={[
-          "flex size-8 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface md:size-5",
+          "flex size-8 items-center justify-center rounded-rsi border border-rsi-border bg-rsi-surface",
           "text-rsi-text-secondary transition-colors",
           "hover:border-rsi-border-strong hover:text-rsi-text",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
@@ -372,7 +371,6 @@ type MissionContractViewModel = {
 };
 
 type MissionContractHandlers = {
-  onToggleSelect: (missionId: string) => void;
   onToggleHidden: (missionId: string, isHidden: boolean) => void;
   onToggleCompleted: (missionId: string, isCompleted: boolean) => void;
   onRemoveMission: (missionId: string) => void;
@@ -457,6 +455,41 @@ function cargoLinesOrFallback(
   ];
 }
 
+function screenshotUrlForSession(
+  logicalPath: string,
+  sessionId: string,
+): string | null {
+  const parts = logicalPath.trim().split("/").filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) {
+    return screenshotUrlFromLogicalPath(`${sessionId}/${parts[0]}`);
+  }
+  return screenshotUrlFromLogicalPath(logicalPath);
+}
+
+function missionSourceGalleryItems(
+  mission: SessionMission,
+  sessionId: string | null,
+): ImageLightboxItem[] {
+  if (!sessionId) return [];
+  const caption = `${resolveMissionTitle(mission) || mission.title}\n${missionTotalScu(mission)}SCU`;
+  const items: ImageLightboxItem[] = [];
+  for (const logicalPath of mission.screenshots ?? []) {
+    if (!logicalPath.trim()) continue;
+    const url = screenshotUrlForSession(logicalPath, sessionId);
+    if (!url) continue;
+    const filename =
+      logicalPath.split("/").filter(Boolean).at(-1) ?? logicalPath;
+    items.push({
+      src: url,
+      alt: filename,
+      title: filename,
+      caption,
+    });
+  }
+  return items;
+}
+
 function MissionBoxesButton({
   mission,
   view,
@@ -484,15 +517,15 @@ function MissionBoxesButton({
         onEditBoxTypes(mission.id);
       }}
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-rsi border px-2 py-1.5",
+        "inline-flex max-w-full shrink-0 items-center gap-2 rounded-rsi border px-2 py-1",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
         isCompleted
           ? "cursor-not-allowed border-rsi-border/50 opacity-60"
-          : "border-rsi-border bg-rsi-surface/80 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
+          : "border-rsi-border/80 bg-rsi-surface/60 hover:border-rsi-accent/50 hover:bg-rsi-accent-muted/25",
         className,
       ].join(" ")}
     >
-      <span className="flex flex-col items-start gap-1">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         {cargoLinesOrFallback(view).map((line) => {
           const splits =
             readyBoxes.scuCargoBoxSplits?.[line.commoditySlug] ??
@@ -503,10 +536,10 @@ function MissionBoxesButton({
           return (
             <span
               key={line.commoditySlug}
-              className="flex flex-col items-start gap-0.5"
+              className="inline-flex min-w-0 items-center gap-1.5"
             >
               <span
-                className="font-mono text-[0.45rem] uppercase tracking-[0.1em]"
+                className="max-w-[7rem] truncate font-mono text-[0.45rem] uppercase tracking-[0.1em]"
                 style={{
                   color: isCompleted ? "var(--rsi-text-muted)" : cargoColor,
                 }}
@@ -516,7 +549,7 @@ function MissionBoxesButton({
               <CargoBoxCountIcons
                 boxCounts={boxCountsFromBreakdown(splits)}
                 color={isCompleted ? "var(--rsi-text-muted)" : cargoColor}
-                className="gap-x-1.5 [&_svg]:h-4 [&_svg]:w-auto [&_span]:text-[0.6rem]"
+                className="gap-x-1 [&_svg]:h-3.5 [&_svg]:w-auto [&_span]:text-[0.55rem]"
               />
             </span>
           );
@@ -529,8 +562,7 @@ function MissionBoxesButton({
 const MissionContractCard = memo(function MissionContractCard({
   mission,
   rows,
-  isFocused = false,
-  onToggleSelect,
+  sessionId = null,
   onToggleHidden,
   onToggleCompleted,
   onRemoveMission,
@@ -538,8 +570,15 @@ const MissionContractCard = memo(function MissionContractCard({
 }: {
   mission: SessionMission;
   rows: HaulingChecklistRow[];
-  isFocused?: boolean;
+  sessionId?: string | null;
 } & MissionContractHandlers) {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const galleryItems = useMemo(
+    () => missionSourceGalleryItems(mission, sessionId),
+    [mission, sessionId],
+  );
+  const hasSource = galleryItems.length > 0;
   const view = missionContractView(mission, rows);
   const {
     isHidden,
@@ -555,50 +594,99 @@ const MissionContractCard = memo(function MissionContractCard({
   } = view;
 
   return (
-    <article
-      data-mission-id={mission.id}
-      aria-selected={isFocused}
-      onClick={(event) => {
-        const target = event.target as HTMLElement | null;
-        if (target?.closest("button, a, [role='menu']")) return;
-        onToggleSelect(mission.id);
-      }}
-      className={[
-        "[content-visibility:auto] [contain-intrinsic-size:auto_9rem]",
-        "cursor-pointer rounded-rsi border border-rsi-border/70 p-3",
-        isHidden ? "opacity-55" : "",
-        isFocused
-          ? "bg-rsi-accent-muted/35 ring-1 ring-rsi-accent/70"
-          : isCompleted
+    <>
+      <article
+        data-mission-id={mission.id}
+        title={
+          hasSource
+            ? galleryItems.length > 1
+              ? `View ${galleryItems.length} source screenshots`
+              : "View source screenshot"
+            : "No source screenshot on file"
+        }
+        onClick={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest("button, a, [role='menu']")) return;
+          if (!hasSource) return;
+          setGalleryIndex(0);
+          setGalleryOpen(true);
+        }}
+        className={[
+          "[content-visibility:auto] [contain-intrinsic-size:auto_7rem]",
+          "flex h-full flex-col rounded-rsi border border-rsi-border/70 px-3 py-2.5",
+          // Force default cursor when there is no source to open.
+          hasSource ? "cursor-pointer" : "!cursor-default",
+          isHidden ? "opacity-55" : "",
+          isCompleted
             ? "bg-rsi-success/5"
-            : "bg-rsi-bg-deep/25",
-      ].join(" ")}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span
-              className={[
-                "font-mono text-[0.55rem] tracking-[0.08em]",
-                isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
-              ].join(" ")}
-            >
-              {rank ?? "—"}
-            </span>
-            {statusBadge}
+            : hasSource
+              ? "bg-rsi-bg-deep/25 hover:border-rsi-border-strong hover:bg-rsi-bg-deep/40"
+              : "bg-rsi-bg-deep/25",
+        ].join(" ")}
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span
+                  className={[
+                    "font-mono text-[0.55rem] tracking-[0.08em]",
+                    isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
+                  ].join(" ")}
+                >
+                  {rank ?? "—"}
+                </span>
+                {statusBadge}
+              </div>
+              <h3
+                className={[
+                  "mt-0.5 text-sm font-semibold tracking-wide break-words hyphens-auto",
+                  isCompleted
+                    ? "text-rsi-text-muted line-through decoration-rsi-success/40"
+                    : "text-rsi-text",
+                ].join(" ")}
+              >
+                {title}
+              </h3>
+              <p className="mt-0.5 font-mono text-[0.6rem] tabular-nums tracking-wide text-rsi-text-secondary">
+                {reward === "—" ? "—" : reward}
+                {reward !== "—" ? (
+                  <span className="ml-0.5 text-[0.5rem] tracking-[0.08em] text-rsi-text-muted">
+                    aUEC
+                  </span>
+                ) : null}
+                <span className="text-rsi-text-muted"> · </span>
+                <span>
+                  {totalScu}
+                  <span title="SCU">SCU</span>
+                </span>
+                <span className="text-rsi-text-muted"> · </span>
+                <span
+                  title={
+                    exp != null
+                      ? `Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`
+                      : "Approximate Covalex hauling reputation XP"
+                  }
+                >
+                  {exp != null ? `${formatHaulingRepXp(exp)} EXP` : "— EXP"}
+                </span>
+              </p>
+            </div>
+            <MissionActionsMenu
+              mission={mission}
+              onToggleCompleted={(isCompletedNext) =>
+                onToggleCompleted(mission.id, isCompletedNext)
+              }
+              onToggleHidden={(isHiddenNext) =>
+                onToggleHidden(mission.id, isHiddenNext)
+              }
+              onRemoveMission={() => onRemoveMission(mission.id)}
+            />
           </div>
-          <p
-            className={[
-              "mt-0.5 text-sm font-semibold tracking-wide break-words hyphens-auto",
-              isCompleted
-                ? "text-rsi-text-muted line-through decoration-rsi-success/40"
-                : "text-rsi-text",
-            ].join(" ")}
-          >
-            {title}
-          </p>
-          <div className="mt-0.5">
+
+          <div className="mt-1.5">
             <CargoAmountBadges
+              tightScuUnit
               items={cargoLinesOrFallback(view).map((line) => ({
                 commoditySlug: line.commoditySlug,
                 commodityName: line.commodity,
@@ -607,208 +695,42 @@ const MissionContractCard = memo(function MissionContractCard({
               }))}
             />
           </div>
-        </div>
-        <MissionActionsMenu
-          mission={mission}
-          onToggleCompleted={(isCompletedNext) =>
-            onToggleCompleted(mission.id, isCompletedNext)
-          }
-          onToggleHidden={(isHiddenNext) =>
-            onToggleHidden(mission.id, isHiddenNext)
-          }
-          onRemoveMission={() => onRemoveMission(mission.id)}
-        />
-      </div>
 
-      <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-rsi-border/50 pt-2.5 font-mono text-[0.65rem] tabular-nums">
-        <div>
-          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            Reward
-          </dt>
-          <dd className="mt-0.5 text-rsi-accent">{reward}</dd>
-        </div>
-        <div>
-          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            SCU
-          </dt>
-          <dd className="mt-0.5 text-rsi-text">{totalScu}</dd>
-        </div>
-        <div>
-          <dt className="text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            EXP
-          </dt>
-          <dd
-            className="mt-0.5 text-rsi-text"
-            title={
-              exp != null
-                ? `Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`
-                : "Approximate Covalex hauling reputation XP"
-            }
-          >
-            {exp != null ? formatHaulingRepXp(exp) : "—"}
-          </dd>
-        </div>
-      </dl>
-
-      <div className="mt-2.5 grid grid-cols-2 gap-3 text-[0.7rem] leading-snug text-rsi-text-secondary">
-        <div className="min-w-0">
-          <p className="font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            From
-          </p>
-          <div className="mt-0.5">
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
             <CatalogLocationBadges items={fromLocations} tone="from" />
-          </div>
-        </div>
-        <div className="min-w-0">
-          <p className="font-mono text-[0.5rem] uppercase tracking-[0.14em] text-rsi-text-muted">
-            To
-          </p>
-          <div className="mt-0.5">
+            {fromLocations.length > 0 && toLocations.length > 0 ? (
+              <span
+                aria-hidden
+                className="font-mono text-[0.55rem] text-rsi-text-muted"
+              >
+                →
+              </span>
+            ) : null}
             <CatalogLocationBadges items={toLocations} tone="to" />
           </div>
+
+          <div className="mt-auto pt-2">
+            <MissionBoxesButton
+              mission={mission}
+              view={view}
+              onEditBoxTypes={onEditBoxTypes}
+            />
+          </div>
         </div>
-      </div>
-
-      <div className="mt-2.5">
-        <MissionBoxesButton
-          mission={mission}
-          view={view}
-          onEditBoxTypes={onEditBoxTypes}
-          className="w-full justify-start sm:w-auto"
+      </article>
+      {galleryOpen && galleryItems.length > 0 ? (
+        <ImageLightbox
+          src={galleryItems[galleryIndex]?.src ?? galleryItems[0]!.src}
+          alt={galleryItems[galleryIndex]?.alt}
+          title={galleryItems[galleryIndex]?.title}
+          caption={galleryItems[galleryIndex]?.caption}
+          items={galleryItems}
+          index={galleryIndex}
+          onIndexChange={setGalleryIndex}
+          onClose={() => setGalleryOpen(false)}
         />
-      </div>
-    </article>
-  );
-});
-
-const MissionContractRow = memo(function MissionContractRow({
-  mission,
-  rows,
-  isFocused = false,
-  onToggleSelect,
-  onToggleHidden,
-  onToggleCompleted,
-  onRemoveMission,
-  onEditBoxTypes,
-}: {
-  mission: SessionMission;
-  rows: HaulingChecklistRow[];
-  isFocused?: boolean;
-} & MissionContractHandlers) {
-  const view = missionContractView(mission, rows);
-  const {
-    isHidden,
-    isCompleted,
-    rank,
-    title,
-    totalScu,
-    reward,
-    exp,
-    fromLocations,
-    toLocations,
-    statusBadge,
-  } = view;
-
-  return (
-    <tr
-      data-mission-id={mission.id}
-      aria-selected={isFocused}
-      onClick={(event) => {
-        const target = event.target as HTMLElement | null;
-        if (target?.closest("button, a, [role='menu']")) return;
-        onToggleSelect(mission.id);
-      }}
-      className={[
-        // Skip off-screen row paint work while scrolling the contracts list.
-        "[content-visibility:auto] [contain-intrinsic-size:auto_4.5rem]",
-        "cursor-pointer border-b border-rsi-border/50 last:border-b-0",
-        isHidden ? "opacity-55" : "",
-        isFocused
-          ? "bg-rsi-accent-muted/35 ring-1 ring-inset ring-rsi-accent/70"
-          : isCompleted
-            ? "bg-rsi-success/5"
-            : "hover:bg-rsi-bg-deep/35",
-      ].join(" ")}
-    >
-      <td className={tdClass}>
-        <span
-          className={[
-            "font-mono text-[0.5rem] tracking-[0.08em]",
-            isCompleted ? "text-rsi-text-muted" : "text-rsi-accent",
-          ].join(" ")}
-        >
-          {rank ?? "—"}
-        </span>
-      </td>
-      <td className={`${tdClass} max-w-[12rem]`}>
-        <p
-          className={[
-            "text-[0.7rem] font-semibold tracking-wide break-words hyphens-auto",
-            isCompleted
-              ? "text-rsi-text-muted line-through decoration-rsi-success/40"
-              : "text-rsi-text",
-          ].join(" ")}
-        >
-          {title}
-        </p>
-        <div className="mt-0.5">
-          <CargoAmountBadges
-            items={cargoLinesOrFallback(view).map((line) => ({
-              commoditySlug: line.commoditySlug,
-              commodityName: line.commodity,
-              scu: line.scu,
-              isCompleted,
-            }))}
-          />
-        </div>
-        {statusBadge ? <div className="mt-0.5">{statusBadge}</div> : null}
-      </td>
-      <td
-        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-accent`}
-      >
-        {reward}
-      </td>
-      <td
-        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
-      >
-        {totalScu}
-      </td>
-      <td
-        className={`${tdClass} text-right font-mono text-[0.7rem] tabular-nums text-rsi-text`}
-        title={
-          exp != null
-            ? `Approximate Covalex hauling reputation XP: ${exp.toLocaleString("en-US")}`
-            : "Approximate Covalex hauling reputation XP"
-        }
-      >
-        {exp != null ? formatHaulingRepXp(exp) : "—"}
-      </td>
-      <td className={`${tdClass} max-w-[9rem]`}>
-        <CatalogLocationBadges items={fromLocations} tone="from" />
-      </td>
-      <td className={`${tdClass} max-w-[9rem]`}>
-        <CatalogLocationBadges items={toLocations} tone="to" />
-      </td>
-      <td className={`${tdClass} whitespace-nowrap`}>
-        <MissionBoxesButton
-          mission={mission}
-          view={view}
-          onEditBoxTypes={onEditBoxTypes}
-        />
-      </td>
-      <td className={`${tdClass} w-10`}>
-        <MissionActionsMenu
-          mission={mission}
-          onToggleCompleted={(isCompletedNext) =>
-            onToggleCompleted(mission.id, isCompletedNext)
-          }
-          onToggleHidden={(isHiddenNext) =>
-            onToggleHidden(mission.id, isHiddenNext)
-          }
-          onRemoveMission={() => onRemoveMission(mission.id)}
-        />
-      </td>
-    </tr>
+      ) : null}
+    </>
   );
 });
 
@@ -827,14 +749,11 @@ export function SessionMissionsModal({
 }: SessionMissionsModalProps) {
   const [enriched, setEnriched] = useState<SessionMission[]>(missions);
   const [boxEditMissionId, setBoxEditMissionId] = useState<string | null>(null);
-  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
-    null,
-  );
   /** Keep DOM warm after first open so close/reopen is CSS-only. */
   const [retain, setRetain] = useState(false);
-  /** Defer heavy row paint one frame so the dialog chrome can appear first. */
+  /** Defer heavy card paint one frame so the dialog chrome can appear first. */
   const [paintRows, setPaintRows] = useState(false);
-  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
   const catalogByIdRef = useRef<Map<string, CatalogMission>>(new Map());
   const catalogIdsKeyRef = useRef<string>("");
 
@@ -873,12 +792,9 @@ export function SessionMissionsModal({
 
   useEffect(() => {
     if (!open) {
-      setSelectedMissionId(null);
       setBoxEditMissionId(null);
-      return;
     }
-    setSelectedMissionId(focusMissionId ?? null);
-  }, [open, focusMissionId]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -937,14 +853,8 @@ export function SessionMissionsModal({
       exp += estimateMissionHaulingRepXp(mission) ?? 0;
       boxes += missionBoxCount(mission);
     }
-    return { rewardAuec, scu, exp, boxes };
-  }, [enriched]);
-
-  const onToggleSelect = useCallback((missionId: string) => {
-    setSelectedMissionId((current) =>
-      current === missionId ? null : missionId,
-    );
-  }, []);
+    return { rewardAuec, scu, exp, boxes, stops: rows.length };
+  }, [enriched, rows]);
 
   const handleToggleHidden = useCallback(
     (missionId: string, isHidden: boolean) => {
@@ -972,18 +882,16 @@ export function SessionMissionsModal({
   }, []);
 
   useEffect(() => {
-    if (!open || !selectedMissionId) return;
-    // Only auto-scroll for the initial focus from a stop tile.
-    if (selectedMissionId !== focusMissionId) return;
+    if (!open || !focusMissionId || !paintRows) return;
     const id = window.requestAnimationFrame(() => {
-      const row = tableScrollRef.current?.querySelector(
-        `[data-mission-id="${CSS.escape(selectedMissionId)}"]`,
+      const card = listScrollRef.current?.querySelector(
+        `[data-mission-id="${CSS.escape(focusMissionId)}"]`,
       );
-      if (!(row instanceof HTMLElement)) return;
-      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (!(card instanceof HTMLElement)) return;
+      card.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(id);
-  }, [open, focusMissionId, selectedMissionId, enriched]);
+  }, [open, focusMissionId, paintRows, enriched]);
 
   if (!open && !retain) return null;
 
@@ -995,7 +903,7 @@ export function SessionMissionsModal({
       ].join(" ")}
       role="dialog"
       aria-modal={open}
-      aria-label="Accepted Contracts"
+      aria-label="Contracts"
       aria-hidden={!open}
       inert={!open ? true : undefined}
       onClick={(event) => {
@@ -1003,21 +911,93 @@ export function SessionMissionsModal({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="relative flex h-[calc(100dvh-4.25rem)] w-full sm:h-auto sm:max-h-[90vh] sm:w-max sm:max-w-[min(100%,72rem)]">
+      <div className="relative flex h-[calc(100dvh-4.25rem)] w-full max-w-5xl sm:h-auto sm:max-h-[90vh]">
         <ModalCloseButton onClick={onClose} />
         <div className="flex h-full w-full flex-col overflow-hidden border-rsi-border bg-rsi-surface shadow-rsi-panel sm:rounded-rsi sm:border">
-        <header className="border-b border-rsi-divider px-4 py-3 sm:px-5 sm:py-4">
-          <h2 className="min-w-0 truncate text-base font-semibold tracking-wide text-rsi-text sm:text-lg">
-            Accepted Contracts
+        <header className="shrink-0 border-b border-rsi-divider px-4 py-3 sm:px-5">
+          <h2 className="min-w-0 text-base font-semibold tracking-wide text-rsi-text">
+            <span className="tabular-nums">{enriched.length}</span> Contracts
           </h2>
+          {enriched.length > 0 ? (
+            <div
+              className="mt-2 flex w-fit max-w-full flex-nowrap items-stretch divide-x divide-rsi-border overflow-x-auto overscroll-x-contain rounded-rsi border border-rsi-border bg-rsi-bg-deep/55 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              role="group"
+              aria-label="Contract totals"
+            >
+              <div
+                className="flex shrink-0 flex-col justify-center px-2.5 py-1 text-left first:pl-3 sm:min-w-[4.5rem] sm:px-3 sm:py-1.5 sm:first:pl-3.5"
+                title="Route stop count"
+              >
+                <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]">
+                  Stops
+                </p>
+                <p className="mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm">
+                  {columnTotals.stops}
+                </p>
+              </div>
+              <div
+                className="flex shrink-0 flex-col justify-center px-2.5 py-1 text-left sm:min-w-[4.5rem] sm:px-3 sm:py-1.5"
+                title="Contracts total boxes"
+              >
+                <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]">
+                  Boxes
+                </p>
+                <p className="mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm">
+                  {columnTotals.boxes}
+                </p>
+              </div>
+              <div
+                className="flex shrink-0 flex-col justify-center px-2.5 py-1 text-left sm:min-w-[4.5rem] sm:px-3 sm:py-1.5"
+                title="Contracts total SCU"
+              >
+                <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]">
+                  SCU
+                </p>
+                <p className="mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm">
+                  {columnTotals.scu}
+                  <span className="ml-1 text-[0.45rem] tracking-[0.1em] text-rsi-text-muted sm:text-[0.5rem] sm:tracking-[0.12em]">
+                    scu
+                  </span>
+                </p>
+              </div>
+              <div
+                className="flex shrink-0 flex-col justify-center px-2.5 py-1 text-left sm:min-w-[4.5rem] sm:px-3 sm:py-1.5"
+                title="Contracts total aUEC"
+              >
+                <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]">
+                  aUEC
+                </p>
+                <p className="mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm">
+                  {columnTotals.rewardAuec > 0
+                    ? Math.floor(columnTotals.rewardAuec).toLocaleString(
+                        "en-US",
+                      )
+                    : "—"}
+                </p>
+              </div>
+              <div
+                className="flex shrink-0 flex-col justify-center px-2.5 py-1 text-left last:pr-3 sm:min-w-[4.5rem] sm:px-3 sm:py-1.5 sm:last:pr-3.5"
+                title={`Contracts total approximate hauling XP: ${columnTotals.exp.toLocaleString("en-US")}`}
+              >
+                <p className="font-mono text-[0.45rem] uppercase leading-none tracking-[0.12em] text-rsi-text-muted sm:text-[0.55rem] sm:tracking-[0.16em]">
+                  XP
+                </p>
+                <p className="mt-0.5 max-w-full whitespace-nowrap font-mono text-[0.7rem] leading-none tabular-nums tracking-wide text-rsi-text sm:mt-1 sm:text-sm">
+                  {columnTotals.exp > 0
+                    ? formatHaulingRepXp(columnTotals.exp)
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </header>
 
         <div
-          ref={tableScrollRef}
+          ref={listScrollRef}
           className="min-h-0 flex-1 overflow-auto overscroll-contain"
         >
           {enriched.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-rsi-text-muted sm:min-w-[20rem] sm:px-5 sm:py-5">
+            <p className="px-4 py-8 text-center text-sm text-rsi-text-muted sm:px-5">
               No contracts in this session.
             </p>
           ) : !paintRows ? (
@@ -1025,155 +1005,22 @@ export function SessionMissionsModal({
               rows={Math.min(Math.max(enriched.length, 3), 8)}
             />
           ) : (
-            <>
-              {/* Mobile: stacked cards — no horizontal scroll */}
-              <div className="space-y-2.5 p-3 pb-4 md:hidden">
-                {enriched.map((mission) => (
-                  <MissionContractCard
-                    key={mission.id}
-                    mission={mission}
-                    rows={rows}
-                    isFocused={mission.id === selectedMissionId}
-                    onToggleSelect={onToggleSelect}
-                    onToggleHidden={handleToggleHidden}
-                    onToggleCompleted={handleToggleCompleted}
-                    onRemoveMission={handleRemoveMission}
-                    onEditBoxTypes={handleEditBoxTypes}
-                  />
-                ))}
-              </div>
-
-              {/* Desktop: column widths follow content; modal wraps tightly */}
-              <table className="hidden border-collapse text-left md:table">
-                <thead className="sticky top-0 z-10 border-b border-rsi-border bg-rsi-surface">
-                  <tr>
-                    <th className={`${thClass} whitespace-nowrap`}>Rank</th>
-                    <th className={`${thClass} max-w-[12rem]`}>Title</th>
-                    <th className={`${thClass} whitespace-nowrap text-right`}>
-                      Reward
-                    </th>
-                    <th className={`${thClass} whitespace-nowrap text-right`}>
-                      SCU
-                    </th>
-                    <th
-                      className={`${thClass} whitespace-nowrap text-right`}
-                      title="Approximate Covalex hauling reputation XP"
-                    >
-                      EXP
-                    </th>
-                    <th className={`${thClass} max-w-[9rem]`}>From</th>
-                    <th className={`${thClass} max-w-[9rem]`}>To</th>
-                    <th className={`${thClass} whitespace-nowrap`}>Boxes</th>
-                    <th className={`${thClass} w-10`}>
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enriched.map((mission) => (
-                    <MissionContractRow
-                      key={mission.id}
-                      mission={mission}
-                      rows={rows}
-                      isFocused={mission.id === selectedMissionId}
-                      onToggleSelect={onToggleSelect}
-                      onToggleHidden={handleToggleHidden}
-                      onToggleCompleted={handleToggleCompleted}
-                      onRemoveMission={handleRemoveMission}
-                      onEditBoxTypes={handleEditBoxTypes}
-                    />
-                  ))}
-                </tbody>
-                <tfoot className="sticky bottom-0 border-t border-rsi-border bg-rsi-surface">
-                  <tr className="whitespace-nowrap">
-                    <td className={`${tdClass} py-2.5`}>
-                      <span className="font-mono text-[0.55rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-                        Total
-                      </span>
-                    </td>
-                    <td
-                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                      colSpan={2}
-                      title="Contracts total aUEC"
-                    >
-                      {columnTotals.rewardAuec > 0
-                        ? `${Math.floor(columnTotals.rewardAuec).toLocaleString("en-US")} aUEC`
-                        : "—"}
-                    </td>
-                    <td
-                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                      title="Contracts total SCU"
-                    >
-                      {columnTotals.scu} SCU
-                    </td>
-                    <td
-                      className={`${tdClass} py-2.5 text-right font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                      title={`Contracts total approximate hauling EXP: ${columnTotals.exp.toLocaleString("en-US")}`}
-                    >
-                      {columnTotals.exp > 0
-                        ? `${formatHaulingRepXp(columnTotals.exp)} EXP`
-                        : "—"}
-                    </td>
-                    <td className={`${tdClass} py-2.5`} />
-                    <td className={`${tdClass} py-2.5`} />
-                    <td
-                      className={`${tdClass} py-2.5 font-mono text-[0.65rem] tabular-nums text-rsi-text`}
-                    >
-                      {columnTotals.boxes} boxes
-                    </td>
-                    <td className={`${tdClass} py-2.5`} />
-                  </tr>
-                </tfoot>
-              </table>
-            </>
+            <div className="grid grid-cols-1 gap-2 p-3 pb-4 sm:grid-cols-2 sm:px-4 sm:pb-5">
+              {enriched.map((mission) => (
+                <MissionContractCard
+                  key={mission.id}
+                  mission={mission}
+                  rows={rows}
+                  sessionId={sessionId}
+                  onToggleHidden={handleToggleHidden}
+                  onToggleCompleted={handleToggleCompleted}
+                  onRemoveMission={handleRemoveMission}
+                  onEditBoxTypes={handleEditBoxTypes}
+                />
+              ))}
+            </div>
           )}
         </div>
-
-        {paintRows && enriched.length > 0 ? (
-          <footer className="shrink-0 border-t border-rsi-border bg-rsi-surface px-3 py-2.5 md:hidden">
-            <p className="font-mono text-[0.5rem] uppercase tracking-[0.16em] text-rsi-text-muted">
-              Total
-            </p>
-            <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.65rem] tabular-nums text-rsi-text">
-              <div title="Contracts total aUEC">
-                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  aUEC
-                </dt>
-                <dd className="mt-0.5">
-                  {columnTotals.rewardAuec > 0
-                    ? Math.floor(columnTotals.rewardAuec).toLocaleString(
-                        "en-US",
-                      )
-                    : "—"}
-                </dd>
-              </div>
-              <div title="Contracts total SCU">
-                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  SCU
-                </dt>
-                <dd className="mt-0.5">{columnTotals.scu}</dd>
-              </div>
-              <div
-                title={`Contracts total approximate hauling EXP: ${columnTotals.exp.toLocaleString("en-US")}`}
-              >
-                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  EXP
-                </dt>
-                <dd className="mt-0.5">
-                  {columnTotals.exp > 0
-                    ? formatHaulingRepXp(columnTotals.exp)
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[0.45rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                  Boxes
-                </dt>
-                <dd className="mt-0.5">{columnTotals.boxes}</dd>
-              </div>
-            </dl>
-          </footer>
-        ) : null}
         </div>
       </div>
 

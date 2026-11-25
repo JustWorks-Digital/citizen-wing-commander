@@ -256,9 +256,7 @@ export function SessionStopsTimelineModal({
                 const isLast = index === timeline.nodes.length - 1;
                 const role = routeActionLabel(node.routeAction);
                 const meta =
-                  node.kind === "start"
-                    ? "Start"
-                    : [`#${node.stopNumber}`, role].filter(Boolean).join(" · ");
+                  node.kind === "start" ? "Start" : (role ?? null);
                 const imageSrc = getLocationImageSrc(node.locationSlug);
                 const thumbClass = isDense
                   ? "size-8"
@@ -365,22 +363,34 @@ export function SessionStopsTimelineModal({
                         >
                           {node.locationName}
                         </p>
-                        {node.isCompleted ? (
-                          <span className="shrink-0 font-mono text-[0.45rem] uppercase tracking-[0.12em] text-rsi-success">
-                            Done
-                          </span>
-                        ) : node.isNext ? (
+                        {node.isNext && !node.isCompleted ? (
                           <span className="shrink-0 font-mono text-[0.45rem] uppercase tracking-[0.12em] text-rsi-accent">
                             Next
                           </span>
                         ) : null}
                       </div>
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted">
-                          {meta}
-                        </p>
+                        {meta ? (
+                          <p
+                            className={[
+                              "truncate font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-text-muted",
+                              node.isCompleted ? "line-through" : "",
+                            ].join(" ")}
+                          >
+                            {meta}
+                          </p>
+                        ) : (
+                          <span />
+                        )}
                         {!isLast ? (
-                          <p className="shrink-0 pr-1 font-mono text-[0.65rem] tabular-nums text-rsi-text-secondary">
+                          <p
+                            className={[
+                              "shrink-0 pr-1 font-mono text-[0.65rem] tabular-nums",
+                              node.isCompleted
+                                ? "text-rsi-text-muted line-through"
+                                : "text-rsi-text-secondary",
+                            ].join(" ")}
+                          >
                             {formatDistanceToNext(node.distanceToNext)}
                           </p>
                         ) : null}

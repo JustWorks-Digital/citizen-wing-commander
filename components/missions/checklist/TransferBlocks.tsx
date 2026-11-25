@@ -168,7 +168,7 @@ export function TransferBlockFrame({
     tone === "pickup"
       ? "border-rsi-accent/30 bg-rsi-bg-deep/25"
       : "border-rsi-gold/30 bg-rsi-bg-deep/25";
-  const doneLabel = tone === "pickup" ? "Picked up" : "Dropped off";
+  const doneLabel = tone === "pickup" ? "Loaded" : "Unloaded";
 
   return (
     <div
@@ -393,26 +393,26 @@ function TransferReceiptBlock({
   const transferRow: ReceiptRow =
     tone === "pickup"
       ? {
-          label: "Deposit",
+          label: "Load",
           amount: `+${transfer.amount}`,
           tone: "text-rsi-success",
         }
       : {
-          label: "Withdrawal",
+          label: "Unload",
           amount: `−${transfer.amount}`,
           tone: "text-rsi-danger",
         };
 
   const rows: ReceiptRow[] = [
     {
-      label: "Inventory",
+      label: "Aboard",
       amount: String(transfer.before),
       showScu: true,
       tone: "text-rsi-text-muted",
     },
     transferRow,
     {
-      label: "Total on ship",
+      label: "New total",
       amount: String(transfer.after),
       showScu: true,
       tone: "text-rsi-text",

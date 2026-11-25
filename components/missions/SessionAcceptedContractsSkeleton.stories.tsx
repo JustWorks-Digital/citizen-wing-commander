@@ -9,7 +9,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Accepted Contracts modal placeholder (mobile cards + desktop table) while rows paint.",
+          "Accepted Contracts modal card-list placeholder while contracts paint.",
       },
     },
   },

@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Trip stops timeline from the sticky Stops stat. Title is Stops (no N/M). Before any stop is complete, drag handles reorder stops (Save order / Cancel). Reset trip clears stop completion only (contracts stay) to unlock reorder. Continuous completion progress bar above the overview (Stops count / Total distance). Location thumbnails per stop (Done / Next badges), leg distances. Start is omitted when it matches stop 1. Density scales with stop count.",
+          "Trip stops timeline from the sticky Stops stat. Title is Stops (no N/M). Before any stop is complete, drag handles reorder stops (Save order / Cancel). Reset trip clears stop completion only (contracts stay) to unlock reorder. Continuous completion progress bar above the overview (Stops count / Total distance). Location thumbnails per stop (Next badge; completed stops strike location + distance). Pickup/Delivery tags without stop numbers. Start is omitted when it matches stop 1. Density scales with stop count.",
       },
     },
   },

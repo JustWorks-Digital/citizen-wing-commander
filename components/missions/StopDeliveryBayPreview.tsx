@@ -54,7 +54,7 @@ export type StopDeliveryBayPreviewProps = {
    * Used to align each graph with its left-side Pickup / Drop off section.
    */
   role?: "pickup" | "delivery";
-  /** Mark all cargo of a role handled (Dropped off / Picked up header checkbox). */
+  /** Mark all cargo of a role handled (Unloaded / Loaded header checkbox). */
   onSetCargoRoleHandled?: (
     role: "pickup" | "delivery",
     handled: boolean,
@@ -115,7 +115,7 @@ const padToggleClass = [
   "rounded-[calc(var(--radius-rsi)-2px)] px-2 py-0.5 font-mono text-[0.5rem] uppercase tracking-[0.12em] transition-colors",
 ].join(" ");
 
-/** Shared so Dropped off matches Picked up when All / Per location is present. */
+/** Shared so Unloaded matches Loaded when All / Per location is present. */
 const graphHeaderClass =
   "flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-rsi-border px-2.5 py-1.5";
 
@@ -159,16 +159,15 @@ export function CargoRoleHandledCheckbox({
   isPending: boolean;
   onToggle: () => void;
 }) {
-  const label = role === "pickup" ? "Picked up" : "Dropped off";
+  const label = role === "pickup" ? "Loaded" : "Unloaded";
   const labelTone =
     role === "pickup" ? "text-rsi-accent" : "text-rsi-gold";
+  // Checked mark matches Pick up / Drop off tab title check (ChecklistCargoTiles).
   const markTone = isPending
-    ? "cursor-wait border-rsi-accent/50 text-rsi-accent"
+    ? "cursor-wait border border-rsi-accent/50 text-rsi-accent"
     : checked
-      ? role === "pickup"
-        ? "border-rsi-accent bg-rsi-accent text-rsi-bg-deep"
-        : "border-rsi-gold bg-rsi-gold text-rsi-bg-deep"
-      : "border-rsi-border bg-transparent text-transparent group-hover:border-rsi-border-strong";
+      ? "bg-rsi-success/80 text-rsi-bg-deep opacity-90 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+      : "border border-rsi-border bg-transparent text-transparent group-hover:border-rsi-border-strong";
   return (
     <button
       type="button"
@@ -191,7 +190,7 @@ export function CargoRoleHandledCheckbox({
     >
       <span
         className={[
-          "inline-flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+          "inline-flex size-3.5 shrink-0 items-center justify-center rounded-full transition-colors",
           markTone,
         ].join(" ")}
         aria-hidden
@@ -204,7 +203,7 @@ export function CargoRoleHandledCheckbox({
             className="size-2.5"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.25"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -364,7 +363,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : (
                 <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-gold">
-                  Dropped off
+                  Unloaded
                 </p>
               )}
             </div>
@@ -424,7 +423,7 @@ export const StopDeliveryBayPreview = memo(function StopDeliveryBayPreview({
                 />
               ) : (
                 <p className="font-mono text-[0.5rem] uppercase tracking-[0.12em] text-rsi-accent">
-                  Picked up
+                  Loaded
                 </p>
               )}
             </div>

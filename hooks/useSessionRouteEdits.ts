@@ -65,7 +65,7 @@ export function useSessionRouteEdits(input: {
         ),
       };
 
-      // Last active cargo type checked → stamp whole role (Picked up / Dropped off).
+      // Last active cargo type checked → stamp whole role (Loaded / Unloaded).
       const role: "pickup" | "delivery" | null =
         toggled.role === "pickup" || toggled.role === "delivery"
           ? toggled.role

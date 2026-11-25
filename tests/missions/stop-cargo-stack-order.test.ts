@@ -5,7 +5,7 @@ import {
   stopCargoBoxGroups,
 } from "@/lib/missions/stopDeliveryBoxes";
 
-describe("Dropped off / Picked up pad stack order", () => {
+describe("Unloaded / Loaded pad stack order", () => {
   it("places highest-SCU cargo leftmost (delivery)", () => {
     // Mixed insertion order — medical 4, scrap 24, stims 9 — must render L→R 24, 9, 4.
     const row: HaulingChecklistRow = {

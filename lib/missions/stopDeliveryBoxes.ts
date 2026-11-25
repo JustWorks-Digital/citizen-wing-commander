@@ -98,7 +98,7 @@ export const stopCargoRole = {
       .filter((cargo) => cargoLineScu(cargo) > 0);
   },
   /**
-   * Picked up / Dropped off — true once every active (SCU > 0) cargo
+   * Loaded / Unloaded — true once every active (SCU > 0) cargo
    * type for the role is handled. Checking the last tile/checkbox lights
    * the role mark without requiring a separate header click.
    */
@@ -340,7 +340,7 @@ export function stopCargoBoxGroups(
     );
   }
 
-  // Highest SCU leftmost on Dropped off / Picked up pads.
+  // Highest SCU leftmost on Unloaded / Loaded pads.
   return [...map.values()]
     .map((entry) => ({
       id: entry.id,

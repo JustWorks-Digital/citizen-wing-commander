@@ -65,7 +65,7 @@ function Interactive(args: {
           </p>
         }
       >
-        <p className="text-sm text-rsi-text-secondary">Start · ship</p>
+        <p className="text-sm text-rsi-text-secondary">Ship · start</p>
       </SessionTripSideNav>
       {args.presentation !== "modal" ? (
         <p className="rounded-rsi border border-rsi-border bg-rsi-bg-deep/30 p-4 text-sm text-rsi-text-secondary">
