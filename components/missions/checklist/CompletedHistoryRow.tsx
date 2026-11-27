@@ -763,6 +763,69 @@ export function CondensedQuantumRow({
   onOpen?: () => void;
 }) {
   const routeTitle = `${fromLabel} → ${toLabel}`;
+  // Completed QT matches closed stop accordion tabs (MissionChecklistTable).
+  if (isCompleted) {
+    return (
+      <div
+        role={onOpen ? "button" : undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        onClick={
+          onOpen
+            ? (event) => {
+                event.stopPropagation();
+                if (isPending) return;
+                onOpen();
+              }
+            : undefined
+        }
+        onKeyDown={
+          onOpen
+            ? (event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (isPending) return;
+                onOpen();
+              }
+            : undefined
+        }
+        className={[
+          "flex w-full min-w-0 items-center gap-1.5 px-3 py-1.5 text-left",
+          onOpen && !isPending ? "cursor-pointer" : "",
+          isFocused
+            ? "bg-rsi-success-muted/50"
+            : "bg-rsi-success-muted/45 hover:bg-rsi-success-muted/60",
+        ].join(" ")}
+      >
+        <svg
+          aria-hidden
+          viewBox="0 0 20 20"
+          className="size-3 shrink-0 text-rsi-text-muted"
+          fill="currentColor"
+        >
+          <path d="M7.05 4.55a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L10.69 10 7.05 6.36a.75.75 0 0 1 0-1.06Z" />
+        </svg>
+        <span
+          className="flex min-w-0 flex-1 items-center truncate text-[0.7rem] font-medium text-rsi-text-secondary"
+          title={routeTitle}
+        >
+          <span className="truncate">{fromLabel}</span>
+          <TravelChevronsIcon className="mx-1.5 h-3 w-3.5 shrink-0 text-rsi-text-muted" />
+          <span className="truncate">{toLabel}</span>
+        </span>
+        <CondensedRowTrailing routeAction="quantum" badgesOnly />
+        {hopLabel ? (
+          <span
+            className="shrink-0 font-mono text-[0.6rem] tabular-nums tracking-wide text-rsi-text-muted"
+            title={hopTitle ?? undefined}
+          >
+            {hopLabel}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div
       role={onOpen ? "button" : undefined}
@@ -788,28 +851,22 @@ export function CondensedQuantumRow({
           : undefined
       }
       className={[
-        // Match CondensedStopRow chrome; completed QT omits the Done mark.
         "flex min-w-0 items-center gap-2.5 px-3 py-2 sm:gap-3",
         onOpen && !isPending ? "cursor-pointer" : "",
-        checklistRowToneClass(isCompleted, isFocused),
+        checklistRowToneClass(false, isFocused),
       ].join(" ")}
     >
-      {!isCompleted ? (
-        <DoneCheckbox
-          location={routeTitle}
-          step="QT"
-          isCompleted={false}
-          isActive={isFocused}
-          isPending={isPending}
-          compact
-          onToggle={onToggle}
-        />
-      ) : null}
+      <DoneCheckbox
+        location={routeTitle}
+        step="QT"
+        isCompleted={false}
+        isActive={isFocused}
+        isPending={isPending}
+        compact
+        onToggle={onToggle}
+      />
       <span
-        className={[
-          "flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide",
-          isCompleted ? "text-rsi-text-secondary" : "text-rsi-text",
-        ].join(" ")}
+        className="flex min-w-0 flex-1 items-center truncate text-sm font-medium tracking-wide text-rsi-text"
         title={routeTitle}
       >
         <span className="truncate">{fromLabel}</span>
