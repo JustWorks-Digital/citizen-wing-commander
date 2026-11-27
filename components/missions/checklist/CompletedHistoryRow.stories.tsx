@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green). Completed quantum strips keep from→to text and omit the Done checkmark so they match completed-stop chrome.",
+          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical; vertical Stops rail uses tighter thumb/connector padding), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green). Completed quantum strips keep from→to text and omit the Done checkmark so they match completed-stop chrome.",
       },
     },
   },

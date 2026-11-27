@@ -107,8 +107,8 @@ export function ChecklistProgressTimeline({
               title={title}
               onClick={() => onSelectStop(stop.id)}
               className={[
-                "flex shrink-0 flex-col items-center gap-1.5 rounded-rsi px-1 py-2 text-center transition-colors",
-                isVertical ? "w-full max-w-[7.5rem]" : "w-[5.75rem]",
+                "flex shrink-0 flex-col items-center gap-1.5 rounded-rsi px-1 text-center transition-colors",
+                isVertical ? "w-full max-w-[7.5rem] py-1.5" : "w-[5.75rem] py-2",
                 "hover:bg-rsi-surface-raised/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)]",
                 stop.isCurrent
                   ? "bg-rsi-accent-muted/30"
@@ -203,7 +203,7 @@ export function ChecklistProgressTimeline({
                 <span
                   aria-hidden
                   className={[
-                    "my-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center",
+                    "inline-flex h-4 w-4 shrink-0 items-center justify-center",
                     connectorClass,
                   ].join(" ")}
                 >
@@ -487,7 +487,7 @@ export function ChecklistProgressRail({
           title="Previous stops"
           onClick={() => scrollToOffscreenStop("up")}
           className={[
-            "flex shrink-0 items-center justify-center border-b border-rsi-divider/60 py-1 text-rsi-text-muted transition-colors",
+            "flex shrink-0 items-center justify-center border-b border-rsi-divider/60 py-0.5 text-rsi-text-muted transition-colors",
             "hover:bg-rsi-surface-raised/40 hover:text-rsi-text",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
           ].join(" ")}
@@ -514,7 +514,7 @@ export function ChecklistProgressRail({
           title="Next stops"
           onClick={() => scrollToOffscreenStop("down")}
           className={[
-            "flex shrink-0 items-center justify-center border-t border-rsi-divider/60 py-1 text-rsi-text-muted transition-colors",
+            "flex shrink-0 items-center justify-center border-t border-rsi-divider/60 py-0.5 text-rsi-text-muted transition-colors",
             "hover:bg-rsi-surface-raised/40 hover:text-rsi-text",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--rsi-ring)]",
           ].join(" ")}
