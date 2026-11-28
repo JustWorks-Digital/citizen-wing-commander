@@ -2674,8 +2674,14 @@ function splitRowCargo(row: HaulingChecklistRow): {
   return { deliveries, pickups };
 }
 
-/** Synthetic stop id for trip-wide contract packing (Cargo bay All tab). */
+/** Synthetic stop id for trip-wide Planned packing (Cargo bay Planned tab). */
 export const ALL_CONTRACTS_PACK_STOP_ID = "__all_contracts__";
+
+/**
+ * Synthetic stop id for the live ship bay (Cargo bay Current tab).
+ * Manual rearranges after trip progress write here — not Planned.
+ */
+export const CURRENT_ABOARD_PACK_STOP_ID = "__current_aboard__";
 
 /**
  * One pickup-only stop listing every contract pickup on the trip.
@@ -3555,6 +3561,46 @@ function consumeSoftOnboardLot(
   return taken;
 }
 
+/** Apply one stop’s planned unload then load to soft lots (delivery → pickup). */
+function applySoftStopTransfers(
+  softLots: Map<string, SoftOnboardLot>,
+  stop: HaulingChecklistRow,
+): void {
+  if (stop.routeAction === "quantum") return;
+  const { deliveries, pickups } = splitRowCargo(stop);
+  for (const { cargo, storage } of deliveries) {
+    consumeSoftOnboardLot(softLots, storage, cargo);
+  }
+  for (const { cargo, storage } of pickups) {
+    addSoftOnboardLot(softLots, storage, cargo);
+  }
+}
+
+/**
+ * Soft lots still aboard after completed stops only (stops at first incomplete).
+ * Matches `cargoInventory.fromCompleted` trip progress.
+ */
+export function collectSoftOnboardLotsFromCompleted(
+  rows: HaulingChecklistRow[],
+): Map<string, SoftOnboardLot> {
+  const softLots = new Map<string, SoftOnboardLot>();
+  for (const stop of rows) {
+    if (!stop.isCompleted) break;
+    applySoftStopTransfers(softLots, stop);
+  }
+  return softLots;
+}
+
+export type SoftVisibleCargoAtStopOptions = {
+  includeAboardCargo?: boolean;
+  /**
+   * When true, earlier stops only apply once `isCompleted`, and a completed
+   * target stop shows post-transfer remaining (delivered crates gone).
+   * Packing planners leave this false (full planned walk).
+   */
+  respectCompletion?: boolean;
+};
+
 /**
  * Cargo visible in the bay at `rowId` (Suggested parity):
  * deliveries leaving + this stop’s pickups + cargo still aboard from earlier pickups.
@@ -3564,11 +3610,12 @@ function consumeSoftOnboardLot(
 export function collectSoftVisibleCargoAtStop(
   rows: HaulingChecklistRow[],
   rowId: string,
-  options?: { includeAboardCargo?: boolean },
+  options?: SoftVisibleCargoAtStopOptions,
 ): SoftVisibleCargo[] | null {
   const rowIndex = rows.findIndex((entry) => entry.id === rowId);
   if (rowIndex < 0) return null;
   const includeAboardCargo = options?.includeAboardCargo !== false;
+  const respectCompletion = Boolean(options?.respectCompletion);
 
   const softLots = new Map<string, SoftOnboardLot>();
   const visible: SoftVisibleCargo[] = [];
@@ -3579,11 +3626,22 @@ export function collectSoftVisibleCargoAtStop(
     const isTarget = index === rowIndex;
 
     if (!isTarget) {
-      for (const { cargo, storage } of deliveries) {
-        consumeSoftOnboardLot(softLots, storage, cargo);
-      }
-      for (const { cargo, storage } of pickups) {
-        addSoftOnboardLot(softLots, storage, cargo);
+      if (respectCompletion && !stop.isCompleted) continue;
+      applySoftStopTransfers(softLots, stop);
+      continue;
+    }
+
+    // Completed target + progress mode: bay after this stop’s transfers.
+    if (respectCompletion && stop.isCompleted) {
+      applySoftStopTransfers(softLots, stop);
+      if (includeAboardCargo) {
+        for (const lot of softLots.values()) {
+          if (lot.cargo.scu <= 0) continue;
+          visible.push({
+            cargo: lot.cargo,
+            storage: lot.storage,
+          });
+        }
       }
       continue;
     }
@@ -3649,27 +3707,10 @@ function claimSoftVisibleDemand(
   );
 }
 
-/**
- * Keep All-tab placed boxes that match cargo aboard at `stopId`.
- * Same origins/cells as All — the location tab is a filter, not a re-pack.
- * `stopId` is first (entity the call is about).
- */
-export function filterBoxesAboardAtStop(
-  stopId: string,
+function filterBoxesAgainstDemand(
   allBoxes: readonly PlacedCargoBox[],
-  stops: HaulingChecklistRow[],
-  options?: { includeAboardCargo?: boolean },
+  demand: SoftVisibleDemand[],
 ): PlacedCargoBox[] {
-  const visible = collectSoftVisibleCargoAtStop(stops, stopId, options);
-  if (!visible || visible.length === 0) return [];
-
-  const demand: SoftVisibleDemand[] = visible.map((line) => ({
-    commoditySlug: line.cargo.commoditySlug,
-    missionId: line.cargo.missionId ?? null,
-    remaining: line.cargo.scu,
-    action: line.action,
-  }));
-
   const kept: PlacedCargoBox[] = [];
   for (const box of allBoxes) {
     const entry = claimSoftVisibleDemand(demand, box);
@@ -3682,6 +3723,50 @@ export function filterBoxesAboardAtStop(
     );
   }
   return kept;
+}
+
+/**
+ * Keep All-tab placed boxes that match cargo aboard at `stopId`.
+ * Same origins/cells as All — the location tab is a filter, not a re-pack.
+ * `stopId` is first (entity the call is about).
+ */
+export function filterBoxesAboardAtStop(
+  stopId: string,
+  allBoxes: readonly PlacedCargoBox[],
+  stops: HaulingChecklistRow[],
+  options?: SoftVisibleCargoAtStopOptions,
+): PlacedCargoBox[] {
+  const visible = collectSoftVisibleCargoAtStop(stops, stopId, options);
+  if (!visible || visible.length === 0) return [];
+
+  const demand: SoftVisibleDemand[] = visible.map((line) => ({
+    commoditySlug: line.cargo.commoditySlug,
+    missionId: line.cargo.missionId ?? null,
+    remaining: line.cargo.scu,
+    action: line.action,
+  }));
+
+  return filterBoxesAgainstDemand(allBoxes, demand);
+}
+
+/**
+ * Keep All-tab placed boxes still aboard after completed stops
+ * (`cargoInventory.fromCompleted` progress). Same origins/cells — no re-pack.
+ */
+export function filterBoxesRemainingAboard(
+  allBoxes: readonly PlacedCargoBox[],
+  stops: HaulingChecklistRow[],
+): PlacedCargoBox[] {
+  const lots = collectSoftOnboardLotsFromCompleted(stops);
+  if (lots.size === 0) return [];
+
+  const demand: SoftVisibleDemand[] = [...lots.values()].map((lot) => ({
+    commoditySlug: lot.cargo.commoditySlug,
+    missionId: lot.cargo.missionId ?? null,
+    remaining: lot.cargo.scu,
+  }));
+
+  return filterBoxesAgainstDemand(allBoxes, demand);
 }
 
 /**

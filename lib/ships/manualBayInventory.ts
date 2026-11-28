@@ -163,10 +163,13 @@ export function demandManualBayInventoryLines(
     missions?: SessionMission[];
     /** Match All vs Transfer bay scope. Default true (All). */
     includeAboardCargo?: boolean;
+    /** Match Current/Stop bay progress (delivered crates leave demand). */
+    respectCompletion?: boolean;
   },
 ): Omit<ManualBayInventoryLine, "placed" | "remaining">[] {
   const visible = collectSoftVisibleCargoAtStop(stops, stopId, {
     includeAboardCargo: options?.includeAboardCargo,
+    respectCompletion: options?.respectCompletion,
   });
   if (!visible) return [];
 
@@ -354,6 +357,7 @@ export const manualBayInventory = {
     options?: {
       missions?: SessionMission[];
       includeAboardCargo?: boolean;
+      respectCompletion?: boolean;
     },
   ): ManualBayInventoryMissionGroup[] {
     const lines = demandManualBayInventoryLines(stopId, stops, options).map(

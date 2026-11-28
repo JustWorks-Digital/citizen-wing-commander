@@ -119,7 +119,7 @@ export function BayFacingPad({
 }: BayFacingPadProps) {
   const buttonClass = (id: BayFacing) =>
     [
-      "inline-flex size-5 items-center justify-center rounded-[3px] border font-mono text-[0.55rem] leading-none transition-colors",
+      "inline-flex size-4 items-center justify-center rounded-[2px] border font-mono text-[0.5rem] leading-none transition-colors",
       facing === id
         ? "border-rsi-accent/50 bg-rsi-accent-muted/40 text-rsi-accent"
         : "border-rsi-border bg-rsi-bg-deep/80 text-rsi-text-secondary hover:border-rsi-border-strong hover:text-rsi-text",
@@ -131,7 +131,7 @@ export function BayFacingPad({
       aria-label={ariaLabel}
       className="pointer-events-auto absolute bottom-2 left-1.5 z-20 grid grid-cols-3 gap-px sm:left-2"
     >
-      <span className="size-5" aria-hidden />
+      <span className="size-4" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "up"}
@@ -142,7 +142,7 @@ export function BayFacingPad({
       >
         ↑
       </button>
-      <span className="size-5" aria-hidden />
+      <span className="size-4" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "left"}
@@ -161,7 +161,7 @@ export function BayFacingPad({
         onClick={() => onFacingChange("home")}
         className={buttonClass("home")}
       >
-        <DefaultFacingIcon className="size-2.5" />
+        <DefaultFacingIcon className="size-2" />
       </button>
       <button
         type="button"
@@ -173,7 +173,7 @@ export function BayFacingPad({
       >
         →
       </button>
-      <span className="size-5" aria-hidden />
+      <span className="size-4" aria-hidden />
       <button
         type="button"
         aria-pressed={facing === "down"}
@@ -184,7 +184,7 @@ export function BayFacingPad({
       >
         ↓
       </button>
-      <span className="size-5" aria-hidden />
+      <span className="size-4" aria-hidden />
     </div>
   );
 }

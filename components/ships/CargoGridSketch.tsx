@@ -326,6 +326,8 @@ export type CargoGridSketchProps = {
   isoToolbarBelow?: ReactNode;
   /** Hide cargo legends (top, 3D, and split shared). */
   hideLegend?: boolean;
+  /** Optional chrome at the top of the legend panel (e.g. All / {Stop}). */
+  legendHeader?: ReactNode;
   /** Leave room under a top-right Legend toggle hosted by the parent. */
   legendToggleAbove?: boolean;
   /**
@@ -499,6 +501,7 @@ export function CargoGridSketch({
   inlineTopLegend = false,
   isoToolbarBelow = null,
   hideLegend: hideLegendProp,
+  legendHeader = null,
   legendToggleAbove = false,
   sidePanelsOverlay: sidePanelsOverlayProp,
   onSidePanelsOverlayChange,
@@ -1038,6 +1041,27 @@ export function CargoGridSketch({
   topZoomRef.current = topZoom;
   const isoZoomRef = useRef(isoZoom);
   isoZoomRef.current = isoZoom;
+
+  /**
+   * 2D facing rotate swaps the layout box (90°/270°) but keeps scroll/zoom
+   * from the previous orientation — Front/Rear clip until we re-fit + center.
+   * Skip the first pass so open auto-fit owns the initial frame.
+   * Call via ref only — do not depend on fitVisibleBayZooms (it changes with
+   * zoom and would loop: fit → zoom setState → new callback → effect again).
+   */
+  const skipFacingRefitRef = useRef(true);
+  useLayoutEffect(() => {
+    if (!showTop) {
+      skipFacingRefitRef.current = true;
+      return;
+    }
+    if (skipFacingRefitRef.current) {
+      skipFacingRefitRef.current = false;
+      return;
+    }
+    fitVisibleBayZoomsRef.current();
+  }, [topFacingDegrees, showTop]);
+
   /**
    * Hide the bay until open fit matches zoom-% (Front + Rear visible).
    * Zoom-% click still works anytime after reveal.
@@ -2483,6 +2507,11 @@ export function CargoGridSketch({
                 })}
                 aria-label="Cargo color legend"
               >
+                {legendHeader ? (
+                  <div className="mb-1.5 flex min-w-0 shrink-0 justify-start pt-0.5">
+                    {legendHeader}
+                  </div>
+                ) : null}
                 {renderCargoLegendBody({
                   includeIsoLayers: false,
                   topLayersTitle: "2D layers",
@@ -3499,6 +3528,11 @@ export function CargoGridSketch({
               style={{ maxHeight: Math.max(120, panelHeightPx - 40) }}
               aria-label="Cargo color legend"
             >
+              {legendHeader ? (
+                <div className="mb-1.5 flex min-w-0 shrink-0 justify-start pt-0.5">
+                  {legendHeader}
+                </div>
+              ) : null}
               {renderCargoLegendBody({
                 includeIsoLayers: true,
                 topLayersTitle: "2D layers",

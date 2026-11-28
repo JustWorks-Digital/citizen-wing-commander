@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical; vertical Stops rail uses tighter thumb/connector padding), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green). Completed quantum strips match closed stop accordion tabs (0.7rem title, Quantum badge, hop mono) and omit the Done checkmark.",
+          "Completed history strip, progress timeline (double chevrons between stops — right on horizontal, down on vertical; vertical Stops rail uses tighter thumb/connector padding; Current overlays the thumb as a badge on mobile/desktop, Next overlays on vertical), last-stop finish tile, and next-stop Done trail (hover waves L→R; pending/blue keeps the wave in accent; complete is static green). Completed quantum strips match closed stop accordion tabs (0.7rem title, Quantum badge, hop mono) and omit the Done checkmark.",
       },
     },
   },

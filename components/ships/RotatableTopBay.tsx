@@ -15,6 +15,19 @@ export type RotatableTopBayProps = {
   children: ReactNode;
 };
 
+/** Layout box for a rotated top bay — swap axes on 90° / 270°. */
+export function rotatableTopBayBoxSize(
+  contentWidth: number,
+  contentHeight: number,
+  degrees: number,
+): { width: number; height: number } {
+  const normalized = ((degrees % 360) + 360) % 360;
+  const quarterTurn = normalized === 90 || normalized === 270;
+  return quarterTurn
+    ? { width: contentHeight, height: contentWidth }
+    : { width: contentWidth, height: contentHeight };
+}
+
 /**
  * Rotates 2D bay content in square increments and swaps the layout box
  * on quarter turns so Front/Rear rails stay inside the scroll area.
@@ -27,7 +40,6 @@ export function RotatableTopBay({
   const innerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const normalized = ((degrees % 360) + 360) % 360;
-  const quarterTurn = normalized === 90 || normalized === 270;
 
   useLayoutEffect(() => {
     const el = innerRef.current;
@@ -43,10 +55,7 @@ export function RotatableTopBay({
 
   const boxStyle: CSSProperties | undefined =
     size.width > 0 && size.height > 0
-      ? {
-          width: quarterTurn ? size.height : size.width,
-          height: quarterTurn ? size.width : size.height,
-        }
+      ? rotatableTopBayBoxSize(size.width, size.height, normalized)
       : undefined;
 
   return (

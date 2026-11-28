@@ -157,17 +157,20 @@ export function ChecklistProgressTimeline({
                     </span>
                   </span>
                 ) : null}
-                {isVertical && statusLabel === "Next" ? (
+                {statusLabel === "Current" ||
+                (isVertical && statusLabel === "Next") ? (
                   <span
                     aria-hidden
                     className="absolute inset-0 flex items-center justify-center bg-rsi-bg-deep/55"
                   >
                     <Badge
-                      variant="neutral"
+                      variant={
+                        statusLabel === "Current" ? "accent" : "neutral"
+                      }
                       size="xs"
                       className="max-w-[calc(100%-0.25rem)] truncate px-0.5"
                     >
-                      Next
+                      {statusLabel}
                     </Badge>
                   </span>
                 ) : null}
@@ -192,10 +195,6 @@ export function ChecklistProgressTimeline({
                 <Badge variant="neutral" size="xs" className="max-w-full truncate">
                   Next
                 </Badge>
-              ) : !isVertical && statusLabel ? (
-                <span className="w-full truncate font-mono text-[0.55rem] uppercase tracking-[0.1em] text-rsi-accent">
-                  {statusLabel}
-                </span>
               ) : null}
             </button>
             {!isLast ? (

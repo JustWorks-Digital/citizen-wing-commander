@@ -7,8 +7,10 @@ import {
 } from "@/lib/ships/cargoBayPackProgram";
 import {
   ALL_CONTRACTS_PACK_STOP_ID,
+  CURRENT_ABOARD_PACK_STOP_ID,
   defaultCargoBayPackMode,
   filterBoxesAboardAtStop as filterPlacedBoxesAboardAtStop,
+  filterBoxesRemainingAboard as filterPlacedBoxesRemainingAboard,
   packByCargoTypeAtStop,
   packDeliveriesFromStop,
   packSuggestedAtStop,
@@ -17,6 +19,7 @@ import {
   type CargoBayPackMode,
   type CargoGridPlacementPlan,
   type PlacedCargoBox,
+  type SoftVisibleCargoAtStopOptions,
 } from "@/lib/ships/cargoGridPlacement";
 import type { ShipCargoGridSketch } from "@/lib/ships/cargoGrids";
 import { settleFloatingBayBoxes } from "@/lib/ships/manualBayMove";
@@ -25,7 +28,10 @@ import { derivePackSlotPolicy } from "@/lib/ships/packSlotPolicy";
 import { validateCargoTypePackClusters } from "@/lib/ships/cargoTypePackValidate";
 import { getShipBayPreferenceFixture } from "@/lib/ships/shipBayPreferences";
 
-export { ALL_CONTRACTS_PACK_STOP_ID } from "@/lib/ships/cargoGridPlacement";
+export {
+  ALL_CONTRACTS_PACK_STOP_ID,
+  CURRENT_ABOARD_PACK_STOP_ID,
+} from "@/lib/ships/cargoGridPlacement";
 
 export type CargoBayPackAtStopOptions = {
   packMode?: CargoBayPackMode;
@@ -116,7 +122,7 @@ export const cargoBay = {
   packDeliveriesFromStop: packDeliveriesFromStop,
 
   /**
-   * Pack every contract pickup on the trip into one bay view (Cargo bay All tab).
+   * Pack every contract pickup on the trip into one bay view (Cargo bay Planned).
    * Amounts match contracts-total SCU; crates may exceed a single stop’s peak.
    */
   packAllContractPickups(
@@ -143,8 +149,19 @@ export const cargoBay = {
     stopId: string,
     allBoxes: readonly PlacedCargoBox[],
     stops: HaulingChecklistRow[],
-    options?: { includeAboardCargo?: boolean },
+    options?: SoftVisibleCargoAtStopOptions,
   ): PlacedCargoBox[] {
     return filterPlacedBoxesAboardAtStop(stopId, allBoxes, stops, options);
+  },
+
+  /**
+   * All tab after trip progress: filter packing plan to crates still aboard
+   * from completed stops. Same origins/cells — does not re-pack.
+   */
+  filterBoxesRemainingAboard(
+    allBoxes: readonly PlacedCargoBox[],
+    stops: HaulingChecklistRow[],
+  ): PlacedCargoBox[] {
+    return filterPlacedBoxesRemainingAboard(allBoxes, stops);
   },
 };

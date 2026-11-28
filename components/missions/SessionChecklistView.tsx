@@ -505,8 +505,14 @@ export function SessionChecklistView({
     return defaultFocusedStopId(
       session.rows,
       session.startLocationSlug ?? null,
+      Boolean(session.quantumOriginDeparted),
     );
-  }, [focusedStopId, session.rows, session.startLocationSlug]);
+  }, [
+    focusedStopId,
+    session.rows,
+    session.startLocationSlug,
+    session.quantumOriginDeparted,
+  ]);
 
   const selectedShipSlug = session.shipSlugs?.[0] ?? null;
   const tripName = session.sessionName?.trim() ?? "";

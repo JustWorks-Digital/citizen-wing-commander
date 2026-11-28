@@ -24,6 +24,7 @@ import {
 import {
   CargoBayLayout,
   type CargoBayHeaderAsideContext,
+  type CargoBayLayoutMode,
   type CargoBayLayoutResizeApi,
   type CargoBayStopScope,
 } from "./CargoBayLayout";
@@ -67,7 +68,8 @@ export function SessionCargoLayoutModal({
     useSessionCargoBayLayoutWidth(sessionId);
   const { isFullscreen, setIsFullscreen, toggleFullscreen } =
     useSessionCargoBayLayoutFullscreen(sessionId);
-  const [stopScope, setStopScope] = useState<CargoBayStopScope>("stop");
+  const [stopScope, setStopScope] = useState<CargoBayStopScope>("all");
+  const [bayLayout, setBayLayout] = useState<CargoBayLayoutMode>("current");
   const [isResizing, setIsResizing] = useState(false);
   const layoutResizeRef = useRef<CargoBayLayoutResizeApi | null>(null);
   const dragRef = useRef<{
@@ -327,6 +329,8 @@ export function SessionCargoLayoutModal({
             focusedStopId={focusedStopId}
             stopScope={stopScope}
             onStopScopeChange={setStopScope}
+            bayLayout={bayLayout}
+            onBayLayoutChange={setBayLayout}
             sessionId={sessionId}
             headerAside={headerAside}
             isFullscreen={isFullscreen}

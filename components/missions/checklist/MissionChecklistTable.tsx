@@ -273,16 +273,18 @@ export function needsQuantumOriginRow(
 }
 
 /**
- * Default focus: quantum origin (when start ≠ first and no stop done yet),
- * else first incomplete stop. When every stop is done, no active focus
- * (completed rows keep the green rail, not the blue active rail).
+ * Default focus: quantum origin (when start ≠ first, QT not departed, and no
+ * stop done yet), else first incomplete stop. When every stop is done, no
+ * active focus (completed rows keep the green rail, not the blue active rail).
  */
 export function defaultFocusedStopId(
   rows: HaulingChecklistRow[],
   startLocationSlug?: string | null,
+  quantumOriginDeparted = false,
 ): string | null {
   if (
     needsQuantumOriginRow(rows, startLocationSlug) &&
+    !quantumOriginDeparted &&
     !rows.some((row) => row.isCompleted)
   ) {
     return QUANTUM_ORIGIN_ROW_ID;
@@ -709,7 +711,11 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   const activeRowId =
     focusTargetsQuantum || focusedRow
       ? focusedStopId
-      : defaultFocusedStopId(displayRows, startLocationSlug);
+      : defaultFocusedStopId(
+          displayRows,
+          startLocationSlug,
+          quantumDeparted,
+        );
   const firstStop = displayRows[0] ?? null;
   const quantumDestinationName = firstStop
     ? (getLocationBySlug(firstStop.locationSlug)?.name ??
