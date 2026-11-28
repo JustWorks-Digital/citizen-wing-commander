@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type MutableRefObject,
   type ReactNode,
   type SetStateAction,
 } from "react";
@@ -130,6 +131,11 @@ export type MissionChecklistTableProps = {
   onFocusStop?: (rowId: string | null) => void;
   /** Left side of the toolbar (e.g. Missions / Stops / Cargo stats). */
   toolbarStart?: ReactNode;
+  /**
+   * Sticky TRIP Stop control — same Done / advance path as accordion chevrons
+   * and keyboard `d` (closes / advances the open accordion).
+   */
+  stopDoneToggleRef?: MutableRefObject<((stopId: string) => void) | null>;
   /**
    * Content stacked above the checklist card in the same column (e.g. trip
    * expand/collapse). Matches checklist width beside the Progress rail.
@@ -300,6 +306,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
   focusedStopId = null,
   onFocusStop,
   toolbarStart = null,
+  stopDoneToggleRef,
   aboveChecklist = null,
   aboveChecklistRail = null,
   onOpenSummary,
@@ -913,7 +920,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     (item) => item.kind === "stop" || item.kind === "quantum",
   );
 
-  const completeQuantumOrigin = () => {
+  const completeQuantumOrigin = useCallback(() => {
     const nextIncomplete =
       rows.find((entry) => !entry.isCompleted) ?? firstStop;
     scheduleAdvanceAfterComplete(
@@ -923,7 +930,67 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
         setQuantumDeparted(true);
       },
     );
-  };
+  }, [firstStop, rows, scheduleAdvanceAfterComplete]);
+
+  const toggleStopDoneById = useCallback(
+    (stopId: string) => {
+      if (stopId === QUANTUM_ORIGIN_ROW_ID) {
+        if (!showQuantumInList) return;
+        if (quantumCompleted) {
+          setQuantumDeparted(false);
+          onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
+        } else {
+          completeQuantumOrigin();
+        }
+        return;
+      }
+      const row = rows.find((entry) => entry.id === stopId);
+      if (!row) return;
+      if (pendingCompleteRowIds.has(row.id)) return;
+      const completing = !row.isCompleted;
+      if (completing) {
+        suppressHistoryOpenUntilRef.current.set(row.id, Date.now() + 500);
+        setExpandedCompletedRowId((current) =>
+          current === row.id ? null : current,
+        );
+        const routeIndex = rows.findIndex((entry) => entry.id === row.id);
+        const nextIncomplete = rows
+          .slice(routeIndex + 1)
+          .find((entry) => !entry.isCompleted);
+        scheduleAdvanceAfterComplete(row.id, nextIncomplete ?? null, () =>
+          onToggle(row.id),
+        );
+      } else {
+        clearCompleteHandoffTimer();
+        setCompleteHandoff(null);
+        void runRowPending(row.id, () => onToggle(row.id));
+        if (isViewingCompleted) {
+          // Undoing Done from a history view — return focus to this stop.
+          onFocusStop?.(row.id);
+        }
+      }
+    },
+    [
+      clearCompleteHandoffTimer,
+      completeQuantumOrigin,
+      isViewingCompleted,
+      onFocusStop,
+      onToggle,
+      pendingCompleteRowIds,
+      quantumCompleted,
+      rows,
+      scheduleAdvanceAfterComplete,
+      showQuantumInList,
+    ],
+  );
+
+  useEffect(() => {
+    if (!stopDoneToggleRef) return;
+    stopDoneToggleRef.current = toggleStopDoneById;
+    return () => {
+      stopDoneToggleRef.current = null;
+    };
+  }, [stopDoneToggleRef, toggleStopDoneById]);
 
   useEffect(() => {
     const isTypingTarget = (target: EventTarget | null) => {
@@ -968,40 +1035,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           : openActiveId;
         if (!doneTargetId) return;
         event.preventDefault();
-        if (doneTargetId === QUANTUM_ORIGIN_ROW_ID && showQuantumInList) {
-          if (quantumCompleted) {
-            setQuantumDeparted(false);
-            onFocusStop?.(QUANTUM_ORIGIN_ROW_ID);
-          } else {
-            completeQuantumOrigin();
-          }
-          return;
-        }
-        const row = rows.find((entry) => entry.id === doneTargetId);
-        if (!row) return;
-        if (pendingCompleteRowIds.has(row.id)) return;
-        const completing = !row.isCompleted;
-        if (completing) {
-          suppressHistoryOpenUntilRef.current.set(row.id, Date.now() + 500);
-          setExpandedCompletedRowId((current) =>
-            current === row.id ? null : current,
-          );
-          const routeIndex = rows.findIndex((entry) => entry.id === row.id);
-          const nextIncomplete = rows
-            .slice(routeIndex + 1)
-            .find((entry) => !entry.isCompleted);
-          scheduleAdvanceAfterComplete(row.id, nextIncomplete ?? null, () =>
-            onToggle(row.id),
-          );
-        } else {
-          clearCompleteHandoffTimer();
-          setCompleteHandoff(null);
-          void runRowPending(row.id, () => onToggle(row.id));
-          if (isViewingCompleted) {
-            // Undoing Done from a history view — return focus to this stop.
-            onFocusStop?.(row.id);
-          }
-        }
+        toggleStopDoneById(doneTargetId);
       }
     };
 
@@ -1012,17 +1046,10 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
     workingIncompleteId,
     isViewingCompleted,
     completedCount,
-    onFocusStop,
     onOpenCargoBays,
     onOpenContracts,
     onOpenStops,
-    onToggle,
-    pendingCompleteRowIds,
-    quantumCompleted,
-    rows,
-    showQuantumInList,
-    scheduleAdvanceAfterComplete,
-    clearCompleteHandoffTimer,
+    toggleStopDoneById,
   ]);
 
   const confirmQuantumDraft = (input: {
@@ -1363,34 +1390,6 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
           );
           const isRowSectionBusy =
             isPendingComplete || isQuantumSaving || isRowCargoPending;
-          const toggleStopDoneById = (
-            stopId: string,
-            stopRouteIndex: number,
-            isCompleted: boolean,
-          ) => {
-            if (pendingCompleteRowIds.has(stopId)) return;
-            const completing = !isCompleted;
-            if (completing) {
-              // Force history-strip condensation even if this stop was expanded.
-              // Also ignore Open for a beat — Done click can land on the strip.
-              suppressHistoryOpenUntilRef.current.set(stopId, Date.now() + 500);
-              setExpandedCompletedRowId((current) =>
-                current === stopId ? null : current,
-              );
-              const nextIncomplete = displayRows
-                .slice(stopRouteIndex + 1)
-                .find((entry) => !entry.isCompleted);
-              scheduleAdvanceAfterComplete(
-                stopId,
-                nextIncomplete ?? null,
-                () => onToggle(stopId),
-              );
-            } else {
-              clearCompleteHandoffTimer();
-              setCompleteHandoff(null);
-              void runRowPending(stopId, () => onToggle(stopId));
-            }
-          };
           const openCompletedHistory = (stopId: string) => {
             const until =
               suppressHistoryOpenUntilRef.current.get(stopId) ?? 0;
@@ -1401,7 +1400,7 @@ export const MissionChecklistTable = memo(function MissionChecklistTable({
             onFocusStop?.(stopId);
           };
           const toggleStopDone = () => {
-            toggleStopDoneById(row.id, routeIndex, row.isCompleted);
+            toggleStopDoneById(row.id);
           };
 
           const condensedHopLabel = (() => {

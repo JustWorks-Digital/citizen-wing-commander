@@ -10,7 +10,7 @@ import {
 import { getLocationShopBySlug } from "@/lib/fixtures/locationShops";
 import { formatDistanceToNext, type HaulingChecklistRow } from "@/lib/missions/sessionChecklist";
 import { distanceBetweenLocationSlugs } from "@/lib/starmap/distance";
-import { DoneCheckbox, DoneStopButton } from "./ChecklistDoneControls";
+import { DoneStopButton } from "./ChecklistDoneControls";
 import { SpaceshipIcon, TravelChevronIcon } from "./ChecklistIcons";
 import { LocationHeader } from "./ChecklistLocationHeader";
 import {
@@ -44,10 +44,10 @@ export function QuantumShipBadge({
         <img
           src={shipIconSrc}
           alt=""
-          className="block size-full object-contain"
+          className="block size-full object-contain transition-transform duration-300 ease-out group-hover/travel:translate-x-1.5"
         />
       ) : (
-        <SpaceshipIcon className="h-3 w-5" />
+        <SpaceshipIcon className="h-3 w-5 transition-transform duration-300 ease-out group-hover/travel:translate-x-1.5" />
       )}
     </span>
   );
@@ -272,7 +272,7 @@ export function QuantumTravelRow({
             chevronWave
               ? chevronWaveAlways
                 ? "opacity-40 animate-rsi-done-chevron-wave"
-                : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                : "opacity-40 group-hover/travel:text-rsi-text group-hover/travel:animate-rsi-done-chevron-wave"
               : "",
           ].join(" ")}
           style={
@@ -286,22 +286,14 @@ export function QuantumTravelRow({
   const travelBlock =
     editing === "from" || editing === "to" ? null : (
       <div
-        className="flex w-full min-w-0 shrink-0 items-center gap-2.5 px-1 py-1 md:min-w-[12rem] md:flex-1 md:self-center sm:gap-3"
+        className="group/travel flex w-full min-w-0 shrink-0 items-center gap-2.5 px-1 py-1 md:min-w-[12rem] md:flex-1 md:self-center sm:gap-3"
         title="Travel"
       >
         <QuantumShipBadge
           shipSlug={shipSlug}
           className="h-12 w-20 sm:h-14 sm:w-24"
         />
-        <span className="group/done flex min-w-0 flex-1 items-center gap-2">
-          <DoneCheckbox
-            location={location}
-            step="QT"
-            isCompleted={isCompleted}
-            isActive={isFocused}
-            isPending={isPending || isSavingSection}
-            onToggle={onToggle}
-          />
+        <span className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
             disabled={sectionBusy}

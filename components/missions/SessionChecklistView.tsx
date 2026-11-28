@@ -32,6 +32,7 @@ import { LocationFuzzySearch } from "@/components/ui/LocationFuzzySearch";
 import { ShipSelect } from "@/components/ui/ShipSelect";
 import {
   getLocationBySlug,
+  getLocationShortName,
   getShipBySlug,
   getShipIconSrc,
   sumShipCargoScu,
@@ -176,6 +177,8 @@ export function SessionChecklistView({
   const [tripNavPrefsReady, setTripNavPrefsReady] = useState(false);
   const [pendingScreenshotCount, setPendingScreenshotCount] = useState(0);
   const [focusedStopId, setFocusedStopId] = useState<string | null>(null);
+  /** Sticky TRIP Done spinner while the focused-stop toggle save runs. */
+  const [toolbarStopPending, setToolbarStopPending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tripRepairBusy, setTripRepairBusy] = useState(false);
   const [tripRepairError, setTripRepairError] = useState<string | null>(null);
@@ -734,6 +737,41 @@ export function SessionChecklistView({
     [persistSession],
   );
 
+  const focusedStopDone = useMemo(() => {
+    if (!resolvedFocusedStopId) return null;
+    if (resolvedFocusedStopId === QUANTUM_ORIGIN_ROW_ID) {
+      if (
+        !needsQuantumOriginRow(
+          session.rows,
+          session.startLocationSlug ?? null,
+        )
+      ) {
+        return null;
+      }
+      const slug = session.startLocationSlug?.trim() ?? "";
+      return {
+        location: slug ? getLocationShortName(slug) : "Quantum travel",
+        step: "QT",
+        isCompleted: quantumOriginDeparted,
+      };
+    }
+    const index = session.rows.findIndex(
+      (row) => row.id === resolvedFocusedStopId,
+    );
+    const row = index >= 0 ? session.rows[index] : null;
+    if (!row) return null;
+    return {
+      location: getLocationShortName(row.locationSlug),
+      step: index + 1,
+      isCompleted: row.isCompleted,
+    };
+  }, [
+    resolvedFocusedStopId,
+    session.rows,
+    session.startLocationSlug,
+    quantumOriginDeparted,
+  ]);
+
   const originHopKey = [
     session.startLocationSlug ?? "",
     session.rows[0]?.id ?? "",
@@ -801,6 +839,25 @@ export function SessionChecklistView({
     setLoadError,
     syncCatalogBoxSplits,
   });
+
+  const stopDoneToggleRef = useRef<((stopId: string) => void) | null>(null);
+
+  const onToolbarToggleStopDone = useCallback(() => {
+    if (!focusedStopDone || toolbarStopPending || !resolvedFocusedStopId) {
+      return;
+    }
+    setToolbarStopPending(true);
+    stopDoneToggleRef.current?.(resolvedFocusedStopId);
+  }, [focusedStopDone, toolbarStopPending, resolvedFocusedStopId]);
+
+  useEffect(() => {
+    if (!toolbarStopPending) return;
+    const timer = window.setTimeout(() => {
+      setToolbarStopPending(false);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [toolbarStopPending, focusedStopDone?.isCompleted]);
+
   const openStops = useCallback(() => setStopsOpen(true), []);
   const closeStops = useCallback(() => setStopsOpen(false), []);
   const openCargoLayout = useCallback(() => setCargoLayoutOpen(true), []);
@@ -910,6 +967,13 @@ export function SessionChecklistView({
         cargoBayCount={cargoBayCount}
         elapsed={<SessionElapsedLabel session={elapsedSession} variant="value" />}
         isSaving={saveInFlight > 0}
+        stopDoneLocation={focusedStopDone?.location ?? null}
+        stopDoneStep={focusedStopDone?.step ?? null}
+        stopIsCompleted={focusedStopDone?.isCompleted ?? false}
+        stopIsPending={toolbarStopPending}
+        onToggleStopDone={
+          focusedStopDone ? onToolbarToggleStopDone : undefined
+        }
       />
     ),
     [
@@ -929,6 +993,9 @@ export function SessionChecklistView({
       cargoBayCount,
       elapsedSession,
       saveInFlight,
+      focusedStopDone,
+      toolbarStopPending,
+      onToolbarToggleStopDone,
     ],
   );
 
@@ -1326,6 +1393,7 @@ export function SessionChecklistView({
         onSetDeliveryScuAtStop={setDeliveryScuAtStop}
         isLoading={isTripLoading}
         toolbarStart={routeProgressStats}
+        stopDoneToggleRef={stopDoneToggleRef}
         distanceTraveled={routeDistance.traveled}
         distanceTotal={routeDistance.total}
         hideCompleted={hideCompleted}

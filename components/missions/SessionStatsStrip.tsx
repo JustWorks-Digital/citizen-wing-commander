@@ -17,6 +17,7 @@ import { resolveMissionTitle } from "@/lib/missions/missionRank";
 import { formatDistanceToNext, type DistanceToNext } from "@/lib/missions/sessionChecklist";
 
 import { Spinner } from "@/components/ui/Spinner";
+import { DoneCheckbox } from "@/components/missions/checklist/ChecklistDoneControls";
 import { AUEC_TITLE, SCU_TITLE } from "@/lib/ui/abbrevTitles";
 
 function StatLabel({
@@ -302,6 +303,15 @@ export type SessionRouteProgressStatsProps = {
    * does not push Distance / aUEC / Time.
    */
   isSaving?: boolean;
+  /**
+   * Focused stop Done — sits in the TRIP strip (left of TRIP spine).
+   * Omit `onToggleStopDone` to hide.
+   */
+  stopDoneLocation?: string | null;
+  stopDoneStep?: number | string | null;
+  stopIsCompleted?: boolean;
+  stopIsPending?: boolean;
+  onToggleStopDone?: () => void;
   /** Optional control to the right of the trip strip (kept outside overflow). */
   trailing?: ReactNode;
   className?: string;
@@ -368,7 +378,7 @@ function StopTransferFlowArrow({ inbound }: { inbound: boolean }) {
     <svg
       aria-hidden
       viewBox="0 0 12 12"
-      className="size-2.5 shrink-0 sm:size-3"
+      className="size-2 shrink-0"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.75"
@@ -410,6 +420,11 @@ export function SessionRouteProgressStats({
   cargoBayCount: _cargoBayCount = 1,
   elapsed = null,
   isSaving = false,
+  stopDoneLocation = null,
+  stopDoneStep = null,
+  stopIsCompleted = false,
+  stopIsPending = false,
+  onToggleStopDone,
   trailing = null,
   className,
 }: SessionRouteProgressStatsProps) {
@@ -433,22 +448,34 @@ export function SessionRouteProgressStats({
     </span>
   );
   const stopTransferBody = showStopTransfer ? (
-    <div
-      className="flex items-center gap-0.5"
-      title={`This stop: ${stopPickup} ${SCU_TITLE} onto ship, ${stopDelivery} ${SCU_TITLE} off ship`}
-    >
-      <div className="flex flex-col justify-center gap-0.5">
-        <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-accent sm:text-[0.7rem]">
-          <StopTransferFlowArrow inbound />
-          <span>{stopPickup}</span>
-        </p>
-        <p className="flex items-center gap-1 font-mono text-[0.65rem] leading-none tabular-nums tracking-wide text-rsi-gold sm:text-[0.7rem]">
-          <StopTransferFlowArrow inbound={false} />
-          <span>{stopDelivery}</span>
-        </p>
+    <>
+      <StatLabel title={`This stop: ${stopPickup} ${SCU_TITLE} onto ship, ${stopDelivery} ${SCU_TITLE} off ship`}>
+        Transfer
+      </StatLabel>
+      <div className="mt-0.5 flex items-center gap-0.5">
+        <div className="flex flex-col justify-center gap-px">
+          <p
+            className={[
+              "flex items-center gap-0.5 font-mono text-[0.5rem] leading-none tabular-nums tracking-wide sm:text-[0.55rem]",
+              stopPickup > 0 ? "text-rsi-accent" : "text-rsi-text-muted",
+            ].join(" ")}
+          >
+            <StopTransferFlowArrow inbound />
+            <span>{stopPickup}</span>
+          </p>
+          <p
+            className={[
+              "flex items-center gap-0.5 font-mono text-[0.5rem] leading-none tabular-nums tracking-wide sm:text-[0.55rem]",
+              stopDelivery > 0 ? "text-rsi-gold" : "text-rsi-text-muted",
+            ].join(" ")}
+          >
+            <StopTransferFlowArrow inbound={false} />
+            <span>{stopDelivery}</span>
+          </p>
+        </div>
+        {scuUnit}
       </div>
-      {scuUnit}
-    </div>
+    </>
   ) : null;
   const aboardCapacityBody = (
     <>
@@ -521,7 +548,10 @@ export function SessionRouteProgressStats({
 
   return (
     <div
-      className={["flex w-full min-w-0 max-w-full items-center gap-2", className]
+      className={[
+        "flex w-full min-w-0 max-w-full flex-nowrap items-center gap-2",
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
     >
@@ -562,10 +592,10 @@ export function SessionRouteProgressStats({
           <div className={[cellClass, "shrink-0"].join(" ")}>{stopTransferBody}</div>
         ) : null}
       </div>
-      <div className="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="ml-auto flex min-w-0 max-w-full flex-nowrap items-center gap-1.5 sm:gap-2">
         {isSaving ? (
           <span
-            className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
+            className="inline-flex shrink-0 items-center gap-1 self-center font-mono text-[0.55rem] uppercase tracking-[0.12em] text-rsi-accent sm:gap-1.5 sm:text-[0.6rem] sm:tracking-[0.14em]"
             role="status"
             aria-live="polite"
           >
@@ -574,10 +604,55 @@ export function SessionRouteProgressStats({
           </span>
         ) : null}
         <div
-          className={[stripClass, "!w-fit max-w-full"].join(" ")}
+          className={[stripClass, "min-w-0 !w-fit shrink"].join(" ")}
           role="group"
           aria-label="Progress — contracts, payout and time"
         >
+          <StripSpine label="TRIP" title="Trip" />
+          {onToggleStopDone && stopDoneLocation != null && stopDoneStep != null ? (
+            <div
+              role="presentation"
+              className={[
+                interactiveCellClass,
+                "shrink-0 !min-w-0 cursor-pointer !px-2 !py-1 sm:!min-w-0 sm:!px-2.5 sm:!py-1.5",
+                stopIsPending ? "cursor-wait" : "",
+              ].join(" ")}
+              title={
+                stopIsPending
+                  ? "Updating stop…"
+                  : `Mark stop done: ${stopDoneLocation}`
+              }
+              onClick={() => {
+                if (stopIsPending) return;
+                onToggleStopDone();
+              }}
+            >
+              <StatLabel>Stop</StatLabel>
+              <div className="mt-0.5 flex items-center gap-1 sm:mt-1">
+                <DoneCheckbox
+                  location={stopDoneLocation}
+                  step={stopDoneStep}
+                  isCompleted={stopIsCompleted}
+                  isActive={!stopIsCompleted}
+                  isPending={stopIsPending}
+                  micro
+                  onToggle={onToggleStopDone}
+                />
+                <p
+                  className={[
+                    "font-mono text-[0.6rem] leading-none tracking-wide sm:text-[0.65rem]",
+                    stopIsPending
+                      ? "text-rsi-accent"
+                      : stopIsCompleted
+                        ? "text-rsi-success"
+                        : "text-rsi-text-secondary",
+                  ].join(" ")}
+                >
+                  {stopIsPending ? "…" : stopIsCompleted ? "Done" : "Open"}
+                </p>
+              </div>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={onMissionsClick}
@@ -588,7 +663,6 @@ export function SessionRouteProgressStats({
             title={contractsAuecTitle}
             aria-label={contractsAuecAria}
           >
-            <StripSpine label="TRIP" title="Trip" />
             <span className={`${cellClass} border-0`}>
               {contractsAuecBody}
             </span>

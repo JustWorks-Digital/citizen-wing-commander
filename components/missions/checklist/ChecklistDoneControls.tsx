@@ -9,6 +9,7 @@ export function DoneCheckbox({
   isActive = false,
   isPending = false,
   compact = false,
+  micro = false,
   onToggle,
   className,
 }: {
@@ -19,9 +20,19 @@ export function DoneCheckbox({
   isPending?: boolean;
   /** Smaller circle + mark for condensed Done strips. */
   compact?: boolean;
+  /** Tiny circle for toolbar / strip cells (overrides compact size). */
+  micro?: boolean;
   onToggle: () => void;
   className?: string;
 }) {
+  const boxSize = micro ? "size-3" : compact ? "size-5" : "size-8";
+  const markSize = micro
+    ? "text-[0.5rem]"
+    : compact
+      ? "text-[0.65rem]"
+      : "text-base";
+  const spinnerSize = micro ? "size-2" : compact ? "size-2.5" : "size-4";
+
   return (
     <button
       type="button"
@@ -42,7 +53,7 @@ export function DoneCheckbox({
       }}
       className={[
         "group inline-flex shrink-0 items-center justify-center rounded-full border transition-colors",
-        compact ? "size-5" : "size-8",
+        boxSize,
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--rsi-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-rsi-bg",
         isPending
           ? "cursor-wait border-rsi-accent/50 bg-rsi-bg-deep/40 text-rsi-accent"
@@ -66,13 +77,13 @@ export function DoneCheckbox({
         .join(" ")}
     >
       {isPending ? (
-        <Spinner className={compact ? "size-2.5" : "size-4"} />
+        <Spinner className={spinnerSize} />
       ) : (
         <span
           aria-hidden
           className={[
             "leading-none",
-            compact ? "text-[0.65rem]" : "text-base",
+            markSize,
             isCompleted
               ? ""
               : "opacity-40 group-hover:opacity-100 group-hover/done:opacity-100",

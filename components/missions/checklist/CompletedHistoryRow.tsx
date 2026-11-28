@@ -157,7 +157,8 @@ export function ChecklistProgressTimeline({
                     </span>
                   </span>
                 ) : null}
-                {statusLabel === "Current" ||
+                {/* Current badge is mobile-only — vertical rail thumbs clip it. */}
+                {(!isVertical && statusLabel === "Current") ||
                 (isVertical && statusLabel === "Next") ? (
                   <span
                     aria-hidden
@@ -895,7 +896,7 @@ export function NextDistanceMeta({
   shipSlug = null,
   variant = "inline",
   isPending = false,
-  /** Stop label for the Done control before the ship. */
+  /** Stop label for chevron Done control after the ship. */
   locationLabel,
   step,
   isActive = false,
@@ -911,7 +912,7 @@ export function NextDistanceMeta({
   locationLabel?: string;
   step?: number | string;
   isActive?: boolean;
-  /** Done checkbox before the ship — marks this stop finished. */
+  /** Chevron trail after the ship marks this stop finished. */
   onToggle?: () => void;
 }) {
   const isHeader = variant === "header";
@@ -930,7 +931,7 @@ export function NextDistanceMeta({
   const doneStep = step ?? "";
 
   const shellClass = [
-    "flex min-w-0 items-center gap-2 text-sm sm:gap-2.5",
+    "group/travel flex min-w-0 items-center gap-2 text-sm sm:gap-2.5",
     isHeader ? "py-0" : "pt-5",
   ].join(" ");
 
@@ -1004,29 +1005,19 @@ export function NextDistanceMeta({
           <img
             src={shipIconSrc}
             alt=""
-            className="block size-full object-contain"
+            className="block size-full object-contain transition-transform duration-300 ease-out group-hover/travel:translate-x-1.5"
           />
         ) : (
-          <SpaceshipIcon className="h-3 w-5" />
+          <SpaceshipIcon className="h-3 w-5 transition-transform duration-300 ease-out group-hover/travel:translate-x-1.5" />
         )}
       </span>
-      {/* Checkbox + chevrons share hover; chevron click marks the stop done. */}
+      {/* Chevrons mark the stop done (sticky TRIP Stop control is the visible checkbox). */}
       <span
         className={[
-          "group/done flex min-w-0 flex-1 items-center gap-2",
+          "flex min-w-0 flex-1 items-center gap-2",
           isHeader ? "h-14 sm:h-16" : "h-16 sm:h-[4.5rem]",
         ].join(" ")}
       >
-        {onToggle ? (
-          <DoneCheckbox
-            location={doneLocation}
-            step={doneStep}
-            isCompleted={row.isCompleted}
-            isActive={isActive}
-            isPending={isPending}
-            onToggle={onToggle}
-          />
-        ) : null}
         {onToggle ? (
           <button
             type="button"
@@ -1058,7 +1049,7 @@ export function NextDistanceMeta({
                   chevronWave
                     ? chevronWaveAlways
                       ? "opacity-40 animate-rsi-done-chevron-wave"
-                      : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                      : "opacity-40 group-hover/travel:text-rsi-text group-hover/travel:animate-rsi-done-chevron-wave"
                     : "",
                 ].join(" ")}
                 style={
@@ -1088,7 +1079,7 @@ export function NextDistanceMeta({
                   chevronWave
                     ? chevronWaveAlways
                       ? "opacity-40 animate-rsi-done-chevron-wave"
-                      : "opacity-40 group-hover/done:text-rsi-text group-hover/done:animate-rsi-done-chevron-wave"
+                      : "opacity-40 group-hover/travel:text-rsi-text group-hover/travel:animate-rsi-done-chevron-wave"
                     : "",
                 ].join(" ")}
                 style={

@@ -13,7 +13,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard as aboard/capacity SCU | Peak | focused-stop ↑pickup / ↓drop-off), TRIP right (TRIP | Contracts with completed count and aUEC split by a rule | Time). Saving… sits left of TRIP. Distance lives in the Stops rail / mobile Stops section.",
+          "Split trip telemetry: Contracts/Source (trip header), route toolbar as two strips — Cargo left (Cargo | Aboard as aboard/capacity SCU | Peak | focused-stop ↑pickup / ↓drop-off), TRIP right (Stop Open/Done | Contracts with completed count and aUEC | Time). Saving… sits left of TRIP. Distance lives in the Stops rail / mobile Stops section.",
       },
     },
   },
@@ -53,6 +53,10 @@ export const RouteProgress: Story = {
       auecProjected={128000}
       onCapacityClick={() => {}}
       elapsed={<span>12m</span>}
+      stopDoneLocation="Lorville"
+      stopDoneStep={2}
+      stopIsCompleted={false}
+      onToggleStopDone={() => {}}
     />
   ),
 };
